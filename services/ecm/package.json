@@ -1,0 +1,23 @@
+{
+  "name": "@evergreen/ecm",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "seed": "bun run src/seed.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@evergreen/shared": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.7.4",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.5"
+  }
+}

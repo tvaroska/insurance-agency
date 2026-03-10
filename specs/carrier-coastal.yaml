@@ -1,0 +1,570 @@
+openapi: 3.0.3
+info:
+  title: Coastal Star Insurance Carrier Portal API
+  description: |
+    Mock Coastal Star Insurance carrier portal API for the Evergreen Insurance training
+    environment.
+
+    Provides programmatic access to quote submission, risk assessment, and
+    bind confirmation — simulating a real carrier integration.
+
+    ## Authentication
+
+    All `/coastal/*` endpoints require an OAuth 2.0 Bearer token.  Include the
+    token in the `Authorization` header:
+
+    ```
+    Authorization: Bearer <access_token>
+    ```
+
+    A dev-token endpoint is available at `GET /auth/dev-token` for training
+    environments (no authentication required).
+
+    ## Latency Simulation
+
+    Set the `CARRIER_LATENCY_MS` environment variable to add artificial
+    latency (milliseconds) to authenticated endpoints, simulating real
+    carrier response times.
+
+    ## Errors
+
+    All error responses share a common envelope (`ErrorResponse`) with
+    `error_code`, `message`, and an optional `details` array for field-level
+    validation failures.
+  version: 1.0.0
+  contact:
+    name: Evergreen Platform Engineering
+
+servers:
+  - url: http://localhost:3006
+    description: Local development
+
+tags:
+  - name: Health
+    description: Service health checks
+  - name: Auth
+    description: Development authentication helpers
+  - name: Quotes
+    description: Quote submission and risk assessment
+  - name: Binding
+    description: Quote bind confirmation and policy creation
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+security:
+  - oauth2: []
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      tags: [Health]
+      security: []
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+                service: carrier-coastal
+                timestamp: "2026-02-20T12:00:00.000Z"
+
+  /auth/dev-token:
+    get:
+      operationId: getDevToken
+      summary: Generate development JWT token
+      description: |
+        Returns a signed JWT with all carrier scopes for development and
+        training use.  **Not available in production.**
+      tags: [Auth]
+      security: []
+      responses:
+        "200":
+          description: JWT token generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevTokenResponse"
+              example:
+                token: "eyJhbGciOiJIUzI1NiIs..."
+
+  /coastal/quotes/submit:
+    post:
+      operationId: submitQuote
+      summary: Submit a quote for risk assessment
+      description: |
+        Submits a quote for automated risk assessment.  The quote must exist
+        and have status `quoted`.  Returns the quote with risk score, tier,
+        and assessment details.
+      tags: [Quotes]
+      security:
+        - oauth2:
+            - "carrier:quotes:write"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteSubmitRequest"
+            example:
+              quote_id: "QUO-CSTL-001"
+      responses:
+        "201":
+          description: Quote submitted and risk assessment generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoastalQuoteAssessed"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+
+  /coastal/quotes/{quote_id}/risk-assessment:
+    get:
+      operationId: getRiskAssessment
+      summary: Get risk assessment for a quote
+      description: |
+        Returns the risk assessment details for a previously submitted quote,
+        including risk score, tier, individual risk factors, and a
+        recommendation (approve / review / decline).
+      tags: [Quotes]
+      security:
+        - oauth2:
+            - "carrier:quotes:read"
+      parameters:
+        - $ref: "#/components/parameters/QuoteId"
+      responses:
+        "200":
+          description: Risk assessment found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskAssessmentResponse"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+
+  /coastal/quotes/{quote_id}/bind:
+    post:
+      operationId: bindQuote
+      summary: Bind a quote to create a policy
+      description: |
+        Confirms binding of an assessed quote, creating a new policy.
+        The quote must have status `assessed`.  Once bound, a policy is
+        created with a 1-year term from the effective date.
+      tags: [Binding]
+      security:
+        - oauth2:
+            - "carrier:underwriting:write"
+      parameters:
+        - $ref: "#/components/parameters/QuoteId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BindRequest"
+            example:
+              effective_date: "2026-03-01"
+              payment_plan: annual
+      responses:
+        "200":
+          description: Quote bound and policy created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BindResponse"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+
+# ---------------------------------------------------------------------------
+# Components
+# ---------------------------------------------------------------------------
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:3006/oauth/token
+          scopes:
+            "carrier:quotes:read": Read quote and risk assessment data
+            "carrier:quotes:write": Submit quotes for risk assessment
+            "carrier:underwriting:write": Bind quotes and create policies
+
+  parameters:
+    QuoteId:
+      name: quote_id
+      in: path
+      required: true
+      description: Unique quote identifier.
+      schema:
+        type: string
+        example: "QUO-CSTL-001"
+
+  headers:
+    X-Correlation-ID:
+      description: Request correlation identifier for tracing.
+      schema:
+        type: string
+        format: uuid
+        example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  schemas:
+    # ----- Health -----------------------------------------------------------
+    HealthResponse:
+      type: object
+      required: [status, service, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          example: ok
+        service:
+          type: string
+          example: carrier-coastal
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-02-20T12:00:00.000Z"
+
+    # ----- Auth -------------------------------------------------------------
+    DevTokenResponse:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: Signed JWT with all carrier scopes.
+          example: "eyJhbGciOiJIUzI1NiIs..."
+
+    # ----- Quote Submit Request ---------------------------------------------
+    QuoteSubmitRequest:
+      type: object
+      required: [quote_id]
+      properties:
+        quote_id:
+          type: string
+          description: ID of the quote to submit for risk assessment.
+          example: "QUO-CSTL-001"
+
+    # ----- Assessed Quote ---------------------------------------------------
+    CoastalQuoteAssessed:
+      type: object
+      description: A Coastal Star Insurance quote after risk assessment.
+      required:
+        - quote_id
+        - request_id
+        - client_id
+        - policy_type
+        - coverages
+        - deductibles
+        - status
+        - risk_score
+        - risk_tier
+        - assessed_at
+        - submitted_at
+      properties:
+        quote_id:
+          type: string
+          description: Unique quote identifier.
+          example: "QUO-CSTL-001"
+        request_id:
+          type: string
+          description: Original rating request ID.
+          example: "REQ-001"
+        client_id:
+          type: string
+          description: Client (insured) identifier.
+          example: "CLT-001"
+        policy_type:
+          type: string
+          description: Type of insurance policy.
+          enum: [auto, home, umbrella]
+          example: auto
+        premium_annual:
+          type: number
+          format: double
+          nullable: true
+          description: Annual premium amount in USD.
+          example: 2100.0
+        premium_monthly:
+          type: number
+          format: double
+          nullable: true
+          description: Monthly premium amount in USD.
+          example: 175.0
+        coverages:
+          type: array
+          description: List of coverage details.
+          items:
+            type: object
+        deductibles:
+          type: object
+          description: Deductible amounts by coverage type.
+        status:
+          type: string
+          description: Quote status after assessment.
+          enum: [assessed]
+          example: assessed
+        risk_score:
+          type: integer
+          description: Computed risk score (30–89).
+          minimum: 30
+          maximum: 89
+          example: 72
+        risk_tier:
+          type: string
+          description: Risk classification tier.
+          enum: [preferred, standard, non_standard]
+          example: standard
+        assessed_at:
+          type: string
+          format: date-time
+          description: When the risk assessment was performed.
+          example: "2026-02-20T14:00:00.000Z"
+        submitted_at:
+          type: string
+          format: date-time
+          description: When the quote was originally submitted.
+          example: "2026-02-18T10:30:00.000Z"
+
+    # ----- Risk Assessment --------------------------------------------------
+    RiskFactor:
+      type: object
+      required: [factor, impact, detail]
+      properties:
+        factor:
+          type: string
+          description: Risk factor name.
+          enum: [driver_age, vehicle_value, claims_history]
+          example: driver_age
+        impact:
+          type: string
+          description: Impact classification.
+          enum: [positive, neutral, negative]
+          example: positive
+        detail:
+          type: string
+          description: Human-readable explanation.
+          example: "Primary driver in preferred age range"
+
+    RiskAssessmentResponse:
+      type: object
+      required:
+        - quote_id
+        - risk_score
+        - risk_tier
+        - factors
+        - recommendation
+        - assessed_at
+      properties:
+        quote_id:
+          type: string
+          description: Quote identifier.
+          example: "QUO-CSTL-001"
+        risk_score:
+          type: integer
+          description: Computed risk score (30–89).
+          minimum: 30
+          maximum: 89
+          example: 72
+        risk_tier:
+          type: string
+          description: Risk classification tier.
+          enum: [preferred, standard, non_standard]
+          example: standard
+        factors:
+          type: array
+          description: Individual risk factor assessments.
+          items:
+            $ref: "#/components/schemas/RiskFactor"
+        recommendation:
+          type: string
+          description: Automated underwriting recommendation.
+          enum: [approve, review, decline]
+          example: approve
+        assessed_at:
+          type: string
+          format: date-time
+          description: When the assessment was performed.
+          example: "2026-02-20T14:00:00.000Z"
+
+    # ----- Bind Request / Response ------------------------------------------
+    BindRequest:
+      type: object
+      required: [effective_date]
+      properties:
+        effective_date:
+          type: string
+          format: date
+          description: Policy effective date (YYYY-MM-DD).
+          example: "2026-03-01"
+        payment_plan:
+          type: string
+          description: Payment frequency.
+          enum: [annual, monthly, semi_annual]
+          example: annual
+
+    BindResponse:
+      type: object
+      required:
+        - quote_id
+        - policy_id
+        - bind_status
+        - effective_date
+        - expiration_date
+        - premium_current
+        - bound_at
+      properties:
+        quote_id:
+          type: string
+          description: The bound quote ID.
+          example: "QUO-CSTL-001"
+        policy_id:
+          type: string
+          description: Newly created policy ID.
+          example: "POL-CSTL-1708444800000"
+        bind_status:
+          type: string
+          description: Bind confirmation status.
+          enum: [bound]
+          example: bound
+        effective_date:
+          type: string
+          format: date
+          description: Policy effective date.
+          example: "2026-03-01"
+        expiration_date:
+          type: string
+          format: date
+          description: Policy expiration date (1 year from effective).
+          example: "2027-03-01"
+        premium_current:
+          type: number
+          format: double
+          description: Annual premium for the new policy.
+          example: 2100.0
+        bound_at:
+          type: string
+          format: date-time
+          description: When the binding was confirmed.
+          example: "2026-02-20T15:00:00.000Z"
+
+    # ----- Error Envelope ---------------------------------------------------
+    ErrorResponse:
+      type: object
+      required: [error_code, message]
+      properties:
+        error_code:
+          type: string
+          description: Machine-readable error code.
+          example: NOT_FOUND
+        message:
+          type: string
+          description: Human-readable error message.
+          example: "quote not found"
+        correlation_id:
+          type: string
+          format: uuid
+          description: Correlation ID for request tracing.
+        details:
+          type: array
+          description: Field-level validation errors (present on 422).
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field:
+                type: string
+                example: effective_date
+              message:
+                type: string
+                example: "effective_date is required"
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: UNAUTHORIZED
+            message: "Missing or invalid Bearer token"
+    Forbidden:
+      description: Insufficient scopes for this operation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: FORBIDDEN
+            message: "Insufficient scopes"
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: NOT_FOUND
+            message: "quote not found"
+    Conflict:
+      description: Resource state conflict.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: CONFLICT
+            message: "Quote has already been bound."
+    UnprocessableEntity:
+      description: Validation error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: VALIDATION_ERROR
+            message: "Validation failed"
+            details:
+              - field: effective_date
+                message: "effective_date is required"

@@ -1,0 +1,1103 @@
+openapi: 3.0.3
+
+info:
+  title: Communication Hub API
+  description: |
+    Unified communication platform for the Evergreen insurance ecosystem.
+    Provides access to client messages (email, SMS, WhatsApp), recorded call
+    transcripts with sentiment analysis, outbound message dispatch, and
+    real-time webhook subscriptions for communication events.
+
+    ## Authentication
+    All endpoints require OAuth 2.0 bearer tokens obtained via the
+    client credentials flow (`POST /oauth/token`).  Scopes are granular
+    per resource type.
+
+    ## Pagination
+    List endpoints use cursor-based pagination.  Pass the opaque `cursor`
+    value from a previous response to fetch the next page.
+
+    ## Webhook Delivery
+    Webhook payloads are signed with HMAC-SHA256 using the subscription
+    secret.  The signature is sent in the `X-Evergreen-Signature` header.
+    Delivery is retried with exponential back-off up to 5 times.
+  version: 1.4.0
+  contact:
+    name: Evergreen Platform Engineering
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:3004
+    description: Local development
+
+tags:
+  - name: Messages
+    description: Read and send messages across all channels
+  - name: Calls
+    description: Access recorded call transcripts and metadata
+  - name: Webhooks
+    description: Manage real-time event subscriptions
+
+security:
+  - oauth2: []
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+paths:
+  # ---- Inbox ----
+  /messages/inbox:
+    get:
+      operationId: listInboxMessages
+      summary: Retrieve recent emails or SMS messages
+      description: |
+        Returns a cursor-paginated list of messages across all channels,
+        ordered by timestamp descending.  Use query parameters to filter by
+        channel, direction, read status, or date range.
+      tags:
+        - Messages
+      security:
+        - oauth2:
+            - comm:messages:read
+      parameters:
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/CursorParam"
+        - name: channel
+          in: query
+          description: Filter messages by communication channel.
+          required: false
+          schema:
+            $ref: "#/components/schemas/Channel"
+        - name: direction
+          in: query
+          description: Filter by message direction.
+          required: false
+          schema:
+            $ref: "#/components/schemas/Direction"
+        - name: read
+          in: query
+          description: Filter by read status.
+          required: false
+          schema:
+            type: boolean
+        - name: client_id
+          in: query
+          description: Filter messages for a specific client.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: since
+          in: query
+          description: Only return messages after this ISO-8601 timestamp.
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          description: Only return messages before this ISO-8601 timestamp.
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Paginated list of messages.
+          headers:
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxResponse"
+              example:
+                data:
+                  - message_id: "msg_9f2a4e71-bc03-4c8d-8e1a-d5f6a7b8c9d0"
+                    client_id: "cli_3e4f5a6b-7c8d-9e0f-1a2b-3c4d5e6f7a8b"
+                    direction: inbound
+                    channel: email
+                    subject: "Question about my auto policy deductible"
+                    body: "Hi, I recently received my renewal notice and noticed my deductible changed from $500 to $1,000. Could you explain why this adjustment was made? I don't recall requesting any changes. Thank you, Margaret Chen"
+                    from: "margaret.chen@example.com"
+                    to: "support@evergreen-ins.com"
+                    timestamp: "2026-02-17T14:32:07Z"
+                    read: false
+                    attachments:
+                      - file_name: "renewal_notice.pdf"
+                        content_type: "application/pdf"
+                        size_bytes: 204800
+                        url: "http://localhost:3004/att/a1b2c3d4"
+                  - message_id: "msg_1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+                    client_id: "cli_7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d"
+                    direction: outbound
+                    channel: sms
+                    subject: null
+                    body: "Hi David, this is a reminder that your homeowner's policy HO-2025-44921 renews on Mar 1. Reply RENEW to confirm or call us at 1-800-555-0199."
+                    from: "+18005550199"
+                    to: "+15551234567"
+                    timestamp: "2026-02-17T09:00:00Z"
+                    read: true
+                    attachments: []
+                cursor: "eyJpZCI6Im1zZ18xYTJiM2M0ZCIsInRzIjoxNzA5MTk3MjAwfQ=="
+                has_more: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ---- Send ----
+  /messages/send:
+    post:
+      operationId: sendMessage
+      summary: Send a message via Email, SMS, or WhatsApp
+      description: |
+        Enqueues an outbound message for delivery.  The response includes a
+        `message_id` for tracking and an initial `status` (typically `queued`).
+        Subscribe to the `message.delivered` and `message.failed` webhook
+        events for delivery confirmation.
+      tags:
+        - Messages
+      security:
+        - oauth2:
+            - comm:messages:send
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+            example:
+              to: "+15559876543"
+              channel: sms
+              body: "Hi James, your life insurance application LI-2026-00312 has been approved! Your new monthly premium is $47.50. Welcome to Evergreen."
+              template_id: "tmpl_approval_notification"
+      responses:
+        "202":
+          description: Message accepted and queued for delivery.
+          headers:
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendMessageResponse"
+              example:
+                message_id: "msg_b4c5d6e7-f8a9-0b1c-2d3e-4f5a6b7c8d9e"
+                status: queued
+                channel: sms
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ---- Call Transcripts ----
+  /calls/transcripts/{call_id}:
+    get:
+      operationId: getCallTranscript
+      summary: Get LLM-ready text of a recorded client conversation
+      description: |
+        Returns the full transcript of a recorded call, enriched with
+        LLM-derived sentiment analysis and extracted topics.  The
+        `transcript_text` field is formatted for direct consumption by
+        downstream language models.
+      tags:
+        - Calls
+      security:
+        - oauth2:
+            - comm:calls:read
+      parameters:
+        - name: call_id
+          in: path
+          required: true
+          description: Unique identifier of the recorded call.
+          schema:
+            type: string
+            pattern: "^call_[a-f0-9\\-]{36}$"
+            example: "call_d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a"
+      responses:
+        "200":
+          description: Call transcript with metadata.
+          headers:
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallTranscript"
+              example:
+                call_id: "call_d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a"
+                client_id: "cli_3e4f5a6b-7c8d-9e0f-1a2b-3c4d5e6f7a8b"
+                agent_name: "Sarah Mitchell"
+                duration_seconds: 487
+                transcript_text: |
+                  [00:00] Agent: Thank you for calling Evergreen Insurance, this is Sarah. How can I help you today?
+                  [00:05] Client: Hi Sarah, I'm calling because we just had a baby and I want to make sure our coverage is adequate.
+                  [00:14] Agent: Congratulations! That's wonderful news. Let me pull up your policy. I see you currently have a $250,000 term life policy. With a new dependent, many families choose to increase coverage.
+                  [00:28] Client: Yes, that's exactly what I was thinking. What would a $500,000 policy look like?
+                  [00:35] Agent: For your age and health profile, a $500,000 30-year term would be approximately $42 per month. I can also bundle that with a child rider for an additional $5 per month.
+                  [00:50] Client: That sounds reasonable. Can we go ahead and start that process?
+                  [01:02] Agent: Absolutely. I'll send you the application via email. You'll also need to schedule a brief health screening, which we can do at your convenience.
+                sentiment: positive
+                topics:
+                  - life event - new baby
+                  - coverage increase
+                  - term life policy
+                  - child rider
+                  - health screening
+                timestamp: "2026-02-16T11:22:33Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ---- Webhooks ----
+  /webhooks/incoming:
+    post:
+      operationId: createWebhookSubscription
+      summary: Subscribe to real-time events
+      description: |
+        Creates a new webhook subscription.  Evergreen will POST event
+        payloads to the provided URL whenever a subscribed event occurs.
+        Each payload is signed with HMAC-SHA256 using the returned `secret`.
+      tags:
+        - Webhooks
+      security:
+        - oauth2:
+            - comm:webhooks:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookSubscriptionRequest"
+            example:
+              url: "http://localhost:3002/hooks/evergreen"
+              events:
+                - message.received
+                - message.delivered
+                - message.failed
+                - call.completed
+                - call.missed
+      responses:
+        "201":
+          description: Webhook subscription created.
+          headers:
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookSubscription"
+              example:
+                webhook_id: "whk_a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+                url: "http://localhost:3002/hooks/evergreen"
+                events:
+                  - message.received
+                  - message.delivered
+                  - message.failed
+                  - call.completed
+                  - call.missed
+                secret: "whsec_k7m9p2r4t6v8x0z1b3d5f7h9j1l3n5q"
+                active: true
+                created_at: "2026-02-18T10:15:30Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+# ---------------------------------------------------------------------------
+# Components
+# ---------------------------------------------------------------------------
+components:
+
+  # ---- Security Schemes ----
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: OAuth 2.0 client credentials flow.
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:3004/oauth/token
+          scopes:
+            comm:messages:read: Read messages across all channels
+            comm:messages:send: Send messages via email, SMS, or WhatsApp
+            comm:calls:read: Read call recordings and transcripts
+            comm:webhooks:manage: Create, update, and delete webhook subscriptions
+
+  # ---- Parameters ----
+  parameters:
+    LimitParam:
+      name: limit
+      in: query
+      description: Maximum number of items to return (1-100).
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 25
+    CursorParam:
+      name: cursor
+      in: query
+      description: Opaque cursor returned by a previous request for fetching the next page.
+      required: false
+      schema:
+        type: string
+        maxLength: 256
+
+  # ---- Responses ----
+  responses:
+    BadRequest:
+      description: The request body or query parameters are invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: "Invalid value for 'channel': must be one of email, sms, phone, whatsapp."
+              request_id: "req_f1e2d3c4-b5a6-9788-7654-321fedcba098"
+              details:
+                - field: channel
+                  reason: "Value 'fax' is not a valid channel."
+    Unauthorized:
+      description: Missing or invalid authentication credentials.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: "Bearer token is expired or malformed."
+              request_id: "req_a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    Forbidden:
+      description: The authenticated principal lacks the required scope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: FORBIDDEN
+              message: "Token does not include the 'comm:messages:send' scope."
+              request_id: "req_11223344-5566-7788-99aa-bbccddeeff00"
+    NotFound:
+      description: The requested resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: NOT_FOUND
+              message: "Call transcript 'call_00000000-0000-0000-0000-000000000000' not found."
+              request_id: "req_deadbeef-cafe-babe-face-123456789abc"
+    Conflict:
+      description: The request conflicts with the current state of the resource.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: CONFLICT
+              message: "A webhook subscription for this URL and event set already exists (whk_a1b2c3d4)."
+              request_id: "req_c0ffee00-d00d-4000-a000-000000000001"
+    InternalServerError:
+      description: An unexpected error occurred on the server.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: "An unexpected error occurred. Please try again later or contact support."
+              request_id: "req_00112233-4455-6677-8899-aabbccddeeff"
+
+  # ---- Schemas ----
+  schemas:
+
+    # -- Enums --
+    Channel:
+      type: string
+      enum:
+        - email
+        - sms
+        - phone
+        - whatsapp
+      description: Communication channel type.
+
+    Direction:
+      type: string
+      enum:
+        - inbound
+        - outbound
+      description: Whether the message was received or sent.
+
+    MessageStatus:
+      type: string
+      enum:
+        - queued
+        - sent
+        - delivered
+        - failed
+        - bounced
+      description: Current delivery status of a message.
+
+    Sentiment:
+      type: string
+      enum:
+        - positive
+        - neutral
+        - negative
+      description: LLM-derived sentiment of the conversation.
+
+    WebhookEventType:
+      type: string
+      enum:
+        - message.received
+        - message.delivered
+        - message.failed
+        - call.completed
+        - call.missed
+      description: Type of event that triggers a webhook delivery.
+
+    # -- Core Resources --
+    Attachment:
+      type: object
+      description: File attached to a message.
+      required:
+        - file_name
+        - content_type
+        - size_bytes
+        - url
+      properties:
+        file_name:
+          type: string
+          description: Original file name.
+          example: "policy_document.pdf"
+        content_type:
+          type: string
+          description: MIME type of the file.
+          example: "application/pdf"
+        size_bytes:
+          type: integer
+          format: int64
+          description: File size in bytes.
+          minimum: 0
+          example: 204800
+        url:
+          type: string
+          format: uri
+          description: Pre-signed URL to download the attachment (valid for 1 hour).
+          example: "http://localhost:3004/att/a1b2c3d4"
+
+    Message:
+      type: object
+      description: A single communication message (email, SMS, WhatsApp, or phone note).
+      required:
+        - message_id
+        - client_id
+        - direction
+        - channel
+        - body
+        - from
+        - to
+        - timestamp
+        - read
+        - attachments
+      properties:
+        message_id:
+          type: string
+          description: Unique message identifier.
+          pattern: "^msg_[a-f0-9\\-]{36}$"
+          example: "msg_9f2a4e71-bc03-4c8d-8e1a-d5f6a7b8c9d0"
+        client_id:
+          type: string
+          format: uuid
+          description: Identifier of the associated insurance client.
+          example: "cli_3e4f5a6b-7c8d-9e0f-1a2b-3c4d5e6f7a8b"
+        direction:
+          $ref: "#/components/schemas/Direction"
+        channel:
+          $ref: "#/components/schemas/Channel"
+        subject:
+          type: string
+          nullable: true
+          description: Email subject line. Null for non-email channels.
+          maxLength: 998
+          example: "Question about my auto policy deductible"
+        body:
+          type: string
+          description: Message body text.
+          maxLength: 65536
+          example: "Hi, I recently received my renewal notice..."
+        from:
+          type: string
+          description: Sender address (email) or phone number (E.164).
+          example: "margaret.chen@example.com"
+        to:
+          type: string
+          description: Recipient address (email) or phone number (E.164).
+          example: "support@evergreen-ins.com"
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of when the message was sent or received.
+          example: "2026-02-17T14:32:07Z"
+        read:
+          type: boolean
+          description: Whether the message has been read by an agent.
+          example: false
+        attachments:
+          type: array
+          description: Files attached to the message.
+          items:
+            $ref: "#/components/schemas/Attachment"
+
+    InboxResponse:
+      type: object
+      description: Paginated inbox response.
+      required:
+        - data
+        - has_more
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        cursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for fetching the next page. Null when there are no more results.
+          example: "eyJpZCI6Im1zZ18xYTJiM2M0ZCIsInRzIjoxNzA5MTk3MjAwfQ=="
+        has_more:
+          type: boolean
+          description: Whether additional pages of results are available.
+          example: true
+
+    CallTranscript:
+      type: object
+      description: Transcript and metadata for a recorded client call.
+      required:
+        - call_id
+        - client_id
+        - agent_name
+        - duration_seconds
+        - transcript_text
+        - sentiment
+        - topics
+        - timestamp
+      properties:
+        call_id:
+          type: string
+          description: Unique call identifier.
+          pattern: "^call_[a-f0-9\\-]{36}$"
+          example: "call_d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a"
+        client_id:
+          type: string
+          format: uuid
+          description: Identifier of the associated insurance client.
+          example: "cli_3e4f5a6b-7c8d-9e0f-1a2b-3c4d5e6f7a8b"
+        agent_name:
+          type: string
+          description: Full name of the agent who handled the call.
+          maxLength: 200
+          example: "Sarah Mitchell"
+        duration_seconds:
+          type: integer
+          format: int32
+          description: Duration of the call in seconds.
+          minimum: 0
+          example: 487
+        transcript_text:
+          type: string
+          description: |
+            Full transcript of the call formatted for LLM consumption.
+            Timestamps are in `[MM:SS]` format, speakers are labeled.
+          maxLength: 1048576
+        sentiment:
+          $ref: "#/components/schemas/Sentiment"
+        topics:
+          type: array
+          description: LLM-extracted topics discussed during the call.
+          items:
+            type: string
+          minItems: 0
+          example:
+            - life event - new baby
+            - coverage increase
+            - term life policy
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of when the call occurred.
+          example: "2026-02-16T11:22:33Z"
+
+    SendMessageRequest:
+      type: object
+      description: Request payload for sending an outbound message.
+      required:
+        - to
+        - channel
+        - body
+      properties:
+        to:
+          type: string
+          description: |
+            Recipient address.  Email address for email channel,
+            E.164 phone number for SMS and WhatsApp.
+          example: "+15559876543"
+        channel:
+          $ref: "#/components/schemas/Channel"
+        subject:
+          type: string
+          nullable: true
+          description: Subject line (required for email, ignored for other channels).
+          maxLength: 998
+          example: "Your policy renewal confirmation"
+        body:
+          type: string
+          description: Message body text.
+          maxLength: 65536
+          example: "Hi James, your life insurance application has been approved!"
+        template_id:
+          type: string
+          nullable: true
+          description: Optional message template identifier for pre-approved content.
+          pattern: "^tmpl_[a-z0-9_]+$"
+          example: "tmpl_approval_notification"
+        attachments:
+          type: array
+          nullable: true
+          description: Files to attach (email and WhatsApp only).
+          items:
+            $ref: "#/components/schemas/AttachmentUpload"
+
+    AttachmentUpload:
+      type: object
+      description: Attachment to include with an outbound message.
+      required:
+        - file_name
+        - content_type
+        - content_base64
+      properties:
+        file_name:
+          type: string
+          description: File name for the attachment.
+          example: "policy_summary.pdf"
+        content_type:
+          type: string
+          description: MIME type of the file.
+          example: "application/pdf"
+        content_base64:
+          type: string
+          format: byte
+          description: Base64-encoded file content. Maximum 10 MB after decoding.
+          maxLength: 13981014
+
+    SendMessageResponse:
+      type: object
+      description: Confirmation that a message has been accepted for delivery.
+      required:
+        - message_id
+        - status
+        - channel
+      properties:
+        message_id:
+          type: string
+          description: Unique identifier assigned to the queued message.
+          pattern: "^msg_[a-f0-9\\-]{36}$"
+          example: "msg_b4c5d6e7-f8a9-0b1c-2d3e-4f5a6b7c8d9e"
+        status:
+          $ref: "#/components/schemas/MessageStatus"
+        channel:
+          $ref: "#/components/schemas/Channel"
+
+    # -- Webhooks --
+    WebhookSubscriptionRequest:
+      type: object
+      description: Request to create a new webhook subscription.
+      required:
+        - url
+        - events
+      properties:
+        url:
+          type: string
+          format: uri
+          description: HTTPS endpoint to receive webhook payloads.
+          example: "http://localhost:3002/hooks/evergreen"
+        events:
+          type: array
+          description: Event types to subscribe to.
+          items:
+            $ref: "#/components/schemas/WebhookEventType"
+          minItems: 1
+          uniqueItems: true
+
+    WebhookSubscription:
+      type: object
+      description: An active webhook subscription.
+      required:
+        - webhook_id
+        - url
+        - events
+        - secret
+        - active
+        - created_at
+      properties:
+        webhook_id:
+          type: string
+          description: Unique webhook subscription identifier.
+          pattern: "^whk_[a-f0-9\\-]{36}$"
+          example: "whk_a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+        url:
+          type: string
+          format: uri
+          description: HTTPS endpoint receiving webhook payloads.
+          example: "http://localhost:3002/hooks/evergreen"
+        events:
+          type: array
+          description: Subscribed event types.
+          items:
+            $ref: "#/components/schemas/WebhookEventType"
+        secret:
+          type: string
+          description: |
+            HMAC-SHA256 signing secret.  Store this securely; it is only
+            returned once at subscription creation time.
+          example: "whsec_k7m9p2r4t6v8x0z1b3d5f7h9j1l3n5q"
+        active:
+          type: boolean
+          description: Whether the subscription is currently active.
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of when the subscription was created.
+          example: "2026-02-18T10:15:30Z"
+
+    # -- Webhook Event Payloads --
+    WebhookEnvelope:
+      type: object
+      description: Common envelope wrapping every webhook delivery.
+      required:
+        - event_id
+        - event_type
+        - timestamp
+        - data
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Unique idempotency key for this event delivery.
+          example: "evt_c9d0e1f2-a3b4-5c6d-7e8f-9a0b1c2d3e4f"
+        event_type:
+          $ref: "#/components/schemas/WebhookEventType"
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of when the event was emitted.
+          example: "2026-02-18T12:00:00Z"
+        data:
+          type: object
+          description: Event-specific payload (see discriminated schemas below).
+
+    WebhookEventMessageReceived:
+      type: object
+      description: Payload delivered when an inbound message arrives.
+      allOf:
+        - $ref: "#/components/schemas/WebhookEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Message"
+      example:
+        event_id: "evt_11111111-2222-3333-4444-555555555555"
+        event_type: message.received
+        timestamp: "2026-02-18T13:45:22Z"
+        data:
+          message_id: "msg_aaaa1111-bbbb-cccc-dddd-eeee2222ffff"
+          client_id: "cli_3e4f5a6b-7c8d-9e0f-1a2b-3c4d5e6f7a8b"
+          direction: inbound
+          channel: email
+          subject: "Billing question - policy AG-2025-98712"
+          body: "Hello, I was charged twice for my February premium. Could you please look into this and issue a refund for the duplicate charge? My policy number is AG-2025-98712. Thanks, Robert Alvarez"
+          from: "robert.alvarez@example.com"
+          to: "billing@evergreen-ins.com"
+          timestamp: "2026-02-18T13:45:20Z"
+          read: false
+          attachments:
+            - file_name: "bank_statement_excerpt.png"
+              content_type: "image/png"
+              size_bytes: 89200
+              url: "http://localhost:3004/att/x9y8z7w6"
+
+    WebhookEventMessageDelivered:
+      type: object
+      description: Payload delivered when an outbound message is confirmed delivered.
+      allOf:
+        - $ref: "#/components/schemas/WebhookEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - message_id
+                - channel
+                - status
+                - delivered_at
+              properties:
+                message_id:
+                  type: string
+                  pattern: "^msg_[a-f0-9\\-]{36}$"
+                  example: "msg_b4c5d6e7-f8a9-0b1c-2d3e-4f5a6b7c8d9e"
+                channel:
+                  $ref: "#/components/schemas/Channel"
+                status:
+                  type: string
+                  enum:
+                    - delivered
+                  example: delivered
+                delivered_at:
+                  type: string
+                  format: date-time
+                  example: "2026-02-18T13:46:05Z"
+      example:
+        event_id: "evt_22222222-3333-4444-5555-666666666666"
+        event_type: message.delivered
+        timestamp: "2026-02-18T13:46:05Z"
+        data:
+          message_id: "msg_b4c5d6e7-f8a9-0b1c-2d3e-4f5a6b7c8d9e"
+          channel: sms
+          status: delivered
+          delivered_at: "2026-02-18T13:46:05Z"
+
+    WebhookEventMessageFailed:
+      type: object
+      description: Payload delivered when an outbound message fails to deliver.
+      allOf:
+        - $ref: "#/components/schemas/WebhookEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - message_id
+                - channel
+                - status
+                - failure_reason
+                - failed_at
+              properties:
+                message_id:
+                  type: string
+                  pattern: "^msg_[a-f0-9\\-]{36}$"
+                  example: "msg_cccc3333-dddd-eeee-ffff-aaaa4444bbbb"
+                channel:
+                  $ref: "#/components/schemas/Channel"
+                status:
+                  type: string
+                  enum:
+                    - failed
+                    - bounced
+                  example: bounced
+                failure_reason:
+                  type: string
+                  description: Human-readable explanation of the delivery failure.
+                  example: "Recipient mailbox full (552 5.2.2)"
+                failed_at:
+                  type: string
+                  format: date-time
+                  example: "2026-02-18T14:01:33Z"
+      example:
+        event_id: "evt_33333333-4444-5555-6666-777777777777"
+        event_type: message.failed
+        timestamp: "2026-02-18T14:01:33Z"
+        data:
+          message_id: "msg_cccc3333-dddd-eeee-ffff-aaaa4444bbbb"
+          channel: email
+          status: bounced
+          failure_reason: "Recipient mailbox full (552 5.2.2)"
+          failed_at: "2026-02-18T14:01:33Z"
+
+    WebhookEventCallCompleted:
+      type: object
+      description: Payload delivered when a recorded call ends and the transcript is ready.
+      allOf:
+        - $ref: "#/components/schemas/WebhookEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/CallTranscript"
+      example:
+        event_id: "evt_44444444-5555-6666-7777-888888888888"
+        event_type: call.completed
+        timestamp: "2026-02-18T15:30:00Z"
+        data:
+          call_id: "call_e5f6a7b8-c9d0-1e2f-3a4b-5c6d7e8f9a0b"
+          client_id: "cli_7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d"
+          agent_name: "Kevin Park"
+          duration_seconds: 312
+          transcript_text: |
+            [00:00] Agent: Evergreen Insurance, Kevin speaking.
+            [00:04] Client: Hi Kevin, I need to add my teenage daughter to our auto policy. She just got her license.
+            [00:12] Agent: Congratulations to her! I can help with that. Adding a teen driver will adjust your premium. Let me calculate that for you.
+            [00:22] Client: Sure. She'll be driving our 2022 Honda CR-V mostly.
+            [00:30] Agent: Based on her age and the vehicle, your monthly premium would increase by approximately $85. We also offer a good-student discount of 15% if she maintains a 3.0 GPA or above.
+            [00:45] Client: She does have good grades, so that discount would be great.
+          sentiment: positive
+          topics:
+            - teen driver addition
+            - auto policy change
+            - premium adjustment
+            - good-student discount
+          timestamp: "2026-02-18T15:25:00Z"
+
+    WebhookEventCallMissed:
+      type: object
+      description: Payload delivered when an incoming call is missed or goes to voicemail.
+      allOf:
+        - $ref: "#/components/schemas/WebhookEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - call_id
+                - client_id
+                - caller_number
+                - called_number
+                - ring_duration_seconds
+                - voicemail
+                - timestamp
+              properties:
+                call_id:
+                  type: string
+                  pattern: "^call_[a-f0-9\\-]{36}$"
+                  example: "call_f6a7b8c9-d0e1-2f3a-4b5c-6d7e8f9a0b1c"
+                client_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Client ID if the caller was identified, null otherwise.
+                  example: "cli_9a0b1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d"
+                caller_number:
+                  type: string
+                  description: E.164 phone number of the caller.
+                  example: "+15553216789"
+                called_number:
+                  type: string
+                  description: E.164 phone number that was dialled.
+                  example: "+18005550199"
+                ring_duration_seconds:
+                  type: integer
+                  format: int32
+                  description: How long the phone rang before the call was missed.
+                  minimum: 0
+                  example: 22
+                voicemail:
+                  type: boolean
+                  description: Whether the caller left a voicemail.
+                  example: true
+                voicemail_transcript:
+                  type: string
+                  nullable: true
+                  description: Transcription of the voicemail, if one was left.
+                  example: "Hi, this is Patricia Holmes, policy number HO-2024-55123. I'm calling about water damage in my basement from last night's storm. Please call me back as soon as possible at 555-321-6789. Thank you."
+                timestamp:
+                  type: string
+                  format: date-time
+                  example: "2026-02-18T08:14:55Z"
+      example:
+        event_id: "evt_55555555-6666-7777-8888-999999999999"
+        event_type: call.missed
+        timestamp: "2026-02-18T08:15:00Z"
+        data:
+          call_id: "call_f6a7b8c9-d0e1-2f3a-4b5c-6d7e8f9a0b1c"
+          client_id: "cli_9a0b1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d"
+          caller_number: "+15553216789"
+          called_number: "+18005550199"
+          ring_duration_seconds: 22
+          voicemail: true
+          voicemail_transcript: "Hi, this is Patricia Holmes, policy number HO-2024-55123. I'm calling about water damage in my basement from last night's storm. Please call me back as soon as possible at 555-321-6789. Thank you."
+          timestamp: "2026-02-18T08:14:55Z"
+
+    # -- Error --
+    Error:
+      type: object
+      description: Standard error response wrapper.
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+            - request_id
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code.
+              enum:
+                - VALIDATION_ERROR
+                - UNAUTHORIZED
+                - FORBIDDEN
+                - NOT_FOUND
+                - CONFLICT
+                - INTERNAL_ERROR
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              description: Human-readable error description.
+              example: "Invalid value for 'channel'."
+            request_id:
+              type: string
+              format: uuid
+              description: Unique identifier for this request, useful for support inquiries.
+              example: "req_f1e2d3c4-b5a6-9788-7654-321fedcba098"
+            details:
+              type: array
+              nullable: true
+              description: Optional field-level validation errors.
+              items:
+                type: object
+                required:
+                  - field
+                  - reason
+                properties:
+                  field:
+                    type: string
+                    description: JSON path of the invalid field.
+                    example: "channel"
+                  reason:
+                    type: string
+                    description: Explanation of why the field is invalid.
+                    example: "Value 'fax' is not a valid channel."

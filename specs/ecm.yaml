@@ -1,0 +1,1335 @@
+openapi: 3.0.3
+info:
+  title: Document & Content Management (ECM) API
+  description: |
+    Enterprise Content Management API for the Evergreen Insurance platform.
+
+    Provides document storage, e-signature envelope orchestration, compliance
+    auditing, and marketing-asset delivery for insurance policy lifecycles.
+
+    ## Authentication
+    All endpoints require an OAuth 2.0 Bearer token obtained via the
+    client credentials flow (`POST /oauth/token`).  Include the token in
+    every request:
+
+    ```
+    Authorization: Bearer <access_token>
+    ```
+
+    ## Pagination
+    List endpoints use **cursor-based** pagination.  Pass `limit` and an
+    optional `cursor` query parameter; the response body includes `has_more`
+    and `cursor` fields to fetch the next page.
+  version: 1.5.0
+  contact:
+    name: Evergreen Platform Engineering
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:3003
+    description: Local development
+
+tags:
+  - name: Documents
+    description: Upload, retrieve, and audit policy documents.
+  - name: Envelopes
+    description: Create and track DocuSign-style e-signature requests.
+  - name: Marketing Assets
+    description: Retrieve approved marketing collateral.
+  - name: ACORD Forms
+    description: Generate ACORD-style PDF forms from policy and claim data.
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+security:
+  - oauth2: []
+
+components:
+  # -----------------------------------------------------------------------
+  # Security Schemes
+  # -----------------------------------------------------------------------
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:3003/oauth/token
+          scopes:
+            ecm:documents:read: Read documents and audit records
+            ecm:documents:write: Create and generate documents
+            ecm:documents:upload: Upload new documents
+            ecm:envelopes:create: Create signature envelopes
+            ecm:assets:read: Read marketing assets
+            ecm:acord:read: Generate ACORD-style PDF forms
+
+  # -----------------------------------------------------------------------
+  # Parameters
+  # -----------------------------------------------------------------------
+  parameters:
+    ClientIdPath:
+      name: client_id
+      in: path
+      required: true
+      description: Unique identifier of the client (policyholder).
+      schema:
+        type: string
+        format: uuid
+        example: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      description: Maximum number of items to return (1-100).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+
+    CursorQuery:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque cursor returned by the previous page.
+      schema:
+        type: string
+        example: "eyJkb2N1bWVudF9pZCI6IjEyMzQ1In0="
+
+  # -----------------------------------------------------------------------
+  # Schemas
+  # -----------------------------------------------------------------------
+  schemas:
+    # -- Enums ------------------------------------------------------------
+    DocumentType:
+      type: string
+      enum:
+        - signed_application
+        - id_verification
+        - coi
+        - dec_page
+        - endorsement
+        - cancellation_notice
+        - welcome_kit
+      example: signed_application
+
+    DocumentStatus:
+      type: string
+      enum:
+        - uploaded
+        - pending_signature
+        - signed
+        - expired
+        - generated
+      example: signed
+
+    EnvelopeStatus:
+      type: string
+      enum:
+        - created
+        - sent
+        - viewed
+        - signed
+        - completed
+        - declined
+        - expired
+      example: completed
+
+    MarketingAssetCategory:
+      type: string
+      enum:
+        - welcome_kit
+        - flyer
+        - comparison_template
+        - social_media
+      example: welcome_kit
+
+    ComplianceStatus:
+      type: string
+      enum:
+        - compliant
+        - missing_documents
+        - expired_documents
+      example: missing_documents
+
+    AcordFormType:
+      type: string
+      enum:
+        - "90"
+        - "80"
+        - "35"
+      description: |
+        ACORD form type:
+        - 90: Personal Auto Application
+        - 80: Homeowners Application
+        - 35: Loss Notice
+      example: "90"
+
+    # -- Core Resources ---------------------------------------------------
+    Document:
+      type: object
+      required:
+        - document_id
+        - client_id
+        - document_type
+        - filename
+        - mime_type
+        - file_size_bytes
+        - status
+        - upload_date
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Unique document identifier.
+          example: "d4e5f6a7-1234-5678-9abc-def012345678"
+        client_id:
+          type: string
+          format: uuid
+          example: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+        document_type:
+          $ref: "#/components/schemas/DocumentType"
+        filename:
+          type: string
+          example: "signed_application_2025-06-15.pdf"
+        mime_type:
+          type: string
+          example: "application/pdf"
+        file_size_bytes:
+          type: integer
+          format: int64
+          minimum: 0
+          example: 245832
+        status:
+          $ref: "#/components/schemas/DocumentStatus"
+        upload_date:
+          type: string
+          format: date-time
+          example: "2025-06-15T14:32:00Z"
+        signer_name:
+          type: string
+          nullable: true
+          example: "Amara Osei"
+        signer_email:
+          type: string
+          format: email
+          nullable: true
+          example: "amara.osei@example.com"
+        signed_date:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-06-16T09:10:22Z"
+        expiration_date:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-06-15T23:59:59Z"
+        tags:
+          type: array
+          items:
+            type: string
+          example:
+            - "auto"
+            - "new_business"
+            - "priority"
+
+    DocumentUpload:
+      type: object
+      required:
+        - file
+        - client_id
+        - document_type
+      properties:
+        file:
+          type: string
+          format: binary
+          description: The document file to upload.
+        client_id:
+          type: string
+          format: uuid
+          example: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+        document_type:
+          $ref: "#/components/schemas/DocumentType"
+        description:
+          type: string
+          maxLength: 500
+          example: "Signed homeowners application for policy HO-2025-88431"
+        tags:
+          type: array
+          items:
+            type: string
+          example:
+            - "homeowners"
+            - "new_business"
+
+    DocumentUploadResponse:
+      type: object
+      required:
+        - document_id
+        - filename
+        - mime_type
+        - upload_date
+        - status
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        filename:
+          type: string
+          example: "ho_application_signed.pdf"
+        mime_type:
+          type: string
+          example: "application/pdf"
+        upload_date:
+          type: string
+          format: date-time
+          example: "2025-07-20T11:05:33Z"
+        status:
+          $ref: "#/components/schemas/DocumentStatus"
+
+    # -- COI Generation ------------------------------------------------------
+    CoiGenerateRequest:
+      type: object
+      description: Payload to generate a Certificate of Insurance.
+      required:
+        - policy_id
+        - certificate_holder
+      properties:
+        policy_id:
+          type: string
+          description: Policy identifier from the AMS service.
+          example: "POL-PA-2024-001847"
+        certificate_holder:
+          type: object
+          description: Entity to whom the certificate is issued.
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              description: Name of the certificate holder.
+              maxLength: 200
+              example: "Springfield Property Management LLC"
+            address:
+              type: object
+              description: Mailing address of the certificate holder.
+              properties:
+                street:
+                  type: string
+                  maxLength: 200
+                  example: "100 Main Street, Suite 400"
+                city:
+                  type: string
+                  maxLength: 100
+                  example: "Springfield"
+                state:
+                  type: string
+                  pattern: "^[A-Z]{2}$"
+                  example: "IL"
+                zip:
+                  type: string
+                  pattern: "^\\d{5}(-\\d{4})?$"
+                  example: "62704"
+        description:
+          type: string
+          maxLength: 500
+          description: Optional description or notes for the certificate.
+          example: "Proof of liability coverage for lease agreement."
+
+    CoiGenerateResponse:
+      type: object
+      description: Generated Certificate of Insurance document.
+      required:
+        - document_id
+        - client_id
+        - policy_id
+        - document_type
+        - filename
+        - status
+        - certificate_holder
+        - coverage_summary
+        - created_at
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Unique document identifier.
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        client_id:
+          type: string
+          format: uuid
+          description: Client (policyholder) identifier.
+          example: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+        policy_id:
+          type: string
+          description: Policy identifier.
+          example: "POL-PA-2024-001847"
+        document_type:
+          type: string
+          description: Always `coi` for generated certificates.
+          enum:
+            - coi
+          example: "coi"
+        filename:
+          type: string
+          description: Generated filename.
+          example: "coi_POL-PA-2024-001847_2026-02-22.pdf"
+        status:
+          $ref: "#/components/schemas/DocumentStatus"
+        certificate_holder:
+          type: object
+          description: Certificate holder details as submitted.
+          properties:
+            name:
+              type: string
+              example: "Springfield Property Management LLC"
+            address:
+              type: object
+              properties:
+                street:
+                  type: string
+                  example: "100 Main Street, Suite 400"
+                city:
+                  type: string
+                  example: "Springfield"
+                state:
+                  type: string
+                  example: "IL"
+                zip:
+                  type: string
+                  example: "62704"
+        description:
+          type: string
+          nullable: true
+          example: "Proof of liability coverage for lease agreement."
+        coverage_summary:
+          type: object
+          description: Summary of the policy coverage included on the certificate.
+          required:
+            - policy_type
+            - carrier_code
+            - effective_date
+            - expiration_date
+            - coverages
+          properties:
+            policy_type:
+              type: string
+              example: "personal_auto"
+            carrier_code:
+              type: string
+              example: "TRAV"
+            effective_date:
+              type: string
+              format: date
+              example: "2024-07-01"
+            expiration_date:
+              type: string
+              format: date
+              example: "2025-07-01"
+            coverages:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "bodily_injury"
+                  limit:
+                    type: number
+                    format: double
+                    example: 250000.00
+                  deductible:
+                    type: number
+                    format: double
+                    example: 0
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the document was generated (UTC).
+          example: "2026-02-22T10:30:00Z"
+
+    Signer:
+      type: object
+      required:
+        - name
+        - email
+        - role
+        - status
+      properties:
+        name:
+          type: string
+          example: "Amara Osei"
+        email:
+          type: string
+          format: email
+          example: "amara.osei@example.com"
+        role:
+          type: string
+          description: Role of the signer (e.g. policyholder, agent, witness).
+          example: "policyholder"
+        status:
+          type: string
+          enum:
+            - pending
+            - viewed
+            - signed
+            - declined
+          example: signed
+        signed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-06-16T09:10:22Z"
+
+    Envelope:
+      type: object
+      required:
+        - envelope_id
+        - client_id
+        - document_ids
+        - signers
+        - status
+        - created_at
+        - expiration_date
+      properties:
+        envelope_id:
+          type: string
+          format: uuid
+          example: "e9f8d7c6-b5a4-3210-fedc-ba9876543210"
+        client_id:
+          type: string
+          format: uuid
+          example: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+        document_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          example:
+            - "d4e5f6a7-1234-5678-9abc-def012345678"
+        signers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Signer"
+        status:
+          $ref: "#/components/schemas/EnvelopeStatus"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-06-15T14:35:00Z"
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-06-16T09:10:22Z"
+        expiration_date:
+          type: string
+          format: date-time
+          example: "2025-07-15T23:59:59Z"
+
+    EnvelopeCreateRequest:
+      type: object
+      required:
+        - client_id
+        - document_ids
+        - signers
+      properties:
+        client_id:
+          type: string
+          format: uuid
+          example: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+        document_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          example:
+            - "d4e5f6a7-1234-5678-9abc-def012345678"
+        signers:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - email
+              - role
+            properties:
+              name:
+                type: string
+                example: "Amara Osei"
+              email:
+                type: string
+                format: email
+                example: "amara.osei@example.com"
+              role:
+                type: string
+                example: "policyholder"
+          minItems: 1
+        message:
+          type: string
+          maxLength: 1000
+          description: Optional message included in the signing notification email.
+          example: "Please review and sign your homeowners policy application. Contact your agent with questions."
+        redirect_url:
+          type: string
+          format: uri
+          description: URL to redirect the signer to after signing is complete.
+          example: "http://localhost:3003/signing-complete"
+
+    MarketingAsset:
+      type: object
+      required:
+        - asset_id
+        - name
+        - category
+        - mime_type
+        - url
+        - version
+        - published_date
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+          example: "fa12bc34-de56-7890-ab12-cd34ef567890"
+        name:
+          type: string
+          example: "Homeowners Welcome Kit - 2025 Edition"
+        description:
+          type: string
+          nullable: true
+          example: "Comprehensive welcome package including coverage summary, claims process overview, and emergency contacts."
+        category:
+          $ref: "#/components/schemas/MarketingAssetCategory"
+        mime_type:
+          type: string
+          example: "application/pdf"
+        url:
+          type: string
+          format: uri
+          example: "http://localhost:3003/assets/welcome-kit-homeowners-2025-v3.pdf"
+        version:
+          type: string
+          description: Semantic version of the asset.
+          example: "3.1.0"
+        published_date:
+          type: string
+          format: date-time
+          example: "2025-04-01T00:00:00Z"
+
+    MissingDocument:
+      type: object
+      required:
+        - document_type
+        - required_by
+        - reason
+      properties:
+        document_type:
+          $ref: "#/components/schemas/DocumentType"
+        required_by:
+          type: string
+          format: date-time
+          description: Deadline by which the document must be provided.
+          example: "2025-08-01T23:59:59Z"
+        reason:
+          type: string
+          example: "State law requires a government-issued photo ID on file before binding coverage."
+
+    AuditResult:
+      type: object
+      required:
+        - client_id
+        - documents
+        - compliance_status
+        - missing_documents
+      properties:
+        client_id:
+          type: string
+          format: uuid
+          example: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        compliance_status:
+          $ref: "#/components/schemas/ComplianceStatus"
+        missing_documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/MissingDocument"
+
+    # -- Pagination wrapper -----------------------------------------------
+    PaginationMeta:
+      type: object
+      required:
+        - has_more
+      properties:
+        cursor:
+          type: string
+          nullable: true
+          description: Cursor to pass for the next page. Null when `has_more` is false.
+          example: "eyJkb2N1bWVudF9pZCI6Ijk5OTk5In0="
+        has_more:
+          type: boolean
+          example: true
+
+    # -- Error ------------------------------------------------------------
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error description.
+          example: "client_id is required."
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "client_id"
+              issue:
+                type: string
+                example: "Must be a valid UUID."
+          nullable: true
+        request_id:
+          type: string
+          format: uuid
+          description: Correlation ID for support investigations.
+          example: "req-8c4f2a1b-3d5e-4f6a-b7c8-d9e0f1a2b3c4"
+
+  # -----------------------------------------------------------------------
+  # Reusable Responses
+  # -----------------------------------------------------------------------
+  responses:
+    BadRequest:
+      description: The request body or query parameters are invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "VALIDATION_ERROR"
+            message: "Request validation failed."
+            details:
+              - field: "client_id"
+                issue: "Must be a valid UUID."
+            request_id: "req-8c4f2a1b-3d5e-4f6a-b7c8-d9e0f1a2b3c4"
+
+    Unauthorized:
+      description: Bearer token is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "UNAUTHORIZED"
+            message: "Bearer token is missing or has expired."
+            request_id: "req-11112222-3333-4444-5555-666677778888"
+
+    Forbidden:
+      description: The token does not have the required scope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "FORBIDDEN"
+            message: "Token lacks the ecm:documents:upload scope."
+            request_id: "req-aaaa1111-bbbb-2222-cccc-3333dddd4444"
+
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "NOT_FOUND"
+            message: "Client b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04 has no documents on file."
+            request_id: "req-55556666-7777-8888-9999-aaaa0000bbbb"
+
+    Conflict:
+      description: The request conflicts with existing state.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "CONFLICT"
+            message: "An envelope already exists for this document set and is awaiting signatures."
+            request_id: "req-ccccdddd-eeee-ffff-0000-111122223333"
+
+    InternalServerError:
+      description: An unexpected server error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "INTERNAL_ERROR"
+            message: "An unexpected error occurred. Please retry or contact support with the request_id."
+            request_id: "req-deadbeef-cafe-babe-face-123456789abc"
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+paths:
+  # -----------------------------------------------------------------------
+  # POST /documents/upload
+  # -----------------------------------------------------------------------
+  /documents/upload:
+    post:
+      operationId: uploadDocument
+      summary: Upload a document
+      description: |
+        Store a new scan, signed form, or other policy document.
+        The file is virus-scanned asynchronously; `status` will remain
+        `uploaded` until processing completes.
+      tags:
+        - Documents
+      security:
+        - oauth2:
+            - ecm:documents:upload
+
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/DocumentUpload"
+            encoding:
+              file:
+                contentType: application/pdf, image/jpeg, image/png, image/tiff
+      responses:
+        "201":
+          description: Document uploaded successfully.
+          headers:
+            Location:
+              description: URL of the newly created document resource.
+              schema:
+                type: string
+                format: uri
+              example: "http://localhost:3003/documents/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentUploadResponse"
+              example:
+                document_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                filename: "ho_application_signed.pdf"
+                mime_type: "application/pdf"
+                upload_date: "2025-07-20T11:05:33Z"
+                status: "uploaded"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # -----------------------------------------------------------------------
+  # POST /documents/coi/generate
+  # -----------------------------------------------------------------------
+  /documents/coi/generate:
+    post:
+      operationId: generateCoi
+      summary: Generate Certificate of Insurance
+      description: |
+        Generate a Certificate of Insurance (COI) document for an existing
+        policy.  The certificate is created as a PDF and stored in the document
+        management system.  Coverage details are populated automatically from
+        the policy record.
+      tags:
+        - Documents
+      security:
+        - oauth2:
+            - ecm:documents:write
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoiGenerateRequest"
+            example:
+              policy_id: "POL-PA-2024-001847"
+              certificate_holder:
+                name: "Springfield Property Management LLC"
+                address:
+                  street: "100 Main Street, Suite 400"
+                  city: "Springfield"
+                  state: "IL"
+                  zip: "62704"
+              description: "Proof of liability coverage for lease agreement."
+      responses:
+        "201":
+          description: Certificate of Insurance generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoiGenerateResponse"
+              example:
+                document_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                client_id: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+                policy_id: "POL-PA-2024-001847"
+                document_type: "coi"
+                filename: "coi_POL-PA-2024-001847_2026-02-22.pdf"
+                status: "uploaded"
+                certificate_holder:
+                  name: "Springfield Property Management LLC"
+                  address:
+                    street: "100 Main Street, Suite 400"
+                    city: "Springfield"
+                    state: "IL"
+                    zip: "62704"
+                description: "Proof of liability coverage for lease agreement."
+                coverage_summary:
+                  policy_type: "personal_auto"
+                  carrier_code: "TRAV"
+                  effective_date: "2024-07-01"
+                  expiration_date: "2025-07-01"
+                  coverages:
+                    - type: "bodily_injury"
+                      limit: 250000.00
+                      deductible: 0
+                    - type: "property_damage"
+                      limit: 100000.00
+                      deductible: 0
+                created_at: "2026-02-22T10:30:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # -----------------------------------------------------------------------
+  # GET /documents
+  # -----------------------------------------------------------------------
+  /documents:
+    get:
+      operationId: listDocuments
+      summary: List all documents
+      description: |
+        General document listing across all clients.  Supports filtering by
+        `status`, `document_type`, and upload date range.  Results are sorted
+        by `upload_date` descending.
+      tags:
+        - Documents
+      security:
+        - oauth2:
+            - ecm:documents:read
+
+      parameters:
+        - $ref: "#/components/parameters/LimitQuery"
+        - $ref: "#/components/parameters/CursorQuery"
+        - name: status
+          in: query
+          required: false
+          description: Filter documents by status.
+          schema:
+            $ref: "#/components/schemas/DocumentStatus"
+        - name: document_type
+          in: query
+          required: false
+          description: Filter documents by type.
+          schema:
+            $ref: "#/components/schemas/DocumentType"
+        - name: date_from
+          in: query
+          required: false
+          description: Return documents uploaded on or after this date-time (inclusive).
+          schema:
+            type: string
+            format: date-time
+            example: "2026-01-01T00:00:00Z"
+        - name: date_to
+          in: query
+          required: false
+          description: Return documents uploaded on or before this date-time (inclusive).
+          schema:
+            type: string
+            format: date-time
+            example: "2026-02-28T23:59:59Z"
+      responses:
+        "200":
+          description: Documents retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Document"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # -----------------------------------------------------------------------
+  # GET /documents/{client_id}/audit
+  # -----------------------------------------------------------------------
+  /documents/{client_id}/audit:
+    get:
+      operationId: auditClientDocuments
+      summary: Audit a client's documents for compliance
+      description: |
+        Returns every document on file for the given client together with a
+        compliance verdict.  If required documents are missing or expired the
+        response includes actionable details.
+      tags:
+        - Documents
+      security:
+        - oauth2:
+            - ecm:documents:read
+
+      parameters:
+        - $ref: "#/components/parameters/ClientIdPath"
+        - $ref: "#/components/parameters/LimitQuery"
+        - $ref: "#/components/parameters/CursorQuery"
+        - name: status
+          in: query
+          required: false
+          description: Filter documents by status.
+          schema:
+            $ref: "#/components/schemas/DocumentStatus"
+      responses:
+        "200":
+          description: Audit completed successfully.
+          headers:
+
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/AuditResult"
+                  - type: object
+                    properties:
+                      pagination:
+                        $ref: "#/components/schemas/PaginationMeta"
+              example:
+                client_id: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+                documents:
+                  - document_id: "d4e5f6a7-1234-5678-9abc-def012345678"
+                    client_id: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+                    document_type: "signed_application"
+                    filename: "signed_application_2025-06-15.pdf"
+                    mime_type: "application/pdf"
+                    file_size_bytes: 245832
+                    status: "signed"
+                    upload_date: "2025-06-15T14:32:00Z"
+                    signer_name: "Amara Osei"
+                    signer_email: "amara.osei@example.com"
+                    signed_date: "2025-06-16T09:10:22Z"
+                    expiration_date: "2026-06-15T23:59:59Z"
+                    tags:
+                      - "auto"
+                      - "new_business"
+                  - document_id: "c3d4e5f6-abcd-1234-ef56-789012345678"
+                    client_id: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+                    document_type: "coi"
+                    filename: "coi_commercial_liability.pdf"
+                    mime_type: "application/pdf"
+                    file_size_bytes: 98210
+                    status: "expired"
+                    upload_date: "2024-03-01T10:00:00Z"
+                    signer_name: null
+                    signer_email: null
+                    signed_date: null
+                    expiration_date: "2025-03-01T23:59:59Z"
+                    tags:
+                      - "commercial"
+                      - "liability"
+                compliance_status: "missing_documents"
+                missing_documents:
+                  - document_type: "id_verification"
+                    required_by: "2025-08-01T23:59:59Z"
+                    reason: "State law requires a government-issued photo ID on file before binding coverage."
+                  - document_type: "coi"
+                    required_by: "2025-07-15T23:59:59Z"
+                    reason: "Existing certificate of insurance expired on 2025-03-01. A renewed COI is required for continued commercial liability coverage."
+                pagination:
+                  cursor: "eyJkb2N1bWVudF9pZCI6ImMzZDRlNWY2In0="
+                  has_more: false
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # -----------------------------------------------------------------------
+  # POST /envelopes/create
+  # -----------------------------------------------------------------------
+  /envelopes/create:
+    post:
+      operationId: createEnvelope
+      summary: Create a signature envelope
+      description: |
+        Generate a DocuSign-style e-signature request for one or more
+        documents.  Each signer receives an email notification with a secure
+        link.  The envelope expires after 30 days by default.
+      tags:
+        - Envelopes
+      security:
+        - oauth2:
+            - ecm:envelopes:create
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnvelopeCreateRequest"
+            example:
+              client_id: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+              document_ids:
+                - "d4e5f6a7-1234-5678-9abc-def012345678"
+              signers:
+                - name: "Amara Osei"
+                  email: "amara.osei@example.com"
+                  role: "policyholder"
+                - name: "David Chen"
+                  email: "david.chen@evergreen-ins.com"
+                  role: "agent"
+              message: "Please review and sign your homeowners policy application. Contact your agent with questions."
+              redirect_url: "http://localhost:3003/signing-complete"
+      responses:
+        "201":
+          description: Envelope created and notifications queued.
+          headers:
+            Location:
+              description: URL of the newly created envelope resource.
+              schema:
+                type: string
+                format: uri
+              example: "http://localhost:3003/envelopes/e9f8d7c6-b5a4-3210-fedc-ba9876543210"
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+              example:
+                envelope_id: "e9f8d7c6-b5a4-3210-fedc-ba9876543210"
+                client_id: "b2f7c8a1-49d3-4e6a-8c15-7a3d9e2b1f04"
+                document_ids:
+                  - "d4e5f6a7-1234-5678-9abc-def012345678"
+                signers:
+                  - name: "Amara Osei"
+                    email: "amara.osei@example.com"
+                    role: "policyholder"
+                    status: "pending"
+                    signed_at: null
+                  - name: "David Chen"
+                    email: "david.chen@evergreen-ins.com"
+                    role: "agent"
+                    status: "pending"
+                    signed_at: null
+                status: "created"
+                created_at: "2025-06-15T14:35:00Z"
+                completed_at: null
+                expiration_date: "2025-07-15T23:59:59Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # -----------------------------------------------------------------------
+  # GET /assets/marketing
+  # -----------------------------------------------------------------------
+  /assets/marketing:
+    get:
+      operationId: listMarketingAssets
+      summary: List marketing assets
+      description: |
+        Retrieve the latest approved marketing collateral such as PDF flyers,
+        Welcome Kits, comparison templates, and social-media graphics.  Results
+        are sorted by `published_date` descending.
+      tags:
+        - Marketing Assets
+      security:
+        - oauth2:
+            - ecm:assets:read
+
+      parameters:
+        - $ref: "#/components/parameters/LimitQuery"
+        - $ref: "#/components/parameters/CursorQuery"
+        - name: category
+          in: query
+          required: false
+          description: Filter assets by category.
+          schema:
+            $ref: "#/components/schemas/MarketingAssetCategory"
+      responses:
+        "200":
+          description: Marketing assets retrieved successfully.
+          headers:
+
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MarketingAsset"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+              example:
+                data:
+                  - asset_id: "fa12bc34-de56-7890-ab12-cd34ef567890"
+                    name: "Homeowners Welcome Kit - 2025 Edition"
+                    description: "Comprehensive welcome package including coverage summary, claims process overview, and emergency contacts."
+                    category: "welcome_kit"
+                    mime_type: "application/pdf"
+                    url: "http://localhost:3003/assets/welcome-kit-homeowners-2025-v3.pdf"
+                    version: "3.1.0"
+                    published_date: "2025-04-01T00:00:00Z"
+                  - asset_id: "bb22cc33-dd44-ee55-ff66-778899001122"
+                    name: "Summer Auto Insurance Savings Flyer"
+                    description: "Seasonal promotional flyer highlighting bundled auto + renters discounts."
+                    category: "flyer"
+                    mime_type: "application/pdf"
+                    url: "http://localhost:3003/assets/flyer-summer-auto-savings-2025.pdf"
+                    version: "1.0.0"
+                    published_date: "2025-05-15T00:00:00Z"
+                  - asset_id: "1a2b3c4d-5e6f-7a8b-9c0d-e1f2a3b4c5d6"
+                    name: "Term vs. Whole Life Comparison Template"
+                    description: "Side-by-side comparison sheet for agents to use during client consultations."
+                    category: "comparison_template"
+                    mime_type: "application/pdf"
+                    url: "http://localhost:3003/assets/comparison-term-vs-whole-life-v2.pdf"
+                    version: "2.0.0"
+                    published_date: "2025-02-10T00:00:00Z"
+                pagination:
+                  cursor: "eyJhc3NldF9pZCI6IjFhMmIzYzRkIn0="
+                  has_more: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # -----------------------------------------------------------------------
+  # GET /documents/acord/{form_type}
+  # -----------------------------------------------------------------------
+  /documents/acord/{form_type}:
+    get:
+      operationId: generateAcordForm
+      summary: Generate an ACORD-style PDF form
+      description: |
+        Generates a PDF in the style of the specified ACORD form, populated
+        with data fetched from the AMS and Claims services.
+
+        - **ACORD 90** (Personal Auto Application): requires `policy_id` for a `personal_auto` policy
+        - **ACORD 80** (Homeowners Application): requires `policy_id` for a `homeowners` policy
+        - **ACORD 35** (Loss Notice): requires `claim_id`
+      tags:
+        - ACORD Forms
+      security:
+        - oauth2:
+            - ecm:acord:read
+
+      parameters:
+        - name: form_type
+          in: path
+          required: true
+          description: The ACORD form number to generate.
+          schema:
+            $ref: "#/components/schemas/AcordFormType"
+        - name: policy_id
+          in: query
+          required: false
+          description: Policy ID from the AMS service. Required for forms 90 and 80.
+          schema:
+            type: string
+            example: "POL-PA-2025-001847"
+        - name: claim_id
+          in: query
+          required: false
+          description: Claim ID from the Claims service. Required for form 35.
+          schema:
+            type: string
+            example: "CLM-2025-000001"
+      responses:
+        "200":
+          description: PDF generated successfully.
+          headers:
+            Content-Disposition:
+              description: Suggested filename for the generated PDF.
+              schema:
+                type: string
+              example: 'inline; filename="ACORD-90.pdf"'
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"

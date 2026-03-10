@@ -1,0 +1,96 @@
+[
+  {
+    "endorsement_id": "END-2025-009432",
+    "policy_id": "POL-PA-2025-001847",
+    "effective_date": "2025-09-01",
+    "change_type": "add_vehicle",
+    "changes": {
+      "vehicle": {
+        "year": 2024,
+        "make": "Toyota",
+        "model": "RAV4",
+        "vin": "JTMRWRFV0RD123456"
+      },
+      "usage": "commute",
+      "annual_mileage": 12000
+    },
+    "premium_delta": 312.00,
+    "status": "approved",
+    "notes": "Client purchased new vehicle; replacing 2018 Civic on the policy.",
+    "created_at": "2025-08-20T14:22:00Z",
+    "updated_at": "2025-08-25T10:15:00Z"
+  },
+  {
+    "endorsement_id": "END-2025-009500",
+    "policy_id": "POL-HO-2025-000312",
+    "effective_date": "2025-10-01",
+    "change_type": "modify_coverage",
+    "changes": {
+      "coverage_type": "dwelling",
+      "old_limit": 450000,
+      "new_limit": 500000,
+      "reason": "Home renovation completed, increased replacement cost"
+    },
+    "premium_delta": 85.00,
+    "status": "applied",
+    "notes": "Dwelling limit increase following kitchen and bathroom renovation.",
+    "created_at": "2025-09-15T09:30:00Z",
+    "updated_at": "2025-09-20T16:45:00Z"
+  },
+  {
+    "endorsement_id": "END-2025-009601",
+    "policy_id": "POL-PA-2025-002103",
+    "effective_date": "2025-11-15",
+    "change_type": "address_change",
+    "changes": {
+      "old_address": {
+        "street": "1580 Bluebonnet Lane",
+        "city": "Houston",
+        "state": "TX",
+        "zip": "77004"
+      },
+      "new_address": {
+        "street": "2340 Oak Park Boulevard",
+        "city": "Houston",
+        "state": "TX",
+        "zip": "77019"
+      }
+    },
+    "premium_delta": -25.00,
+    "status": "pending_review",
+    "notes": "Client moved to new neighborhood. Updated garaging address.",
+    "created_at": "2025-11-01T11:00:00Z",
+    "updated_at": "2025-11-01T11:00:00Z"
+  },
+  {
+    "endorsement_id": "END-2025-009700",
+    "policy_id": "POL-BO-2025-000045",
+    "effective_date": "2025-07-01",
+    "change_type": "add_coverage",
+    "changes": {
+      "coverage_type": "cyber_liability",
+      "limit": 100000,
+      "deductible": 2500
+    },
+    "premium_delta": 450.00,
+    "status": "submitted_to_carrier",
+    "notes": "Adding cyber liability coverage per client request after industry data breach.",
+    "created_at": "2025-06-15T13:45:00Z",
+    "updated_at": "2025-06-18T09:00:00Z"
+  },
+  {
+    "endorsement_id": "END-2025-009810",
+    "policy_id": "POL-PA-2025-002410",
+    "effective_date": "2025-08-01",
+    "change_type": "remove_driver",
+    "changes": {
+      "driver_name": "Emily Wilson",
+      "reason": "Driver moved out of household"
+    },
+    "premium_delta": -180.00,
+    "status": "rejected",
+    "notes": "Carrier rejected: driver still listed on vehicle registration.",
+    "created_at": "2025-07-10T10:20:00Z",
+    "updated_at": "2025-07-15T14:30:00Z"
+  }
+]

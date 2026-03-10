@@ -1,0 +1,13 @@
+{
+  "name": "@evergreen/e2e-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test --serial scenarios/",
+    "test:report": "bun run run.ts"
+  },
+  "dependencies": {
+    "@evergreen/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.11.0"
+  }
+}

@@ -1,0 +1,584 @@
+openapi: 3.0.3
+info:
+  title: Evergreen Claims Service API
+  description: |
+    RESTful API for insurance claims lifecycle management.
+
+    Supports First Notice of Loss (FNOL) intake, adjuster assignment,
+    investigation tracking, reserve management, settlement/denial workflows,
+    claim document management, and chronological activity timelines.
+
+    ## Authentication
+    All endpoints require an OAuth 2.0 Bearer token obtained via the
+    client credentials flow (`POST /oauth/token`).
+
+    ## Pagination
+    List endpoints use cursor-based pagination with `limit` (max 100,
+    default 25) and an opaque `cursor` parameter.
+
+    ## Status Lifecycle
+    `reported` → `assigned` → `investigating` → `reserved` → `settled` | `denied`
+
+    ## Errors
+    All error responses use a common envelope with `error_code`, `message`,
+    `correlation_id`, and optional `details` array.
+  version: 1.0.0
+  contact:
+    name: Evergreen Claims Engineering
+
+servers:
+  - url: http://localhost:3007
+    description: Local development
+
+tags:
+  - name: Claims
+    description: Claim lifecycle management
+  - name: Adjusters
+    description: Claims adjuster management
+
+security:
+  - oauth2: []
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:3007/oauth/token
+          scopes:
+            claims:read: Read claims and adjusters
+            claims:write: Create and update claims
+            claims:assign: Assign adjusters to claims
+            claims:documents: Upload claim documents
+
+  schemas:
+    Claim:
+      type: object
+      properties:
+        claim_id:
+          type: string
+          example: CLM-2026-000001
+        policy_id:
+          type: string
+        client_id:
+          type: string
+        claim_type:
+          type: string
+          enum: [auto_collision, auto_comprehensive, property_damage, theft, liability, medical, fire, water, weather]
+        status:
+          type: string
+          enum: [reported, assigned, investigating, reserved, settled, denied]
+        loss_date:
+          type: string
+          format: date
+        reported_date:
+          type: string
+          format: date
+        loss_description:
+          type: string
+        loss_location:
+          type: string
+          nullable: true
+        reserve_amount:
+          type: number
+          nullable: true
+        settlement_amount:
+          type: number
+          nullable: true
+        adjuster_id:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ClaimDetail:
+      allOf:
+        - $ref: '#/components/schemas/Claim'
+        - type: object
+          properties:
+            adjuster:
+              $ref: '#/components/schemas/Adjuster'
+              nullable: true
+            timeline:
+              type: array
+              items:
+                $ref: '#/components/schemas/TimelineEvent'
+            documents:
+              type: array
+              items:
+                $ref: '#/components/schemas/ClaimDocument'
+
+    Adjuster:
+      type: object
+      properties:
+        adjuster_id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        specialty:
+          type: string
+          enum: [auto, property, liability, general]
+        active:
+          type: integer
+          enum: [0, 1]
+        max_open_claims:
+          type: integer
+        open_claims_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    TimelineEvent:
+      type: object
+      properties:
+        event_id:
+          type: string
+        claim_id:
+          type: string
+        event_type:
+          type: string
+          enum: [status_change, assignment, note, document_upload, reserve_change, payment]
+        description:
+          type: string
+        old_value:
+          type: string
+          nullable: true
+        new_value:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ClaimDocument:
+      type: object
+      properties:
+        document_id:
+          type: string
+        claim_id:
+          type: string
+        document_type:
+          type: string
+          enum: [police_report, medical_records, photos, estimate, correspondence, other]
+        file_name:
+          type: string
+        file_path:
+          type: string
+        uploaded_by:
+          type: string
+          nullable: true
+        uploaded_at:
+          type: string
+          format: date-time
+
+    FnolRequest:
+      type: object
+      required: [policy_id, client_id, claim_type, loss_date, loss_description]
+      properties:
+        policy_id:
+          type: string
+        client_id:
+          type: string
+        claim_type:
+          type: string
+          enum: [auto_collision, auto_comprehensive, property_damage, theft, liability, medical, fire, water, weather]
+        loss_date:
+          type: string
+          format: date
+        loss_description:
+          type: string
+          maxLength: 5000
+        loss_location:
+          type: string
+          maxLength: 500
+        notes:
+          type: string
+
+    ClaimUpdateRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [reported, assigned, investigating, reserved, settled, denied]
+        reserve_amount:
+          type: number
+          minimum: 0
+        settlement_amount:
+          type: number
+          minimum: 0
+        notes:
+          type: string
+          maxLength: 5000
+
+    AssignRequest:
+      type: object
+      required: [adjuster_id]
+      properties:
+        adjuster_id:
+          type: string
+
+    DocumentUploadRequest:
+      type: object
+      required: [document_type, file_name, file_path]
+      properties:
+        document_type:
+          type: string
+          enum: [police_report, medical_records, photos, estimate, correspondence, other]
+        file_name:
+          type: string
+          maxLength: 255
+        file_path:
+          type: string
+          maxLength: 1000
+        uploaded_by:
+          type: string
+
+    PaginationMeta:
+      type: object
+      properties:
+        limit:
+          type: integer
+        cursor:
+          type: string
+          nullable: true
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        error_code:
+          type: string
+        message:
+          type: string
+        correlation_id:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+              code:
+                type: string
+
+paths:
+  /claims/fnol:
+    post:
+      tags: [Claims]
+      summary: File First Notice of Loss
+      operationId: fileFnol
+      security:
+        - oauth2: [claims:write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FnolRequest'
+      responses:
+        '201':
+          description: Claim created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden — missing claims:write scope
+
+  /claims:
+    get:
+      tags: [Claims]
+      summary: List claims
+      operationId: listClaims
+      security:
+        - oauth2: [claims:read]
+      parameters:
+        - name: client_id
+          in: query
+          schema:
+            type: string
+        - name: policy_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [reported, assigned, investigating, reserved, settled, denied]
+        - name: claim_type
+          in: query
+          schema:
+            type: string
+            enum: [auto_collision, auto_comprehensive, property_damage, theft, liability, medical, fire, water, weather]
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of claims
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Claim'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /claims/{claim_id}:
+    get:
+      tags: [Claims]
+      summary: Get claim details
+      operationId: getClaimDetail
+      security:
+        - oauth2: [claims:read]
+      parameters:
+        - name: claim_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Claim with adjuster, timeline, and documents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimDetail'
+        '404':
+          description: Claim not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags: [Claims]
+      summary: Update claim status, reserves, or notes
+      operationId: updateClaim
+      security:
+        - oauth2: [claims:write]
+      parameters:
+        - name: claim_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimUpdateRequest'
+      responses:
+        '200':
+          description: Updated claim
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '400':
+          description: Validation error (invalid transition, negative amount)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Claim not found
+
+  /claims/{claim_id}/assign:
+    post:
+      tags: [Claims]
+      summary: Assign adjuster to claim
+      operationId: assignAdjuster
+      security:
+        - oauth2: [claims:assign]
+      parameters:
+        - name: claim_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+      responses:
+        '200':
+          description: Claim with adjuster assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '400':
+          description: Adjuster inactive or at capacity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Claim or adjuster not found
+
+  /claims/{claim_id}/timeline:
+    get:
+      tags: [Claims]
+      summary: Get claim activity timeline
+      operationId: getClaimTimeline
+      security:
+        - oauth2: [claims:read]
+      parameters:
+        - name: claim_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chronological list of timeline events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TimelineEvent'
+        '404':
+          description: Claim not found
+
+  /claims/{claim_id}/documents:
+    post:
+      tags: [Claims]
+      summary: Upload claim document metadata
+      operationId: uploadClaimDocument
+      security:
+        - oauth2: [claims:documents]
+      parameters:
+        - name: claim_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentUploadRequest'
+      responses:
+        '201':
+          description: Document metadata created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimDocument'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Claim not found
+
+  /adjusters:
+    get:
+      tags: [Adjusters]
+      summary: List adjusters
+      operationId: listAdjusters
+      security:
+        - oauth2: [claims:read]
+      parameters:
+        - name: specialty
+          in: query
+          schema:
+            type: string
+            enum: [auto, property, liability, general]
+        - name: active
+          in: query
+          schema:
+            type: string
+            enum: ['0', '1']
+      responses:
+        '200':
+          description: List of adjusters with open claim counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Adjuster'
+        '400':
+          description: Validation error

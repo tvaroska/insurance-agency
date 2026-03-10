@@ -1,0 +1,1153 @@
+openapi: 3.0.3
+info:
+  title: CRM & Marketing Automation API
+  description: |
+    Evergreen CRM & Marketing Automation API for insurance agencies.
+    Provides lead scoring, campaign enrollment, retention risk analytics,
+    and lead lifecycle management.
+  version: 1.4.0
+  contact:
+    name: Evergreen CRM Engineering
+
+servers:
+  - url: http://localhost:3002
+    description: Local development
+
+tags:
+  - name: Leads
+    description: Lead scoring and lifecycle management
+  - name: Campaigns
+    description: Nurture sequences and campaign enrollment
+  - name: Analytics
+    description: Retention risk and engagement analytics
+  - name: Webhooks
+    description: Webhook event payloads
+
+paths:
+  # -----------------------------------------------------------------------
+  # POST /leads
+  # -----------------------------------------------------------------------
+  /leads:
+    get:
+      operationId: listLeads
+      summary: List leads
+      description: |
+        Returns a paginated list of leads with optional filters. Use this
+        endpoint to browse leads by client, status, source, producer, or
+        minimum engagement score. Results are sorted by score descending.
+      tags:
+        - Leads
+      security:
+        - oauth2:
+            - crm:leads:read
+
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: client_id
+          in: query
+          description: Filter by associated client identifier.
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by lead status.
+          required: false
+          schema:
+            $ref: "#/components/schemas/LeadStatus"
+        - name: source
+          in: query
+          description: Filter by lead source.
+          required: false
+          schema:
+            $ref: "#/components/schemas/LeadSource"
+        - name: assigned_producer
+          in: query
+          description: Filter by assigned producer ID.
+          required: false
+          schema:
+            type: string
+        - name: min_score
+          in: query
+          description: Minimum engagement score filter (inclusive).
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated list of leads.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Lead"
+                  pagination:
+                    $ref: "#/components/schemas/CursorPagination"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    post:
+      operationId: createLead
+      summary: Create a lead
+      description: |
+        Create a new lead record.  The lead is always created with status `new`
+        and an initial engagement score of 50.
+      tags:
+        - Leads
+      security:
+        - oauth2:
+            - crm:leads:write
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadCreateRequest"
+            example:
+              first_name: "Margaret"
+              last_name: "Thornton"
+              email: "m.thornton@example.com"
+              source: "web"
+              client_id: "cli_90210abc"
+              phone: "+1-503-555-0147"
+              assigned_producer: "prod_44e1bc90"
+              tags:
+                - "high-value"
+                - "auto-and-home"
+              notes: "Referred by existing client Sarah Chen."
+      responses:
+        "201":
+          description: Lead created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+              example:
+                lead_id: "lead_8f3a12c4"
+                client_id: "cli_90210abc"
+                first_name: "Margaret"
+                last_name: "Thornton"
+                email: "m.thornton@example.com"
+                phone: "+1-503-555-0147"
+                source: "web"
+                status: "new"
+                score: 50
+                assigned_producer: "prod_44e1bc90"
+                tags:
+                  - "high-value"
+                  - "auto-and-home"
+                notes: "Referred by existing client Sarah Chen."
+                last_activity_date: "2026-02-22"
+                created_at: "2026-02-22T10:00:00Z"
+                updated_at: "2026-02-22T10:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /leads/scoring:
+    get:
+      operationId: getLeadScoring
+      summary: Get scored leads
+      description: |
+        Returns a list of leads ranked by engagement score. Use this endpoint
+        to identify "hot" leads that are most likely to convert. Results are
+        sorted by score descending by default.
+      tags:
+        - Leads
+      security:
+        - oauth2:
+            - crm:leads:read
+
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: min_score
+          in: query
+          description: Minimum engagement score filter (inclusive).
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 0
+        - name: status
+          in: query
+          description: Filter by lead status.
+          required: false
+          schema:
+            $ref: "#/components/schemas/LeadStatus"
+        - name: source
+          in: query
+          description: Filter by lead source.
+          required: false
+          schema:
+            $ref: "#/components/schemas/LeadSource"
+        - name: assigned_producer
+          in: query
+          description: Filter by assigned producer ID.
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Paginated list of scored leads.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Lead"
+                  pagination:
+                    $ref: "#/components/schemas/CursorPagination"
+              example:
+                data:
+                  - lead_id: "lead_8f3a12c4"
+                    client_id: "cli_90210abc"
+                    first_name: "Margaret"
+                    last_name: "Thornton"
+                    email: "m.thornton@example.com"
+                    phone: "+1-503-555-0147"
+                    source: "web"
+                    status: "qualified"
+                    score: 87
+                    assigned_producer: "prod_44e1bc90"
+                    tags:
+                      - "high-value"
+                      - "auto-and-home"
+                    last_activity_date: "2026-02-15"
+                    created_at: "2025-11-03T09:22:00Z"
+                    updated_at: "2026-02-15T14:08:33Z"
+                  - lead_id: "lead_c29e44d1"
+                    client_id: "cli_7734def0"
+                    first_name: "David"
+                    last_name: "Reyes"
+                    email: "d.reyes@example.com"
+                    phone: "+1-971-555-0283"
+                    source: "referral"
+                    status: "contacted"
+                    score: 74
+                    assigned_producer: "prod_44e1bc90"
+                    tags:
+                      - "referral-partner-jones"
+                    last_activity_date: "2026-02-12"
+                    created_at: "2026-01-20T16:45:10Z"
+                    updated_at: "2026-02-12T11:30:00Z"
+                pagination:
+                  limit: 25
+                  cursor: "eyJzIjo3NCwiaSI6ImxlYWRfYzI5ZTQ0ZDEifQ=="
+                  has_more: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /leads/{id}:
+    patch:
+      operationId: updateLead
+      summary: Update lead status
+      description: |
+        Update a lead's status, score, tags, notes, or assigned producer.
+        Partial updates are supported; only include the fields you want to change.
+      tags:
+        - Leads
+      security:
+        - oauth2:
+            - crm:leads:write
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique lead identifier.
+          schema:
+            type: string
+            example: "lead_8f3a12c4"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadUpdate"
+            example:
+              status: "proposal_sent"
+              score: 91
+              tags:
+                - "high-value"
+                - "auto-and-home"
+                - "proposal-q1-2026"
+              notes: "Sent bundled auto + home proposal. Follow up by 2026-02-25."
+              assigned_producer: "prod_44e1bc90"
+      responses:
+        "200":
+          description: Lead updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+              example:
+                lead_id: "lead_8f3a12c4"
+                client_id: "cli_90210abc"
+                first_name: "Margaret"
+                last_name: "Thornton"
+                email: "m.thornton@example.com"
+                phone: "+1-503-555-0147"
+                source: "web"
+                status: "proposal_sent"
+                score: 91
+                assigned_producer: "prod_44e1bc90"
+                tags:
+                  - "high-value"
+                  - "auto-and-home"
+                  - "proposal-q1-2026"
+                last_activity_date: "2026-02-18"
+                created_at: "2025-11-03T09:22:00Z"
+                updated_at: "2026-02-18T10:14:57Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /campaigns/{id}/enroll:
+    post:
+      operationId: enrollInCampaign
+      summary: Enroll client in campaign
+      description: |
+        Add a client to a specific nurture sequence or campaign. The client
+        will begin receiving communications according to the campaign's
+        configured cadence and steps.
+      tags:
+        - Campaigns
+      security:
+        - oauth2:
+            - crm:campaigns:enroll
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique campaign identifier.
+          schema:
+            type: string
+            example: "camp_life_pivot_2026"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignEnrollRequest"
+            example:
+              client_id: "cli_90210abc"
+              trigger_reason: "Client expressed interest in converting term to whole life during annual review."
+              metadata:
+                current_policy: "pol_term20_8821"
+                coverage_amount: 500000
+                term_remaining_years: 12
+      responses:
+        "201":
+          description: Client enrolled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignEnrollResponse"
+              example:
+                enrollment_id: "enr_a7f29c01"
+                campaign_id: "camp_life_pivot_2026"
+                client_id: "cli_90210abc"
+                enrolled_at: "2026-02-18T10:30:00Z"
+                sequence_step: 1
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /analytics/retention-risk:
+    get:
+      operationId: getRetentionRisk
+      summary: Get retention risk clients
+      description: |
+        Retrieve clients with low engagement scores who are at risk of churning.
+        Each result includes contributing risk factors and a recommended action
+        to help retain the client.
+      tags:
+        - Analytics
+      security:
+        - oauth2:
+            - crm:analytics:read
+
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: min_risk_score
+          in: query
+          description: Minimum risk score filter (inclusive). Higher means more at-risk.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 50
+        - name: assigned_producer
+          in: query
+          description: Filter by assigned producer ID.
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Paginated list of at-risk clients.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RetentionRisk"
+                  pagination:
+                    $ref: "#/components/schemas/CursorPagination"
+              example:
+                data:
+                  - client_id: "cli_3321feed"
+                    client_name: "Sandra Kowalski"
+                    risk_score: 82
+                    factors:
+                      rate_increase_pct: 14.5
+                      months_since_contact: 9
+                      email_open_rate: 0.04
+                      policies_count: 1
+                    recommended_action: "Schedule personal outreach call. Single-policy client with significant rate increase and no recent engagement. Offer multi-policy discount."
+                  - client_id: "cli_a019bc44"
+                    client_name: "James Whitfield"
+                    risk_score: 71
+                    factors:
+                      rate_increase_pct: 8.2
+                      months_since_contact: 6
+                      email_open_rate: 0.11
+                      policies_count: 2
+                    recommended_action: "Send retention email with loyalty discount. Moderate risk, but two policies provide leverage."
+                pagination:
+                  limit: 25
+                  cursor: "eyJzIjo3MSwiaSI6ImNsaV9hMDE5YmM0NCJ9"
+                  has_more: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: OAuth 2.0 client credentials flow for Evergreen CRM.
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:3002/oauth/token
+          scopes:
+            crm:leads:read: Read lead data and scores
+            crm:leads:write: Update lead status, score, and metadata
+            crm:campaigns:enroll: Enroll clients in campaigns
+            crm:analytics:read: Read retention risk and engagement analytics
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: Maximum number of results to return.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque cursor for fetching the next page of results.
+      required: false
+      schema:
+        type: string
+
+  schemas:
+    # ---- Enums ----
+
+    LeadStatus:
+      type: string
+      enum:
+        - new
+        - contacted
+        - qualified
+        - proposal_sent
+        - closed_won
+        - closed_lost
+      description: Current stage of the lead in the sales pipeline.
+
+    LeadSource:
+      type: string
+      enum:
+        - referral
+        - web
+        - cold_call
+        - partner
+        - event
+      description: Channel through which the lead was acquired.
+
+    CampaignType:
+      type: string
+      enum:
+        - nurture
+        - retention
+        - cross_sell
+        - welcome
+      description: Category of the marketing campaign.
+
+    CampaignStatus:
+      type: string
+      enum:
+        - active
+        - paused
+        - completed
+
+    # ---- Core Resources ----
+
+    Lead:
+      type: object
+      required:
+        - lead_id
+        - client_id
+        - first_name
+        - last_name
+        - email
+        - source
+        - status
+        - score
+        - created_at
+        - updated_at
+      properties:
+        lead_id:
+          type: string
+          description: Unique lead identifier.
+          example: "lead_8f3a12c4"
+        client_id:
+          type: string
+          description: Associated client identifier.
+          example: "cli_90210abc"
+        first_name:
+          type: string
+          maxLength: 100
+          example: "Margaret"
+        last_name:
+          type: string
+          maxLength: 100
+          example: "Thornton"
+        email:
+          type: string
+          format: email
+          example: "m.thornton@example.com"
+        phone:
+          type: string
+          pattern: '^\+1-\d{3}-\d{3}-\d{4}$'
+          example: "+1-503-555-0147"
+        source:
+          $ref: "#/components/schemas/LeadSource"
+        status:
+          $ref: "#/components/schemas/LeadStatus"
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Engagement score. Higher values indicate a hotter lead.
+          example: 87
+        assigned_producer:
+          type: string
+          description: Producer (agent) responsible for the lead.
+          example: "prod_44e1bc90"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Freeform tags for segmentation.
+          example:
+            - "high-value"
+            - "auto-and-home"
+        notes:
+          type: string
+          maxLength: 2000
+          description: Internal notes attached to the lead.
+          nullable: true
+          example: "Referred by existing client Sarah Chen."
+        last_activity_date:
+          type: string
+          format: date
+          description: Date of the most recent interaction.
+          example: "2026-02-15"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-11-03T09:22:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-02-15T14:08:33Z"
+
+    LeadCreateRequest:
+      type: object
+      description: Payload to create a new lead.
+      required:
+        - first_name
+        - last_name
+        - email
+        - source
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+          example: "Margaret"
+        last_name:
+          type: string
+          maxLength: 100
+          example: "Thornton"
+        email:
+          type: string
+          format: email
+          example: "m.thornton@example.com"
+        source:
+          $ref: "#/components/schemas/LeadSource"
+        client_id:
+          type: string
+          description: Associated client identifier (optional).
+          example: "cli_90210abc"
+        phone:
+          type: string
+          pattern: '^\+1-\d{3}-\d{3}-\d{4}$'
+          example: "+1-503-555-0147"
+        assigned_producer:
+          type: string
+          description: Producer (agent) responsible for the lead.
+          example: "prod_44e1bc90"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Freeform tags for segmentation.
+          example:
+            - "high-value"
+            - "auto-and-home"
+        notes:
+          type: string
+          maxLength: 2000
+          description: Internal notes attached to the lead.
+          example: "Referred by existing client Sarah Chen."
+
+    LeadUpdate:
+      type: object
+      description: Partial update payload for a lead. Include only fields to change.
+      minProperties: 1
+      properties:
+        status:
+          $ref: "#/components/schemas/LeadStatus"
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+          maxLength: 2000
+          description: Internal notes attached to the lead.
+        assigned_producer:
+          type: string
+          description: Producer (agent) to reassign the lead to.
+
+    Campaign:
+      type: object
+      required:
+        - campaign_id
+        - name
+        - type
+        - status
+        - enrolled_count
+        - conversion_rate
+      properties:
+        campaign_id:
+          type: string
+          example: "camp_life_pivot_2026"
+        name:
+          type: string
+          example: "Life Insurance Pivot"
+        type:
+          $ref: "#/components/schemas/CampaignType"
+        status:
+          $ref: "#/components/schemas/CampaignStatus"
+        enrolled_count:
+          type: integer
+          minimum: 0
+          example: 148
+        conversion_rate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Fraction of enrollees who converted (0.0 to 1.0).
+          example: 0.23
+
+    CampaignEnrollRequest:
+      type: object
+      required:
+        - client_id
+      properties:
+        client_id:
+          type: string
+          description: Client to enroll.
+          example: "cli_90210abc"
+        trigger_reason:
+          type: string
+          maxLength: 500
+          description: Human-readable reason for enrollment.
+          example: "Client expressed interest in converting term to whole life during annual review."
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Arbitrary key-value data relevant to the enrollment context.
+          example:
+            current_policy: "pol_term20_8821"
+            coverage_amount: 500000
+            term_remaining_years: 12
+
+    CampaignEnrollResponse:
+      type: object
+      required:
+        - enrollment_id
+        - campaign_id
+        - client_id
+        - enrolled_at
+        - sequence_step
+      properties:
+        enrollment_id:
+          type: string
+          example: "enr_a7f29c01"
+        campaign_id:
+          type: string
+          example: "camp_life_pivot_2026"
+        client_id:
+          type: string
+          example: "cli_90210abc"
+        enrolled_at:
+          type: string
+          format: date-time
+          example: "2026-02-18T10:30:00Z"
+        sequence_step:
+          type: integer
+          minimum: 1
+          description: Starting step in the campaign sequence.
+          example: 1
+
+    RetentionRisk:
+      type: object
+      required:
+        - client_id
+        - client_name
+        - risk_score
+        - factors
+        - recommended_action
+      properties:
+        client_id:
+          type: string
+          example: "cli_3321feed"
+        client_name:
+          type: string
+          example: "Sandra Kowalski"
+        risk_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Churn risk score. Higher values indicate greater risk.
+          example: 82
+        factors:
+          $ref: "#/components/schemas/RetentionRiskFactors"
+        recommended_action:
+          type: string
+          description: AI-generated suggested next step to retain the client.
+          example: "Schedule personal outreach call. Single-policy client with significant rate increase and no recent engagement. Offer multi-policy discount."
+
+    RetentionRiskFactors:
+      type: object
+      required:
+        - rate_increase_pct
+        - months_since_contact
+        - email_open_rate
+        - policies_count
+      properties:
+        rate_increase_pct:
+          type: number
+          format: float
+          description: Percentage rate increase at last renewal.
+          example: 14.5
+        months_since_contact:
+          type: integer
+          minimum: 0
+          description: Months since the last meaningful interaction.
+          example: 9
+        email_open_rate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Email open rate over the last 90 days (0.0 to 1.0).
+          example: 0.04
+        policies_count:
+          type: integer
+          minimum: 0
+          description: Number of active policies the client holds.
+          example: 1
+
+    # ---- Pagination ----
+
+    CursorPagination:
+      type: object
+      required:
+        - limit
+        - has_more
+      properties:
+        limit:
+          type: integer
+          description: Number of results requested.
+          example: 25
+        cursor:
+          type: string
+          nullable: true
+          description: Cursor to pass for the next page. Null when no more results.
+          example: "eyJzIjo3NCwiaSI6ImxlYWRfYzI5ZTQ0ZDEifQ=="
+        has_more:
+          type: boolean
+          description: Whether additional results are available beyond this page.
+          example: true
+
+    # ---- Webhook Events ----
+
+    WebhookEvent:
+      type: object
+      discriminator:
+        propertyName: event_type
+        mapping:
+          lead.status_changed: "#/components/schemas/LeadStatusChangedEvent"
+          lead.score_updated: "#/components/schemas/LeadScoreUpdatedEvent"
+          campaign.enrollment_completed: "#/components/schemas/CampaignEnrollmentCompletedEvent"
+      required:
+        - event_id
+        - event_type
+        - occurred_at
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Unique event identifier for idempotency.
+        event_type:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+
+    LeadStatusChangedEvent:
+      allOf:
+        - $ref: "#/components/schemas/WebhookEvent"
+        - type: object
+          required:
+            - data
+          properties:
+            event_type:
+              type: string
+              enum:
+                - lead.status_changed
+            data:
+              type: object
+              required:
+                - lead_id
+                - previous_status
+                - new_status
+                - changed_by
+              properties:
+                lead_id:
+                  type: string
+                  example: "lead_8f3a12c4"
+                previous_status:
+                  $ref: "#/components/schemas/LeadStatus"
+                new_status:
+                  $ref: "#/components/schemas/LeadStatus"
+                changed_by:
+                  type: string
+                  description: User or system that triggered the change.
+                  example: "prod_44e1bc90"
+      example:
+        event_id: "evt_d3c1aee0-4f5a-4b3e-9a12-1c2d3e4f5a6b"
+        event_type: "lead.status_changed"
+        occurred_at: "2026-02-18T10:14:57Z"
+        data:
+          lead_id: "lead_8f3a12c4"
+          previous_status: "qualified"
+          new_status: "proposal_sent"
+          changed_by: "prod_44e1bc90"
+
+    LeadScoreUpdatedEvent:
+      allOf:
+        - $ref: "#/components/schemas/WebhookEvent"
+        - type: object
+          required:
+            - data
+          properties:
+            event_type:
+              type: string
+              enum:
+                - lead.score_updated
+            data:
+              type: object
+              required:
+                - lead_id
+                - previous_score
+                - new_score
+                - reason
+              properties:
+                lead_id:
+                  type: string
+                  example: "lead_c29e44d1"
+                previous_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  example: 62
+                new_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  example: 74
+                reason:
+                  type: string
+                  description: Explanation for the score change.
+                  example: "Opened 3 emails, clicked quote link, visited pricing page."
+      example:
+        event_id: "evt_b7e91024-8823-4cc1-a0f3-99ab12cd34ef"
+        event_type: "lead.score_updated"
+        occurred_at: "2026-02-12T11:30:00Z"
+        data:
+          lead_id: "lead_c29e44d1"
+          previous_score: 62
+          new_score: 74
+          reason: "Opened 3 emails, clicked quote link, visited pricing page."
+
+    CampaignEnrollmentCompletedEvent:
+      allOf:
+        - $ref: "#/components/schemas/WebhookEvent"
+        - type: object
+          required:
+            - data
+          properties:
+            event_type:
+              type: string
+              enum:
+                - campaign.enrollment_completed
+            data:
+              type: object
+              required:
+                - enrollment_id
+                - campaign_id
+                - client_id
+                - outcome
+                - completed_at
+              properties:
+                enrollment_id:
+                  type: string
+                  example: "enr_a7f29c01"
+                campaign_id:
+                  type: string
+                  example: "camp_life_pivot_2026"
+                client_id:
+                  type: string
+                  example: "cli_90210abc"
+                outcome:
+                  type: string
+                  enum:
+                    - converted
+                    - exhausted
+                    - unsubscribed
+                  description: Final outcome of the campaign sequence.
+                  example: "converted"
+                completed_at:
+                  type: string
+                  format: date-time
+                  example: "2026-03-20T08:00:00Z"
+      example:
+        event_id: "evt_19fa3b0c-67d2-4e9a-b1c4-abcdef012345"
+        event_type: "campaign.enrollment_completed"
+        occurred_at: "2026-03-20T08:00:00Z"
+        data:
+          enrollment_id: "enr_a7f29c01"
+          campaign_id: "camp_life_pivot_2026"
+          client_id: "cli_90210abc"
+          outcome: "converted"
+          completed_at: "2026-03-20T08:00:00Z"
+
+    # ---- Errors ----
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error description.
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              reason:
+                type: string
+          description: Field-level validation errors, if applicable.
+        request_id:
+          type: string
+          format: uuid
+          description: Unique request identifier for support troubleshooting.
+
+  responses:
+    BadRequest:
+      description: The request body or parameters are invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "VALIDATION_ERROR"
+            message: "Request validation failed."
+            details:
+              - field: "score"
+                reason: "Must be between 0 and 100."
+            request_id: "req_a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+    Unauthorized:
+      description: Missing or invalid authentication credentials.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "UNAUTHORIZED"
+            message: "Bearer token is missing or expired."
+            request_id: "req_f0e1d2c3-b4a5-6789-0abc-def123456789"
+
+    Forbidden:
+      description: The authenticated principal lacks the required scope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "FORBIDDEN"
+            message: "Insufficient scope. Required: crm:leads:write."
+            request_id: "req_11223344-5566-7788-99aa-bbccddeeff00"
+
+    NotFound:
+      description: The requested resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "NOT_FOUND"
+            message: "Lead lead_00000000 not found."
+            request_id: "req_aabbccdd-eeff-0011-2233-445566778899"
+
+    Conflict:
+      description: The request conflicts with current state (e.g., client already enrolled).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "CONFLICT"
+            message: "Client cli_90210abc is already enrolled in campaign camp_life_pivot_2026."
+            request_id: "req_deadbeef-cafe-1234-5678-abcdef012345"
+
+    InternalServerError:
+      description: An unexpected server error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: "INTERNAL_ERROR"
+            message: "An unexpected error occurred. Please contact support with the request ID."
+            request_id: "req_fedcba98-7654-3210-fedc-ba9876543210"

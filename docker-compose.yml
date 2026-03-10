@@ -1,0 +1,130 @@
+services:
+  ams:
+    build:
+      context: .
+      dockerfile: services/ams/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - JWT_SECRET=dev-secret
+    healthcheck:
+      test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3000/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  rater:
+    build:
+      context: .
+      dockerfile: services/rater/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - JWT_SECRET=dev-secret
+      - AMS_BASE_URL=http://ams:3000
+    healthcheck:
+      test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3001/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  crm:
+    build:
+      context: .
+      dockerfile: services/crm/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - JWT_SECRET=dev-secret
+    healthcheck:
+      test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3002/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  ecm:
+    build:
+      context: .
+      dockerfile: services/ecm/Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - JWT_SECRET=dev-secret
+      - AMS_URL=http://ams:3000
+      - CLAIMS_URL=http://claims:3007
+    healthcheck:
+      test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3003/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  carrier-summit:
+    build:
+      context: .
+      dockerfile: services/carrier-summit/Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      - PORT=3005
+      - JWT_SECRET=dev-secret
+    healthcheck:
+      test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3005/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  carrier-coastal:
+    build:
+      context: .
+      dockerfile: services/carrier-coastal/Dockerfile
+    ports:
+      - "3006:3006"
+    environment:
+      - PORT=3006
+      - JWT_SECRET=dev-secret
+    healthcheck:
+      test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3006/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  comm:
+    build:
+      context: .
+      dockerfile: services/comm/Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+    healthcheck:
+      test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3004/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  claims:
+    build:
+      context: .
+      dockerfile: services/claims/Dockerfile
+    ports:
+      - "3007:3007"
+    environment:
+      - PORT=3007
+      - JWT_SECRET=dev-secret
+    healthcheck:
+      test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3007/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

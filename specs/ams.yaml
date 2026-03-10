@@ -1,0 +1,2511 @@
+openapi: 3.0.3
+info:
+  title: Evergreen Agency Management System API
+  description: |
+    RESTful API for the Evergreen Agency Management System (AMS).
+
+    Provides programmatic access to client records, insurance policies,
+    endorsement workflows, commission accounting, and internal task management
+    for independent insurance agencies.
+
+    ## Authentication
+
+    All endpoints require an OAuth 2.0 Bearer token obtained via the
+    client credentials flow (`POST /oauth/token`).  Include the token in
+    the `Authorization` header:
+
+    ```
+    Authorization: Bearer <access_token>
+    ```
+
+    Pre-configured clients: `agent-full` (all scopes), `agent-csr`
+    (service subset), `agent-readonly` (read-only).  Secret: `dev-secret`.
+    Alternatively, any self-signed JWT (HS256, secret `dev-secret`) with
+    `sub` and `scope` claims is accepted.
+
+    ## Pagination
+
+    List endpoints use **cursor-based** pagination.  Pass `limit` (max 100,
+    default 25) and an opaque `cursor` value returned by the previous page.
+    The response includes a `has_more` boolean and a `next_cursor` field
+    (present only when `has_more` is true).
+
+    ## Errors
+
+    All error responses share a common envelope (`ErrorResponse`) with
+    `error_code`, `message`, and an optional `details` array for field-level
+    validation failures.
+  version: 1.4.0
+  contact:
+    name: Evergreen AMS Engineering
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+tags:
+  - name: Clients
+    description: Manage client (insured) records
+  - name: Policies
+    description: Insurance policy lifecycle
+  - name: Endorsements
+    description: Mid-term policy changes
+  - name: Accounting
+    description: Commission and revenue data
+  - name: Tasks
+    description: Internal workflow task management
+  - name: Escalations
+    description: Manager escalation and E&O workflow
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+security:
+  - oauth2: []
+
+components:
+  # -----------------------------------------------------------------------
+  # Security Schemes
+  # -----------------------------------------------------------------------
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:3000/oauth/token
+          scopes:
+            ams:clients:read: Read client records
+            ams:clients:write: Create and update client records
+            ams:policies:read: Read policy data
+            ams:policies:endorsements: Create and manage endorsements
+            ams:accounting:read: Read commission and accounting data
+            ams:tasks:read: Read task records
+            ams:tasks:write: Update task status and assignments
+            ams:escalations:read: Read escalation records
+            ams:escalations:write: Create and manage escalations
+
+  # -----------------------------------------------------------------------
+  # Schemas
+  # -----------------------------------------------------------------------
+  schemas:
+    # ----- Address --------------------------------------------------------
+    Address:
+      type: object
+      description: US mailing address.
+      required:
+        - street
+        - city
+        - state
+        - zip
+      properties:
+        street:
+          type: string
+          description: Street address including unit/apt number.
+          maxLength: 200
+          example: "742 Evergreen Terrace, Apt 2B"
+        city:
+          type: string
+          description: City name.
+          maxLength: 100
+          example: Springfield
+        state:
+          type: string
+          description: Two-letter US state code (ISO 3166-2:US).
+          pattern: "^[A-Z]{2}$"
+          example: IL
+        zip:
+          type: string
+          description: Five-digit or ZIP+4 postal code.
+          pattern: "^\\d{5}(-\\d{4})?$"
+          example: "62704"
+
+    # ----- Client ---------------------------------------------------------
+    Client:
+      type: object
+      description: An insured individual or household member.
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique client identifier.
+          readOnly: true
+          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+        first_name:
+          type: string
+          description: Legal first name.
+          maxLength: 100
+          example: Sarah
+        last_name:
+          type: string
+          description: Legal last name.
+          maxLength: 100
+          example: Chen
+        dob:
+          type: string
+          format: date
+          description: Date of birth (YYYY-MM-DD).
+          example: "1987-04-15"
+        email:
+          type: string
+          format: email
+          description: Primary email address.
+          maxLength: 254
+          example: sarah.chen@example.com
+        phone:
+          type: string
+          description: Primary phone number in E.164 format.
+          pattern: "^\\+1\\d{10}$"
+          example: "+15035551234"
+        address:
+          $ref: "#/components/schemas/Address"
+        driver_license_number:
+          type: string
+          description: Driver license number (state-specific format).
+          maxLength: 30
+          example: "D400-1234-5678"
+        occupation:
+          type: string
+          description: Current occupation or job title.
+          maxLength: 150
+          example: Software Engineer
+        marital_status:
+          type: string
+          description: Marital status of the client.
+          enum:
+            - single
+            - married
+            - divorced
+            - widowed
+          example: married
+        household_id:
+          type: string
+          format: uuid
+          description: |
+            Identifier linking members of the same household for
+            multi-policy discounts and shared billing.
+          example: "hh-00a1b2c3-d4e5-6789-abcd-ef0123456789"
+        preferred_contact_method:
+          type: string
+          description: How the client prefers to be contacted.
+          enum:
+            - email
+            - sms
+            - phone
+          default: email
+          example: email
+        preferred_contact_time:
+          type: string
+          description: |
+            Preferred time window for outbound contact (free-form text,
+            e.g. "weekday mornings" or "after 5 PM PST").
+          maxLength: 100
+          example: "weekday mornings before 10 AM PST"
+        status:
+          type: string
+          description: Lifecycle status of the client record.
+          enum:
+            - active
+            - inactive
+            - prospect
+          example: active
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the record was created (UTC).
+          readOnly: true
+          example: "2023-06-12T14:23:45Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of the last modification (UTC).
+          readOnly: true
+          example: "2025-11-03T09:17:22Z"
+
+    # ----- Client Create Request -------------------------------------------
+    ClientCreateRequest:
+      type: object
+      description: Payload to create a new client record.
+      required:
+        - first_name
+        - last_name
+        - email
+      properties:
+        first_name:
+          type: string
+          description: Legal first name.
+          maxLength: 100
+          example: Sarah
+        last_name:
+          type: string
+          description: Legal last name.
+          maxLength: 100
+          example: Chen
+        email:
+          type: string
+          format: email
+          description: Primary email address.
+          maxLength: 254
+          example: sarah.chen@example.com
+        dob:
+          type: string
+          format: date
+          description: Date of birth (YYYY-MM-DD).
+          example: "1987-04-15"
+        phone:
+          type: string
+          description: Primary phone number in E.164 format.
+          pattern: "^\\+1\\d{10}$"
+          example: "+15035551234"
+        address:
+          $ref: "#/components/schemas/Address"
+        driver_license_number:
+          type: string
+          description: Driver license number (state-specific format).
+          maxLength: 30
+          example: "D400-1234-5678"
+        occupation:
+          type: string
+          description: Current occupation or job title.
+          maxLength: 150
+          example: Software Engineer
+        marital_status:
+          type: string
+          description: Marital status of the client.
+          enum:
+            - single
+            - married
+            - divorced
+            - widowed
+          example: single
+        household_id:
+          type: string
+          format: uuid
+          description: Identifier linking members of the same household.
+          example: "hh-00a1b2c3-d4e5-6789-abcd-ef0123456789"
+        preferred_contact_method:
+          type: string
+          description: How the client prefers to be contacted.
+          enum:
+            - email
+            - phone
+            - mail
+          default: email
+          example: email
+        status:
+          type: string
+          description: Lifecycle status of the client record.
+          enum:
+            - active
+            - inactive
+            - prospect
+          default: active
+          example: active
+
+    # ----- Client Patch -----------------------------------------------------
+    ClientPatch:
+      type: object
+      description: Fields that may be updated on a client via PATCH.
+      minProperties: 1
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+          example: Sarah
+        last_name:
+          type: string
+          maxLength: 100
+          example: Chen
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          example: sarah.chen@example.com
+        dob:
+          type: string
+          format: date
+          example: "1987-04-15"
+        phone:
+          type: string
+          pattern: "^\\+1\\d{10}$"
+          example: "+15035551234"
+        address:
+          $ref: "#/components/schemas/Address"
+        driver_license_number:
+          type: string
+          maxLength: 30
+          example: "D400-1234-5678"
+        occupation:
+          type: string
+          maxLength: 150
+          example: Software Engineer
+        marital_status:
+          type: string
+          enum:
+            - single
+            - married
+            - divorced
+            - widowed
+          example: married
+        household_id:
+          type: string
+          format: uuid
+          example: "hh-00a1b2c3-d4e5-6789-abcd-ef0123456789"
+        preferred_contact_method:
+          type: string
+          enum:
+            - email
+            - phone
+            - mail
+          example: email
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - prospect
+          example: active
+
+    # ----- Task Create Request ----------------------------------------------
+    TaskCreateRequest:
+      type: object
+      description: Payload to create a new workflow task.
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: Short description of the task.
+          maxLength: 250
+          example: "Follow up on Chen renewal — POL-PA-2024-001847"
+        description:
+          type: string
+          description: Detailed task instructions or context.
+          maxLength: 5000
+          example: "Policy expires 2025-07-01. Client requested competitive quotes from PROG and HRTF."
+        priority:
+          type: string
+          description: Urgency level.
+          enum:
+            - low
+            - medium
+            - high
+            - urgent
+          default: medium
+          example: high
+        task_type:
+          type: string
+          description: Category of the task (e.g. renewal, remarketing, follow_up).
+          maxLength: 100
+          example: renewal_follow_up
+        assigned_to:
+          type: string
+          format: uuid
+          description: User ID of the assigned agent or CSR.
+          example: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+        due_date:
+          type: string
+          format: date
+          description: Target completion date (YYYY-MM-DD).
+          example: "2025-06-15"
+        client_id:
+          type: string
+          format: uuid
+          description: Client record associated with this task.
+          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+        policy_id:
+          type: string
+          description: Policy associated with this task.
+          example: "POL-PA-2024-001847"
+
+    # ----- Policy Create Request -------------------------------------------
+    PolicyCreateRequest:
+      type: object
+      description: Payload to create a new policy record.
+      required:
+        - client_id
+        - policy_type
+        - carrier_code
+        - effective_date
+        - expiration_date
+        - annual_premium
+        - coverages
+      properties:
+        client_id:
+          type: string
+          description: Owning client's unique identifier.
+          example: "CL-001"
+        policy_type:
+          $ref: "#/components/schemas/PolicyType"
+        carrier_code:
+          type: string
+          description: Insurance carrier code.
+          example: "SMIT"
+        effective_date:
+          type: string
+          format: date
+          description: Date coverage begins (YYYY-MM-DD).
+          example: "2025-06-01"
+        expiration_date:
+          type: string
+          format: date
+          description: Date coverage ends (YYYY-MM-DD).
+          example: "2026-06-01"
+        annual_premium:
+          type: number
+          format: double
+          description: Annual premium in USD.
+          minimum: 0
+          example: 1450.00
+        status:
+          $ref: "#/components/schemas/PolicyStatus"
+        coverages:
+          type: array
+          description: Coverage lines to include on this policy.
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Coverage"
+        multi_policy_discount:
+          type: boolean
+          description: Whether this policy qualifies for a multi-policy discount.
+          default: false
+          example: true
+        policy_number:
+          type: string
+          description: Optional carrier-assigned policy number.
+          example: "PA-2025-001847"
+
+    # ----- Coverage -------------------------------------------------------
+    Coverage:
+      type: object
+      description: A single coverage line within a policy.
+      required:
+        - type
+        - limit
+        - deductible
+      properties:
+        type:
+          type: string
+          description: Coverage type identifier.
+          maxLength: 80
+          example: bodily_injury
+        limit:
+          type: number
+          format: double
+          description: Per-occurrence or per-person coverage limit in USD.
+          minimum: 0
+          example: 250000.00
+        deductible:
+          type: number
+          format: double
+          description: Deductible amount in USD.
+          minimum: 0
+          example: 500.00
+
+    # ----- Policy ---------------------------------------------------------
+    Policy:
+      type: object
+      description: An insurance contract (policy) bound through the agency.
+      required:
+        - policy_id
+        - client_id
+        - carrier_code
+        - policy_type
+        - effective_date
+        - expiration_date
+        - premium_current
+        - status
+        - coverages
+        - created_at
+        - updated_at
+      properties:
+        policy_id:
+          type: string
+          description: |
+            Human-readable policy identifier.
+            Format: POL-{TYPE_ABBREV}-{YEAR}-{SEQUENCE}
+          pattern: "^POL-[A-Z]{2,3}-\\d{4}-\\d{6}$"
+          example: "POL-PA-2024-001847"
+        client_id:
+          type: string
+          format: uuid
+          description: Owning client's unique identifier.
+          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+        carrier_code:
+          $ref: "#/components/schemas/CarrierCode"
+        policy_type:
+          $ref: "#/components/schemas/PolicyType"
+        effective_date:
+          type: string
+          format: date
+          description: Date coverage begins (YYYY-MM-DD).
+          example: "2024-07-01"
+        expiration_date:
+          type: string
+          format: date
+          description: Date coverage ends (YYYY-MM-DD).
+          example: "2025-07-01"
+        premium_current:
+          type: number
+          format: double
+          description: Current annual premium in USD.
+          minimum: 0
+          example: 1842.00
+        premium_prior:
+          type: number
+          format: double
+          description: Prior-term annual premium in USD (null for new business).
+          minimum: 0
+          nullable: true
+          example: 1764.00
+        status:
+          $ref: "#/components/schemas/PolicyStatus"
+        coverages:
+          type: array
+          description: Coverage lines included on this policy.
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Coverage"
+        multi_policy_discount:
+          type: boolean
+          description: Whether this policy qualifies for a multi-policy (bundle) discount.
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2024-06-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2025-01-08T16:45:12Z"
+
+    # ----- Endorsement Request / Response ---------------------------------
+    EndorsementRequest:
+      type: object
+      description: Payload to request a mid-term policy change (endorsement).
+      required:
+        - effective_date
+        - change_type
+        - changes
+      properties:
+        effective_date:
+          type: string
+          format: date
+          description: Requested effective date of the endorsement.
+          example: "2025-03-15"
+        change_type:
+          type: string
+          description: Category of endorsement.
+          enum:
+            - add_coverage
+            - remove_coverage
+            - modify_coverage
+            - add_vehicle
+            - remove_vehicle
+            - add_driver
+            - remove_driver
+            - address_change
+            - other
+          example: add_vehicle
+        changes:
+          type: object
+          description: |
+            Free-form object describing the requested modifications.
+            Structure varies by `change_type`.
+          additionalProperties: true
+          example:
+            vehicle:
+              year: 2024
+              make: Toyota
+              model: RAV4
+              vin: "JTMRWRFV0RD123456"
+            usage: commute
+            annual_mileage: 12000
+        notes:
+          type: string
+          description: Agent notes or special instructions for the carrier.
+          maxLength: 2000
+          example: "Client purchased new vehicle; replacing 2018 Civic on the policy."
+
+    Endorsement:
+      type: object
+      description: A recorded endorsement (mid-term change) on a policy.
+      required:
+        - endorsement_id
+        - policy_id
+        - effective_date
+        - change_type
+        - status
+        - created_at
+        - updated_at
+      properties:
+        endorsement_id:
+          type: string
+          description: Unique endorsement identifier.
+          example: "END-2025-009432"
+        policy_id:
+          type: string
+          description: Associated policy identifier.
+          example: "POL-PA-2024-001847"
+        effective_date:
+          type: string
+          format: date
+          example: "2025-03-15"
+        change_type:
+          type: string
+          enum:
+            - add_coverage
+            - remove_coverage
+            - modify_coverage
+            - add_vehicle
+            - remove_vehicle
+            - add_driver
+            - remove_driver
+            - address_change
+            - other
+          example: add_vehicle
+        changes:
+          type: object
+          additionalProperties: true
+          example:
+            vehicle:
+              year: 2024
+              make: Toyota
+              model: RAV4
+              vin: "JTMRWRFV0RD123456"
+            usage: commute
+            annual_mileage: 12000
+        premium_delta:
+          type: number
+          format: double
+          description: Change in annualized premium resulting from endorsement (can be negative).
+          example: 312.00
+        status:
+          type: string
+          description: Processing status of the endorsement.
+          enum:
+            - pending_review
+            - submitted_to_carrier
+            - approved
+            - rejected
+            - applied
+          example: pending_review
+        notes:
+          type: string
+          maxLength: 2000
+          example: "Client purchased new vehicle; replacing 2018 Civic on the policy."
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2025-03-10T14:22:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2025-03-10T14:22:00Z"
+
+    # ----- Commission Record ----------------------------------------------
+    CommissionRecord:
+      type: object
+      description: A single commission transaction earned by the agency.
+      required:
+        - commission_id
+        - policy_id
+        - carrier_code
+        - transaction_type
+        - gross_amount
+        - net_amount
+        - commission_rate
+        - effective_date
+        - status
+        - created_at
+      properties:
+        commission_id:
+          type: string
+          description: Unique commission record identifier.
+          example: "COM-2025-018743"
+        policy_id:
+          type: string
+          description: Policy that generated this commission.
+          example: "POL-PA-2024-001847"
+        carrier_code:
+          $ref: "#/components/schemas/CarrierCode"
+        transaction_type:
+          type: string
+          description: Type of commission-generating transaction.
+          enum:
+            - new_business
+            - renewal
+            - endorsement
+            - cancellation
+            - reinstatement
+            - audit
+          example: new_business
+        gross_amount:
+          type: number
+          format: double
+          description: Gross commission amount in USD before splits.
+          example: 276.30
+        net_amount:
+          type: number
+          format: double
+          description: Net commission after splits/overrides in USD.
+          example: 193.41
+        commission_rate:
+          type: number
+          format: double
+          description: Commission rate as a decimal (e.g., 0.15 for 15%).
+          minimum: 0
+          maximum: 1
+          example: 0.15
+        effective_date:
+          type: string
+          format: date
+          description: Date the commission was earned.
+          example: "2024-07-01"
+        payment_date:
+          type: string
+          format: date
+          nullable: true
+          description: Date the carrier paid the commission (null if unpaid).
+          example: "2024-08-15"
+        status:
+          type: string
+          description: Payment status.
+          enum:
+            - earned
+            - paid
+            - reversed
+            - pending
+          example: paid
+        producer_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Producing agent's identifier (for split tracking).
+          example: "agt-44a1b2c3-d4e5-6789-abcd-ef0123456789"
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2024-07-02T08:00:00Z"
+
+    # ----- Task -----------------------------------------------------------
+    Task:
+      type: object
+      description: An internal workflow task (renewal follow-up, remarketing, etc.).
+      required:
+        - id
+        - title
+        - status
+        - priority
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique task identifier.
+          example: "t-881a2b3c-4d5e-6f78-9abc-def012345678"
+        title:
+          type: string
+          description: Short description of the task.
+          maxLength: 250
+          example: "Follow up on Chen renewal — POL-PA-2024-001847"
+        description:
+          type: string
+          description: Detailed task instructions or context.
+          maxLength: 5000
+          example: "Policy expires 2025-07-01. Client requested competitive quotes from PROG and HRTF."
+        status:
+          type: string
+          description: Current workflow status.
+          enum:
+            - open
+            - in_progress
+            - blocked
+            - completed
+            - cancelled
+          example: open
+        priority:
+          type: string
+          description: Urgency level.
+          enum:
+            - low
+            - medium
+            - high
+            - urgent
+          example: high
+        task_type:
+          type: string
+          description: Category of the task (e.g. renewal, remarketing, follow_up).
+          maxLength: 100
+          nullable: true
+          example: renewal_follow_up
+        assigned_to:
+          type: string
+          format: uuid
+          nullable: true
+          description: User ID of the assigned agent or CSR.
+          example: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+        related_client_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Client record associated with this task.
+          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+        related_policy_id:
+          type: string
+          nullable: true
+          description: Policy associated with this task.
+          example: "POL-PA-2024-001847"
+        due_date:
+          type: string
+          format: date
+          nullable: true
+          description: Target completion date.
+          example: "2025-06-15"
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2025-05-01T09:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2025-05-01T09:00:00Z"
+
+    # ----- Task Patch -----------------------------------------------------
+    TaskPatch:
+      type: object
+      description: Fields that may be updated on a task via PATCH.
+      minProperties: 1
+      properties:
+        status:
+          type: string
+          enum:
+            - open
+            - in_progress
+            - blocked
+            - completed
+            - cancelled
+          example: in_progress
+        priority:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - urgent
+          example: high
+        assigned_to:
+          type: string
+          format: uuid
+          nullable: true
+          example: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+        due_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2025-06-10"
+        description:
+          type: string
+          maxLength: 5000
+
+    # ----- Escalation ------------------------------------------------------
+    Escalation:
+      type: object
+      description: A manager escalation request with optional resolution.
+      required:
+        - escalation_id
+        - client_id
+        - reason
+        - summary
+        - status
+        - poll_count
+        - created_at
+        - updated_at
+      properties:
+        escalation_id:
+          type: string
+          description: Unique escalation identifier (esc_ prefix).
+          example: "esc_a1b2c3d4"
+        client_id:
+          type: string
+          description: Client ID this escalation relates to.
+          example: "CL-001"
+        policy_id:
+          type: string
+          nullable: true
+          description: Optional policy ID.
+          example: "POL-PA-2024-001847"
+        reason:
+          type: string
+          enum:
+            - premium_threshold
+            - state_minimum_violation
+            - coverage_adequacy
+            - surplus_lines
+            - principal_review
+            - backdating
+          description: Reason code for the escalation.
+          example: premium_threshold
+        summary:
+          type: string
+          maxLength: 2000
+          description: Free-text summary of why escalation is needed.
+          example: "Premium of $12,500 exceeds $10K threshold"
+        context:
+          type: object
+          nullable: true
+          description: Arbitrary JSON context for the escalation.
+        status:
+          type: string
+          enum: [pending, approved, denied, needs_info]
+          description: Current status. Starts as pending, resolved by manager engine.
+          example: pending
+        manager_response:
+          $ref: "#/components/schemas/ManagerResponse"
+        poll_count:
+          type: integer
+          description: Number of times GET has been called on this escalation.
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+
+    EscalationCreate:
+      type: object
+      required:
+        - client_id
+        - reason
+        - summary
+      properties:
+        client_id:
+          type: string
+          example: "CL-001"
+        policy_id:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          enum:
+            - premium_threshold
+            - state_minimum_violation
+            - coverage_adequacy
+            - surplus_lines
+            - principal_review
+            - backdating
+        summary:
+          type: string
+          maxLength: 2000
+        context:
+          type: object
+          nullable: true
+
+    ManagerResponse:
+      type: object
+      nullable: true
+      description: Manager engine response after processing.
+      properties:
+        decision:
+          type: string
+          enum: [approved, denied, needs_info]
+        template_id:
+          type: string
+          description: ID of the response template used.
+        response_text:
+          type: string
+          description: Human-readable manager response.
+        resolved_at:
+          type: string
+          format: date-time
+
+    EscalationEvent:
+      type: object
+      description: Audit trail event for an escalation.
+      properties:
+        id:
+          type: integer
+        escalation_id:
+          type: string
+        event_type:
+          type: string
+          enum: [created, manager_reviewed, status_changed]
+        from_status:
+          type: string
+          nullable: true
+        to_status:
+          type: string
+          nullable: true
+        details:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # ----- Enums (reusable) -----------------------------------------------
+    PolicyType:
+      type: string
+      description: Line of business / product type.
+      enum:
+        - personal_auto
+        - homeowners
+        - umbrella
+        - bop
+        - workers_comp
+        - general_liability
+        - professional_liability
+      example: personal_auto
+
+    PolicyStatus:
+      type: string
+      description: Lifecycle status of a policy.
+      enum:
+        - active
+        - pending
+        - cancelled
+        - expired
+        - non_renewed
+      example: active
+
+    CarrierCode:
+      type: string
+      description: Short code identifying an insurance carrier.
+      enum:
+        - TRAV
+        - PROG
+        - HRTF
+        - ERIE
+        - NTNW
+        - SAFECO
+        - LIBT
+      example: TRAV
+
+    USStateCode:
+      type: string
+      description: Two-letter US state code.
+      pattern: "^[A-Z]{2}$"
+      example: CA
+
+    # ----- Pagination Envelope --------------------------------------------
+    PaginationMeta:
+      type: object
+      description: Cursor-based pagination metadata.
+      required:
+        - limit
+        - has_more
+      properties:
+        limit:
+          type: integer
+          description: Maximum items per page.
+          minimum: 1
+          maximum: 100
+          example: 25
+        cursor:
+          type: string
+          nullable: true
+          description: Cursor used for this page (null on the first page).
+          example: "eyJpZCI6ImM5YTFmMmUzIn0="
+        next_cursor:
+          type: string
+          nullable: true
+          description: Cursor for the next page (null when `has_more` is false).
+          example: "eyJpZCI6ImQ4YjJlM2Y0In0="
+        has_more:
+          type: boolean
+          description: Whether additional pages exist.
+          example: true
+
+    # ----- Error Schemas --------------------------------------------------
+    ErrorResponse:
+      type: object
+      description: Standard error envelope returned by all endpoints.
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+          description: Machine-readable error code.
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Human-readable summary of the error.
+          example: "One or more fields failed validation."
+        correlation_id:
+          type: string
+          format: uuid
+          description: Unique identifier for request tracing (always present on 5xx).
+          example: "corr-12345678-abcd-efgh-ijkl-mnopqrstuvwx"
+        details:
+          type: array
+          description: Field-level validation errors (present on 400 responses).
+          items:
+            $ref: "#/components/schemas/FieldError"
+
+    FieldError:
+      type: object
+      description: Describes a validation failure on a single field.
+      required:
+        - field
+        - message
+        - code
+      properties:
+        field:
+          type: string
+          description: JSON path to the invalid field.
+          example: effective_date
+        message:
+          type: string
+          description: Human-readable explanation.
+          example: "Effective date must be in the future."
+        code:
+          type: string
+          description: Machine-readable validation rule that failed.
+          enum:
+            - required
+            - invalid_format
+            - out_of_range
+            - too_long
+            - invalid_enum
+            - conflict
+          example: out_of_range
+
+  # -----------------------------------------------------------------------
+  # Reusable Parameters
+  # -----------------------------------------------------------------------
+  parameters:
+    limitParam:
+      name: limit
+      in: query
+      description: Maximum number of records to return (1-100).
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+      example: 25
+
+    cursorParam:
+      name: cursor
+      in: query
+      description: Opaque cursor for fetching the next page of results.
+      required: false
+      schema:
+        type: string
+      example: "eyJpZCI6ImM5YTFmMmUzIn0="
+
+  # -----------------------------------------------------------------------
+  # Reusable Responses
+  # -----------------------------------------------------------------------
+  responses:
+    400BadRequest:
+      description: Validation error — one or more fields are invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: VALIDATION_ERROR
+            message: "One or more fields failed validation."
+            details:
+              - field: effective_date
+                message: "Effective date must be in the future."
+                code: out_of_range
+
+    401Unauthorized:
+      description: Authentication failed — token is missing, expired, or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: AUTH_ERROR
+            message: "Bearer token is expired. Please re-authenticate."
+
+    403Forbidden:
+      description: Authorization failed — the token lacks a required scope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: FORBIDDEN
+            message: "Token does not include the required scope: ams:policies:endorsements."
+
+    404NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: NOT_FOUND
+            message: "Policy POL-PA-2024-999999 does not exist."
+
+    409Conflict:
+      description: Conflict — the operation is not valid for the resource's current state.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: CONFLICT
+            message: "Cannot endorse policy POL-PA-2024-001847: policy status is 'cancelled'."
+
+    500InternalServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: INTERNAL_ERROR
+            message: "An unexpected error occurred. Please contact support with the correlation_id."
+            correlation_id: "corr-12345678-abcd-efgh-ijkl-mnopqrstuvwx"
+
+# ===========================================================================
+# Paths
+# ===========================================================================
+paths:
+  # -------------------------------------------------------------------------
+  # GET /clients
+  # -------------------------------------------------------------------------
+  /clients:
+    get:
+      operationId: listClients
+      summary: List clients
+      description: |
+        Retrieve a paginated list of client records with optional filters.
+        Results are ordered by `last_name` ascending, then `first_name` ascending.
+      tags:
+        - Clients
+
+      security:
+        - oauth2:
+            - ams:clients:read
+      parameters:
+        - name: status
+          in: query
+          description: Filter by client lifecycle status.
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - inactive
+              - prospect
+          example: active
+        - name: last_name
+          in: query
+          description: Case-insensitive prefix search on last name.
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          example: Chen
+        - name: household_id
+          in: query
+          description: Filter by household identifier.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
+      responses:
+        "200":
+          description: A paginated list of clients.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Client"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+              example:
+                data:
+                  - id: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+                    first_name: Sarah
+                    last_name: Chen
+                    dob: "1987-04-15"
+                    email: sarah.chen@example.com
+                    phone: "+15035551234"
+                    address:
+                      street: "742 Evergreen Terrace, Apt 2B"
+                      city: Springfield
+                      state: IL
+                      zip: "62704"
+                    driver_license_number: "D400-1234-5678"
+                    occupation: Software Engineer
+                    marital_status: married
+                    household_id: "hh-00a1b2c3-d4e5-6789-abcd-ef0123456789"
+                    preferred_contact_method: email
+                    preferred_contact_time: "weekday mornings before 10 AM PST"
+                    status: active
+                    created_at: "2023-06-12T14:23:45Z"
+                    updated_at: "2025-11-03T09:17:22Z"
+                  - id: "d8b2e3f4-5c67-8e90-1bcd-ef2345678901"
+                    first_name: Michael
+                    last_name: Chen
+                    dob: "1985-09-28"
+                    email: m.chen@example.com
+                    phone: "+15035559876"
+                    address:
+                      street: "742 Evergreen Terrace, Apt 2B"
+                      city: Springfield
+                      state: IL
+                      zip: "62704"
+                    driver_license_number: "D400-8765-4321"
+                    occupation: Civil Engineer
+                    marital_status: married
+                    household_id: "hh-00a1b2c3-d4e5-6789-abcd-ef0123456789"
+                    preferred_contact_method: phone
+                    preferred_contact_time: "evenings after 6 PM CST"
+                    status: active
+                    created_at: "2023-06-12T14:25:00Z"
+                    updated_at: "2025-11-03T09:17:22Z"
+                pagination:
+                  limit: 25
+                  cursor: null
+                  next_cursor: "eyJpZCI6ImQ4YjJlM2Y0In0="
+                  has_more: true
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+    post:
+      operationId: createClient
+      summary: Create a client
+      description: |
+        Create a new client (insured) record.  The email address must be unique
+        across all existing clients; a duplicate email returns 409.
+      tags:
+        - Clients
+
+      security:
+        - oauth2:
+            - ams:clients:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientCreateRequest"
+            example:
+              first_name: Sarah
+              last_name: Chen
+              email: sarah.chen@example.com
+              dob: "1987-04-15"
+              phone: "+15035551234"
+              address:
+                street: "742 Evergreen Terrace, Apt 2B"
+                city: Springfield
+                state: IL
+                zip: "62704"
+              driver_license_number: "D400-1234-5678"
+              occupation: Software Engineer
+              marital_status: single
+              preferred_contact_method: email
+              status: active
+      responses:
+        "201":
+          description: Client created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+              example:
+                id: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+                first_name: Sarah
+                last_name: Chen
+                dob: "1987-04-15"
+                email: sarah.chen@example.com
+                phone: "+15035551234"
+                address:
+                  street: "742 Evergreen Terrace, Apt 2B"
+                  city: Springfield
+                  state: IL
+                  zip: "62704"
+                driver_license_number: "D400-1234-5678"
+                occupation: Software Engineer
+                marital_status: single
+                preferred_contact_method: email
+                status: active
+                created_at: "2025-06-12T14:23:45Z"
+                updated_at: "2025-06-12T14:23:45Z"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "409":
+          $ref: "#/components/responses/409Conflict"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # -------------------------------------------------------------------------
+  # PATCH /clients/{id}
+  # -------------------------------------------------------------------------
+  /clients/{id}:
+    patch:
+      operationId: updateClient
+      summary: Update a client
+      description: |
+        Partially update a client record.  Only the fields included in the
+        request body are modified; omitted fields remain unchanged.
+      tags:
+        - Clients
+
+      security:
+        - oauth2:
+            - ams:clients:write
+      parameters:
+        - name: id
+          in: path
+          description: Client UUID.
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientPatch"
+            example:
+              phone: "+15035559999"
+              occupation: "Senior Software Engineer"
+              marital_status: married
+      responses:
+        "200":
+          description: Client updated successfully. Returns the full updated client.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+              example:
+                id: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+                first_name: Sarah
+                last_name: Chen
+                dob: "1987-04-15"
+                email: sarah.chen@example.com
+                phone: "+15035559999"
+                address:
+                  street: "742 Evergreen Terrace, Apt 2B"
+                  city: Springfield
+                  state: IL
+                  zip: "62704"
+                driver_license_number: "D400-1234-5678"
+                occupation: "Senior Software Engineer"
+                marital_status: married
+                household_id: "hh-00a1b2c3-d4e5-6789-abcd-ef0123456789"
+                preferred_contact_method: email
+                status: active
+                created_at: "2023-06-12T14:23:45Z"
+                updated_at: "2025-11-04T10:22:33Z"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # -------------------------------------------------------------------------
+  # POST /clients/{id}/merge
+  # -------------------------------------------------------------------------
+  /clients/{id}/merge:
+    post:
+      operationId: mergeClient
+      summary: Merge two client records
+      description: |
+        Merge a source client into a target client. Re-parents the source
+        client's policies and tasks to the target, then sets the source
+        client's status to `inactive`. Returns a merge summary with counts
+        of moved entities.
+
+        Use this to consolidate duplicate client records (scenario 04).
+      tags:
+        - Clients
+
+      security:
+        - oauth2:
+            - ams:clients:write
+      parameters:
+        - name: id
+          in: path
+          description: Target client ID (the record that will be kept).
+          required: true
+          schema:
+            type: string
+          example: "CL-001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - source_client_id
+              properties:
+                source_client_id:
+                  type: string
+                  description: ID of the client to merge into the target. This client will be set to inactive.
+                  example: "CL-002"
+            example:
+              source_client_id: "CL-002"
+      responses:
+        "200":
+          description: Merge completed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - target_client
+                  - source_client_id
+                  - policies_moved
+                  - tasks_moved
+                properties:
+                  target_client:
+                    $ref: "#/components/schemas/Client"
+                  source_client_id:
+                    type: string
+                    description: ID of the source client (now inactive).
+                    example: "CL-002"
+                  policies_moved:
+                    type: integer
+                    description: Number of policies re-parented to the target client.
+                    example: 2
+                  tasks_moved:
+                    type: integer
+                    description: Number of tasks re-parented to the target client.
+                    example: 1
+              example:
+                target_client:
+                  id: "CL-001"
+                  first_name: Alice
+                  last_name: Adams
+                  email: alice@example.com
+                  status: active
+                  created_at: "2025-01-15T10:00:00Z"
+                  updated_at: "2025-01-15T10:00:00Z"
+                source_client_id: "CL-002"
+                policies_moved: 2
+                tasks_moved: 1
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+        "409":
+          $ref: "#/components/responses/409Conflict"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # -------------------------------------------------------------------------
+  # GET /clients/household/{household_id}
+  # -------------------------------------------------------------------------
+  /clients/household/{household_id}:
+    get:
+      operationId: getHouseholdSummary
+      summary: Get household summary
+      description: |
+        Returns a summary of all members in a household, including per-member
+        policy counts, total premiums, coverage types held, and identified
+        coverage gaps. Useful for cross-sell analysis (scenario 06) and
+        meeting preparation (scenario 11).
+      tags:
+        - Clients
+
+      security:
+        - oauth2:
+            - ams:clients:read
+      parameters:
+        - name: household_id
+          in: path
+          description: Household identifier shared by all household members.
+          required: true
+          schema:
+            type: string
+          example: "HH-001"
+      responses:
+        "200":
+          description: Household summary with member details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - household_id
+                  - member_count
+                  - total_premium
+                  - coverage_types
+                  - coverage_gaps
+                  - members
+                properties:
+                  household_id:
+                    type: string
+                    description: Household identifier.
+                    example: "HH-001"
+                  member_count:
+                    type: integer
+                    description: Number of members in the household.
+                    example: 2
+                  total_premium:
+                    type: number
+                    format: double
+                    description: Sum of all members' policy premiums.
+                    example: 4500.00
+                  coverage_types:
+                    type: array
+                    items:
+                      type: string
+                    description: All coverage types held across the household (sorted).
+                    example: ["homeowners", "personal_auto"]
+                  coverage_gaps:
+                    type: array
+                    items:
+                      type: string
+                    description: Recommended coverage types not currently held by any household member.
+                    example: ["flood", "life", "umbrella"]
+                  members:
+                    type: array
+                    description: Household members with per-member policy summaries.
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/Client"
+                        - type: object
+                          properties:
+                            policy_count:
+                              type: integer
+                              description: Number of policies for this member.
+                              example: 2
+                            total_premium:
+                              type: number
+                              format: double
+                              description: Sum of premiums for this member.
+                              example: 3000.00
+                            coverage_types:
+                              type: array
+                              items:
+                                type: string
+                              description: Coverage types held by this member (sorted).
+                              example: ["homeowners", "personal_auto"]
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # -------------------------------------------------------------------------
+  # GET /clients/{id}/policies
+  # -------------------------------------------------------------------------
+  /clients/{id}/policies:
+    get:
+      operationId: listClientPolicies
+      summary: List policies for a client
+      description: |
+        Retrieve all insurance policies associated with a specific client.
+        Results are ordered by `effective_date` descending.
+      tags:
+        - Policies
+
+      security:
+        - oauth2:
+            - ams:policies:read
+      parameters:
+        - name: id
+          in: path
+          description: Client UUID.
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+        - name: policy_type
+          in: query
+          description: Filter by line of business.
+          required: false
+          schema:
+            $ref: "#/components/schemas/PolicyType"
+        - name: status
+          in: query
+          description: Filter by policy status.
+          required: false
+          schema:
+            $ref: "#/components/schemas/PolicyStatus"
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
+      responses:
+        "200":
+          description: A paginated list of policies belonging to the client.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Policy"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+              example:
+                data:
+                  - policy_id: "POL-PA-2024-001847"
+                    client_id: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+                    carrier_code: TRAV
+                    policy_type: personal_auto
+                    effective_date: "2024-07-01"
+                    expiration_date: "2025-07-01"
+                    premium_current: 1842.00
+                    premium_prior: 1764.00
+                    status: active
+                    coverages:
+                      - type: bodily_injury
+                        limit: 250000.00
+                        deductible: 0
+                      - type: property_damage
+                        limit: 100000.00
+                        deductible: 0
+                      - type: collision
+                        limit: 0
+                        deductible: 500.00
+                      - type: comprehensive
+                        limit: 0
+                        deductible: 250.00
+                    created_at: "2024-06-15T10:30:00Z"
+                    updated_at: "2025-01-08T16:45:12Z"
+                  - policy_id: "POL-HO-2023-004221"
+                    client_id: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+                    carrier_code: ERIE
+                    policy_type: homeowners
+                    effective_date: "2023-09-01"
+                    expiration_date: "2024-09-01"
+                    premium_current: 2156.00
+                    premium_prior: null
+                    status: expired
+                    coverages:
+                      - type: dwelling
+                        limit: 450000.00
+                        deductible: 1000.00
+                      - type: personal_property
+                        limit: 225000.00
+                        deductible: 1000.00
+                      - type: liability
+                        limit: 300000.00
+                        deductible: 0
+                    created_at: "2023-08-10T11:00:00Z"
+                    updated_at: "2024-09-01T00:00:00Z"
+                pagination:
+                  limit: 25
+                  cursor: null
+                  next_cursor: null
+                  has_more: false
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # -------------------------------------------------------------------------
+  # POST /policies
+  # -------------------------------------------------------------------------
+  /policies:
+    post:
+      operationId: createPolicy
+      summary: Create a new policy record
+      description: |
+        Create a new insurance policy in the AMS. Requires a valid `client_id`
+        referencing an existing client. At least one coverage entry is required.
+        Status defaults to `pending` if not provided.
+      tags:
+        - Policies
+
+      security:
+        - oauth2:
+            - ams:policies:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyCreateRequest"
+            example:
+              client_id: "CL-001"
+              policy_type: personal_auto
+              carrier_code: "SMIT"
+              effective_date: "2025-06-01"
+              expiration_date: "2026-06-01"
+              annual_premium: 1450.00
+              status: active
+              coverages:
+                - type: bodily_injury
+                  limit: 250000
+                  deductible: 0
+                - type: property_damage
+                  limit: 50000
+                  deductible: 0
+              multi_policy_discount: true
+      responses:
+        "201":
+          description: Policy created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # -------------------------------------------------------------------------
+  # POST /policies/{id}/endorsements
+  # -------------------------------------------------------------------------
+  /policies/{id}/endorsements:
+    post:
+      operationId: createEndorsement
+      summary: Request a policy endorsement
+      description: |
+        Submit a mid-term change request (endorsement) for an existing policy.
+        The policy must be in `active` or `pending` status; attempting to
+        endorse a `cancelled`, `expired`, or `non_renewed` policy returns 409.
+      tags:
+        - Endorsements
+
+      security:
+        - oauth2:
+            - ams:policies:endorsements
+      parameters:
+        - name: id
+          in: path
+          description: Policy identifier (e.g., `POL-PA-2024-001847`).
+          required: true
+          schema:
+            type: string
+          example: "POL-PA-2024-001847"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EndorsementRequest"
+            example:
+              effective_date: "2025-03-15"
+              change_type: add_vehicle
+              changes:
+                vehicle:
+                  year: 2024
+                  make: Toyota
+                  model: RAV4
+                  vin: "JTMRWRFV0RD123456"
+                usage: commute
+                annual_mileage: 12000
+              notes: "Client purchased new vehicle; replacing 2018 Civic on the policy."
+      responses:
+        "201":
+          description: Endorsement request created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Endorsement"
+              example:
+                endorsement_id: "END-2025-009432"
+                policy_id: "POL-PA-2024-001847"
+                effective_date: "2025-03-15"
+                change_type: add_vehicle
+                changes:
+                  vehicle:
+                    year: 2024
+                    make: Toyota
+                    model: RAV4
+                    vin: "JTMRWRFV0RD123456"
+                  usage: commute
+                  annual_mileage: 12000
+                premium_delta: 312.00
+                status: pending_review
+                notes: "Client purchased new vehicle; replacing 2018 Civic on the policy."
+                created_at: "2025-03-10T14:22:00Z"
+                updated_at: "2025-03-10T14:22:00Z"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+        "409":
+          $ref: "#/components/responses/409Conflict"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # -------------------------------------------------------------------------
+  # GET /accounting/commissions
+  # -------------------------------------------------------------------------
+  /accounting/commissions:
+    get:
+      operationId: listCommissions
+      summary: Fetch commission data
+      description: |
+        Retrieve a paginated list of commission records with optional filters
+        by carrier, date range, transaction type, and payment status.
+        Results are ordered by `effective_date` descending.
+      tags:
+        - Accounting
+
+      security:
+        - oauth2:
+            - ams:accounting:read
+      parameters:
+        - name: carrier_code
+          in: query
+          description: Filter by carrier.
+          required: false
+          schema:
+            $ref: "#/components/schemas/CarrierCode"
+        - name: transaction_type
+          in: query
+          description: Filter by transaction type.
+          required: false
+          schema:
+            type: string
+            enum:
+              - new_business
+              - renewal
+              - endorsement
+              - cancellation
+              - reinstatement
+              - audit
+        - name: status
+          in: query
+          description: Filter by payment status.
+          required: false
+          schema:
+            type: string
+            enum:
+              - earned
+              - paid
+              - reversed
+              - pending
+        - name: effective_date_from
+          in: query
+          description: Inclusive start of the effective-date range (YYYY-MM-DD).
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: effective_date_to
+          in: query
+          description: Inclusive end of the effective-date range (YYYY-MM-DD).
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2024-12-31"
+        - name: producer_id
+          in: query
+          description: Filter by producing agent UUID.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
+      responses:
+        "200":
+          description: A paginated list of commission records.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CommissionRecord"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+              example:
+                data:
+                  - commission_id: "COM-2025-018743"
+                    policy_id: "POL-PA-2024-001847"
+                    carrier_code: TRAV
+                    transaction_type: new_business
+                    gross_amount: 276.30
+                    net_amount: 193.41
+                    commission_rate: 0.15
+                    effective_date: "2024-07-01"
+                    payment_date: "2024-08-15"
+                    status: paid
+                    producer_id: "agt-44a1b2c3-d4e5-6789-abcd-ef0123456789"
+                    created_at: "2024-07-02T08:00:00Z"
+                  - commission_id: "COM-2025-018901"
+                    policy_id: "POL-HO-2023-004221"
+                    carrier_code: ERIE
+                    transaction_type: renewal
+                    gross_amount: 323.40
+                    net_amount: 226.38
+                    commission_rate: 0.15
+                    effective_date: "2024-09-01"
+                    payment_date: null
+                    status: earned
+                    producer_id: "agt-44a1b2c3-d4e5-6789-abcd-ef0123456789"
+                    created_at: "2024-09-02T08:00:00Z"
+                pagination:
+                  limit: 25
+                  cursor: null
+                  next_cursor: null
+                  has_more: false
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # -------------------------------------------------------------------------
+  # GET /tasks  &  POST /tasks
+  # -------------------------------------------------------------------------
+  /tasks:
+    get:
+      operationId: listTasks
+      summary: List tasks
+      description: |
+        Retrieve a paginated list of workflow tasks with optional filters.
+        Results are ordered by `due_date` ascending (soonest first), then
+        `created_at` descending.
+      tags:
+        - Tasks
+
+      security:
+        - oauth2:
+            - ams:tasks:read
+      parameters:
+        - name: status
+          in: query
+          description: Filter by task status.
+          required: false
+          schema:
+            type: string
+            enum:
+              - open
+              - in_progress
+              - blocked
+              - completed
+              - cancelled
+          example: open
+        - name: priority
+          in: query
+          description: Filter by priority level.
+          required: false
+          schema:
+            type: string
+            enum:
+              - low
+              - medium
+              - high
+              - urgent
+          example: high
+        - name: assigned_to
+          in: query
+          description: Filter by assigned user UUID.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: client_id
+          in: query
+          description: Filter by related client UUID.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: due_date_before
+          in: query
+          description: Return tasks with due_date on or before this date (YYYY-MM-DD).
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2025-06-30"
+        - name: due_date_after
+          in: query
+          description: Return tasks with due_date on or after this date (YYYY-MM-DD).
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2025-06-01"
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
+      responses:
+        "200":
+          description: A paginated list of tasks.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+              example:
+                data:
+                  - id: "t-881a2b3c-4d5e-6f78-9abc-def012345678"
+                    title: "Follow up on Chen renewal — POL-PA-2024-001847"
+                    description: "Policy expires 2025-07-01. Client requested competitive quotes from PROG and HRTF."
+                    status: open
+                    priority: high
+                    assigned_to: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+                    related_client_id: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+                    related_policy_id: "POL-PA-2024-001847"
+                    due_date: "2025-06-15"
+                    created_at: "2025-05-01T09:00:00Z"
+                    updated_at: "2025-05-01T09:00:00Z"
+                pagination:
+                  limit: 25
+                  cursor: null
+                  next_cursor: null
+                  has_more: false
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+    post:
+      operationId: createTask
+      summary: Create a task
+      description: |
+        Create a new internal workflow task.  The task is always created with
+        status `open`.
+      tags:
+        - Tasks
+
+      security:
+        - oauth2:
+            - ams:tasks:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCreateRequest"
+            example:
+              title: "Follow up on Chen renewal — POL-PA-2024-001847"
+              description: "Policy expires 2025-07-01. Client requested competitive quotes from PROG and HRTF."
+              priority: high
+              task_type: renewal_follow_up
+              assigned_to: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+              due_date: "2025-06-15"
+              client_id: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+              policy_id: "POL-PA-2024-001847"
+      responses:
+        "201":
+          description: Task created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+              example:
+                id: "t-881a2b3c-4d5e-6f78-9abc-def012345678"
+                title: "Follow up on Chen renewal — POL-PA-2024-001847"
+                description: "Policy expires 2025-07-01. Client requested competitive quotes from PROG and HRTF."
+                status: open
+                priority: high
+                task_type: renewal_follow_up
+                assigned_to: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+                related_client_id: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+                related_policy_id: "POL-PA-2024-001847"
+                due_date: "2025-06-15"
+                created_at: "2025-05-01T09:00:00Z"
+                updated_at: "2025-05-01T09:00:00Z"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # -------------------------------------------------------------------------
+  # PATCH /tasks/{id}
+  # -------------------------------------------------------------------------
+  /tasks/{id}:
+    patch:
+      operationId: updateTask
+      summary: Update a task
+      description: |
+        Partially update an internal workflow task.  Only the fields included
+        in the request body are modified; omitted fields remain unchanged.
+      tags:
+        - Tasks
+
+      security:
+        - oauth2:
+            - ams:tasks:write
+      parameters:
+        - name: id
+          in: path
+          description: Task UUID.
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "t-881a2b3c-4d5e-6f78-9abc-def012345678"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskPatch"
+            example:
+              status: in_progress
+              priority: high
+              assigned_to: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+              due_date: "2025-06-10"
+      responses:
+        "200":
+          description: Task updated successfully. Returns the full updated task.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+              example:
+                id: "t-881a2b3c-4d5e-6f78-9abc-def012345678"
+                title: "Follow up on Chen renewal — POL-PA-2024-001847"
+                description: "Policy expires 2025-07-01. Client requested competitive quotes from PROG and HRTF."
+                status: in_progress
+                priority: high
+                assigned_to: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+                related_client_id: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+                related_policy_id: "POL-PA-2024-001847"
+                due_date: "2025-06-10"
+                created_at: "2025-05-01T09:00:00Z"
+                updated_at: "2025-05-02T11:34:56Z"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+        "409":
+          $ref: "#/components/responses/409Conflict"
+
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Escalations
+  # ─────────────────────────────────────────────────────────────────────
+
+  /escalations:
+    get:
+      operationId: listEscalations
+      summary: List escalations
+      description: |
+        Retrieve a paginated list of manager escalations with optional filters.
+      tags: [Escalations]
+      security:
+        - oauth2:
+            - ams:escalations:read
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, denied, needs_info]
+        - name: client_id
+          in: query
+          schema:
+            type: string
+        - name: created_after
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: created_before
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/cursor"
+      responses:
+        "200":
+          description: Paginated list of escalations.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Escalation"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+
+    post:
+      operationId: createEscalation
+      summary: Create an escalation
+      description: |
+        Submit a new manager escalation. The escalation starts in `pending`
+        status. Poll `GET /escalations/{id}` to receive the manager's decision.
+        The decision resolves on the second poll (poll_count >= 2).
+      tags: [Escalations]
+      security:
+        - oauth2:
+            - ams:escalations:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EscalationCreate"
+      responses:
+        "201":
+          description: Escalation created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Escalation"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+
+  /escalations/{escalation_id}:
+    get:
+      operationId: getEscalation
+      summary: Get escalation by ID
+      description: |
+        Retrieve an escalation by its ID. Each GET increments the `poll_count`.
+        When `poll_count` reaches 2 and status is still `pending`, the manager
+        engine processes the escalation and resolves it to `approved`, `denied`,
+        or `needs_info`. Includes the full audit trail of events.
+      tags: [Escalations]
+      security:
+        - oauth2:
+            - ams:escalations:read
+      parameters:
+        - name: escalation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Escalation with events.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Escalation"
+                  - type: object
+                    properties:
+                      events:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/EscalationEvent"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"

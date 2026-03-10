@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# SQLite runtime files
+*.db-shm
+*.db-wal
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

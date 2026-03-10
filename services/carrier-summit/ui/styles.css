@@ -1,0 +1,664 @@
+:root {
+  --summit-green: #2d6a4f;
+  --summit-green-hover: #1b4332;
+  --summit-slate: #334155;
+  --summit-bg-light: #f1f5f0;
+  --summit-gray: #e0e0e0;
+  --summit-text: #1e293b;
+  --summit-text-muted: #64748b;
+  --status-approved: #28a745;
+  --status-declined: #dc3545;
+  --status-pending: #f59e0b;
+  --status-referred: #17a2b8;
+  --status-default: #6c757d;
+  --status-inspection-scheduled: #8b5cf6;
+  --status-inspection-complete: #059669;
+  --status-conditions-pending: #d97706;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--summit-bg-light);
+  color: var(--summit-text);
+  line-height: 1.5;
+}
+
+/* ── Header ─────────────────────────────────── */
+
+.header {
+  background: var(--summit-slate);
+  color: #fff;
+  border-top: 4px solid var(--summit-green);
+}
+
+.header-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-logo svg {
+  flex-shrink: 0;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.header-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* ── Tab Navigation ─────────────────────────── */
+
+.tab-nav {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  gap: 0;
+  background: #fff;
+  border-bottom: 1px solid var(--summit-gray);
+}
+
+.tab-nav button {
+  padding: 12px 20px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--summit-text-muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-nav button:hover {
+  color: var(--summit-text);
+}
+
+.tab-nav button.active {
+  color: var(--summit-green);
+  border-bottom-color: var(--summit-green);
+}
+
+/* ── Content ────────────────────────────────── */
+
+.content {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 24px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--summit-slate);
+}
+
+/* ── Search Bar ─────────────────────────────── */
+
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--summit-gray);
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.search-bar input:focus {
+  border-color: var(--summit-green);
+}
+
+.search-bar button {
+  padding: 10px 20px;
+  background: var(--summit-green);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.search-bar button:hover {
+  background: var(--summit-green-hover);
+}
+
+.search-bar button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Detail Grid ────────────────────────────── */
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--summit-text-muted);
+  margin-bottom: 2px;
+}
+
+.detail-value {
+  font-size: 14px;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+/* ── Status Badge ───────────────────────────── */
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: capitalize;
+}
+
+/* ── Step Indicator ─────────────────────────── */
+
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.step-indicator .step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--summit-text-muted);
+}
+
+.step-indicator .step .step-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  border: 2px solid var(--summit-gray);
+  background: #fff;
+  color: var(--summit-text-muted);
+}
+
+.step-indicator .step.step-active .step-number {
+  border-color: var(--summit-green);
+  background: var(--summit-green);
+  color: #fff;
+}
+
+.step-indicator .step.step-active {
+  color: var(--summit-green);
+}
+
+.step-indicator .step.step-complete .step-number {
+  border-color: var(--summit-green);
+  background: var(--summit-green);
+  color: #fff;
+}
+
+.step-indicator .step.step-complete {
+  color: var(--summit-green);
+}
+
+.step-indicator .step.step-pending .step-number {
+  border-color: var(--summit-gray);
+  background: #fff;
+  color: var(--summit-text-muted);
+}
+
+.step-indicator .step-connector {
+  width: 32px;
+  height: 2px;
+  background: var(--summit-gray);
+  align-self: center;
+}
+
+.step-indicator .step.step-complete + .step-connector,
+.step-indicator .step-connector.connector-complete {
+  background: var(--summit-green);
+}
+
+/* ── Form Fields ────────────────────────────── */
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--summit-text);
+  margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--summit-gray);
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: var(--summit-green);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  gap: 12px;
+}
+
+/* ── Photo Checklist ────────────────────────── */
+
+.photo-checklist {
+  list-style: none;
+  padding: 0;
+}
+
+.photo-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--summit-gray);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.photo-checklist li:hover {
+  border-color: var(--summit-green);
+}
+
+.photo-checklist li.checked {
+  border-color: var(--summit-green);
+  background: #f0fdf4;
+}
+
+.photo-checklist li input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--summit-green);
+  cursor: pointer;
+}
+
+.photo-checklist li .check-label {
+  flex: 1;
+}
+
+.photo-checklist li .check-desc {
+  font-size: 12px;
+  color: var(--summit-text-muted);
+}
+
+/* ── Timeline ───────────────────────────────── */
+
+.timeline {
+  position: relative;
+  padding-left: 28px;
+  margin: 16px 0;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--summit-gray);
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-item .timeline-dot {
+  position: absolute;
+  left: -22px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--summit-gray);
+  border: 2px solid #fff;
+}
+
+.timeline-item.timeline-complete .timeline-dot {
+  background: var(--summit-green);
+}
+
+.timeline-item.timeline-active .timeline-dot {
+  background: var(--summit-green);
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.25);
+}
+
+.timeline-item.timeline-pending .timeline-dot {
+  background: var(--summit-gray);
+}
+
+.timeline-item .timeline-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--summit-text);
+}
+
+.timeline-item .timeline-date {
+  font-size: 12px;
+  color: var(--summit-text-muted);
+  margin-top: 2px;
+}
+
+.timeline-item.timeline-pending .timeline-label {
+  color: var(--summit-text-muted);
+}
+
+/* ── Version Badge ──────────────────────────── */
+
+.version-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--summit-green);
+  color: #fff;
+  margin-left: 6px;
+}
+
+/* ── Conditions Panel ───────────────────────── */
+
+.conditions-list {
+  list-style: none;
+  padding: 0;
+}
+
+.conditions-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--summit-gray);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.conditions-list li .condition-status {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+}
+
+.conditions-list li .condition-status.met {
+  background: var(--status-approved);
+}
+
+.conditions-list li .condition-status.unmet {
+  background: var(--status-declined);
+}
+
+.conditions-list li .condition-status.pending {
+  background: var(--status-pending);
+}
+
+/* ── Decision Buttons ───────────────────────── */
+
+.decision-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.decision-actions textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--summit-gray);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+}
+
+.decision-actions textarea:focus {
+  border-color: var(--summit-green);
+}
+
+.btn {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--summit-green);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--summit-green-hover);
+}
+
+.btn-secondary {
+  background: #fff;
+  color: var(--summit-text);
+  border: 1px solid var(--summit-gray);
+}
+
+.btn-secondary:hover {
+  background: var(--summit-bg-light);
+}
+
+.btn-approve {
+  background: var(--status-approved);
+  color: #fff;
+}
+
+.btn-decline {
+  background: var(--status-declined);
+  color: #fff;
+}
+
+.btn-refer {
+  background: var(--status-referred);
+  color: #fff;
+}
+
+/* ── Documents Table ────────────────────────── */
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.doc-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--summit-text-muted);
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--summit-gray);
+}
+
+.doc-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--summit-gray);
+}
+
+/* ── Messages ───────────────────────────────── */
+
+.error-msg {
+  padding: 12px 16px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 6px;
+  font-size: 14px;
+  border: 1px solid #fecaca;
+}
+
+.success-msg {
+  padding: 12px 16px;
+  background: #f0fdf4;
+  color: #166534;
+  border-radius: 6px;
+  font-size: 14px;
+  border: 1px solid #bbf7d0;
+}
+
+.loading {
+  color: var(--summit-text-muted);
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+.empty-state {
+  color: var(--summit-text-muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 32px 0;
+}
+
+/* ── Footer ─────────────────────────────────── */
+
+.footer {
+  max-width: 960px;
+  margin: 32px auto 24px;
+  padding: 0 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--summit-text-muted);
+}
+
+/* ── Responsive ─────────────────────────────── */
+
+@media (max-width: 600px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .header-inner {
+    padding: 12px 16px;
+  }
+
+  .tab-nav {
+    padding: 0 16px;
+  }
+
+  .content {
+    padding: 0 16px;
+  }
+
+  .decision-actions {
+    flex-direction: column;
+  }
+
+  .step-indicator {
+    gap: 4px;
+  }
+
+  .step-indicator .step .step-label {
+    display: none;
+  }
+}

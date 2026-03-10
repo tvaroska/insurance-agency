@@ -1,0 +1,512 @@
+openapi: 3.0.3
+info:
+  title: Summit Fire & Casualty Carrier Portal API
+  description: |
+    Mock Summit Fire & Casualty carrier portal API for the Evergreen Insurance training
+    environment.
+
+    Provides programmatic access to quote lookup, underwriting decisions,
+    and policy document retrieval — simulating a real carrier integration.
+
+    ## Authentication
+
+    All `/summit/*` endpoints require an OAuth 2.0 Bearer token.  Include the
+    token in the `Authorization` header:
+
+    ```
+    Authorization: Bearer <access_token>
+    ```
+
+    A dev-token endpoint is available at `GET /auth/dev-token` for training
+    environments (no authentication required).
+
+    ## Latency Simulation
+
+    Set the `CARRIER_LATENCY_MS` environment variable to add artificial
+    latency (milliseconds) to authenticated endpoints, simulating real
+    carrier response times.
+
+    ## Errors
+
+    All error responses share a common envelope (`ErrorResponse`) with
+    `error_code`, `message`, and an optional `details` array for field-level
+    validation failures.
+  version: 1.0.0
+  contact:
+    name: Evergreen Platform Engineering
+
+servers:
+  - url: http://localhost:3005
+    description: Local development
+
+tags:
+  - name: Health
+    description: Service health checks
+  - name: Auth
+    description: Development authentication helpers
+  - name: Quotes
+    description: Quote lookup from underwriting system
+  - name: Underwriting
+    description: Underwriting decision simulation
+  - name: Policies
+    description: Policy documents and retrieval
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+security:
+  - oauth2: []
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      tags: [Health]
+      security: []
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+                service: carrier-summit
+                timestamp: "2026-02-20T12:00:00.000Z"
+
+  /auth/dev-token:
+    get:
+      operationId: getDevToken
+      summary: Generate development JWT token
+      description: |
+        Returns a signed JWT with all carrier scopes for development and
+        training use.  **Not available in production.**
+      tags: [Auth]
+      security: []
+      responses:
+        "200":
+          description: JWT token generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevTokenResponse"
+              example:
+                token: "eyJhbGciOiJIUzI1NiIs..."
+
+  /summit/quotes/{quote_id}:
+    get:
+      operationId: getQuote
+      summary: Look up a quote
+      description: Retrieves a quote by ID from the Summit Fire & Casualty underwriting system.
+      tags: [Quotes]
+      security:
+        - oauth2:
+            - "carrier:quotes:read"
+
+      parameters:
+        - $ref: "#/components/parameters/QuoteId"
+      responses:
+        "200":
+          description: Quote found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummitQuote"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+
+  /summit/underwriting/{quote_id}/decision:
+    post:
+      operationId: submitUnderwritingDecision
+      summary: Submit underwriting decision
+      description: |
+        Simulates an underwriting decision on a quote.  Valid decisions are
+        `approve`, `decline`, or `refer`.  Once a quote has been approved or
+        declined it cannot be changed (returns 409 Conflict).
+      tags: [Underwriting]
+      security:
+        - oauth2:
+            - "carrier:underwriting:write"
+
+      parameters:
+        - $ref: "#/components/parameters/QuoteId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnderwritingDecisionRequest"
+            example:
+              decision: approve
+              notes: "Risk profile acceptable, no prior claims."
+      responses:
+        "200":
+          description: Decision recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummitQuoteWithDecision"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+
+  /summit/policies/{policy_id}/documents:
+    get:
+      operationId: getPolicyDocuments
+      summary: List policy documents
+      description: Returns the list of documents available for a given policy.
+      tags: [Policies]
+      security:
+        - oauth2:
+            - "carrier:policies:read"
+
+      parameters:
+        - $ref: "#/components/parameters/PolicyId"
+      responses:
+        "200":
+          description: Documents listed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyDocumentsResponse"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+
+# ---------------------------------------------------------------------------
+# Components
+# ---------------------------------------------------------------------------
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:3005/oauth/token
+          scopes:
+            "carrier:quotes:read": Read quote data
+            "carrier:underwriting:write": Submit underwriting decisions
+            "carrier:policies:read": Read policy and document data
+
+  parameters:
+    QuoteId:
+      name: quote_id
+      in: path
+      required: true
+      description: Unique quote identifier.
+      schema:
+        type: string
+        example: "QUO-SMIT-001"
+    PolicyId:
+      name: policy_id
+      in: path
+      required: true
+      description: Unique policy identifier.
+      schema:
+        type: string
+        example: "POL-SMIT-001"
+
+  headers:
+    X-Correlation-ID:
+      description: Request correlation identifier for tracing.
+      schema:
+        type: string
+        format: uuid
+        example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  schemas:
+    # ----- Health -----------------------------------------------------------
+    HealthResponse:
+      type: object
+      required: [status, service, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          example: ok
+        service:
+          type: string
+          example: carrier-summit
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-02-20T12:00:00.000Z"
+
+    # ----- Auth -------------------------------------------------------------
+    DevTokenResponse:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: Signed JWT with all carrier scopes.
+          example: "eyJhbGciOiJIUzI1NiIs..."
+
+    # ----- Quote (Summit Fire & Casualty) ------------------------------------------------
+    SummitQuote:
+      type: object
+      description: A Summit Fire & Casualty insurance quote.
+      required:
+        - quote_id
+        - request_id
+        - client_id
+        - policy_type
+        - coverages
+        - deductibles
+        - status
+        - submitted_at
+        - underwriting_status
+      properties:
+        quote_id:
+          type: string
+          description: Unique quote identifier.
+          example: "QUO-SMIT-001"
+        request_id:
+          type: string
+          description: Original rating request ID.
+          example: "REQ-001"
+        client_id:
+          type: string
+          description: Client (insured) identifier.
+          example: "CLT-001"
+        policy_type:
+          type: string
+          description: Type of insurance policy.
+          enum: [auto, home, umbrella]
+          example: auto
+        premium_annual:
+          type: number
+          format: double
+          nullable: true
+          description: Annual premium amount in USD.
+          example: 1847.0
+        premium_monthly:
+          type: number
+          format: double
+          nullable: true
+          description: Monthly premium amount in USD.
+          example: 153.92
+        coverages:
+          type: array
+          description: List of coverage details.
+          items:
+            type: object
+        deductibles:
+          type: object
+          description: Deductible amounts by coverage type.
+        status:
+          type: string
+          description: Current quote status.
+          enum: [quoted, approved, declined]
+          example: quoted
+        decline_reason:
+          type: string
+          nullable: true
+          description: Reason for decline, if applicable.
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+          description: Quote expiration date.
+          example: "2026-05-20"
+        submitted_at:
+          type: string
+          format: date-time
+          description: When the quote was submitted.
+          example: "2026-02-18T10:30:00.000Z"
+        underwriting_status:
+          type: string
+          description: Current underwriting review status.
+          enum: [pending_review, approved, declined, referred]
+          example: pending_review
+        underwriting_notes:
+          type: string
+          nullable: true
+          description: Underwriter notes.
+
+    SummitQuoteWithDecision:
+      allOf:
+        - $ref: "#/components/schemas/SummitQuote"
+        - type: object
+          properties:
+            decided_at:
+              type: string
+              format: date-time
+              description: When the underwriting decision was made.
+              example: "2026-02-20T14:30:00.000Z"
+
+    # ----- Underwriting Decision Request ------------------------------------
+    UnderwritingDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          description: The underwriting decision.
+          enum: [approve, decline, refer]
+          example: approve
+        notes:
+          type: string
+          description: Optional notes from the underwriter.
+          example: "Risk profile acceptable, no prior claims."
+
+    # ----- Policy Documents -------------------------------------------------
+    PolicyDocument:
+      type: object
+      required:
+        - document_id
+        - document_type
+        - filename
+        - file_size_bytes
+        - created_at
+      properties:
+        document_id:
+          type: string
+          description: Unique document identifier.
+          example: "DOC-TRAV-001"
+        document_type:
+          type: string
+          description: Type of document.
+          enum: [declaration, id_card, endorsement, cancellation]
+          example: declaration
+        filename:
+          type: string
+          description: Original filename.
+          example: "declaration_page.pdf"
+        file_size_bytes:
+          type: integer
+          description: File size in bytes.
+          example: 245760
+        created_at:
+          type: string
+          format: date-time
+          description: When the document was created.
+          example: "2026-02-18T10:00:00.000Z"
+
+    PolicyDocumentsResponse:
+      type: object
+      required: [policy_id, document_count, documents]
+      properties:
+        policy_id:
+          type: string
+          description: Policy identifier.
+          example: "POL-SMIT-001"
+        document_count:
+          type: integer
+          description: Total number of documents.
+          example: 2
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyDocument"
+
+    # ----- Error Envelope ---------------------------------------------------
+    ErrorResponse:
+      type: object
+      required: [error_code, message]
+      properties:
+        error_code:
+          type: string
+          description: Machine-readable error code.
+          example: NOT_FOUND
+        message:
+          type: string
+          description: Human-readable error message.
+          example: "quote not found"
+        correlation_id:
+          type: string
+          format: uuid
+          description: Correlation ID for request tracing.
+        details:
+          type: array
+          description: Field-level validation errors (present on 422).
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field:
+                type: string
+                example: decision
+              message:
+                type: string
+                example: "decision is required"
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: UNAUTHORIZED
+            message: "Missing or invalid Bearer token"
+    Forbidden:
+      description: Insufficient scopes for this operation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: FORBIDDEN
+            message: "Insufficient scopes"
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: NOT_FOUND
+            message: "quote not found"
+    Conflict:
+      description: Resource state conflict.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: CONFLICT
+            message: "Quote already has underwriting decision 'approved'."
+    UnprocessableEntity:
+      description: Validation error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: VALIDATION_ERROR
+            message: "Validation failed"
+            details:
+              - field: decision
+                message: "decision is required"

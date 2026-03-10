@@ -1,0 +1,82 @@
+[
+  {
+    "asset_id": "AST-001",
+    "name": "Personal Lines Welcome Kit",
+    "description": "Welcome packet for new personal lines clients with policy overview, claims process, and agent contact information.",
+    "category": "welcome_kit",
+    "mime_type": "application/pdf",
+    "url": "https://cdn.evergreen-insurance.com/assets/welcome-kit-personal.pdf",
+    "version": "2.1",
+    "published_date": "2025-03-15T00:00:00Z"
+  },
+  {
+    "asset_id": "AST-002",
+    "name": "Commercial Lines Welcome Kit",
+    "description": "Welcome packet for new commercial clients covering BOP, GL, and workers comp basics.",
+    "category": "welcome_kit",
+    "mime_type": "application/pdf",
+    "url": "https://cdn.evergreen-insurance.com/assets/welcome-kit-commercial.pdf",
+    "version": "1.4",
+    "published_date": "2025-04-01T00:00:00Z"
+  },
+  {
+    "asset_id": "AST-003",
+    "name": "Home & Auto Bundle Savings Flyer",
+    "description": "One-page flyer highlighting multi-policy discount savings for bundling home and auto coverage.",
+    "category": "flyer",
+    "mime_type": "application/pdf",
+    "url": "https://cdn.evergreen-insurance.com/assets/bundle-savings-flyer.pdf",
+    "version": "3.0",
+    "published_date": "2025-05-10T00:00:00Z"
+  },
+  {
+    "asset_id": "AST-004",
+    "name": "Umbrella Coverage Explainer Flyer",
+    "description": "Educational flyer explaining umbrella policy benefits, coverage limits, and common scenarios.",
+    "category": "flyer",
+    "mime_type": "application/pdf",
+    "url": "https://cdn.evergreen-insurance.com/assets/umbrella-explainer.pdf",
+    "version": "1.2",
+    "published_date": "2025-02-20T00:00:00Z"
+  },
+  {
+    "asset_id": "AST-005",
+    "name": "Carrier Rate Comparison Template",
+    "description": "Spreadsheet template for comparing quotes across carriers, pre-formatted with coverage categories.",
+    "category": "comparison_template",
+    "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "url": "https://cdn.evergreen-insurance.com/assets/rate-comparison-template.xlsx",
+    "version": "4.0",
+    "published_date": "2025-06-01T00:00:00Z"
+  },
+  {
+    "asset_id": "AST-006",
+    "name": "Price Comparison One-Pager",
+    "description": "Client-facing comparison document showing current vs. proposed premiums with coverage highlights.",
+    "category": "comparison_template",
+    "mime_type": "application/pdf",
+    "url": "https://cdn.evergreen-insurance.com/assets/price-comparison-one-pager.pdf",
+    "version": "2.0",
+    "published_date": "2025-05-20T00:00:00Z"
+  },
+  {
+    "asset_id": "AST-007",
+    "name": "Insurance Tips — Storm Season Preparedness",
+    "description": "Social media graphic series for storm season with home preparation tips and claims advice.",
+    "category": "social_media",
+    "mime_type": "image/png",
+    "url": "https://cdn.evergreen-insurance.com/assets/social-storm-prep.png",
+    "version": "1.0",
+    "published_date": "2025-05-01T00:00:00Z"
+  },
+  {
+    "asset_id": "AST-008",
+    "name": "New Client Referral Program Graphic",
+    "description": "Social media post template promoting the client referral rewards program.",
+    "category": "social_media",
+    "mime_type": "image/png",
+    "url": "https://cdn.evergreen-insurance.com/assets/social-referral-program.png",
+    "version": "1.1",
+    "published_date": "2025-04-15T00:00:00Z"
+  }
+]
