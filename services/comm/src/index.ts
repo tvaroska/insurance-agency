@@ -12,6 +12,8 @@ import {
   type CorrelationVariables,
 } from "@evergreen/shared";
 import { messagesRouter } from "./routes/messages";
+import { callsRouter } from "./routes/calls";
+import { webhooksRouter } from "./routes/webhooks";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -35,6 +37,8 @@ app.route("/", oauthTokenEndpoint());
 const api = new Hono<{ Variables: AppVariables }>();
 api.use("*", jwtAuth);
 api.route("/messages", messagesRouter);
+api.route("/calls", callsRouter);
+api.route("/webhooks", webhooksRouter);
 app.route("/v1", api);
 
 // ── MCP Streamable HTTP transport ───────────────────────────────────

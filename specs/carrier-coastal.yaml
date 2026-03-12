@@ -215,6 +215,123 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
 
 
+  /coastal/quotes/quick:
+    post:
+      operationId: quickQuote
+      summary: Instant quote with VIN decode
+      description: |
+        Submits a VIN and driver info for an instant auto quote.  The VIN is
+        decoded to identify the vehicle, and a risk-assessed quote is returned
+        immediately with premium options.
+      tags: [Quotes]
+      security:
+        - oauth2:
+            - "carrier:quotes:write"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuickQuoteRequest"
+            example:
+              vin: "1HGCM82633A004352"
+              client_id: "CLT-001"
+              driver_name: "John Smith"
+              driver_dob: "1985-06-15"
+      responses:
+        "201":
+          description: Quote created with instant risk assessment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuickQuoteResponse"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+
+  /coastal/quotes/{quote_id}/recalculate:
+    post:
+      operationId: recalculateQuote
+      summary: Recalculate premium with adjusted coverages
+      description: |
+        Recalculates the premium for an existing quote based on modified
+        coverage selections.  Returns both original and adjusted premium
+        amounts for comparison.
+      tags: [Quotes]
+      security:
+        - oauth2:
+            - "carrier:quotes:read"
+      parameters:
+        - $ref: "#/components/parameters/QuoteId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecalculateRequest"
+            example:
+              coverages:
+                - type: "bodily_injury"
+                  limit: "250/500"
+                - type: "collision"
+                  deductible: 1000
+      responses:
+        "200":
+          description: Premium recalculated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecalculateResponse"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+
+  /coastal/policies/{policy_id}/id-card:
+    get:
+      operationId: getPolicyIdCard
+      summary: Get digital insurance ID card
+      description: |
+        Generates or retrieves a digital insurance ID card for a policy.
+        If an ID card has not been previously generated, one is created
+        on the fly and cached for future requests.
+      tags: [Binding]
+      security:
+        - oauth2:
+            - "carrier:policies:read"
+      parameters:
+        - $ref: "#/components/parameters/PolicyId"
+      responses:
+        "200":
+          description: ID card returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdCardResponse"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+
 # ---------------------------------------------------------------------------
 # Components
 # ---------------------------------------------------------------------------
@@ -229,6 +346,7 @@ components:
             "carrier:quotes:read": Read quote and risk assessment data
             "carrier:quotes:write": Submit quotes for risk assessment
             "carrier:underwriting:write": Bind quotes and create policies
+            "carrier:policies:read": Read policy data and ID cards
 
   parameters:
     QuoteId:
@@ -239,6 +357,14 @@ components:
       schema:
         type: string
         example: "QUO-CSTL-001"
+    PolicyId:
+      name: policy_id
+      in: path
+      required: true
+      description: Unique policy identifier.
+      schema:
+        type: string
+        example: "POL-CSTL-001"
 
   headers:
     X-Correlation-ID:
@@ -487,6 +613,188 @@ components:
           format: date-time
           description: When the binding was confirmed.
           example: "2026-02-20T15:00:00.000Z"
+
+    # ----- Quick Quote -------------------------------------------------------
+    QuickQuoteRequest:
+      type: object
+      required: [vin, client_id, driver_name]
+      properties:
+        vin:
+          type: string
+          description: Vehicle Identification Number (17 characters).
+          example: "1HGCM82633A004352"
+        client_id:
+          type: string
+          description: Client identifier.
+          example: "CLT-001"
+        driver_name:
+          type: string
+          description: Primary driver full name.
+          example: "John Smith"
+        driver_dob:
+          type: string
+          format: date
+          description: Driver date of birth (YYYY-MM-DD).
+          example: "1985-06-15"
+        driver_license:
+          type: string
+          description: Driver license number.
+
+    QuickQuoteResponse:
+      type: object
+      required:
+        - quote_id
+        - client_id
+        - vehicle
+        - premium
+        - risk_score
+        - risk_tier
+        - coverages
+        - status
+        - assessed_at
+      properties:
+        quote_id:
+          type: string
+          example: "QT-CSTL-1710288000000"
+        client_id:
+          type: string
+          example: "CLT-001"
+        vehicle:
+          type: object
+          properties:
+            vin:
+              type: string
+            year:
+              type: integer
+            make:
+              type: string
+            model:
+              type: string
+        premium:
+          type: object
+          properties:
+            annual:
+              type: number
+              format: double
+            semi_annual:
+              type: number
+              format: double
+            monthly:
+              type: number
+              format: double
+        risk_score:
+          type: integer
+          minimum: 30
+          maximum: 89
+          example: 72
+        risk_tier:
+          type: string
+          enum: [preferred, standard, non_standard]
+          example: standard
+        coverages:
+          type: array
+          items:
+            type: object
+        status:
+          type: string
+          enum: [assessed]
+          example: assessed
+        assessed_at:
+          type: string
+          format: date-time
+
+    # ----- Recalculate --------------------------------------------------------
+    RecalculateRequest:
+      type: object
+      properties:
+        coverages:
+          type: array
+          description: Modified coverage selections for premium recalculation.
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "bodily_injury"
+              limit:
+                oneOf:
+                  - type: string
+                  - type: number
+              deductible:
+                type: number
+
+    RecalculateResponse:
+      type: object
+      required: [quote_id, original_premium, adjusted_premium, coverages]
+      properties:
+        quote_id:
+          type: string
+          example: "QUO-CSTL-001"
+        original_premium:
+          type: object
+          properties:
+            annual:
+              type: number
+              format: double
+            monthly:
+              type: number
+              format: double
+        adjusted_premium:
+          type: object
+          properties:
+            annual:
+              type: number
+              format: double
+            semi_annual:
+              type: number
+              format: double
+            monthly:
+              type: number
+              format: double
+        coverages:
+          type: array
+          items:
+            type: object
+
+    # ----- ID Card ------------------------------------------------------------
+    IdCardResponse:
+      type: object
+      required: [card_id, policy_id, card_data, issued_at]
+      properties:
+        card_id:
+          type: string
+          example: "IDC-POLCSTL0-1710288000000"
+        policy_id:
+          type: string
+          example: "POL-CSTL-001"
+        card_data:
+          type: object
+          properties:
+            carrier:
+              type: string
+              example: "Coastal Star Insurance"
+            carrier_code:
+              type: string
+              example: "CSTL"
+            policy_number:
+              type: string
+            insured_name:
+              type: string
+            policy_type:
+              type: string
+            effective_date:
+              type: string
+              format: date
+            expiration_date:
+              type: string
+              format: date
+            coverages_summary:
+              type: array
+              items:
+                type: object
+        issued_at:
+          type: string
+          format: date-time
 
     # ----- Error Envelope ---------------------------------------------------
     ErrorResponse:

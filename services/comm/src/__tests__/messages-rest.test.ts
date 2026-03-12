@@ -227,3 +227,20 @@ describe("GET /v1/messages", () => {
     expect(json.pagination).toHaveProperty("next_cursor");
   });
 });
+
+// ── GET /inbox ──────────────────────────────────────────────────────
+
+describe("GET /v1/messages/inbox", () => {
+  test("200 returns same results as GET /v1/messages", async () => {
+    const hdr = await authHeader(["comm:messages:read"]);
+    const [resRoot, resInbox] = await Promise.all([
+      getMessages({}, hdr),
+      app.request("http://localhost/v1/messages/inbox", { headers: hdr }),
+    ]);
+    expect(resRoot.status).toBe(200);
+    expect(resInbox.status).toBe(200);
+    const jsonRoot = await resRoot.json();
+    const jsonInbox = await resInbox.json();
+    expect(jsonInbox.data.length).toBe(jsonRoot.data.length);
+  });
+});

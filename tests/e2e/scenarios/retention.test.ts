@@ -140,12 +140,17 @@ describe("Retention Agent — E2E", () => {
         }),
       },
     );
-    expect(res.status).toBe(201);
+    // 201 on first run, 409 if already enrolled from a previous run
+    expect([201, 409]).toContain(res.status);
 
     const body = await res.json();
-    expect(body.enrollment_id).toBeTruthy();
-    expect(body.campaign_id).toBe(CAMPAIGNS.RENEWAL_Q1);
-    expect(body.client_id).toBe(client.id);
+    if (res.status === 201) {
+      expect(body.enrollment_id).toBeTruthy();
+      expect(body.campaign_id).toBe(CAMPAIGNS.RENEWAL_Q1);
+      expect(body.client_id).toBe(client.id);
+    } else {
+      expect(body.message).toContain("already enrolled");
+    }
   });
 
   test("Step 7: Send comparison email via Comm Hub", async () => {

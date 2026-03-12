@@ -204,6 +204,115 @@ paths:
           $ref: "#/components/responses/NotFound"
 
 
+  /summit/submissions:
+    post:
+      operationId: submitProperty
+      summary: Submit a property for quoting
+      description: |
+        Submits a new property submission with address, property details,
+        and requested coverages.  Automatically schedules an inspection
+        and creates default underwriting conditions.
+      tags: [Quotes]
+      security:
+        - oauth2:
+            - "carrier:quotes:write"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertySubmissionRequest"
+            example:
+              client_id: "CLT-001"
+              policy_type: "home"
+              property_address:
+                street: "123 Main St"
+                city: "Tampa"
+                state: "FL"
+                zip: "33601"
+              property_details:
+                square_feet: 2200
+                year_built: 2005
+                construction_type: "frame"
+              coverages:
+                - type: "dwelling"
+                  limit: 350000
+      responses:
+        "201":
+          description: Submission accepted and inspection scheduled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertySubmissionResponse"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+
+  /summit/inspections/{quote_id}:
+    get:
+      operationId: getInspectionStatus
+      summary: Get inspection status for a quote
+      description: Returns the current inspection status, schedule, and property details for a submitted quote.
+      tags: [Quotes]
+      security:
+        - oauth2:
+            - "carrier:quotes:read"
+      parameters:
+        - $ref: "#/components/parameters/QuoteId"
+      responses:
+        "200":
+          description: Inspection status returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectionStatusResponse"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+
+  /summit/inspections/{quote_id}/conditions:
+    get:
+      operationId: getInspectionConditions
+      summary: Get underwriting conditions for a quote
+      description: Returns the list of underwriting conditions attached to a submitted quote.
+      tags: [Quotes]
+      security:
+        - oauth2:
+            - "carrier:quotes:read"
+      parameters:
+        - $ref: "#/components/parameters/QuoteId"
+      responses:
+        "200":
+          description: Conditions listed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectionConditionsResponse"
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/X-Correlation-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+
 # ---------------------------------------------------------------------------
 # Components
 # ---------------------------------------------------------------------------
@@ -216,6 +325,7 @@ components:
           tokenUrl: http://localhost:3005/oauth/token
           scopes:
             "carrier:quotes:read": Read quote data
+            "carrier:quotes:write": Submit property quotes
             "carrier:underwriting:write": Submit underwriting decisions
             "carrier:policies:read": Read policy and document data
 
@@ -429,6 +539,191 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PolicyDocument"
+
+    # ----- Property Submission -----------------------------------------------
+    PropertySubmissionRequest:
+      type: object
+      required: [client_id, policy_type, property_address, property_details, coverages]
+      properties:
+        client_id:
+          type: string
+          description: Client (insured) identifier.
+          example: "CLT-001"
+        policy_type:
+          type: string
+          description: Type of insurance policy.
+          example: "home"
+        property_address:
+          type: object
+          description: Property street address.
+          properties:
+            street:
+              type: string
+              example: "123 Main St"
+            city:
+              type: string
+              example: "Tampa"
+            state:
+              type: string
+              example: "FL"
+            zip:
+              type: string
+              example: "33601"
+        property_details:
+          type: object
+          description: Physical property characteristics.
+          properties:
+            square_feet:
+              type: integer
+              example: 2200
+            year_built:
+              type: integer
+              example: 2005
+            construction_type:
+              type: string
+              example: "frame"
+        coverages:
+          type: array
+          description: Requested coverages.
+          items:
+            type: object
+        deductibles:
+          type: object
+          description: Deductible amounts by coverage type.
+        photo_checklist:
+          type: array
+          description: Optional list of photo requirements.
+          items:
+            type: string
+
+    PropertySubmissionResponse:
+      type: object
+      required:
+        - quote_id
+        - request_id
+        - client_id
+        - policy_type
+        - premium_annual
+        - premium_monthly
+        - status
+        - inspection_status
+        - inspection_scheduled_at
+        - conditions_count
+        - submitted_at
+      properties:
+        quote_id:
+          type: string
+          example: "QT-SMIT-1710288000000"
+        request_id:
+          type: string
+          example: "QR-1710288000000"
+        client_id:
+          type: string
+          example: "CLT-001"
+        policy_type:
+          type: string
+          example: "home"
+        premium_annual:
+          type: number
+          format: double
+          example: 1870.0
+        premium_monthly:
+          type: number
+          format: double
+          example: 155.83
+        status:
+          type: string
+          enum: [submitted]
+          example: submitted
+        inspection_status:
+          type: string
+          enum: [scheduled]
+          example: scheduled
+        inspection_scheduled_at:
+          type: string
+          format: date-time
+          example: "2026-03-19T12:00:00.000Z"
+        conditions_count:
+          type: integer
+          example: 3
+        submitted_at:
+          type: string
+          format: date-time
+          example: "2026-03-12T12:00:00.000Z"
+
+    # ----- Inspection Status --------------------------------------------------
+    InspectionStatusResponse:
+      type: object
+      required: [quote_id, inspection_status]
+      properties:
+        quote_id:
+          type: string
+          example: "QT-SMIT-1710288000000"
+        inspection_status:
+          type: string
+          description: Current inspection status.
+          enum: [scheduled, in_progress, completed, cancelled]
+          example: scheduled
+        inspection_scheduled_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-03-19T12:00:00.000Z"
+        inspection_completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        inspection_notes:
+          type: string
+          nullable: true
+        property_address:
+          type: object
+          nullable: true
+        property_details:
+          type: object
+          nullable: true
+
+    # ----- Underwriting Conditions -------------------------------------------
+    UnderwritingCondition:
+      type: object
+      required: [condition_id, condition_type, description, status, created_at]
+      properties:
+        condition_id:
+          type: string
+          example: "COND-QT-SMIT-001-1"
+        condition_type:
+          type: string
+          enum: [inspection_required, document_required]
+          example: inspection_required
+        description:
+          type: string
+          example: "4-point inspection report required"
+        status:
+          type: string
+          enum: [pending, met, waived]
+          example: pending
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    InspectionConditionsResponse:
+      type: object
+      required: [quote_id, conditions_count, conditions]
+      properties:
+        quote_id:
+          type: string
+          example: "QT-SMIT-1710288000000"
+        conditions_count:
+          type: integer
+          example: 3
+        conditions:
+          type: array
+          items:
+            $ref: "#/components/schemas/UnderwritingCondition"
 
     # ----- Error Envelope ---------------------------------------------------
     ErrorResponse:

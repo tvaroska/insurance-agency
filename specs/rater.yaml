@@ -420,6 +420,75 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /carriers:
+    get:
+      operationId: listCarriers
+      summary: List carriers (alias for /carriers/appetite)
+      description: |
+        Alias for `GET /carriers/appetite`. Returns the same paginated list of
+        carriers and their appetite for writing specific risk types.
+      tags:
+        - Carriers
+      security:
+        - oauth2:
+            - rater:carriers:read
+      parameters:
+        - name: state
+          in: query
+          description: Two-letter US state code.
+          schema:
+            type: string
+            pattern: '^[A-Z]{2}$'
+        - name: policy_type
+          in: query
+          description: Filter by policy type.
+          schema:
+            $ref: '#/components/schemas/PolicyType'
+        - name: risk_category
+          in: query
+          schema:
+            type: string
+            enum: [preferred, standard, non_standard]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Carrier appetite list retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CarrierAppetite'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /carriers/appetite:
     get:
       operationId: getCarrierAppetite

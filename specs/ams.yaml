@@ -1868,9 +1868,81 @@ paths:
           $ref: "#/components/responses/500InternalServerError"
 
   # -------------------------------------------------------------------------
-  # POST /policies
+  # GET /policies  &  POST /policies
   # -------------------------------------------------------------------------
   /policies:
+    get:
+      operationId: listPolicies
+      summary: List policies across all clients
+      description: |
+        Returns a paginated list of policies across all clients with optional
+        filters.  Results are sorted by `expiration_date` descending.
+      tags:
+        - Policies
+      security:
+        - oauth2:
+            - ams:policies:read
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
+        - name: status
+          in: query
+          description: Filter by policy status.
+          required: false
+          schema:
+            $ref: "#/components/schemas/PolicyStatus"
+        - name: client_id
+          in: query
+          description: Filter by client identifier.
+          required: false
+          schema:
+            type: string
+        - name: policy_type
+          in: query
+          description: Filter by line of business.
+          required: false
+          schema:
+            $ref: "#/components/schemas/PolicyType"
+        - name: expiration_before
+          in: query
+          description: Return policies expiring on or before this date (YYYY-MM-DD).
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: expiration_after
+          in: query
+          description: Return policies expiring on or after this date (YYYY-MM-DD).
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: A paginated list of policies.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Policy"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
     post:
       operationId: createPolicy
       summary: Create a new policy record
@@ -1922,6 +1994,52 @@ paths:
         "404":
           $ref: "#/components/responses/404NotFound"
 
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
+  # -------------------------------------------------------------------------
+  # GET /policies/{id}
+  # -------------------------------------------------------------------------
+  /policies/{id}:
+    get:
+      operationId: getPolicyById
+      summary: Get a single policy by ID
+      description: |
+        Returns the full policy record including nested coverages for the
+        given policy identifier.
+      tags:
+        - Policies
+      security:
+        - oauth2:
+            - ams:policies:read
+      parameters:
+        - name: id
+          in: path
+          description: Policy identifier.
+          required: true
+          schema:
+            type: string
+          example: "POL-PA-2024-001847"
+      responses:
+        "200":
+          description: Policy with coverages.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Policy"
+                  - type: object
+                    properties:
+                      coverages:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Coverage"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
         "500":
           $ref: "#/components/responses/500InternalServerError"
 

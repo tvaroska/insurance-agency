@@ -14,6 +14,18 @@ const client = CLIENTS.SARAH_CHEN;
 
 describe("Content Auditor Agent — E2E", () => {
   test("Step 1: Get qualified leads from CRM", async () => {
+    // Ensure the lead is in "qualified" status (may have been changed by prior test runs)
+    await e2eAuthRequest(
+      "crm",
+      `/v1/leads/${LEADS.SARAH_CHEN}`,
+      ["crm:leads:write"],
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "qualified" }),
+      },
+    );
+
     const res = await e2eAuthRequest(
       "crm",
       "/v1/leads/scoring?status=qualified",

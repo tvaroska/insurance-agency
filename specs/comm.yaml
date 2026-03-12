@@ -152,6 +152,70 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  # ---- Messages (REST alias) ----
+  /messages:
+    get:
+      operationId: listMessages
+      summary: List messages (REST alias for /messages/inbox)
+      description: |
+        REST alias for `GET /messages/inbox`.  Returns the same paginated list
+        of messages with the same filter parameters.
+      tags:
+        - Messages
+      security:
+        - oauth2:
+            - comm:messages:read
+      parameters:
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/CursorParam"
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Channel"
+        - name: direction
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Direction"
+        - name: read
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: client_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Paginated list of messages.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   # ---- Send ----
   /messages/send:
     post:

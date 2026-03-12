@@ -279,6 +279,40 @@ paths:
           $ref: "#/components/responses/InternalServerError"
 
   /leads/{id}:
+    get:
+      operationId: getLeadById
+      summary: Get a lead by ID
+      description: |
+        Returns a single lead record by its unique identifier.
+      tags:
+        - Leads
+      security:
+        - oauth2:
+            - crm:leads:read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique lead identifier.
+          schema:
+            type: string
+            example: "lead_8f3a12c4"
+      responses:
+        "200":
+          description: Lead found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
     patch:
       operationId: updateLead
       summary: Update lead status
@@ -353,6 +387,59 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /campaigns:
+    get:
+      operationId: listCampaigns
+      summary: List campaigns
+      description: |
+        Returns a paginated list of campaigns with optional filters by status
+        and type.  Results are sorted by `campaign_id` ascending.
+      tags:
+        - Campaigns
+      security:
+        - oauth2:
+            - crm:campaigns:read
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: status
+          in: query
+          description: Filter by campaign status.
+          required: false
+          schema:
+            $ref: "#/components/schemas/CampaignStatus"
+        - name: type
+          in: query
+          description: Filter by campaign type.
+          required: false
+          schema:
+            $ref: "#/components/schemas/CampaignType"
+      responses:
+        "200":
+          description: Paginated list of campaigns.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Campaign"
+                  pagination:
+                    $ref: "#/components/schemas/CursorPagination"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /campaigns/{id}/enroll:
     post:
       operationId: enrollInCampaign
@@ -412,6 +499,69 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /leads/{id}/enroll:
+    post:
+      operationId: enrollLeadInCampaign
+      summary: Enroll a lead's client in a campaign
+      description: |
+        Lead-centric campaign enrollment.  Looks up the lead by ID, resolves
+        the associated `client_id`, and enrolls that client in the specified
+        campaign.  Delegates to the same enrollment logic as
+        `POST /campaigns/{id}/enroll`.
+      tags:
+        - Leads
+      security:
+        - oauth2:
+            - crm:campaigns:enroll
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique lead identifier.
+          schema:
+            type: string
+            example: "lead_8f3a12c4"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - campaign_id
+              properties:
+                campaign_id:
+                  type: string
+                  description: Campaign to enroll the lead's client into.
+                  example: "camp_life_pivot_2026"
+                trigger_reason:
+                  type: string
+                  maxLength: 500
+                  description: Human-readable reason for enrollment.
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  description: Arbitrary key-value data relevant to the enrollment.
+      responses:
+        "201":
+          description: Client enrolled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignEnrollResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -510,6 +660,7 @@ components:
           scopes:
             crm:leads:read: Read lead data and scores
             crm:leads:write: Update lead status, score, and metadata
+            crm:campaigns:read: Read campaign data
             crm:campaigns:enroll: Enroll clients in campaigns
             crm:analytics:read: Read retention risk and engagement analytics
 
