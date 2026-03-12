@@ -1,0 +1,112 @@
+[
+  {
+    "client_id": "CLI-002",
+    "client_name": "James O'Brien",
+    "risk_score": 88,
+    "rate_increase_pct": 18.2,
+    "months_since_contact": 11,
+    "email_open_rate": 0.02,
+    "policies_count": 1,
+    "recommended_action": "Immediate personal outreach call. Single-policy client with steep rate increase and nearly zero engagement. Offer multi-policy discount and rate review.",
+    "assigned_producer": "prod_44e1bc90"
+  },
+  {
+    "client_id": "CLI-004",
+    "client_name": "Patricia Kowalski",
+    "risk_score": 82,
+    "rate_increase_pct": 14.5,
+    "months_since_contact": 9,
+    "email_open_rate": 0.04,
+    "policies_count": 1,
+    "recommended_action": "Schedule personal outreach call. Single-policy client with significant rate increase and no recent engagement. Offer multi-policy discount.",
+    "assigned_producer": "prod_44e1bc90"
+  },
+  {
+    "client_id": "CLI-006",
+    "client_name": "William Nguyen",
+    "risk_score": 75,
+    "rate_increase_pct": 10.8,
+    "months_since_contact": 7,
+    "email_open_rate": 0.08,
+    "policies_count": 2,
+    "recommended_action": "Send retention email with loyalty discount. Two policies provide leverage, but rate increase and low engagement are concerning.",
+    "assigned_producer": "prod_77f2ad10"
+  },
+  {
+    "client_id": "CLI-007",
+    "client_name": "Jennifer Davis",
+    "risk_score": 71,
+    "rate_increase_pct": 8.2,
+    "months_since_contact": 6,
+    "email_open_rate": 0.11,
+    "policies_count": 2,
+    "recommended_action": "Send retention email with loyalty discount. Moderate risk, but two policies provide leverage.",
+    "assigned_producer": "prod_77f2ad10"
+  },
+  {
+    "client_id": "CLI-009",
+    "client_name": "Thomas Anderson",
+    "risk_score": 68,
+    "rate_increase_pct": 12.1,
+    "months_since_contact": 5,
+    "email_open_rate": 0.15,
+    "policies_count": 1,
+    "recommended_action": "Proactive renewal call. Single policy with notable rate increase, but still some engagement. Discuss coverage options.",
+    "assigned_producer": "prod_44e1bc90"
+  },
+  {
+    "client_id": "CLI-011",
+    "client_name": "Maria Santos",
+    "risk_score": 64,
+    "rate_increase_pct": 6.5,
+    "months_since_contact": 8,
+    "email_open_rate": 0.06,
+    "policies_count": 3,
+    "recommended_action": "Schedule annual review. Three policies but long gap since contact and low email engagement. Emphasize multi-policy benefits.",
+    "assigned_producer": "prod_44e1bc90"
+  },
+  {
+    "client_id": "CLI-015",
+    "client_name": "Karen Mitchell",
+    "risk_score": 58,
+    "rate_increase_pct": 5.3,
+    "months_since_contact": 4,
+    "email_open_rate": 0.19,
+    "policies_count": 2,
+    "recommended_action": "Automated retention email sequence. Moderate risk with some engagement. Highlight claims-free discount eligibility.",
+    "assigned_producer": "prod_77f2ad10"
+  },
+  {
+    "client_id": "CLI-019",
+    "client_name": "Steven Clark",
+    "risk_score": 53,
+    "rate_increase_pct": 4.1,
+    "months_since_contact": 3,
+    "email_open_rate": 0.22,
+    "policies_count": 1,
+    "recommended_action": "Cross-sell opportunity. Low risk score but single policy. Send bundling offer to increase stickiness.",
+    "assigned_producer": "prod_44e1bc90"
+  },
+  {
+    "client_id": "CLI-021",
+    "client_name": "Nancy White",
+    "risk_score": 45,
+    "rate_increase_pct": 2.8,
+    "months_since_contact": 2,
+    "email_open_rate": 0.35,
+    "policies_count": 3,
+    "recommended_action": "Low risk. Include in quarterly newsletter and annual review cycle.",
+    "assigned_producer": "prod_77f2ad10"
+  },
+  {
+    "client_id": "CLI-023",
+    "client_name": "Richard Taylor",
+    "risk_score": 38,
+    "rate_increase_pct": 1.5,
+    "months_since_contact": 1,
+    "email_open_rate": 0.48,
+    "policies_count": 4,
+    "recommended_action": "Healthy engagement. No immediate action needed. Continue current communication cadence.",
+    "assigned_producer": "prod_44e1bc90"
+  }
+]

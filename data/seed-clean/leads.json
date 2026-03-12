@@ -1,0 +1,277 @@
+[
+  {
+    "lead_id": "lead_8f3a12c4",
+    "client_id": "CLI-001",
+    "first_name": "Sarah",
+    "last_name": "Chen",
+    "email": "sarah.chen@email.com",
+    "phone": "+1-310-555-0101",
+    "source": "web",
+    "status": "qualified",
+    "score": 92,
+    "assigned_producer": "prod_44e1bc90",
+    "tags": [
+      "high-value",
+      "auto-and-home"
+    ],
+    "notes": "Interested in bundling auto + home. Requested quote comparison.",
+    "last_activity_date": "2026-02-18",
+    "created_at": "2025-09-10T08:00:00Z",
+    "updated_at": "2026-02-18T14:30:00Z"
+  },
+  {
+    "lead_id": "lead_c29e44d1",
+    "client_id": "CLI-003",
+    "first_name": "Michael",
+    "last_name": "Rodriguez",
+    "email": "m.rodriguez@email.com",
+    "phone": "+1-773-555-0203",
+    "source": "referral",
+    "status": "contacted",
+    "score": 74,
+    "assigned_producer": "prod_44e1bc90",
+    "tags": [
+      "referral-partner-jones"
+    ],
+    "notes": null,
+    "last_activity_date": "2026-02-12",
+    "created_at": "2026-01-20T16:45:10Z",
+    "updated_at": "2026-02-12T11:30:00Z"
+  },
+  {
+    "lead_id": "lead_a1b2c3d4",
+    "client_id": "CLI-005",
+    "first_name": "Jessica",
+    "last_name": "Williams",
+    "email": "j.williams@email.com",
+    "phone": "+1-503-555-0147",
+    "source": "event",
+    "status": "proposal_sent",
+    "score": 87,
+    "assigned_producer": "prod_77f2ad10",
+    "tags": [
+      "high-value",
+      "umbrella"
+    ],
+    "notes": "Met at industry conference. Needs umbrella policy for rental properties.",
+    "last_activity_date": "2026-02-15",
+    "created_at": "2025-11-03T09:22:00Z",
+    "updated_at": "2026-02-15T14:08:33Z"
+  },
+  {
+    "lead_id": "lead_d4e5f6a7",
+    "client_id": "CLI-008",
+    "first_name": "Robert",
+    "last_name": "Kim",
+    "email": "r.kim@email.com",
+    "phone": "+1-312-555-0889",
+    "source": "cold_call",
+    "status": "new",
+    "score": 35,
+    "assigned_producer": null,
+    "tags": [
+      "small-business"
+    ],
+    "notes": null,
+    "last_activity_date": "2026-02-01",
+    "created_at": "2026-02-01T10:00:00Z",
+    "updated_at": "2026-02-01T10:00:00Z"
+  },
+  {
+    "lead_id": "lead_e5f6a7b8",
+    "client_id": "CLI-010",
+    "first_name": "Amanda",
+    "last_name": "Patel",
+    "email": "a.patel@email.com",
+    "phone": "+1-971-555-0283",
+    "source": "partner",
+    "status": "closed_won",
+    "score": 95,
+    "assigned_producer": "prod_44e1bc90",
+    "tags": [
+      "high-value",
+      "auto-and-home",
+      "converted"
+    ],
+    "notes": "Converted from term quote. Bound auto + home bundle.",
+    "last_activity_date": "2026-01-28",
+    "created_at": "2025-08-15T14:00:00Z",
+    "updated_at": "2026-01-28T09:15:00Z"
+  },
+  {
+    "lead_id": "lead_f6a7b8c9",
+    "client_id": "CLI-012",
+    "first_name": "David",
+    "last_name": "Thompson",
+    "email": "d.thompson@email.com",
+    "phone": "+1-847-555-0432",
+    "source": "web",
+    "status": "closed_lost",
+    "score": 22,
+    "assigned_producer": "prod_77f2ad10",
+    "tags": [
+      "price-sensitive"
+    ],
+    "notes": "Went with competitor. Price was primary concern.",
+    "last_activity_date": "2026-01-10",
+    "created_at": "2025-12-01T11:30:00Z",
+    "updated_at": "2026-01-10T16:45:00Z"
+  },
+  {
+    "lead_id": "lead_a7b8c9d0",
+    "client_id": "CLI-014",
+    "first_name": "Emily",
+    "last_name": "Garcia",
+    "email": "e.garcia@email.com",
+    "phone": "+1-630-555-0178",
+    "source": "referral",
+    "status": "qualified",
+    "score": 81,
+    "assigned_producer": "prod_44e1bc90",
+    "tags": [
+      "multi-policy",
+      "referral-partner-smith"
+    ],
+    "notes": "Referred by existing client CLI-001. Looking for auto coverage.",
+    "last_activity_date": "2026-02-16",
+    "created_at": "2026-01-05T13:20:00Z",
+    "updated_at": "2026-02-16T10:00:00Z"
+  },
+  {
+    "lead_id": "lead_b8c9d0e1",
+    "client_id": "CLI-016",
+    "first_name": "James",
+    "last_name": "Wilson",
+    "email": "j.wilson@email.com",
+    "phone": "+1-708-555-0654",
+    "source": "cold_call",
+    "status": "contacted",
+    "score": 48,
+    "assigned_producer": "prod_77f2ad10",
+    "tags": [
+      "commercial"
+    ],
+    "notes": "Small business owner. Needs workers comp and BOP.",
+    "last_activity_date": "2026-02-08",
+    "created_at": "2026-01-15T09:00:00Z",
+    "updated_at": "2026-02-08T15:30:00Z"
+  },
+  {
+    "lead_id": "lead_c9d0e1f2",
+    "client_id": "CLI-018",
+    "first_name": "Lisa",
+    "last_name": "Martinez",
+    "email": "l.martinez@email.com",
+    "phone": "+1-224-555-0921",
+    "source": "web",
+    "status": "new",
+    "score": 55,
+    "assigned_producer": null,
+    "tags": [
+      "homeowners"
+    ],
+    "notes": null,
+    "last_activity_date": "2026-02-19",
+    "created_at": "2026-02-19T08:45:00Z",
+    "updated_at": "2026-02-19T08:45:00Z"
+  },
+  {
+    "lead_id": "lead_d0e1f2a3",
+    "client_id": "CLI-020",
+    "first_name": "Christopher",
+    "last_name": "Brown",
+    "email": "c.brown@email.com",
+    "phone": "+1-815-555-0333",
+    "source": "event",
+    "status": "proposal_sent",
+    "score": 78,
+    "assigned_producer": "prod_44e1bc90",
+    "tags": [
+      "auto",
+      "young-driver"
+    ],
+    "notes": "Has teenage driver. Needs SR-22 filing.",
+    "last_activity_date": "2026-02-14",
+    "created_at": "2025-12-20T10:30:00Z",
+    "updated_at": "2026-02-14T12:00:00Z"
+  },
+  {
+    "lead_id": "lead_e1f2a3b4",
+    "client_id": "CLI-022",
+    "first_name": "Margaret",
+    "last_name": "Thornton",
+    "email": "m.thornton@email.com",
+    "phone": "+1-847-555-0567",
+    "source": "partner",
+    "status": "contacted",
+    "score": 63,
+    "assigned_producer": "prod_77f2ad10",
+    "tags": [
+      "life-insurance"
+    ],
+    "notes": "Interested in term-to-whole conversion.",
+    "last_activity_date": "2026-02-10",
+    "created_at": "2026-01-08T14:15:00Z",
+    "updated_at": "2026-02-10T09:30:00Z"
+  },
+  {
+    "lead_id": "lead_f2a3b4c5",
+    "client_id": "CLI-024",
+    "first_name": "Daniel",
+    "last_name": "Lee",
+    "email": "d.lee@email.com",
+    "phone": "+1-312-555-0777",
+    "source": "web",
+    "status": "closed_won",
+    "score": 90,
+    "assigned_producer": "prod_44e1bc90",
+    "tags": [
+      "high-value",
+      "multi-policy",
+      "converted"
+    ],
+    "notes": "Bound auto + renters. Excellent cross-sell candidate for umbrella.",
+    "last_activity_date": "2026-02-05",
+    "created_at": "2025-10-12T11:00:00Z",
+    "updated_at": "2026-02-05T16:20:00Z"
+  },
+  {
+    "lead_id": "lead_g3h4i5j6",
+    "client_id": "CLI-010",
+    "first_name": "Angela",
+    "last_name": "Foster-Blake",
+    "email": "angie.fosterblake@gmail.com",
+    "phone": "+1-718-555-9999",
+    "source": "web",
+    "status": "qualified",
+    "score": 70,
+    "assigned_producer": "prod_77f2ad10",
+    "tags": [
+      "high-value",
+      "auto-and-home"
+    ],
+    "notes": "Client inquired about homeowners coverage under married name.",
+    "last_activity_date": "2026-02-18",
+    "created_at": "2026-02-01T10:00:00Z",
+    "updated_at": "2026-02-18T10:00:00Z"
+  },
+  {
+    "lead_id": "lead_h4i5j6k7",
+    "client_id": "CLI-015",
+    "first_name": "George",
+    "last_name": "Papadopoulos",
+    "email": "george.papa@email.com",
+    "phone": "+1-954-555-0000",
+    "source": "web",
+    "status": "new",
+    "score": 30,
+    "assigned_producer": null,
+    "tags": [
+      "renewal"
+    ],
+    "notes": "Web form submission for renewal inquiry.",
+    "last_activity_date": "2026-02-01",
+    "created_at": "2026-02-01T14:00:00Z",
+    "updated_at": "2026-02-01T14:00:00Z"
+  }
+]

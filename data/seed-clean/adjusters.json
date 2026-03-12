@@ -1,0 +1,35 @@
+[
+  {
+    "adjuster_id": "ADJ-001",
+    "first_name": "Marcus",
+    "last_name": "Rivera",
+    "email": "m.rivera@evergreen-claims.com",
+    "phone": "+1-312-555-0401",
+    "specialty": "auto",
+    "active": 1,
+    "max_open_claims": 25,
+    "created_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "adjuster_id": "ADJ-002",
+    "first_name": "Sandra",
+    "last_name": "Chen",
+    "email": "s.chen@evergreen-claims.com",
+    "phone": "+1-312-555-0402",
+    "specialty": "property",
+    "active": 1,
+    "max_open_claims": 20,
+    "created_at": "2024-03-01T00:00:00Z"
+  },
+  {
+    "adjuster_id": "ADJ-003",
+    "first_name": "David",
+    "last_name": "Okafor",
+    "email": "d.okafor@evergreen-claims.com",
+    "phone": "+1-312-555-0403",
+    "specialty": "general",
+    "active": 1,
+    "max_open_claims": 30,
+    "created_at": "2023-06-15T00:00:00Z"
+  }
+]

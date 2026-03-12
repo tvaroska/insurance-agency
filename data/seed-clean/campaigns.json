@@ -1,0 +1,42 @@
+[
+  {
+    "campaign_id": "camp_life_pivot_2026",
+    "name": "Life Insurance Pivot",
+    "type": "cross_sell",
+    "status": "active",
+    "enrolled_count": 148,
+    "conversion_rate": 0.23
+  },
+  {
+    "campaign_id": "camp_renewal_q1",
+    "name": "Q1 Renewal Retention",
+    "type": "retention",
+    "status": "active",
+    "enrolled_count": 312,
+    "conversion_rate": 0.67
+  },
+  {
+    "campaign_id": "camp_new_client_welcome",
+    "name": "New Client Welcome Series",
+    "type": "welcome",
+    "status": "active",
+    "enrolled_count": 89,
+    "conversion_rate": 0.81
+  },
+  {
+    "campaign_id": "camp_auto_nurture",
+    "name": "Auto Insurance Nurture",
+    "type": "nurture",
+    "status": "active",
+    "enrolled_count": 205,
+    "conversion_rate": 0.18
+  },
+  {
+    "campaign_id": "camp_holiday_2025",
+    "name": "Holiday 2025 Bundle Promo",
+    "type": "cross_sell",
+    "status": "completed",
+    "enrolled_count": 430,
+    "conversion_rate": 0.31
+  }
+]

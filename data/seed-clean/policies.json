@@ -1,0 +1,2527 @@
+[
+  {
+    "policy_id": "POL-PA-2025-001847",
+    "client_id": "CLI-001",
+    "carrier_code": "SMIT",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 1450,
+    "premium_prior": 1280,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      },
+      {
+        "type": "uninsured_motorist",
+        "limit": "100000/300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000312",
+    "client_id": "CLI-001",
+    "carrier_code": "SMIT",
+    "policy_type": "homeowners",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 1850,
+    "premium_prior": 1720,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "450000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "225000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      },
+      {
+        "type": "medical_payments",
+        "limit": "5000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-001848",
+    "client_id": "CLI-002",
+    "carrier_code": "SMIT",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 1320,
+    "premium_prior": 1200,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-002103",
+    "client_id": "CLI-003",
+    "carrier_code": "CSTL",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-09-15",
+    "expiration_date": "2026-03-15",
+    "premium_current": 980,
+    "premium_prior": 910,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "50000/100000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "25000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 1000
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 500
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-09-15T00:00:00Z",
+    "updated_at": "2025-09-15T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2024-003210",
+    "client_id": "CLI-004",
+    "carrier_code": "HRTF",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-04-01",
+    "expiration_date": "2026-04-01",
+    "premium_current": 1680,
+    "premium_prior": 1410,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "250000/500000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "100000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-04-01T00:00:00Z",
+    "updated_at": "2025-04-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-BO-2025-000045",
+    "client_id": "CLI-004",
+    "carrier_code": "HRTF",
+    "policy_type": "bop",
+    "effective_date": "2025-04-01",
+    "expiration_date": "2026-04-01",
+    "premium_current": 3200,
+    "premium_prior": 2850,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "1000000",
+        "deductible": null
+      },
+      {
+        "type": "business_property",
+        "limit": "250000",
+        "deductible": 1000
+      },
+      {
+        "type": "business_income",
+        "limit": "100000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-04-01T00:00:00Z",
+    "updated_at": "2025-04-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-002250",
+    "client_id": "CLI-005",
+    "carrier_code": "HRTF",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-10-15",
+    "expiration_date": "2026-04-15",
+    "premium_current": 1120,
+    "premium_prior": 1050,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-10-15T00:00:00Z",
+    "updated_at": "2025-10-15T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-RN-2025-000089",
+    "client_id": "CLI-006",
+    "carrier_code": "LIBT",
+    "policy_type": "renters",
+    "effective_date": "2025-03-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 320,
+    "premium_prior": 290,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "personal_property",
+        "limit": "30000",
+        "deductible": 500
+      },
+      {
+        "type": "liability",
+        "limit": "100000",
+        "deductible": null
+      },
+      {
+        "type": "medical_payments",
+        "limit": "1000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-03-01T00:00:00Z",
+    "updated_at": "2025-03-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-002301",
+    "client_id": "CLI-006",
+    "carrier_code": "CSTL",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-03-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 1560,
+    "premium_prior": 1290,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "50000/100000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "25000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-03-01T00:00:00Z",
+    "updated_at": "2025-03-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-002410",
+    "client_id": "CLI-007",
+    "carrier_code": "ERIE",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-11-01",
+    "expiration_date": "2026-05-01",
+    "premium_current": 1180,
+    "premium_prior": 1100,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-11-01T00:00:00Z",
+    "updated_at": "2025-11-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2024-003450",
+    "client_id": "CLI-008",
+    "carrier_code": "NTNW",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-07-01",
+    "expiration_date": "2026-07-01",
+    "premium_current": 1350,
+    "premium_prior": 1250,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "250000/500000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "100000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-07-01T00:00:00Z",
+    "updated_at": "2025-07-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000415",
+    "client_id": "CLI-008",
+    "carrier_code": "NTNW",
+    "policy_type": "homeowners",
+    "effective_date": "2025-07-01",
+    "expiration_date": "2026-07-01",
+    "premium_current": 2100,
+    "premium_prior": 1800,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "380000",
+        "deductible": 2500
+      },
+      {
+        "type": "personal_property",
+        "limit": "190000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      },
+      {
+        "type": "medical_payments",
+        "limit": "5000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-07-01T00:00:00Z",
+    "updated_at": "2025-07-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-WC-2025-000012",
+    "client_id": "CLI-008",
+    "carrier_code": "NTNW",
+    "policy_type": "workers_comp",
+    "effective_date": "2025-07-01",
+    "expiration_date": "2026-07-01",
+    "premium_current": 4500,
+    "premium_prior": 4200,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "workers_compensation",
+        "limit": "statutory",
+        "deductible": null
+      },
+      {
+        "type": "employers_liability",
+        "limit": "500000/500000/500000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-07-01T00:00:00Z",
+    "updated_at": "2025-07-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-002500",
+    "client_id": "CLI-009",
+    "carrier_code": "NTNW",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-07-01",
+    "expiration_date": "2026-07-01",
+    "premium_current": 1080,
+    "premium_prior": 1020,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-07-01T00:00:00Z",
+    "updated_at": "2025-07-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-RN-2025-000102",
+    "client_id": "CLI-010",
+    "carrier_code": "SAFECO",
+    "policy_type": "renters",
+    "effective_date": "2025-05-01",
+    "expiration_date": "2026-05-01",
+    "premium_current": 280,
+    "premium_prior": 260,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "personal_property",
+        "limit": "25000",
+        "deductible": 500
+      },
+      {
+        "type": "liability",
+        "limit": "100000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-05-01T00:00:00Z",
+    "updated_at": "2025-05-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-002600",
+    "client_id": "CLI-011",
+    "carrier_code": "CSTL",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 1420,
+    "premium_prior": 1310,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-GL-2025-000008",
+    "client_id": "CLI-011",
+    "carrier_code": "HRTF",
+    "policy_type": "general_liability",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 2800,
+    "premium_prior": 2400,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "1000000",
+        "deductible": null
+      },
+      {
+        "type": "products_completed_ops",
+        "limit": "1000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-WC-2025-000015",
+    "client_id": "CLI-011",
+    "carrier_code": "HRTF",
+    "policy_type": "workers_comp",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 5200,
+    "premium_prior": 4800,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "workers_compensation",
+        "limit": "statutory",
+        "deductible": null
+      },
+      {
+        "type": "employers_liability",
+        "limit": "500000/500000/500000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-002700",
+    "client_id": "CLI-012",
+    "carrier_code": "SAFECO",
+    "policy_type": "personal_auto",
+    "effective_date": "2026-01-15",
+    "expiration_date": "2026-07-15",
+    "premium_current": 1050,
+    "premium_prior": 980,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "50000/100000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "25000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 1000
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 500
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2026-01-15T00:00:00Z",
+    "updated_at": "2026-01-15T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2024-003600",
+    "client_id": "CLI-013",
+    "carrier_code": "ERIE",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-05-01",
+    "expiration_date": "2026-05-01",
+    "premium_current": 890,
+    "premium_prior": 850,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "250000/500000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "100000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-05-01T00:00:00Z",
+    "updated_at": "2025-05-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000520",
+    "client_id": "CLI-013",
+    "carrier_code": "ERIE",
+    "policy_type": "homeowners",
+    "effective_date": "2025-05-01",
+    "expiration_date": "2026-05-01",
+    "premium_current": 1650,
+    "premium_prior": 1520,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "320000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "160000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-05-01T00:00:00Z",
+    "updated_at": "2025-05-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-RN-2025-000115",
+    "client_id": "CLI-014",
+    "carrier_code": "LIBT",
+    "policy_type": "renters",
+    "effective_date": "2025-03-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 350,
+    "premium_prior": 310,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "personal_property",
+        "limit": "40000",
+        "deductible": 500
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      },
+      {
+        "type": "medical_payments",
+        "limit": "5000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-03-01T00:00:00Z",
+    "updated_at": "2025-03-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-002850",
+    "client_id": "CLI-015",
+    "carrier_code": "SMIT",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-08-01",
+    "expiration_date": "2026-02-28",
+    "premium_current": 920,
+    "premium_prior": 880,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-08-01T00:00:00Z",
+    "updated_at": "2025-08-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000610",
+    "client_id": "CLI-015",
+    "carrier_code": "SMIT",
+    "policy_type": "homeowners",
+    "effective_date": "2025-08-01",
+    "expiration_date": "2026-02-28",
+    "premium_current": 2450,
+    "premium_prior": 2100,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "520000",
+        "deductible": 2500
+      },
+      {
+        "type": "personal_property",
+        "limit": "260000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      },
+      {
+        "type": "medical_payments",
+        "limit": "5000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-08-01T00:00:00Z",
+    "updated_at": "2025-08-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-002900",
+    "client_id": "CLI-016",
+    "carrier_code": "SAFECO",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-10-01",
+    "expiration_date": "2026-04-01",
+    "premium_current": 1150,
+    "premium_prior": 960,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-10-01T00:00:00Z",
+    "updated_at": "2025-10-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-003000",
+    "client_id": "CLI-017",
+    "carrier_code": "CSTL",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-06-15",
+    "expiration_date": "2026-06-15",
+    "premium_current": 1280,
+    "premium_prior": 1200,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-06-15T00:00:00Z",
+    "updated_at": "2025-06-15T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-003100",
+    "client_id": "CLI-018",
+    "carrier_code": "SMIT",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-12-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 1380,
+    "premium_prior": 1300,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-12-01T00:00:00Z",
+    "updated_at": "2025-12-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-BO-2025-000060",
+    "client_id": "CLI-018",
+    "carrier_code": "SMIT",
+    "policy_type": "bop",
+    "effective_date": "2025-12-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 2850,
+    "premium_prior": 2600,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "1000000",
+        "deductible": null
+      },
+      {
+        "type": "business_property",
+        "limit": "200000",
+        "deductible": 1000
+      },
+      {
+        "type": "business_income",
+        "limit": "75000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-12-01T00:00:00Z",
+    "updated_at": "2025-12-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-003200",
+    "client_id": "CLI-019",
+    "carrier_code": "CSTL",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-07-01",
+    "expiration_date": "2026-07-01",
+    "premium_current": 2850,
+    "premium_prior": 1680,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "50000/100000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "25000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 1000
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 500
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-07-01T00:00:00Z",
+    "updated_at": "2025-12-01T10:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-003300",
+    "client_id": "CLI-020",
+    "carrier_code": "LIBT",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-08-20",
+    "expiration_date": "2026-02-20",
+    "premium_current": 1520,
+    "premium_prior": 1300,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-08-20T00:00:00Z",
+    "updated_at": "2025-08-20T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2024-003700",
+    "client_id": "CLI-021",
+    "carrier_code": "ERIE",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 1190,
+    "premium_prior": 1100,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "250000/500000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "100000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-BO-2025-000075",
+    "client_id": "CLI-021",
+    "carrier_code": "ERIE",
+    "policy_type": "bop",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 3600,
+    "premium_prior": 3100,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "1000000",
+        "deductible": null
+      },
+      {
+        "type": "business_property",
+        "limit": "150000",
+        "deductible": 1000
+      },
+      {
+        "type": "business_income",
+        "limit": "50000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-GL-2025-000012",
+    "client_id": "CLI-021",
+    "carrier_code": "ERIE",
+    "policy_type": "general_liability",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 2200,
+    "premium_prior": 2050,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "2000000",
+        "deductible": null
+      },
+      {
+        "type": "products_completed_ops",
+        "limit": "2000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-WC-2025-000020",
+    "client_id": "CLI-021",
+    "carrier_code": "ERIE",
+    "policy_type": "workers_comp",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 6800,
+    "premium_prior": 6200,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "workers_compensation",
+        "limit": "statutory",
+        "deductible": null
+      },
+      {
+        "type": "employers_liability",
+        "limit": "1000000/1000000/1000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-003400",
+    "client_id": "CLI-022",
+    "carrier_code": "SAFECO",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-10-01",
+    "expiration_date": "2026-04-01",
+    "premium_current": 1060,
+    "premium_prior": 990,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      },
+      {
+        "type": "uninsured_motorist",
+        "limit": "100000/300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-10-01T00:00:00Z",
+    "updated_at": "2025-10-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-RN-2025-000130",
+    "client_id": "CLI-022",
+    "carrier_code": "SAFECO",
+    "policy_type": "renters",
+    "effective_date": "2025-10-01",
+    "expiration_date": "2026-04-01",
+    "premium_current": 240,
+    "premium_prior": 220,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "personal_property",
+        "limit": "20000",
+        "deductible": 500
+      },
+      {
+        "type": "liability",
+        "limit": "100000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-10-01T00:00:00Z",
+    "updated_at": "2025-10-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-003500",
+    "client_id": "CLI-023",
+    "carrier_code": "SMIT",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-08-01",
+    "expiration_date": "2026-02-28",
+    "premium_current": 1250,
+    "premium_prior": 1180,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-08-01T00:00:00Z",
+    "updated_at": "2025-08-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000720",
+    "client_id": "CLI-023",
+    "carrier_code": "SMIT",
+    "policy_type": "homeowners",
+    "effective_date": "2025-08-01",
+    "expiration_date": "2026-02-28",
+    "premium_current": 1980,
+    "premium_prior": 1850,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "410000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "205000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-08-01T00:00:00Z",
+    "updated_at": "2025-08-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-003600",
+    "client_id": "CLI-024",
+    "carrier_code": "LIBT",
+    "policy_type": "personal_auto",
+    "effective_date": "2026-01-05",
+    "expiration_date": "2026-07-05",
+    "premium_current": 1780,
+    "premium_prior": 1520,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "25000/50000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "10000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 1000
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 500
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2026-01-05T00:00:00Z",
+    "updated_at": "2026-01-05T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-003700",
+    "client_id": "CLI-025",
+    "carrier_code": "NTNW",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 1480,
+    "premium_prior": 1350,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-BO-2025-000090",
+    "client_id": "CLI-025",
+    "carrier_code": "NTNW",
+    "policy_type": "bop",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 2750,
+    "premium_prior": 2500,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "1000000",
+        "deductible": null
+      },
+      {
+        "type": "business_property",
+        "limit": "180000",
+        "deductible": 1000
+      },
+      {
+        "type": "business_income",
+        "limit": "60000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-GL-2025-000018",
+    "client_id": "CLI-025",
+    "carrier_code": "NTNW",
+    "policy_type": "general_liability",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 1900,
+    "premium_prior": 1750,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "1000000",
+        "deductible": null
+      },
+      {
+        "type": "products_completed_ops",
+        "limit": "1000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-UM-2025-000005",
+    "client_id": "CLI-001",
+    "carrier_code": "SMIT",
+    "policy_type": "umbrella",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 380,
+    "premium_prior": 350,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "umbrella_liability",
+        "limit": "1000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-UM-2025-000010",
+    "client_id": "CLI-004",
+    "carrier_code": "HRTF",
+    "policy_type": "umbrella",
+    "effective_date": "2025-04-01",
+    "expiration_date": "2026-04-01",
+    "premium_current": 520,
+    "premium_prior": 480,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "umbrella_liability",
+        "limit": "2000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-04-01T00:00:00Z",
+    "updated_at": "2025-04-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2024-000810",
+    "client_id": "CLI-004",
+    "carrier_code": "HRTF",
+    "policy_type": "homeowners",
+    "effective_date": "2025-04-01",
+    "expiration_date": "2026-04-01",
+    "premium_current": 2680,
+    "premium_prior": 2300,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "580000",
+        "deductible": 2500
+      },
+      {
+        "type": "personal_property",
+        "limit": "290000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "500000",
+        "deductible": null
+      },
+      {
+        "type": "medical_payments",
+        "limit": "5000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-04-01T00:00:00Z",
+    "updated_at": "2025-04-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000830",
+    "client_id": "CLI-016",
+    "carrier_code": "SAFECO",
+    "policy_type": "homeowners",
+    "effective_date": "2025-10-01",
+    "expiration_date": "2026-04-01",
+    "premium_current": 1420,
+    "premium_prior": 1350,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "350000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "175000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-10-01T00:00:00Z",
+    "updated_at": "2025-10-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000850",
+    "client_id": "CLI-017",
+    "carrier_code": "CSTL",
+    "policy_type": "homeowners",
+    "effective_date": "2025-06-15",
+    "expiration_date": "2026-06-15",
+    "premium_current": 1580,
+    "premium_prior": 1480,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "340000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "170000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-15T00:00:00Z",
+    "updated_at": "2025-06-15T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000870",
+    "client_id": "CLI-011",
+    "carrier_code": "CSTL",
+    "policy_type": "homeowners",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 1750,
+    "premium_prior": 1600,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "360000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "180000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000890",
+    "client_id": "CLI-021",
+    "carrier_code": "ERIE",
+    "policy_type": "homeowners",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 1480,
+    "premium_prior": 1380,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "290000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "145000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000910",
+    "client_id": "CLI-018",
+    "carrier_code": "SMIT",
+    "policy_type": "homeowners",
+    "effective_date": "2025-12-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 1620,
+    "premium_prior": 1500,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "310000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "155000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-12-01T00:00:00Z",
+    "updated_at": "2025-12-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000930",
+    "client_id": "CLI-025",
+    "carrier_code": "NTNW",
+    "policy_type": "homeowners",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 1550,
+    "premium_prior": 1420,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "330000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "165000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-000950",
+    "client_id": "CLI-009",
+    "carrier_code": "NTNW",
+    "policy_type": "homeowners",
+    "effective_date": "2025-07-01",
+    "expiration_date": "2026-07-01",
+    "premium_current": 1720,
+    "premium_prior": 1600,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "380000",
+        "deductible": 1500
+      },
+      {
+        "type": "personal_property",
+        "limit": "190000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-07-01T00:00:00Z",
+    "updated_at": "2025-07-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-UM-2025-000015",
+    "client_id": "CLI-008",
+    "carrier_code": "NTNW",
+    "policy_type": "umbrella",
+    "effective_date": "2025-07-01",
+    "expiration_date": "2026-07-01",
+    "premium_current": 450,
+    "premium_prior": 400,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "umbrella_liability",
+        "limit": "1000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-07-01T00:00:00Z",
+    "updated_at": "2025-07-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-UM-2025-000020",
+    "client_id": "CLI-013",
+    "carrier_code": "ERIE",
+    "policy_type": "umbrella",
+    "effective_date": "2025-05-01",
+    "expiration_date": "2026-05-01",
+    "premium_current": 340,
+    "premium_prior": 320,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "umbrella_liability",
+        "limit": "1000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-05-01T00:00:00Z",
+    "updated_at": "2025-05-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-UM-2025-000025",
+    "client_id": "CLI-021",
+    "carrier_code": "ERIE",
+    "policy_type": "umbrella",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 620,
+    "premium_prior": 580,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "umbrella_liability",
+        "limit": "2000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-UM-2025-000030",
+    "client_id": "CLI-023",
+    "carrier_code": "SMIT",
+    "policy_type": "umbrella",
+    "effective_date": "2025-08-01",
+    "expiration_date": "2026-02-28",
+    "premium_current": 360,
+    "premium_prior": 340,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "umbrella_liability",
+        "limit": "1000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-08-01T00:00:00Z",
+    "updated_at": "2025-08-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-RN-2025-000145",
+    "client_id": "CLI-020",
+    "carrier_code": "LIBT",
+    "policy_type": "renters",
+    "effective_date": "2025-08-20",
+    "expiration_date": "2026-02-20",
+    "premium_current": 310,
+    "premium_prior": 280,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "personal_property",
+        "limit": "35000",
+        "deductible": 500
+      },
+      {
+        "type": "liability",
+        "limit": "100000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-08-20T00:00:00Z",
+    "updated_at": "2025-08-20T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-BO-2025-000100",
+    "client_id": "CLI-008",
+    "carrier_code": "NTNW",
+    "policy_type": "bop",
+    "effective_date": "2025-07-01",
+    "expiration_date": "2026-07-01",
+    "premium_current": 4100,
+    "premium_prior": 3800,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "1000000",
+        "deductible": null
+      },
+      {
+        "type": "business_property",
+        "limit": "300000",
+        "deductible": 1000
+      },
+      {
+        "type": "business_income",
+        "limit": "100000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-07-01T00:00:00Z",
+    "updated_at": "2025-07-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-BO-2025-000110",
+    "client_id": "CLI-011",
+    "carrier_code": "HRTF",
+    "policy_type": "bop",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 2400,
+    "premium_prior": 2200,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "500000",
+        "deductible": null
+      },
+      {
+        "type": "business_property",
+        "limit": "100000",
+        "deductible": 1000
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-BO-2025-000120",
+    "client_id": "CLI-023",
+    "carrier_code": "SMIT",
+    "policy_type": "bop",
+    "effective_date": "2025-08-01",
+    "expiration_date": "2026-02-28",
+    "premium_current": 1850,
+    "premium_prior": 1700,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "500000",
+        "deductible": null
+      },
+      {
+        "type": "business_property",
+        "limit": "80000",
+        "deductible": 500
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-08-01T00:00:00Z",
+    "updated_at": "2025-08-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-BO-2025-000130",
+    "client_id": "CLI-018",
+    "carrier_code": "SMIT",
+    "policy_type": "bop",
+    "effective_date": "2025-12-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 2200,
+    "premium_prior": null,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "1000000",
+        "deductible": null
+      },
+      {
+        "type": "business_property",
+        "limit": "120000",
+        "deductible": 1000
+      },
+      {
+        "type": "business_income",
+        "limit": "40000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-12-01T00:00:00Z",
+    "updated_at": "2025-12-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-GL-2025-000022",
+    "client_id": "CLI-008",
+    "carrier_code": "NTNW",
+    "policy_type": "general_liability",
+    "effective_date": "2025-07-01",
+    "expiration_date": "2026-07-01",
+    "premium_current": 2400,
+    "premium_prior": 2200,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "2000000",
+        "deductible": null
+      },
+      {
+        "type": "products_completed_ops",
+        "limit": "2000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-07-01T00:00:00Z",
+    "updated_at": "2025-07-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-GL-2025-000028",
+    "client_id": "CLI-011",
+    "carrier_code": "HRTF",
+    "policy_type": "general_liability",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 1800,
+    "premium_prior": 1650,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "general_liability",
+        "limit": "1000000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-WC-2025-000025",
+    "client_id": "CLI-025",
+    "carrier_code": "NTNW",
+    "policy_type": "workers_comp",
+    "effective_date": "2025-09-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 3800,
+    "premium_prior": 3500,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "workers_compensation",
+        "limit": "statutory",
+        "deductible": null
+      },
+      {
+        "type": "employers_liability",
+        "limit": "500000/500000/500000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-09-01T00:00:00Z",
+    "updated_at": "2025-09-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2024-004000",
+    "client_id": "CLI-010",
+    "carrier_code": "SAFECO",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-05-01",
+    "expiration_date": "2025-11-01",
+    "premium_current": 1100,
+    "premium_prior": 1050,
+    "status": "expired",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "50000/100000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "25000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 1000
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-05-01T00:00:00Z",
+    "updated_at": "2025-11-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-004100",
+    "client_id": "CLI-014",
+    "carrier_code": "LIBT",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-03-01",
+    "expiration_date": "2026-03-01",
+    "premium_current": 1650,
+    "premium_prior": 1400,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-03-01T00:00:00Z",
+    "updated_at": "2025-03-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2024-004200",
+    "client_id": "CLI-013",
+    "carrier_code": "ERIE",
+    "policy_type": "personal_auto",
+    "effective_date": "2024-05-01",
+    "expiration_date": "2025-05-01",
+    "premium_current": 850,
+    "premium_prior": 820,
+    "status": "expired",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "250000/500000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "100000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2024-05-01T00:00:00Z",
+    "updated_at": "2025-05-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-004300",
+    "client_id": "CLI-012",
+    "carrier_code": "SAFECO",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-01-15",
+    "expiration_date": "2025-07-15",
+    "premium_current": 1020,
+    "premium_prior": 950,
+    "status": "expired",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "50000/100000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "25000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 1000
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-01-15T00:00:00Z",
+    "updated_at": "2025-07-15T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-004400",
+    "client_id": "CLI-015",
+    "carrier_code": "SMIT",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-02-01",
+    "expiration_date": "2025-08-01",
+    "premium_current": 880,
+    "premium_prior": 840,
+    "status": "expired",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-02-01T00:00:00Z",
+    "updated_at": "2025-08-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-001000",
+    "client_id": "CLI-007",
+    "carrier_code": "ERIE",
+    "policy_type": "homeowners",
+    "effective_date": "2025-11-01",
+    "expiration_date": "2026-05-01",
+    "premium_current": 1380,
+    "premium_prior": 1280,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "340000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "170000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-11-01T00:00:00Z",
+    "updated_at": "2025-11-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-001010",
+    "client_id": "CLI-002",
+    "carrier_code": "SMIT",
+    "policy_type": "homeowners",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 1850,
+    "premium_prior": 1720,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "450000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "225000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2025-001020",
+    "client_id": "CLI-015",
+    "carrier_code": "SMIT",
+    "policy_type": "homeowners",
+    "effective_date": "2025-02-01",
+    "expiration_date": "2025-08-01",
+    "premium_current": 2100,
+    "premium_prior": 1900,
+    "status": "expired",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "520000",
+        "deductible": 2500
+      },
+      {
+        "type": "personal_property",
+        "limit": "260000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-02-01T00:00:00Z",
+    "updated_at": "2025-08-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-004500",
+    "client_id": "CLI-006",
+    "carrier_code": "CSTL",
+    "policy_type": "personal_auto",
+    "effective_date": "2024-09-01",
+    "expiration_date": "2025-03-01",
+    "premium_current": 1290,
+    "premium_prior": 1180,
+    "status": "cancelled",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "50000/100000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2024-09-01T00:00:00Z",
+    "updated_at": "2025-01-15T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2026-000010",
+    "client_id": "CLI-003",
+    "carrier_code": "CSTL",
+    "policy_type": "personal_auto",
+    "effective_date": "2026-03-15",
+    "expiration_date": "2026-09-15",
+    "premium_current": 1020,
+    "premium_prior": 980,
+    "status": "pending",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2026-02-10T00:00:00Z",
+    "updated_at": "2026-02-10T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2026-000020",
+    "client_id": "CLI-020",
+    "carrier_code": "LIBT",
+    "policy_type": "personal_auto",
+    "effective_date": "2026-02-20",
+    "expiration_date": "2026-08-20",
+    "premium_current": 1580,
+    "premium_prior": 1520,
+    "status": "pending",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2026-02-10T00:00:00Z",
+    "updated_at": "2026-02-10T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2026-000030",
+    "client_id": "CLI-027",
+    "carrier_code": "CSTL",
+    "policy_type": "personal_auto",
+    "effective_date": "2026-01-15",
+    "expiration_date": "2026-07-15",
+    "premium_current": 1250,
+    "premium_prior": null,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      },
+      {
+        "type": "uninsured_motorist",
+        "limit": "100000/300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2026-01-15T00:00:00Z",
+    "updated_at": "2026-01-15T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-005000",
+    "client_id": "CLI-024",
+    "carrier_code": "LIBT",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-06-01",
+    "expiration_date": "2026-06-01",
+    "premium_current": 1350,
+    "premium_prior": null,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      },
+      {
+        "type": "uninsured_motorist",
+        "limit": "100000/300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-06-01T00:00:00Z",
+    "updated_at": "2025-12-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2026-000040",
+    "client_id": "CLI-032",
+    "carrier_code": "ERIE",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-08-23",
+    "expiration_date": "2026-02-23",
+    "premium_current": 1290,
+    "premium_prior": 1100,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      },
+      {
+        "type": "comprehensive",
+        "limit": null,
+        "deductible": 250
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-08-23T00:00:00Z",
+    "updated_at": "2026-02-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-HO-2026-000050",
+    "client_id": "CLI-032",
+    "carrier_code": "ERIE",
+    "policy_type": "homeowners",
+    "effective_date": "2025-08-23",
+    "expiration_date": "2026-02-23",
+    "premium_current": 1820,
+    "premium_prior": 1600,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "dwelling",
+        "limit": "400000",
+        "deductible": 1000
+      },
+      {
+        "type": "personal_property",
+        "limit": "200000",
+        "deductible": null
+      },
+      {
+        "type": "liability",
+        "limit": "300000",
+        "deductible": null
+      }
+    ],
+    "multi_policy_discount": true,
+    "created_at": "2025-08-23T00:00:00Z",
+    "updated_at": "2026-02-01T00:00:00Z"
+  },
+  {
+    "policy_id": "POL-PA-2025-005100",
+    "client_id": "CLI-033",
+    "carrier_code": "LIBT",
+    "policy_type": "personal_auto",
+    "effective_date": "2025-06-15",
+    "expiration_date": "2026-06-15",
+    "premium_current": 1150,
+    "premium_prior": 1050,
+    "status": "active",
+    "coverages": [
+      {
+        "type": "bodily_injury",
+        "limit": "100000/300000",
+        "deductible": null
+      },
+      {
+        "type": "property_damage",
+        "limit": "50000",
+        "deductible": null
+      },
+      {
+        "type": "collision",
+        "limit": null,
+        "deductible": 500
+      }
+    ],
+    "multi_policy_discount": false,
+    "created_at": "2025-06-15T00:00:00Z",
+    "updated_at": "2025-12-15T00:00:00Z"
+  }
+]

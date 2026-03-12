@@ -3,7 +3,8 @@ import { leads, campaigns, campaignEnrollments, retentionRisks } from "./schema"
 import { join } from "path";
 import { sql } from "drizzle-orm";
 
-const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", "seed");
+const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
+const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
 
 interface SeedLead {
   lead_id: string;
@@ -109,6 +110,7 @@ function createTables() {
 }
 
 async function seed() {
+  console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
   console.log("Creating tables...");
   createTables();
 

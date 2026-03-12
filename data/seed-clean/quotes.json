@@ -1,0 +1,1322 @@
+[
+  {
+    "request_id": "QR-001",
+    "client_id": "CLI-003",
+    "policy_type": "personal_auto",
+    "submitted_at": "2026-02-06T10:00:00Z",
+    "status": "completed",
+    "drivers": [
+      {
+        "name": "Maria Rodriguez",
+        "dob": "1990-11-08",
+        "license_number": "TX-19204837",
+        "relationship": "self",
+        "violations": [],
+        "accidents": []
+      }
+    ],
+    "vehicles": [
+      {
+        "year": 2022,
+        "make": "Honda",
+        "model": "Accord",
+        "vin": "1HGCV1F34NA012345",
+        "usage": "commute",
+        "annual_miles": 12000
+      }
+    ],
+    "requested_coverages": [
+      { "type": "bodily_injury", "limit": "100000/300000" },
+      { "type": "property_damage", "limit": "50000" },
+      { "type": "collision", "deductible": 500 },
+      { "type": "comprehensive", "deductible": 250 }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-001-CSTL",
+        "carrier_code": "CSTL",
+        "carrier_name": "Coastal Star Insurance",
+        "premium_annual": 1020.00,
+        "premium_monthly": 89.00,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-08"
+      },
+      {
+        "quote_id": "QT-001-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": 1085.00,
+        "premium_monthly": 94.50,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-08"
+      },
+      {
+        "quote_id": "QT-001-SAFECO",
+        "carrier_code": "SAFECO",
+        "carrier_name": "Safeco",
+        "premium_annual": 1140.00,
+        "premium_monthly": 99.00,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-08"
+      },
+      {
+        "quote_id": "QT-001-NTNW",
+        "carrier_code": "NTNW",
+        "carrier_name": "Nationwide",
+        "premium_annual": 1010.00,
+        "premium_monthly": 88.00,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-08"
+      }
+    ],
+    "expires_at": "2026-03-08T23:59:59Z"
+  },
+  {
+    "request_id": "QR-002",
+    "client_id": "CLI-019",
+    "policy_type": "personal_auto",
+    "submitted_at": "2026-01-18T14:00:00Z",
+    "status": "completed",
+    "drivers": [
+      {
+        "name": "Tyler Morrison",
+        "dob": "1996-08-14",
+        "license_number": "CA-D3918274",
+        "relationship": "self",
+        "violations": [],
+        "accidents": [
+          { "date": "2024-03-10", "type": "at_fault", "description": "Rear-end collision" },
+          { "date": "2025-11-22", "type": "at_fault", "description": "Intersection accident" }
+        ]
+      }
+    ],
+    "vehicles": [
+      {
+        "year": 2021,
+        "make": "BMW",
+        "model": "3 Series",
+        "vin": "WBA5R1C56M7B92345",
+        "usage": "commute",
+        "annual_miles": 15000
+      }
+    ],
+    "requested_coverages": [
+      { "type": "bodily_injury", "limit": "50000/100000" },
+      { "type": "property_damage", "limit": "25000" },
+      { "type": "collision", "deductible": 1500 },
+      { "type": "comprehensive", "deductible": 500 }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-002-CSTL",
+        "carrier_code": "CSTL",
+        "carrier_name": "Coastal Star Insurance",
+        "premium_annual": 2780.00,
+        "premium_monthly": 241.50,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "50000/100000" },
+          { "type": "property_damage", "limit": "25000" },
+          { "type": "collision", "deductible": 1500 },
+          { "type": "comprehensive", "deductible": 500 }
+        ],
+        "deductibles": { "collision": 1500, "comprehensive": 500 },
+        "status": "quoted",
+        "valid_until": "2026-02-17"
+      },
+      {
+        "quote_id": "QT-002-LIBT",
+        "carrier_code": "LIBT",
+        "carrier_name": "Liberty Mutual",
+        "premium_annual": 3100.00,
+        "premium_monthly": 269.50,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "50000/100000" },
+          { "type": "property_damage", "limit": "25000" },
+          { "type": "collision", "deductible": 1500 },
+          { "type": "comprehensive", "deductible": 500 }
+        ],
+        "deductibles": { "collision": 1500, "comprehensive": 500 },
+        "status": "quoted",
+        "valid_until": "2026-02-17"
+      },
+      {
+        "quote_id": "QT-002-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "Two at-fault accidents within 36 months exceeds underwriting guidelines",
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-002-ERIE",
+        "carrier_code": "ERIE",
+        "carrier_name": "Erie Insurance",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "Driver does not meet risk acceptance criteria due to accident history",
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-002-SAFECO",
+        "carrier_code": "SAFECO",
+        "carrier_name": "Safeco",
+        "premium_annual": 3350.00,
+        "premium_monthly": 291.00,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "50000/100000" },
+          { "type": "property_damage", "limit": "25000" },
+          { "type": "collision", "deductible": 1500 },
+          { "type": "comprehensive", "deductible": 500 }
+        ],
+        "deductibles": { "collision": 1500, "comprehensive": 500 },
+        "status": "quoted",
+        "valid_until": "2026-02-17"
+      }
+    ],
+    "expires_at": "2026-02-17T23:59:59Z"
+  },
+  {
+    "request_id": "QR-003",
+    "client_id": "CLI-016",
+    "policy_type": "homeowners",
+    "submitted_at": "2025-09-15T09:00:00Z",
+    "status": "completed",
+    "property": {
+      "address": { "street": "4455 Mission Blvd", "city": "San Diego", "state": "CA", "zip": "92109" },
+      "year_built": 1985,
+      "square_feet": 1650,
+      "construction": "stucco",
+      "roof_type": "tile",
+      "roof_year": 2018,
+      "heating": "central",
+      "security_system": true,
+      "swimming_pool": false
+    },
+    "requested_coverages": [
+      { "type": "dwelling", "limit": "350000" },
+      { "type": "personal_property", "limit": "175000" },
+      { "type": "liability", "limit": "300000" }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-003-SAFECO",
+        "carrier_code": "SAFECO",
+        "carrier_name": "Safeco",
+        "premium_annual": 1420.00,
+        "premium_monthly": 123.50,
+        "coverages": [
+          { "type": "dwelling", "limit": "350000", "deductible": 1000 },
+          { "type": "personal_property", "limit": "175000" },
+          { "type": "liability", "limit": "300000" }
+        ],
+        "deductibles": { "dwelling": 1000 },
+        "status": "bound",
+        "valid_until": "2025-10-15"
+      },
+      {
+        "quote_id": "QT-003-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": 1510.00,
+        "premium_monthly": 131.50,
+        "coverages": [
+          { "type": "dwelling", "limit": "350000", "deductible": 1000 },
+          { "type": "personal_property", "limit": "175000" },
+          { "type": "liability", "limit": "300000" }
+        ],
+        "deductibles": { "dwelling": 1000 },
+        "status": "quoted",
+        "valid_until": "2025-10-15"
+      },
+      {
+        "quote_id": "QT-003-HRTF",
+        "carrier_code": "HRTF",
+        "carrier_name": "Hartford",
+        "premium_annual": 1480.00,
+        "premium_monthly": 128.70,
+        "coverages": [
+          { "type": "dwelling", "limit": "350000", "deductible": 1000 },
+          { "type": "personal_property", "limit": "175000" },
+          { "type": "liability", "limit": "300000" }
+        ],
+        "deductibles": { "dwelling": 1000 },
+        "status": "quoted",
+        "valid_until": "2025-10-15"
+      }
+    ],
+    "expires_at": "2025-10-15T23:59:59Z"
+  },
+  {
+    "request_id": "QR-004",
+    "client_id": "CLI-010",
+    "policy_type": "homeowners",
+    "submitted_at": "2026-01-10T11:00:00Z",
+    "status": "requires_info",
+    "property": {
+      "address": { "street": "TBD", "city": "Brooklyn", "state": "NY", "zip": "11225" },
+      "year_built": null,
+      "square_feet": null,
+      "construction": null,
+      "roof_type": null,
+      "roof_year": null,
+      "heating": null,
+      "security_system": null,
+      "swimming_pool": null
+    },
+    "requested_coverages": [
+      { "type": "dwelling", "limit": "TBD" },
+      { "type": "personal_property", "limit": "TBD" },
+      { "type": "liability", "limit": "300000" }
+    ],
+    "missing_fields": [
+      "property_address",
+      "year_built",
+      "square_footage",
+      "construction_type",
+      "roof_type",
+      "roof_year",
+      "dwelling_coverage_limit",
+      "personal_property_limit",
+      "prior_insurance_carrier"
+    ],
+    "results": [],
+    "expires_at": null
+  },
+  {
+    "request_id": "QR-005",
+    "client_id": "CLI-006",
+    "policy_type": "personal_auto",
+    "submitted_at": "2025-09-22T10:00:00Z",
+    "status": "completed",
+    "drivers": [
+      {
+        "name": "Marcus Williams",
+        "dob": "1992-09-03",
+        "license_number": "FL-W492-837-55-019",
+        "relationship": "self",
+        "violations": [
+          { "date": "2024-06-15", "type": "speeding", "description": "15 mph over limit" }
+        ],
+        "accidents": []
+      }
+    ],
+    "vehicles": [
+      {
+        "year": 2023,
+        "make": "Tesla",
+        "model": "Model 3",
+        "vin": "5YJ3E1EA5PF123456",
+        "usage": "commute",
+        "annual_miles": 10000
+      }
+    ],
+    "requested_coverages": [
+      { "type": "bodily_injury", "limit": "100000/300000" },
+      { "type": "property_damage", "limit": "50000" },
+      { "type": "collision", "deductible": 500 },
+      { "type": "comprehensive", "deductible": 250 }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-005-CSTL",
+        "carrier_code": "CSTL",
+        "carrier_name": "Coastal Star Insurance",
+        "premium_annual": 1560.00,
+        "premium_monthly": 135.50,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "bound",
+        "valid_until": "2025-10-22"
+      },
+      {
+        "quote_id": "QT-005-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": 1640.00,
+        "premium_monthly": 142.50,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2025-10-22"
+      },
+      {
+        "quote_id": "QT-005-NTNW",
+        "carrier_code": "NTNW",
+        "carrier_name": "Nationwide",
+        "premium_annual": 1720.00,
+        "premium_monthly": 149.50,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2025-10-22"
+      }
+    ],
+    "expires_at": "2025-10-22T23:59:59Z"
+  },
+  {
+    "request_id": "QR-006",
+    "client_id": "CLI-020",
+    "policy_type": "personal_auto",
+    "submitted_at": "2026-02-06T09:00:00Z",
+    "status": "completed",
+    "drivers": [
+      {
+        "name": "Samantha West",
+        "dob": "1989-05-26",
+        "license_number": "NY-673849251",
+        "relationship": "self",
+        "violations": [],
+        "accidents": []
+      }
+    ],
+    "vehicles": [
+      {
+        "year": 2020,
+        "make": "Subaru",
+        "model": "Outback",
+        "vin": "4S4BTACC5L3123456",
+        "usage": "pleasure",
+        "annual_miles": 8000
+      }
+    ],
+    "requested_coverages": [
+      { "type": "bodily_injury", "limit": "100000/300000" },
+      { "type": "property_damage", "limit": "50000" },
+      { "type": "collision", "deductible": 500 },
+      { "type": "comprehensive", "deductible": 250 }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-006-LIBT",
+        "carrier_code": "LIBT",
+        "carrier_name": "Liberty Mutual",
+        "premium_annual": 1580.00,
+        "premium_monthly": 137.50,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-08"
+      },
+      {
+        "quote_id": "QT-006-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": 1490.00,
+        "premium_monthly": 129.50,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-08"
+      },
+      {
+        "quote_id": "QT-006-CSTL",
+        "carrier_code": "CSTL",
+        "carrier_name": "Coastal Star Insurance",
+        "premium_annual": 1440.00,
+        "premium_monthly": 125.00,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-08"
+      },
+      {
+        "quote_id": "QT-006-SAFECO",
+        "carrier_code": "SAFECO",
+        "carrier_name": "Safeco",
+        "premium_annual": 1530.00,
+        "premium_monthly": 133.00,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-08"
+      }
+    ],
+    "expires_at": "2026-03-08T23:59:59Z"
+  },
+  {
+    "request_id": "QR-007",
+    "client_id": "CLI-018",
+    "policy_type": "bop",
+    "submitted_at": "2025-11-15T10:00:00Z",
+    "status": "completed",
+    "business": {
+      "name": "Sweet Rosa's Bakery",
+      "type": "bakery",
+      "years_in_business": 8,
+      "annual_revenue": 420000,
+      "num_employees": 6,
+      "square_footage": 2200,
+      "address": { "street": "1030 West Colonial Drive", "city": "Orlando", "state": "FL", "zip": "32805" }
+    },
+    "requested_coverages": [
+      { "type": "general_liability", "limit": "1000000" },
+      { "type": "business_property", "limit": "120000" },
+      { "type": "business_income", "limit": "40000" }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-007-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": 2200.00,
+        "premium_monthly": 191.50,
+        "coverages": [
+          { "type": "general_liability", "limit": "1000000" },
+          { "type": "business_property", "limit": "120000", "deductible": 1000 },
+          { "type": "business_income", "limit": "40000" }
+        ],
+        "deductibles": { "business_property": 1000 },
+        "status": "bound",
+        "valid_until": "2025-12-15"
+      },
+      {
+        "quote_id": "QT-007-HRTF",
+        "carrier_code": "HRTF",
+        "carrier_name": "Hartford",
+        "premium_annual": 2380.00,
+        "premium_monthly": 207.00,
+        "coverages": [
+          { "type": "general_liability", "limit": "1000000" },
+          { "type": "business_property", "limit": "120000", "deductible": 1000 },
+          { "type": "business_income", "limit": "40000" }
+        ],
+        "deductibles": { "business_property": 1000 },
+        "status": "quoted",
+        "valid_until": "2025-12-15"
+      },
+      {
+        "quote_id": "QT-007-NTNW",
+        "carrier_code": "NTNW",
+        "carrier_name": "Nationwide",
+        "premium_annual": 2450.00,
+        "premium_monthly": 213.00,
+        "coverages": [
+          { "type": "general_liability", "limit": "1000000" },
+          { "type": "business_property", "limit": "120000", "deductible": 1000 },
+          { "type": "business_income", "limit": "40000" }
+        ],
+        "deductibles": { "business_property": 1000 },
+        "status": "quoted",
+        "valid_until": "2025-12-15"
+      }
+    ],
+    "expires_at": "2025-12-15T23:59:59Z"
+  },
+  {
+    "request_id": "QR-008",
+    "client_id": "CLI-024",
+    "policy_type": "personal_auto",
+    "submitted_at": "2025-12-20T15:00:00Z",
+    "status": "completed",
+    "drivers": [
+      {
+        "name": "Rachel Adams",
+        "dob": "1998-02-11",
+        "license_number": "NY-782934615",
+        "relationship": "self",
+        "violations": [],
+        "accidents": []
+      }
+    ],
+    "vehicles": [
+      {
+        "year": 2025,
+        "make": "Honda",
+        "model": "Civic",
+        "vin": "2HGFE2F59SH012345",
+        "usage": "commute",
+        "annual_miles": 10000
+      }
+    ],
+    "requested_coverages": [
+      { "type": "bodily_injury", "limit": "50000/100000" },
+      { "type": "property_damage", "limit": "25000" },
+      { "type": "collision", "deductible": 1000 },
+      { "type": "comprehensive", "deductible": 500 }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-008-LIBT",
+        "carrier_code": "LIBT",
+        "carrier_name": "Liberty Mutual",
+        "premium_annual": 1780.00,
+        "premium_monthly": 154.50,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "50000/100000" },
+          { "type": "property_damage", "limit": "25000" },
+          { "type": "collision", "deductible": 1000 },
+          { "type": "comprehensive", "deductible": 500 }
+        ],
+        "deductibles": { "collision": 1000, "comprehensive": 500 },
+        "status": "bound",
+        "valid_until": "2026-01-20"
+      },
+      {
+        "quote_id": "QT-008-CSTL",
+        "carrier_code": "CSTL",
+        "carrier_name": "Coastal Star Insurance",
+        "premium_annual": 1850.00,
+        "premium_monthly": 160.80,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "50000/100000" },
+          { "type": "property_damage", "limit": "25000" },
+          { "type": "collision", "deductible": 1000 },
+          { "type": "comprehensive", "deductible": 500 }
+        ],
+        "deductibles": { "collision": 1000, "comprehensive": 500 },
+        "status": "quoted",
+        "valid_until": "2026-01-20"
+      },
+      {
+        "quote_id": "QT-008-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": 1920.00,
+        "premium_monthly": 167.00,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "50000/100000" },
+          { "type": "property_damage", "limit": "25000" },
+          { "type": "collision", "deductible": 1000 },
+          { "type": "comprehensive", "deductible": 500 }
+        ],
+        "deductibles": { "collision": 1000, "comprehensive": 500 },
+        "status": "quoted",
+        "valid_until": "2026-01-20"
+      }
+    ],
+    "expires_at": "2026-01-20T23:59:59Z"
+  },
+  {
+    "request_id": "QR-009",
+    "client_id": "CLI-015",
+    "policy_type": "personal_auto",
+    "submitted_at": "2026-02-10T09:00:00Z",
+    "status": "completed",
+    "drivers": [
+      {
+        "name": "George Papadopoulos",
+        "dob": "1968-11-22",
+        "license_number": "FL-P293-847-55-012",
+        "relationship": "self",
+        "violations": [],
+        "accidents": []
+      }
+    ],
+    "vehicles": [
+      {
+        "year": 2019,
+        "make": "Toyota",
+        "model": "Camry",
+        "vin": "4T1B11HK5KU123456",
+        "usage": "pleasure",
+        "annual_miles": 6000
+      }
+    ],
+    "requested_coverages": [
+      { "type": "bodily_injury", "limit": "100000/300000" },
+      { "type": "property_damage", "limit": "50000" },
+      { "type": "collision", "deductible": 500 },
+      { "type": "comprehensive", "deductible": 250 }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-009-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": 920.00,
+        "premium_monthly": 80.00,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-12"
+      },
+      {
+        "quote_id": "QT-009-ERIE",
+        "carrier_code": "ERIE",
+        "carrier_name": "Erie Insurance",
+        "premium_annual": 860.00,
+        "premium_monthly": 74.80,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-12"
+      },
+      {
+        "quote_id": "QT-009-SAFECO",
+        "carrier_code": "SAFECO",
+        "carrier_name": "Safeco",
+        "premium_annual": 940.00,
+        "premium_monthly": 81.70,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-12"
+      }
+    ],
+    "expires_at": "2026-03-12T23:59:59Z"
+  },
+  {
+    "request_id": "QR-010",
+    "client_id": "CLI-011",
+    "policy_type": "workers_comp",
+    "submitted_at": "2026-01-05T11:00:00Z",
+    "status": "completed",
+    "business": {
+      "name": "Gutierrez Landscaping LLC",
+      "type": "landscaping",
+      "years_in_business": 10,
+      "annual_payroll": 280000,
+      "num_employees": 8,
+      "class_codes": ["0042", "9102"],
+      "experience_mod": 0.95,
+      "address": { "street": "5602 Bay Shore Blvd", "city": "Tampa", "state": "FL", "zip": "33611" }
+    },
+    "requested_coverages": [
+      { "type": "workers_compensation", "limit": "statutory" },
+      { "type": "employers_liability", "limit": "500000/500000/500000" }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-010-HRTF",
+        "carrier_code": "HRTF",
+        "carrier_name": "Hartford",
+        "premium_annual": 5200.00,
+        "premium_monthly": 452.00,
+        "coverages": [
+          { "type": "workers_compensation", "limit": "statutory" },
+          { "type": "employers_liability", "limit": "500000/500000/500000" }
+        ],
+        "deductibles": {},
+        "status": "bound",
+        "valid_until": "2026-02-05"
+      },
+      {
+        "quote_id": "QT-010-NTNW",
+        "carrier_code": "NTNW",
+        "carrier_name": "Nationwide",
+        "premium_annual": 5450.00,
+        "premium_monthly": 474.00,
+        "coverages": [
+          { "type": "workers_compensation", "limit": "statutory" },
+          { "type": "employers_liability", "limit": "500000/500000/500000" }
+        ],
+        "deductibles": {},
+        "status": "quoted",
+        "valid_until": "2026-02-05"
+      },
+      {
+        "quote_id": "QT-010-ERIE",
+        "carrier_code": "ERIE",
+        "carrier_name": "Erie Insurance",
+        "premium_annual": 5600.00,
+        "premium_monthly": 487.00,
+        "coverages": [
+          { "type": "workers_compensation", "limit": "statutory" },
+          { "type": "employers_liability", "limit": "500000/500000/500000" }
+        ],
+        "deductibles": {},
+        "status": "quoted",
+        "valid_until": "2026-02-05"
+      }
+    ],
+    "expires_at": "2026-02-05T23:59:59Z"
+  },
+  {
+    "request_id": "QR-011",
+    "client_id": "CLI-014",
+    "policy_type": "renters",
+    "submitted_at": "2025-02-15T14:00:00Z",
+    "status": "completed",
+    "property": {
+      "address": { "street": "150 East 44th Street, Apt 22F", "city": "New York", "state": "NY", "zip": "10017" },
+      "unit_type": "apartment",
+      "floor": 22,
+      "security_system": true,
+      "sprinklers": true
+    },
+    "requested_coverages": [
+      { "type": "personal_property", "limit": "40000" },
+      { "type": "liability", "limit": "300000" },
+      { "type": "medical_payments", "limit": "5000" }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-011-LIBT",
+        "carrier_code": "LIBT",
+        "carrier_name": "Liberty Mutual",
+        "premium_annual": 350.00,
+        "premium_monthly": 30.50,
+        "coverages": [
+          { "type": "personal_property", "limit": "40000", "deductible": 500 },
+          { "type": "liability", "limit": "300000" },
+          { "type": "medical_payments", "limit": "5000" }
+        ],
+        "deductibles": { "personal_property": 500 },
+        "status": "bound",
+        "valid_until": "2025-03-15"
+      },
+      {
+        "quote_id": "QT-011-SAFECO",
+        "carrier_code": "SAFECO",
+        "carrier_name": "Safeco",
+        "premium_annual": 380.00,
+        "premium_monthly": 33.00,
+        "coverages": [
+          { "type": "personal_property", "limit": "40000", "deductible": 500 },
+          { "type": "liability", "limit": "300000" },
+          { "type": "medical_payments", "limit": "5000" }
+        ],
+        "deductibles": { "personal_property": 500 },
+        "status": "quoted",
+        "valid_until": "2025-03-15"
+      },
+      {
+        "quote_id": "QT-011-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": 365.00,
+        "premium_monthly": 31.80,
+        "coverages": [
+          { "type": "personal_property", "limit": "40000", "deductible": 500 },
+          { "type": "liability", "limit": "300000" },
+          { "type": "medical_payments", "limit": "5000" }
+        ],
+        "deductibles": { "personal_property": 500 },
+        "status": "quoted",
+        "valid_until": "2025-03-15"
+      }
+    ],
+    "expires_at": "2025-03-15T23:59:59Z"
+  },
+  {
+    "request_id": "QR-012",
+    "client_id": "CLI-025",
+    "policy_type": "general_liability",
+    "submitted_at": "2025-08-10T09:00:00Z",
+    "status": "completed",
+    "business": {
+      "name": "Hawkins Auto Repair",
+      "type": "auto_repair",
+      "years_in_business": 12,
+      "annual_revenue": 680000,
+      "num_employees": 5,
+      "square_footage": 4500,
+      "address": { "street": "7700 Westheimer Road", "city": "Houston", "state": "TX", "zip": "77063" }
+    },
+    "requested_coverages": [
+      { "type": "general_liability", "limit": "1000000" },
+      { "type": "products_completed_ops", "limit": "1000000" }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-012-NTNW",
+        "carrier_code": "NTNW",
+        "carrier_name": "Nationwide",
+        "premium_annual": 1900.00,
+        "premium_monthly": 165.00,
+        "coverages": [
+          { "type": "general_liability", "limit": "1000000" },
+          { "type": "products_completed_ops", "limit": "1000000" }
+        ],
+        "deductibles": {},
+        "status": "bound",
+        "valid_until": "2025-09-10"
+      },
+      {
+        "quote_id": "QT-012-HRTF",
+        "carrier_code": "HRTF",
+        "carrier_name": "Hartford",
+        "premium_annual": 2050.00,
+        "premium_monthly": 178.50,
+        "coverages": [
+          { "type": "general_liability", "limit": "1000000" },
+          { "type": "products_completed_ops", "limit": "1000000" }
+        ],
+        "deductibles": {},
+        "status": "quoted",
+        "valid_until": "2025-09-10"
+      },
+      {
+        "quote_id": "QT-012-ERIE",
+        "carrier_code": "ERIE",
+        "carrier_name": "Erie Insurance",
+        "premium_annual": 2150.00,
+        "premium_monthly": 187.00,
+        "coverages": [
+          { "type": "general_liability", "limit": "1000000" },
+          { "type": "products_completed_ops", "limit": "1000000" }
+        ],
+        "deductibles": {},
+        "status": "quoted",
+        "valid_until": "2025-09-10"
+      },
+      {
+        "quote_id": "QT-012-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "Auto repair operations exceed risk appetite for this program",
+        "valid_until": null
+      }
+    ],
+    "expires_at": "2025-09-10T23:59:59Z"
+  },
+  {
+    "request_id": "QR-013",
+    "client_id": "CLI-022",
+    "policy_type": "homeowners",
+    "submitted_at": "2026-02-12T10:00:00Z",
+    "status": "completed",
+    "property": {
+      "address": { "street": "2760 Park Street", "city": "Jacksonville", "state": "FL", "zip": "32205" },
+      "year_built": 1972,
+      "square_feet": 1400,
+      "construction": "frame",
+      "roof_type": "asphalt_shingle",
+      "roof_year": 2010,
+      "heating": "central",
+      "security_system": false,
+      "swimming_pool": false
+    },
+    "requested_coverages": [
+      { "type": "dwelling", "limit": "280000" },
+      { "type": "personal_property", "limit": "140000" },
+      { "type": "liability", "limit": "300000" }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-013-SAFECO",
+        "carrier_code": "SAFECO",
+        "carrier_name": "Safeco",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "Moratorium: New homeowners policies in Florida coastal ZIP codes suspended due to hurricane season underwriting moratorium effective 2026-01-15 through 2026-04-01",
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-013-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "Moratorium: Summit Fire & Casualty has suspended new homeowners writings in FL ZIP codes 322xx through 329xx until further notice",
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-013-NTNW",
+        "carrier_code": "NTNW",
+        "carrier_name": "Nationwide",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "Moratorium: Nationwide is not accepting new homeowners applications in Florida at this time",
+        "valid_until": null
+      }
+    ],
+    "expires_at": null
+  },
+  {
+    "request_id": "QR-014",
+    "client_id": "CLI-026",
+    "policy_type": "personal_auto",
+    "submitted_at": "2026-02-10T14:00:00Z",
+    "status": "completed",
+    "drivers": [
+      {
+        "name": "Victor Marsh",
+        "dob": "1999-03-18",
+        "license_number": "TX-99281746",
+        "relationship": "self",
+        "violations": [
+          { "date": "2025-06-01", "type": "DUI", "description": "DUI conviction" },
+          { "date": "2025-09-15", "type": "speeding", "description": "25 mph over limit" },
+          { "date": "2024-12-01", "type": "reckless_driving", "description": "Reckless driving charge" }
+        ],
+        "accidents": [
+          { "date": "2025-08-20", "type": "at_fault", "description": "Single vehicle rollover" }
+        ]
+      }
+    ],
+    "vehicles": [
+      {
+        "year": 2024,
+        "make": "Dodge",
+        "model": "Charger",
+        "vin": "2C3CDXCT8NH123456",
+        "usage": "commute",
+        "annual_miles": 18000
+      }
+    ],
+    "requested_coverages": [
+      { "type": "bodily_injury", "limit": "50000/100000" },
+      { "type": "property_damage", "limit": "25000" },
+      { "type": "collision", "deductible": 1000 },
+      { "type": "comprehensive", "deductible": 500 }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-014-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "underwriting_hold",
+        "decline_reason": "Underwriting hold: DUI conviction within 36 months requires manual underwriting review. Estimated review time 10-15 business days.",
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-014-CSTL",
+        "carrier_code": "CSTL",
+        "carrier_name": "Coastal Star Insurance",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "Risk assessment rejected: DUI + reckless driving + at-fault accident within 24 months exceeds maximum risk tolerance. SR-22 filing required for any future application.",
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-014-ERIE",
+        "carrier_code": "ERIE",
+        "carrier_name": "Erie Insurance",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "Driver does not meet eligibility requirements. Major violations including DUI within 36 months.",
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-014-NTNW",
+        "carrier_code": "NTNW",
+        "carrier_name": "Nationwide",
+        "premium_annual": 5200.00,
+        "premium_monthly": 452.00,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "50000/100000" },
+          { "type": "property_damage", "limit": "25000" },
+          { "type": "collision", "deductible": 1000 },
+          { "type": "comprehensive", "deductible": 500 }
+        ],
+        "deductibles": { "collision": 1000, "comprehensive": 500 },
+        "status": "quoted",
+        "valid_until": "2026-03-12"
+      }
+    ],
+    "expires_at": "2026-03-12T23:59:59Z"
+  },
+  {
+    "request_id": "QR-015",
+    "client_id": "CLI-017",
+    "policy_type": "personal_auto",
+    "submitted_at": "2026-02-18T09:00:00Z",
+    "status": "partial",
+    "drivers": [
+      {
+        "name": "Daniel Reeves",
+        "dob": "1984-03-02",
+        "license_number": "TX-64738291",
+        "relationship": "self",
+        "violations": [],
+        "accidents": []
+      }
+    ],
+    "vehicles": [
+      {
+        "year": 2023,
+        "make": "Ford",
+        "model": "F-150",
+        "vin": "1FTFW1E80NFA12345",
+        "usage": "commute",
+        "annual_miles": 14000
+      }
+    ],
+    "requested_coverages": [
+      { "type": "bodily_injury", "limit": "100000/300000" },
+      { "type": "property_damage", "limit": "50000" },
+      { "type": "collision", "deductible": 500 },
+      { "type": "comprehensive", "deductible": 250 },
+      { "type": "uninsured_motorist", "limit": "100000/300000" }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-015-CSTL",
+        "carrier_code": "CSTL",
+        "carrier_name": "Coastal Star Insurance",
+        "premium_annual": 1340.00,
+        "premium_monthly": 116.50,
+        "coverages": [
+          { "type": "bodily_injury", "limit": "100000/300000" },
+          { "type": "property_damage", "limit": "50000" },
+          { "type": "collision", "deductible": 500 },
+          { "type": "comprehensive", "deductible": 250 },
+          { "type": "uninsured_motorist", "limit": "100000/300000" }
+        ],
+        "deductibles": { "collision": 500, "comprehensive": 250 },
+        "status": "quoted",
+        "valid_until": "2026-03-20"
+      },
+      {
+        "quote_id": "QT-015-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "pending",
+        "decline_reason": null,
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-015-SAFECO",
+        "carrier_code": "SAFECO",
+        "carrier_name": "Safeco",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "pending",
+        "decline_reason": null,
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-015-NTNW",
+        "carrier_code": "NTNW",
+        "carrier_name": "Nationwide",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "error",
+        "decline_reason": "Carrier API timeout after 30 seconds. Retry recommended.",
+        "valid_until": null
+      }
+    ],
+    "expires_at": "2026-03-20T23:59:59Z"
+  },
+  {
+    "request_id": "QR-016",
+    "client_id": "CLI-028",
+    "policy_type": "personal_auto",
+    "submitted_at": "2026-02-05T10:00:00Z",
+    "status": "completed",
+    "drivers": [
+      {
+        "name": "Nathan Blackwood",
+        "dob": "1976-04-08",
+        "license_number": "AK-7483920",
+        "relationship": "self",
+        "violations": [],
+        "accidents": []
+      }
+    ],
+    "vehicles": [
+      {
+        "year": 2022,
+        "make": "Toyota",
+        "model": "Tacoma",
+        "vin": "3TMCZ5AN9NM123456",
+        "usage": "commute",
+        "annual_miles": 10000
+      }
+    ],
+    "requested_coverages": [
+      { "type": "bodily_injury", "limit": "100000/300000" },
+      { "type": "property_damage", "limit": "50000" },
+      { "type": "collision", "deductible": 500 },
+      { "type": "comprehensive", "deductible": 250 }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-016-CSTL",
+        "carrier_code": "CSTL",
+        "carrier_name": "Coastal Star Insurance",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "State not available: Alaska is not in Coastal Star Insurance's appointed territory",
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-016-SMIT",
+        "carrier_code": "SMIT",
+        "carrier_name": "Summit Fire & Casualty",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "State not available: Summit Fire & Casualty does not write personal auto in Alaska",
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-016-SAFECO",
+        "carrier_code": "SAFECO",
+        "carrier_name": "Safeco",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "State not available: Agency lacks appointment in Alaska",
+        "valid_until": null
+      }
+    ],
+    "expires_at": null
+  },
+  {
+    "request_id": "QR-017",
+    "client_id": "CLI-028",
+    "policy_type": "bop",
+    "submitted_at": "2026-02-08T10:00:00Z",
+    "status": "completed",
+    "business": {
+      "name": "Blackwood Fishing Charters",
+      "type": "fishing_charter",
+      "years_in_business": 15,
+      "annual_revenue": 350000,
+      "num_employees": 4,
+      "square_footage": 800,
+      "address": { "street": "1200 Northern Lights Blvd", "city": "Anchorage", "state": "AK", "zip": "99503" }
+    },
+    "requested_coverages": [
+      { "type": "general_liability", "limit": "1000000" },
+      { "type": "business_property", "limit": "200000" }
+    ],
+    "results": [
+      {
+        "quote_id": "QT-017-HRTF",
+        "carrier_code": "HRTF",
+        "carrier_name": "The Hartford",
+        "premium_annual": null,
+        "premium_monthly": null,
+        "coverages": [],
+        "deductibles": {},
+        "status": "declined",
+        "decline_reason": "State not available: The Hartford does not write BOP in Alaska. Fishing charter operations also exceed standard risk appetite.",
+        "valid_until": null
+      },
+      {
+        "quote_id": "QT-017-SURPLUS",
+        "carrier_code": "SURPLUS",
+        "carrier_name": "Lloyd's of London (Surplus Lines)",
+        "premium_annual": 8500.00,
+        "premium_monthly": 739.00,
+        "coverages": [
+          { "type": "general_liability", "limit": "1000000" },
+          { "type": "business_property", "limit": "200000", "deductible": 5000 }
+        ],
+        "deductibles": { "business_property": 5000 },
+        "status": "quoted",
+        "surplus_lines": true,
+        "surplus_lines_tax_pct": 3.0,
+        "valid_until": "2026-03-10"
+      }
+    ],
+    "expires_at": "2026-03-10T23:59:59Z"
+  }
+]
