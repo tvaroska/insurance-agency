@@ -17,6 +17,10 @@ COPY --from=deps /app/services/crm/node_modules services/crm/node_modules
 COPY packages/shared packages/shared
 COPY services/crm services/crm
 COPY data/seed data/seed
+COPY data/seed-clean data/seed-clean
+
+ARG SEED_MODE=realistic
+ENV SEED_MODE=${SEED_MODE}
 
 WORKDIR /app/services/crm
 

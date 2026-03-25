@@ -17,6 +17,10 @@ COPY --from=deps /app/services/ecm/node_modules services/ecm/node_modules
 COPY packages/shared packages/shared
 COPY services/ecm services/ecm
 COPY data/seed data/seed
+COPY data/seed-clean data/seed-clean
+
+ARG SEED_MODE=realistic
+ENV SEED_MODE=${SEED_MODE}
 
 WORKDIR /app/services/ecm
 

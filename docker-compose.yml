@@ -1,13 +1,31 @@
+# Usage:
+#   Build both variants:
+#     docker compose build                        # realistic (default, adversarial data)
+#     SEED_MODE=clean docker compose build         # clean (no adversarial data)
+#   Run:
+#     docker compose up                            # realistic
+#     SEED_MODE=clean docker compose up            # clean
+#   Reset to seed state:
+#     docker compose down && docker compose up     # containers start fresh from image
+
+x-service-base: &service-base
+  environment: &base-env
+    JWT_SECRET: dev-secret
+
 services:
   ams:
+    <<: *service-base
     build:
       context: .
       dockerfile: services/ams/Dockerfile
+      args:
+        SEED_MODE: ${SEED_MODE:-realistic}
+    image: evergreen/ams:${SEED_MODE:-realistic}
     ports:
       - "3000:3000"
     environment:
-      - PORT=3000
-      - JWT_SECRET=dev-secret
+      <<: *base-env
+      PORT: 3000
     healthcheck:
       test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3000/health').then(r=>{if(!r.ok)process.exit(1)})"]
       interval: 10s
@@ -16,15 +34,19 @@ services:
       start_period: 5s
 
   rater:
+    <<: *service-base
     build:
       context: .
       dockerfile: services/rater/Dockerfile
+      args:
+        SEED_MODE: ${SEED_MODE:-realistic}
+    image: evergreen/rater:${SEED_MODE:-realistic}
     ports:
       - "3001:3001"
     environment:
-      - PORT=3001
-      - JWT_SECRET=dev-secret
-      - AMS_BASE_URL=http://ams:3000
+      <<: *base-env
+      PORT: 3001
+      AMS_BASE_URL: http://ams:3000
     healthcheck:
       test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3001/health').then(r=>{if(!r.ok)process.exit(1)})"]
       interval: 10s
@@ -33,14 +55,18 @@ services:
       start_period: 5s
 
   crm:
+    <<: *service-base
     build:
       context: .
       dockerfile: services/crm/Dockerfile
+      args:
+        SEED_MODE: ${SEED_MODE:-realistic}
+    image: evergreen/crm:${SEED_MODE:-realistic}
     ports:
       - "3002:3002"
     environment:
-      - PORT=3002
-      - JWT_SECRET=dev-secret
+      <<: *base-env
+      PORT: 3002
     healthcheck:
       test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3002/health').then(r=>{if(!r.ok)process.exit(1)})"]
       interval: 10s
@@ -49,16 +75,20 @@ services:
       start_period: 5s
 
   ecm:
+    <<: *service-base
     build:
       context: .
       dockerfile: services/ecm/Dockerfile
+      args:
+        SEED_MODE: ${SEED_MODE:-realistic}
+    image: evergreen/ecm:${SEED_MODE:-realistic}
     ports:
       - "3003:3003"
     environment:
-      - PORT=3003
-      - JWT_SECRET=dev-secret
-      - AMS_URL=http://ams:3000
-      - CLAIMS_URL=http://claims:3007
+      <<: *base-env
+      PORT: 3003
+      AMS_URL: http://ams:3000
+      CLAIMS_URL: http://claims:3007
     healthcheck:
       test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3003/health').then(r=>{if(!r.ok)process.exit(1)})"]
       interval: 10s
@@ -66,15 +96,39 @@ services:
       retries: 3
       start_period: 5s
 
+  comm:
+    <<: *service-base
+    build:
+      context: .
+      dockerfile: services/comm/Dockerfile
+      args:
+        SEED_MODE: ${SEED_MODE:-realistic}
+    image: evergreen/comm:${SEED_MODE:-realistic}
+    ports:
+      - "3004:3004"
+    environment:
+      <<: *base-env
+      PORT: 3004
+    healthcheck:
+      test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3004/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
   carrier-summit:
+    <<: *service-base
     build:
       context: .
       dockerfile: services/carrier-summit/Dockerfile
+      args:
+        SEED_MODE: ${SEED_MODE:-realistic}
+    image: evergreen/carrier-summit:${SEED_MODE:-realistic}
     ports:
       - "3005:3005"
     environment:
-      - PORT=3005
-      - JWT_SECRET=dev-secret
+      <<: *base-env
+      PORT: 3005
     healthcheck:
       test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3005/health').then(r=>{if(!r.ok)process.exit(1)})"]
       interval: 10s
@@ -83,14 +137,18 @@ services:
       start_period: 5s
 
   carrier-coastal:
+    <<: *service-base
     build:
       context: .
       dockerfile: services/carrier-coastal/Dockerfile
+      args:
+        SEED_MODE: ${SEED_MODE:-realistic}
+    image: evergreen/carrier-coastal:${SEED_MODE:-realistic}
     ports:
       - "3006:3006"
     environment:
-      - PORT=3006
-      - JWT_SECRET=dev-secret
+      <<: *base-env
+      PORT: 3006
     healthcheck:
       test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3006/health').then(r=>{if(!r.ok)process.exit(1)})"]
       interval: 10s
@@ -98,30 +156,19 @@ services:
       retries: 3
       start_period: 5s
 
-  comm:
-    build:
-      context: .
-      dockerfile: services/comm/Dockerfile
-    ports:
-      - "3004:3004"
-    environment:
-      - PORT=3004
-    healthcheck:
-      test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3004/health').then(r=>{if(!r.ok)process.exit(1)})"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
-
   claims:
+    <<: *service-base
     build:
       context: .
       dockerfile: services/claims/Dockerfile
+      args:
+        SEED_MODE: ${SEED_MODE:-realistic}
+    image: evergreen/claims:${SEED_MODE:-realistic}
     ports:
       - "3007:3007"
     environment:
-      - PORT=3007
-      - JWT_SECRET=dev-secret
+      <<: *base-env
+      PORT: 3007
     healthcheck:
       test: ["CMD", "bun", "run", "-e", "fetch('http://localhost:3007/health').then(r=>{if(!r.ok)process.exit(1)})"]
       interval: 10s

@@ -50,7 +50,7 @@ The evaluation system is fully decoupled. The agent, the services, and the score
 
 ### Lifecycle of an Evaluation Run
 
-1. **Start services** with desired seed mode: `SEED_MODE=clean|dirty` (default: `dirty`). Services seed their SQLite DBs on startup from `data/seed/` or `data/seed-clean/`.
+1. **Start services** with desired seed mode: `SEED_MODE=clean|realistic` (default: `realistic`). Services seed their SQLite DBs on startup from `data/seed/` or `data/seed-clean/`.
 
 2. **Agent runs independently.** It receives a scenario prompt, service URLs, and OAuth credentials. It calls service APIs to complete the scenario. The agent can be any implementation — Claude, GPT, a custom bot, a human. The eval system doesn't care.
 
@@ -60,7 +60,7 @@ The evaluation system is fully decoupled. The agent, the services, and the score
 
 5. **Run the scorer:**
    ```
-   bun eval/score.ts --traces ./traces.jsonl --scenario 01 --seed dirty
+   bun eval/score.ts --traces ./traces.jsonl --scenario 01 --seed realistic
    ```
 
 ### Scorer Inputs
@@ -119,12 +119,12 @@ Each check is weighted. Final score is a weighted combination of both evaluator 
 - [x] **S1-seed-1** Create clean seed dataset — Duplicate `data/seed/` to `data/seed-clean/`. Remove all adversarial data: no below-minimum coverage, no lapsed policies, no unsigned docs, no fraud indicators, no duplicate records, no stale contacts, no name mismatches. All clients have valid, consistent, complete records.
   - Files: `data/seed-clean/*.json` (16 files)
 
-- [x] **S1-seed-2** Seed mode selector — Update each service's `seed.ts` to accept `SEED_MODE=clean|dirty` env var. `clean` loads from `data/seed-clean/`, `dirty` (default) loads from `data/seed/`.
+- [x] **S1-seed-2** Seed mode selector — Update each service's `seed.ts` to accept `SEED_MODE=clean|realistic` env var. `clean` loads from `data/seed-clean/`, `dirty` (default) loads from `data/seed/`.
   - Files: `services/*/src/seed.ts`
 
 ### Phase 2: Scorer
 
-- [ ] **S1-score-1** Scenario definition format — Create `eval/types.ts` with `ScenarioDefinition` interface: `id`, `name`, `difficulty`, `services` (which services participate), `expected_api_calls` (min/max range), `eo_traps` (list of trap IDs with descriptions), `output_checks` (list of DB assertions), `trace_checks` (list of span pattern checks), `clean_variant` and `dirty_variant` configs (different client IDs, expected outcomes).
+- [ ] **S1-score-1** Scenario definition format — Create `eval/types.ts` with `ScenarioDefinition` interface: `id`, `name`, `difficulty`, `services` (which services participate), `expected_api_calls` (min/max range), `eo_traps` (list of trap IDs with descriptions), `output_checks` (list of DB assertions), `trace_checks` (list of span pattern checks), `clean_variant` and `realistic_variant` configs (different client IDs, expected outcomes).
   - Files: `eval/types.ts`
 
 - [ ] **S1-score-2** Output evaluator — Create `eval/evaluators/output.ts`. Queries service REST APIs to verify expected state changes. Checks: record existence, field values, record counts, relationship integrity. Each check is pass/fail with a weight. Returns `OutputScore { dimension, weight, passed, details }[]`.
@@ -133,10 +133,10 @@ Each check is weighted. Final score is a weighted combination of both evaluator 
 - [ ] **S1-score-3** Trace evaluator — Create `eval/evaluators/trace.ts`. Reads agent traces and scores: (a) API call sequence — right endpoints in reasonable order? (b) Error recovery — handled 4xx appropriately? (c) Efficiency — call count vs expected range. (d) E&O compliance — escalated when required? Returns `TraceScore { dimension, weight, score, details }[]`. Includes a trace parser layer with adapters for different agent frameworks.
   - Files: `eval/evaluators/trace.ts`, `eval/trace-parsers/`
 
-- [ ] **S1-score-4** Report generator — Create `eval/report.ts`. Combines output + trace scores into a final report. Per-scenario: dimension breakdown, clean vs dirty comparison, E&O violations. Output formats: JSON + markdown.
+- [ ] **S1-score-4** Report generator — Create `eval/report.ts`. Combines output + trace scores into a final report. Per-scenario: dimension breakdown, clean vs realistic comparison, E&O violations. Output formats: JSON + markdown.
   - Files: `eval/report.ts`
 
-- [ ] **S1-score-5** Scorer CLI — Create `eval/score.ts`. CLI entry point: `bun eval/score.ts --traces <path> --scenario <id> --seed clean|dirty`. Reads traces, queries services, runs both evaluators, generates report to `eval/runs/<run-id>/`.
+- [ ] **S1-score-5** Scorer CLI — Create `eval/score.ts`. CLI entry point: `bun eval/score.ts --traces <path> --scenario <id> --seed clean|realistic`. Reads traces, queries services, runs both evaluators, generates report to `eval/runs/<run-id>/`.
   - Files: `eval/score.ts`
 
 ### Phase 3: Scenario Implementations (5 scenarios)
@@ -209,7 +209,7 @@ Each check is weighted. Final score is a weighted combination of both evaluator 
 - **ORM:** Drizzle — type-safe, lightweight, excellent SQLite support
 - **Database:** SQLite per service — each microservice owns its data, no shared DB
 - **Auth:** OAuth 2.0 client credentials — each service exposes `POST /oauth/token`
-- **Data strategy:** Dual seed datasets (clean/dirty) — clean for baseline, dirty for trap detection. Restart services between runs to reset state.
+- **Data strategy:** Dual seed datasets (clean/realistic) — clean for baseline, realistic for trap detection. Restart services between runs to reset state.
 - **Tracing:** Agent-side only. Services have no instrumentation. The agent framework (Claude, LangChain, etc.) produces traces of its API calls. The scorer reads these traces.
 - **Eval architecture:** Decoupled scorer reads agent traces + queries service DB state. Two evaluators (output + trace) scored independently then combined. Agent runs independently — scorer doesn't invoke or manage the agent.
 - **HITL simulation:** Rule-based manager persona in AMS service

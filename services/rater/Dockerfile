@@ -17,6 +17,10 @@ COPY --from=deps /app/services/rater/node_modules services/rater/node_modules
 COPY packages/shared packages/shared
 COPY services/rater services/rater
 COPY data/seed data/seed
+COPY data/seed-clean data/seed-clean
+
+ARG SEED_MODE=realistic
+ENV SEED_MODE=${SEED_MODE}
 
 WORKDIR /app/services/rater
 

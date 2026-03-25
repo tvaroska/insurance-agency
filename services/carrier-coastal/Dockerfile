@@ -32,6 +32,10 @@ COPY services/carrier-coastal/package.json services/carrier-coastal/
 COPY services/carrier-coastal/tsconfig.json services/carrier-coastal/
 COPY --from=ui-builder /app/services/carrier-coastal/public services/carrier-coastal/public
 COPY data/seed data/seed
+COPY data/seed-clean data/seed-clean
+
+ARG SEED_MODE=realistic
+ENV SEED_MODE=${SEED_MODE}
 
 WORKDIR /app/services/carrier-coastal
 

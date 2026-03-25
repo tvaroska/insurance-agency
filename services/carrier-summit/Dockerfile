@@ -32,6 +32,10 @@ COPY services/carrier-summit/package.json services/carrier-summit/
 COPY services/carrier-summit/tsconfig.json services/carrier-summit/
 COPY --from=ui-builder /app/services/carrier-summit/public services/carrier-summit/public
 COPY data/seed data/seed
+COPY data/seed-clean data/seed-clean
+
+ARG SEED_MODE=realistic
+ENV SEED_MODE=${SEED_MODE}
 
 WORKDIR /app/services/carrier-summit
 
