@@ -21,7 +21,8 @@ import { PORT_SERVICE_MAP } from "../types";
 
 // ── Attribute helpers ───────────────────────────────────────────────
 
-function getStringAttr(attrs: OtlpAttribute[], key: string): string | undefined {
+function getStringAttr(attrs: OtlpAttribute[] | undefined, key: string): string | undefined {
+  if (!attrs) return undefined;
   const attr = attrs.find((a) => a.key === key);
   if (!attr) return undefined;
   if (attr.value.stringValue !== undefined) return attr.value.stringValue;

@@ -1,5 +1,19 @@
 // Scenario Definition Types
 
+export type PromptDifficulty =
+  | "scripted"
+  | "explicit"
+  | "natural"
+  | "vague"
+  | "adversarial";
+
+export interface TestCase {
+  id: string;
+  prompt: string;
+  difficulty: PromptDifficulty;
+  outputChecks: OutputCheck[];
+}
+
 export interface ScenarioDefinition {
   id: string;
   name: string;
@@ -14,10 +28,9 @@ export interface ScenarioDefinition {
 
 export interface VariantConfig {
   description: string;
-  prompt: string;
+  cases: TestCase[];
   expectedApiCalls: { min: number; max: number };
 
-  outputChecks: OutputCheck[];
   traceChecks: TraceCheck[];
   eoTraps: EoTrap[];
 }
@@ -149,6 +162,7 @@ export interface ScenarioReport {
   runId: string;
   timestamp: string;
   scenario: string;
+  caseId: string;
   seed: "clean" | "realistic";
   overall: {
     score: number;

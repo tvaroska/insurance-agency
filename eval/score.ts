@@ -50,19 +50,19 @@ async function loadTraces(tracePath: string): Promise<OtlpTrace> {
 
   if (stat) {
     const content = await readFile(tracePath, "utf-8");
-    // Support JSONL (one JSON object per line) or single JSON
-    const lines = content
-      .trim()
-      .split("\n")
-      .filter((l) => l.trim());
+    const trimmed = content.trim();
 
-    if (lines.length === 1) {
-      return JSON.parse(lines[0]) as OtlpTrace;
+    // Try parsing as a single JSON object first (standard or pretty-printed)
+    try {
+      return JSON.parse(trimmed) as OtlpTrace;
+    } catch {
+      // Fall through to JSONL parsing
     }
 
-    // Merge multiple OTLP JSON objects into one
+    // JSONL: one JSON object per line
     const merged: OtlpTrace = { resourceSpans: [] };
-    for (const line of lines) {
+    for (const line of trimmed.split("\n")) {
+      if (!line.trim()) continue;
       const obj = JSON.parse(line) as OtlpTrace;
       merged.resourceSpans.push(...obj.resourceSpans);
     }
@@ -80,14 +80,8 @@ async function loadTraces(tracePath: string): Promise<OtlpTrace> {
   const merged: OtlpTrace = { resourceSpans: [] };
   for (const file of jsonFiles.sort()) {
     const content = await readFile(join(tracePath, file), "utf-8");
-    const lines = content
-      .trim()
-      .split("\n")
-      .filter((l) => l.trim());
-    for (const line of lines) {
-      const obj = JSON.parse(line) as OtlpTrace;
-      merged.resourceSpans.push(...obj.resourceSpans);
-    }
+    const obj = JSON.parse(content.trim()) as OtlpTrace;
+    merged.resourceSpans.push(...obj.resourceSpans);
   }
   return merged;
 }

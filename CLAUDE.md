@@ -19,3 +19,19 @@ docker compose down && docker compose up
 # Run tests (these run in-memory, no docker needed):
 cd services/<name> && bun test
 ```
+
+## Planning Workflow
+
+| File | Purpose |
+|------|---------|
+| `TODO.md` | Sprint 0 (always active) + current sprint |
+| `docs/roadmap.md` | Strategic priorities by feature area |
+| `docs/cujs.md` | Critical User Journeys |
+| `docs/specs.md` | Product specs and requirements |
+| `docs/architecture.md` | System design and tech decisions |
+| `docs/testing.md` | Test strategy and conventions |
+| `docs/features/*.md` | Completed work history per feature area |
+
+Commands: `/wopen` | `/wimplement {task-id}` | `/wnew-task` | `/wnew-feature` | `/wreplan` | `/wstatus`
+
+Run `cd services/<name> && bun test` before committing. Tests must pass before marking tasks complete.

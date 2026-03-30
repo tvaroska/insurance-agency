@@ -254,6 +254,43 @@ See [regulatory.md](regulatory.md) for full rules including state-specific requi
 
 ---
 
+## Evaluation & Scoring
+
+The gym includes a scorer CLI that evaluates AI agent performance by combining two analysis methods:
+
+- **Output scoring (40%)** — Queries gym REST APIs to verify the agent achieved expected outcomes (records created, fields updated, etc.)
+- **Trace scoring (60%)** — Analyzes OTLP JSON traces to verify the agent followed correct workflows (API call sequences, E&O escalations, efficiency)
+
+E&O violations are auto-fail — an agent that triggers a regulatory trap scores 0% on the entire scenario.
+
+### Scorer CLI
+
+```bash
+bun eval/score.ts --traces <path> --scenario <id> [--seed realistic|clean] [--out <dir>]
+```
+
+- `--traces` — Path to OTLP JSON trace file or directory
+- `--scenario` — Scenario ID (comma-separated for multiple: `01,04,07,08`)
+- `--seed` — Which seed data variant the gym is running (default: `realistic`)
+- `--out` — Output directory for JSON + markdown reports
+
+### Supported Scenarios
+
+| Scenario | Difficulty | Key Test |
+|----------|-----------|----------|
+| 01 — New Client Intake | Easy | Multi-service record creation, duplicate checking |
+| 04 — Duplicate Client Detection | Medium | Cross-referencing, conflict resolution, merge logic |
+| 07 — FNOL Claim Filing | Hard | Claims intake, adjuster assignment, E&O routing |
+| 08 — E&O Trap Navigation | Hard | 5 mixed requests, 3 are regulatory traps |
+
+### Trace Format
+
+The scorer accepts OTLP JSON traces with GenAI semantic conventions (`gen_ai.operation.name = "execute_tool"`). HTTP call details are extracted from `_http` metadata in tool responses. Compatible with Google ADK, LangChain, PydanticAI, and CrewAI.
+
+See [`eval/`](eval/) for scorer source and scenario definitions.
+
+---
+
 ## Architecture
 
 ```
@@ -320,18 +357,9 @@ cd tests/e2e && bun test
 
 Planned enhancements to evolve the gym from a static mock environment into a dynamic training platform.
 
-### Evaluation & Scoring Engine
+### More Scenarios
 
-The gym currently tracks data state but doesn't grade agent execution. A dedicated `evaluator` service would quantify agent performance across different LLMs, prompts, and strategies.
-
-- **Standalone service** that connects to all service databases (read-only) and consumes API call logs
-- **Scenario definitions** as JSON/YAML specifying starting state, user prompt, and expected end state
-- **Scoring metrics:**
-  - E&O violations (critical failures): binding below state minimums, hallucinating coverage (-1000 pts)
-  - PII compliance: logging unmasked SSNs or bank details in plain text (-500 pts)
-  - Business outcomes: identifying cross-sell opportunities, successful binds (+100 pts)
-  - Efficiency: unnecessary API calls, infinite loops, redundant reads (deductions)
-- **Output:** Standardized JSON "Report Card" usable in CI/CD pipelines to prevent regressions in agent reasoning
+4 of 15 benchmark scenarios have scorer definitions (01, 04, 07, 08). Remaining 11 scenarios need scorer implementations covering all difficulty tiers.
 
 ### Chaos Injection
 
