@@ -28,7 +28,7 @@ info:
     url: https://www.apache.org/licenses/LICENSE-2.0
 
 servers:
-  - url: http://localhost:3003
+  - url: http://localhost:3003/v1
     description: Local development
 
 tags:

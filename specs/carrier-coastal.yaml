@@ -36,7 +36,7 @@ info:
     name: Evergreen Platform Engineering
 
 servers:
-  - url: http://localhost:3006
+  - url: http://localhost:3006/v1
     description: Local development
 
 tags:

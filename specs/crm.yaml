@@ -10,7 +10,7 @@ info:
     name: Evergreen CRM Engineering
 
 servers:
-  - url: http://localhost:3002
+  - url: http://localhost:3002/v1
     description: Local development
 
 tags:

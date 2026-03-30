@@ -27,7 +27,7 @@ info:
     name: Evergreen Claims Engineering
 
 servers:
-  - url: http://localhost:3007
+  - url: http://localhost:3007/v1
     description: Local development
 
 tags:
