@@ -24,14 +24,6 @@ No open issues.
 
 ### Phase 2: Scorer
 
-- [ ] `S1-EVAL-2` **Output evaluator** — P0
-  Create `eval/evaluators/output.ts`. Queries gym REST APIs (services must be running) to verify state after agent run. Checks: record existence via GET, field values via partial body matching, record counts via list endpoints, relationship integrity via cross-service GETs. Each check is pass/fail with a weight. Returns `OutputScore[]`.
-  Files: `eval/evaluators/output.ts`
-
-- [ ] `S1-EVAL-3` **Trace evaluator** — P0
-  Create `eval/evaluators/trace.ts`. Reads OTLP JSON file (agent-side OTel spans). Parses `resourceSpans[].scopeSpans[].spans[]`, extracts HTTP client spans (kind=3), maps `http.request.method`, `url.full`, `http.response.status_code`, `server.port` to `ApiCall[]`. Scores: (a) API call sequence matching, (b) error recovery (4xx handling), (c) efficiency (call count vs expected range), (d) E&O compliance (escalation presence). Port-to-service mapping: 3000=AMS through 3007=Claims.
-  Files: `eval/evaluators/trace.ts`
-
 - [ ] `S1-EVAL-4` **Report generator** — P1
   Create `eval/report.ts`. Combines output + trace scores. Weights: trace 40%, output 60%. E&O override: any E&O failure caps scenario score at 0. Output: JSON (machine-readable) + markdown (human-readable) with dimension breakdown and E&O trap results.
   Files: `eval/report.ts`
