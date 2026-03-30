@@ -25,23 +25,19 @@ const { values } = parseArgs({
 });
 
 if (values.help || !values.traces || !values.scenario) {
-  console.log(`Usage: bun eval/score.ts --traces <path> --scenario <id> --seed clean|realistic
+  console.log(`Usage: bun eval/score.ts --traces <path> --scenario <id> --seed <variant>
 
 Options:
   --traces    Path to OTLP JSON file or directory of .json files
   --scenario  Scenario ID (e.g. 01) or comma-separated IDs (01,04,07,08)
-  --seed      Seed mode: clean or realistic (default: realistic)
+  --seed      Variant name (default: realistic). Common: clean, realistic, attorney, state-minimum
   --case      Test case ID (optional, runs first case if omitted)
   --out       Output directory (default: eval/runs/<run-id>/)
   --help      Show this help`);
   process.exit(values.help ? 0 : 1);
 }
 
-const seed = values.seed as "clean" | "realistic";
-if (seed !== "clean" && seed !== "realistic") {
-  console.error(`Invalid seed mode: ${seed}. Use "clean" or "realistic".`);
-  process.exit(1);
-}
+const seed = values.seed!;
 
 // ── Load traces ─────────────────────────────────────────────────────
 
@@ -98,6 +94,12 @@ async function scoreScenario(scenarioId: string, trace: OtlpTrace) {
   }
 
   const variant = def.variants[seed];
+  if (!variant) {
+    console.error(
+      `Unknown variant "${seed}" for scenario ${scenarioId}. Available: ${Object.keys(def.variants).join(", ")}`,
+    );
+    process.exit(1);
+  }
   const testCase =
     values.case
       ? variant.cases.find((c) => c.id === values.case)
@@ -118,12 +120,8 @@ async function scoreScenario(scenarioId: string, trace: OtlpTrace) {
   // Evaluate trace
   const traceScores = evaluateTrace(variant.traceChecks, apiCalls);
 
-  // Evaluate output (combines variant-level + case-level checks)
-  const allOutputChecks = [...variant.cases[0].outputChecks];
-  if (testCase !== variant.cases[0]) {
-    allOutputChecks.push(...testCase.outputChecks);
-  }
-  const outputScores = await evaluateOutput(allOutputChecks);
+  // Evaluate output using the selected case's checks
+  const outputScores = await evaluateOutput(testCase.outputChecks);
 
   // Evaluate E&O traps
   const eoTrapResults: EoTrapResult[] = variant.eoTraps.map((trap) => {

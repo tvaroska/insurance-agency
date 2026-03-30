@@ -20,10 +20,7 @@ export interface ScenarioDefinition {
   difficulty: "easy" | "medium" | "hard";
   services: string[];
 
-  variants: {
-    clean: VariantConfig;
-    realistic: VariantConfig;
-  };
+  variants: Record<string, VariantConfig>;
 }
 
 export interface VariantConfig {
