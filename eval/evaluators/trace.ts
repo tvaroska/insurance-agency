@@ -5,8 +5,10 @@ import type {
   OtlpAttribute,
   TraceCheck,
   TraceScore,
+  ToolMapping,
 } from "../types";
 import { PORT_SERVICE_MAP, SPAN_KIND_CLIENT } from "../types";
+import { parseGenAiTrace } from "./trace-genai";
 
 // ── Attribute helpers ───────────────────────────────────────────────
 
@@ -197,4 +199,20 @@ function formatPattern(pattern: TraceCheck["pattern"]): string {
   if (pattern.service) parts.push(`(${pattern.service})`);
   if (pattern.statusCode) parts.push(`→${pattern.statusCode}`);
   return parts.join(" ") || "(empty pattern)";
+}
+
+// ── Unified parser ──────────────────────────────────────────────────
+
+/**
+ * Auto-detect trace format and parse to ApiCall[].
+ * Tries HTTP client spans first, falls back to GenAI tool spans.
+ */
+export function parseTrace(
+  trace: OtlpTrace,
+  toolMapping?: ToolMapping,
+): ApiCall[] {
+  const httpCalls = parseOtlpTrace(trace);
+  if (httpCalls.length > 0) return httpCalls;
+
+  return parseGenAiTrace(trace, toolMapping);
 }

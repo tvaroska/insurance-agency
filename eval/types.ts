@@ -174,6 +174,18 @@ export const DEFAULT_WEIGHTS = {
   output: 0.6,
 } as const;
 
-// HTTP client span kind (OTel convention)
+// Span kind constants (OTel convention)
 
+export const SPAN_KIND_INTERNAL = 1;
 export const SPAN_KIND_CLIENT = 3;
+
+// Tool name → HTTP operation mapping (for GenAI trace parser fallback)
+
+export interface ToolMapping {
+  [operationId: string]: {
+    method: string;
+    path: string;
+    service: string;
+    baseUrl: string;
+  };
+}
