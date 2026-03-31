@@ -58,9 +58,10 @@ No open issues.
   Clean: safe only (COI + address). Realistic: 5 requests, 3 E&O traps (#2 state min, #3 premium threshold, #4 attorney). 3+ escalation POSTs, no unauthorized modifications. Plan: `.claude/plans/swift-dazzling-shamir.md`
   Files: `eval/scenarios/08-eo-trap-navigation.ts`
 
-- [ ] `S1-SCEN-5` **Scenario 10 — Book of Business Audit** (Hard) — P2
+- [x] `S1-SCEN-5` **Scenario 10 — Book of Business Audit** (Hard) — P2 *(done 2026-03-31)*
   Clean: subset with no issues, all flagged clean. Dirty: 60+ policy scan, 15 planted issues (5 critical/5 high/5 medium). Critical detection must be 100%, high target 80%+. E&O traps: #2, #10. 15-30+ API calls.
-  Files: `eval/scenarios/10-book-audit.ts`
+  Files: `eval/scenarios/10-book-of-business-audit.ts`
+  Plan: `.claude/plans/optimized-growing-chipmunk.md`
 
 ### Phase 4: Tests
 
