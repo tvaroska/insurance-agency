@@ -80,9 +80,10 @@ No open issues.
   Files: `eval/__tests__/output-evaluator.test.ts`
   Plan: `.claude/plans/wondrous-yawning-dahl.md`
 
-- [ ] `S1-TEST-2` **Trace evaluator unit tests** — P1
-  Fixture OTLP JSON files with known spans. Verify: span parsing, ApiCall extraction, sequence matching, E&O escalation detection, efficiency scoring.
+- [x] `S1-TEST-2` **Trace evaluator unit tests** — P1 *(done 2026-04-02)*
+  32 tests: parseOtlpTrace (span parsing, service resolution, timestamp sorting), parseGenAiTrace (_http extraction, nested result, toolMapping fallback, prefix stripping), evaluateTrace (presence/absence/sequence/count checks, pattern matching, weights), parseTrace (unified auto-detect). OTLP JSON fixtures for HTTP client spans and GenAI tool spans.
   Files: `eval/__tests__/trace-evaluator.test.ts`, `eval/__tests__/fixtures/`
+  Plan: `.claude/plans/synchronous-fluttering-tide.md`
 
 - [ ] `S1-TEST-3` **Integration test** — P2
   Run scorer against fixture run directory (pre-recorded OTLP JSON + mock REST responses). Verify both evaluators produce expected scores, report renders correctly, E&O override works.

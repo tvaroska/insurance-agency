@@ -1,0 +1,83 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "genai-agent" } }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "spans": [
+            {
+              "traceId": "genai-trace-1",
+              "spanId": "genai-span-1",
+              "name": "execute_tool listClients",
+              "kind": 1,
+              "startTimeUnixNano": "1700000001000000000",
+              "endTimeUnixNano": "1700000001150000000",
+              "attributes": [
+                { "key": "gen_ai.operation.name", "value": { "stringValue": "execute_tool" } },
+                { "key": "gen_ai.tool.name", "value": { "stringValue": "listClients" } },
+                {
+                  "key": "gen_ai.tool.call.result",
+                  "value": {
+                    "stringValue": "{\"data\": [{\"id\": \"CLI-001\"}], \"_http\": {\"method\": \"GET\", \"url\": \"http://localhost:3002/v1/clients\", \"status_code\": 200}}"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "genai-trace-1",
+              "spanId": "genai-span-2",
+              "name": "execute_tool createPolicy",
+              "kind": 1,
+              "startTimeUnixNano": "1700000001200000000",
+              "endTimeUnixNano": "1700000001400000000",
+              "attributes": [
+                { "key": "gen_ai.operation.name", "value": { "stringValue": "execute_tool" } },
+                { "key": "gen_ai.tool.name", "value": { "stringValue": "createPolicy" } },
+                {
+                  "key": "gen_ai.tool.call.result",
+                  "value": {
+                    "stringValue": "{\"result\": {\"id\": \"POL-001\", \"_http\": {\"method\": \"POST\", \"url\": \"http://localhost:3000/v1/policies\", \"status_code\": 201}}}"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "genai-trace-1",
+              "spanId": "genai-span-3",
+              "name": "execute_tool ams_getQuote",
+              "kind": 1,
+              "startTimeUnixNano": "1700000001500000000",
+              "endTimeUnixNano": "1700000001600000000",
+              "attributes": [
+                { "key": "gen_ai.operation.name", "value": { "stringValue": "execute_tool" } },
+                { "key": "gen_ai.tool.name", "value": { "stringValue": "ams_getQuote" } },
+                {
+                  "key": "gen_ai.tool.call.result",
+                  "value": {
+                    "stringValue": "{\"quote_id\": \"Q-100\"}"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "genai-trace-1",
+              "spanId": "genai-span-llm",
+              "name": "chat claude-3",
+              "kind": 1,
+              "startTimeUnixNano": "1700000000900000000",
+              "endTimeUnixNano": "1700000000950000000",
+              "attributes": [
+                { "key": "gen_ai.operation.name", "value": { "stringValue": "chat" } },
+                { "key": "gen_ai.system", "value": { "stringValue": "anthropic" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
