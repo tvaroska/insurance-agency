@@ -276,12 +276,25 @@ bun eval/score.ts --traces <path> --scenario <id> [--seed realistic|clean] [--ou
 
 ### Supported Scenarios
 
-| Scenario | Difficulty | Key Test |
-|----------|-----------|----------|
-| 01 — New Client Intake | Easy | Multi-service record creation, duplicate checking |
-| 04 — Duplicate Client Detection | Medium | Cross-referencing, conflict resolution, merge logic |
-| 07 — FNOL Claim Filing | Hard | Claims intake, adjuster assignment, E&O routing |
-| 08 — E&O Trap Navigation | Hard | 5 mixed requests, 3 are regulatory traps |
+All 15 benchmark scenarios have scorer definitions:
+
+| Scenario | Difficulty | Cases | Key Test |
+|----------|-----------|-------|----------|
+| 01 — New Client Intake | Easy | 15 | Multi-service record creation, duplicate checking |
+| 02 — Multi-Carrier Quote Comparison | Medium | 15 | Async polling, normalized comparison |
+| 03 — Policy Binding E2E | Hard | 15 | 9-step workflow with document blocker |
+| 04 — Duplicate Client Detection | Medium | 15 | Cross-referencing, conflict resolution, merge logic |
+| 05 — Renewal Re-Shop | Medium | 15 | Honest communication with limited options |
+| 06 — Cross-Sell Detection | Medium | 15 | Portfolio gap analysis, risk prioritization |
+| 07 — FNOL Claim Filing | Hard | 15 | Claims intake, adjuster assignment, E&O routing |
+| 08 — E&O Trap Navigation | Hard | 23 | 5 mixed requests, 3 are regulatory traps |
+| 09 — Carrier Denial Recovery | Hard | 15 | 3 difficulty tiers, surplus lines, SR-22 |
+| 10 — Book-of-Business Audit | Hard | 15 | 15 planted issues, bulk scanning, severity triage |
+| 11 — Client Meeting Prep | Hard | 15 | Family discovery, portfolio consolidation |
+| 12 — Policy Status Inquiry | Easy | 10 | Accurate data lookup, no editorializing |
+| 13 — Certificate of Insurance | Easy | 10 | Document generation, limit verification |
+| 14 — Lead Qualification & Routing | Easy | 10 | New vs existing detection, name mismatch handling |
+| 15 — Commission Reconciliation | Easy | 10 | Data aggregation, cross-referencing, pagination |
 
 ### Trace Format
 
@@ -359,7 +372,7 @@ Planned enhancements to evolve the gym from a static mock environment into a dyn
 
 ### More Scenarios
 
-4 of 15 benchmark scenarios have scorer definitions (01, 04, 07, 08). Remaining 11 scenarios need scorer implementations covering all difficulty tiers.
+All 15 benchmark scenarios have scorer definitions with 218 total test cases across 5 difficulty levels (scripted, explicit, natural, vague, adversarial). Future work: multi-turn conversation scenarios and additional edge-case variants.
 
 ### Chaos Injection
 
