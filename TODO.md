@@ -65,9 +65,10 @@ No open issues.
 
 ### Phase 5: Interoperability
 
-- [ ] `S1-INTOP-1` **METR Task Standard wrapper** — P1
-  Expose gym scenarios as a METR `TaskFamily`. `get_tasks()` returns 15 scenarios with metadata, `start()` boots gym via docker compose, `score(submission)` invokes existing scorer CLI on OTLP traces. Dockerfile for task container. Enables any METR-compatible harness to evaluate agents against the gym.
-  Files: `eval/metr/`, `Dockerfile.metr`
+- [x] `S1-INTOP-1` **METR Task Standard wrapper** — P1 *(done 2026-04-02)*
+  203 tasks (15 scenarios × seed variants × 5 difficulties) exposed as METR TaskFamily. `get_tasks()` reads exported `tasks.json`, `start()` boots gym via docker compose, `score()` invokes `bun eval/score.ts` on OTLP traces. Includes Dockerfile + manifest.
+  Files: `eval/metr/EvergreenInsurance.py`, `eval/metr/export-tasks.ts`, `eval/metr/tasks.json`, `eval/metr/Dockerfile`, `eval/metr/manifest.yaml`
+  Plan: `.claude/plans/unified-tinkering-nova.md`
 
 - [ ] `S1-INTOP-2` **Inspect AI task definitions** — P2 (backlog)
   Expose scenarios as Inspect AI `Task` + `Scorer`. Output scorer maps to Inspect `Scorer`, scenario prompts map to `Dataset`. Enables model-agnostic evaluation via `inspect eval`.
