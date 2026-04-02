@@ -41,6 +41,10 @@ Scorer that evaluates AI agent performance on 15 benchmark scenarios using outpu
   - Medium: 02 (Multi-Carrier Quote Comparison), 05 (Renewal Re-Shop), 06 (Cross-Sell Detection)
   - Hard: 03 (Policy Binding E2E), 09 (Carrier Denial Recovery), 10 (Book of Business Audit), 11 (Client Meeting Prep)
 
+### Phase 4: Tests (Sprint 1, 2026-04-02)
+
+- **S1-TEST-1** Output evaluator unit tests — `eval/__tests__/output-evaluator.test.ts`. 23 tests covering all three assertion types (status, array length, body match), OAuth token caching, unknown service handling, network errors, and scoring weight propagation. Uses `global.fetch` mocking with module re-import for token cache isolation. Plan: `.claude/plans/wondrous-yawning-dahl.md`
+
 ## In Progress
 
 No work in progress.

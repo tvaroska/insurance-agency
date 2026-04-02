@@ -63,11 +63,22 @@ No open issues.
   Files: `eval/scenarios/10-book-of-business-audit.ts`
   Plan: `.claude/plans/optimized-growing-chipmunk.md`
 
+### Phase 5: Interoperability
+
+- [ ] `S1-INTOP-1` **METR Task Standard wrapper** — P1
+  Expose gym scenarios as a METR `TaskFamily`. `get_tasks()` returns 15 scenarios with metadata, `start()` boots gym via docker compose, `score(submission)` invokes existing scorer CLI on OTLP traces. Dockerfile for task container. Enables any METR-compatible harness to evaluate agents against the gym.
+  Files: `eval/metr/`, `Dockerfile.metr`
+
+- [ ] `S1-INTOP-2` **Inspect AI task definitions** — P2 (backlog)
+  Expose scenarios as Inspect AI `Task` + `Scorer`. Output scorer maps to Inspect `Scorer`, scenario prompts map to `Dataset`. Enables model-agnostic evaluation via `inspect eval`.
+  Files: `eval/inspect/`
+
 ### Phase 4: Tests
 
-- [ ] `S1-TEST-1` **Output evaluator unit tests** — P1
-  Mock REST API responses (fetch mocks), verify assertion logic for existence/field/count/relationship checks, test scoring math and weight combination.
+- [x] `S1-TEST-1` **Output evaluator unit tests** — P1 *(done 2026-04-02)*
+  23 tests: status/array-length/body-match assertions, auth caching, unknown service, network errors, scoring weights. Fetch mocks via `global.fetch` override.
   Files: `eval/__tests__/output-evaluator.test.ts`
+  Plan: `.claude/plans/wondrous-yawning-dahl.md`
 
 - [ ] `S1-TEST-2` **Trace evaluator unit tests** — P1
   Fixture OTLP JSON files with known spans. Verify: span parsing, ApiCall extraction, sequence matching, E&O escalation detection, efficiency scoring.
