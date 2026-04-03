@@ -44,6 +44,8 @@ Scorer that evaluates AI agent performance on 15 benchmark scenarios using outpu
 ### Phase 4: Tests (Sprint 1, 2026-04-02)
 
 - **S1-TEST-1** Output evaluator unit tests — `eval/__tests__/output-evaluator.test.ts`. 23 tests covering all three assertion types (status, array length, body match), OAuth token caching, unknown service handling, network errors, and scoring weight propagation. Uses `global.fetch` mocking with module re-import for token cache isolation. Plan: `.claude/plans/wondrous-yawning-dahl.md`
+- **S1-TEST-2** Trace evaluator unit tests — `eval/__tests__/trace-evaluator.test.ts`. 32 tests: parseOtlpTrace, parseGenAiTrace, evaluateTrace (all 4 check types), parseTrace (unified auto-detect). Plan: `.claude/plans/synchronous-fluttering-tide.md`
+- **S1-TEST-3** Integration test — `eval/__tests__/integration.test.ts`. 5 tests: full pipeline all-pass (scenario 01 clean), partial output failures with weighted scoring verification, E&O trap failure overrides score to 0, E&O trap caught preserves score, report structure validation. Fixture: `eval/__tests__/fixtures/otlp-scenario01.json`. Plan: `.claude/plans/mighty-jingling-graham.md`
 
 ## In Progress
 

@@ -85,9 +85,10 @@ No open issues.
   Files: `eval/__tests__/trace-evaluator.test.ts`, `eval/__tests__/fixtures/`
   Plan: `.claude/plans/synchronous-fluttering-tide.md`
 
-- [ ] `S1-TEST-3` **Integration test** — P2
-  Run scorer against fixture run directory (pre-recorded OTLP JSON + mock REST responses). Verify both evaluators produce expected scores, report renders correctly, E&O override works.
-  Files: `eval/__tests__/integration.test.ts`
+- [x] `S1-TEST-3` **Integration test** — P2 *(done 2026-04-03)*
+  5 tests: full pipeline all-pass (scenario 01), partial output failures with weighted scoring, E&O trap failure overrides score to 0, E&O trap caught preserves score, report structure validation. Fixture: pre-recorded OTLP JSON for scenario 01 clean.
+  Files: `eval/__tests__/integration.test.ts`, `eval/__tests__/fixtures/otlp-scenario01.json`
+  Plan: `.claude/plans/mighty-jingling-graham.md`
 
 ---
 
