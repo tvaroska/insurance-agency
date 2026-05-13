@@ -1,0 +1,69 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model Quote {
+  quote_id          String  @id
+  request_id        String
+  client_id         String
+  policy_type       String
+  premium_annual    Float?
+  premium_monthly   Float?
+  premium_semi_annual Float?
+  coverages         String
+  deductibles       String
+  status            String  @default("quoted")
+  decline_reason    String?
+  valid_until       String?
+  submitted_at      String
+  risk_score        Int?
+  risk_tier         String?
+  risk_factors      String?
+  assessed_at       String?
+  bind_status       String  @default("unbound")
+  bound_at          String?
+  policy_id         String?
+  vin               String?
+  vehicle_year      Int?
+  vehicle_make      String?
+  vehicle_model     String?
+  driver_name       String?
+  driver_dob        String?
+  driver_license    String?
+  coverage_config   String?
+
+  @@map("quotes")
+}
+
+model Policy {
+  policy_id       String   @id
+  client_id       String
+  policy_type     String
+  effective_date  String
+  expiration_date String
+  premium_current Float
+  status          String   @default("active")
+  coverages       String
+  created_at      String
+  updated_at      String
+
+  id_cards IdCard[]
+
+  @@map("policies")
+}
+
+model IdCard {
+  card_id   String @id
+  policy_id String
+  card_data String
+  issued_at String
+
+  policy Policy @relation(fields: [policy_id], references: [policy_id])
+
+  @@map("id_cards")
+}

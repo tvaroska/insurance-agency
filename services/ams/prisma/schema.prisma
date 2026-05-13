@@ -1,0 +1,153 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model Client {
+  id                       String   @id
+  first_name               String
+  last_name                String
+  dob                      String?
+  email                    String
+  phone                    String?
+  address_street           String?
+  address_city             String?
+  address_state            String?
+  address_zip              String?
+  driver_license_number    String?
+  occupation               String?
+  marital_status           String?
+  household_id             String?
+  preferred_contact_method String?
+  preferred_contact_time   String?
+  status                   String   @default("active")
+  created_at               String
+  updated_at               String
+
+  policies Policy[]
+
+  @@map("clients")
+}
+
+model Policy {
+  policy_id            String   @id
+  client_id            String
+  carrier_code         String
+  policy_type          String
+  effective_date       String
+  expiration_date      String
+  premium_current      Float
+  premium_prior        Float?
+  status               String   @default("active")
+  multi_policy_discount Boolean? @default(false)
+  created_at           String
+  updated_at           String
+
+  client       Client        @relation(fields: [client_id], references: [id])
+  coverages    Coverage[]
+  endorsements Endorsement[]
+  commissions  Commission[]
+
+  @@map("policies")
+}
+
+model Coverage {
+  id         Int     @id @default(autoincrement())
+  policy_id  String
+  type       String
+  limit      String?
+  deductible Float?
+
+  policy Policy @relation(fields: [policy_id], references: [policy_id])
+
+  @@map("coverages")
+}
+
+model Endorsement {
+  endorsement_id String  @id
+  policy_id      String
+  effective_date String
+  change_type    String
+  changes        String
+  premium_delta  Float?
+  status         String  @default("pending_review")
+  notes          String?
+  created_at     String
+  updated_at     String
+
+  policy Policy @relation(fields: [policy_id], references: [policy_id])
+
+  @@map("endorsements")
+}
+
+model Commission {
+  commission_id    String  @id
+  policy_id        String
+  carrier_code     String
+  transaction_type String
+  gross_amount     Float
+  net_amount       Float
+  commission_rate  Float
+  effective_date   String
+  payment_date     String?
+  status           String  @default("pending")
+  producer_id      String?
+  created_at       String
+
+  policy Policy @relation(fields: [policy_id], references: [policy_id])
+
+  @@map("commissions")
+}
+
+model Escalation {
+  escalation_id    String  @id
+  client_id        String
+  policy_id        String?
+  reason           String
+  summary          String
+  context          String?
+  status           String  @default("pending")
+  manager_response String?
+  poll_count       Int     @default(0)
+  created_at       String
+  updated_at       String
+
+  events EscalationEvent[]
+
+  @@map("escalations")
+}
+
+model EscalationEvent {
+  id            Int     @id @default(autoincrement())
+  escalation_id String
+  event_type    String
+  from_status   String?
+  to_status     String?
+  details       String?
+  created_at    String
+
+  escalation Escalation @relation(fields: [escalation_id], references: [escalation_id])
+
+  @@map("escalation_events")
+}
+
+model Task {
+  id                String  @id
+  title             String
+  description       String?
+  status            String  @default("open")
+  priority          String  @default("medium")
+  task_type         String?
+  assigned_to       String?
+  related_client_id String?
+  related_policy_id String?
+  due_date          String?
+  created_at        String
+  updated_at        String
+
+  @@map("tasks")
+}

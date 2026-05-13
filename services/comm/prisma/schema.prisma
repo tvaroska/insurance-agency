@@ -1,0 +1,58 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model Message {
+  message_id       String  @id
+  client_id        String
+  direction        String
+  channel          String
+  subject          String?
+  body             String?
+  from_addr        String
+  to_addr          String
+  timestamp        String
+  read             Boolean @default(false)
+  call_id          String?
+  duration_seconds Int?
+  transcript       String?
+  sentiment        String?
+  topics           String  @default("[]")
+  status           String  @default("delivered")
+  template_id      String?
+  attachments      String  @default("[]")
+
+  @@map("messages")
+}
+
+model Webhook {
+  webhook_id String  @id
+  url        String
+  events     String  @default("[]")
+  secret     String
+  active     Boolean @default(true)
+  created_at String
+
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  delivery_id     String  @id
+  webhook_id      String
+  event_id        String
+  event_type      String
+  payload         String
+  status          String  @default("pending")
+  attempts        Int     @default(0)
+  last_attempt_at String?
+  next_retry_at   String?
+  response_status Int?
+  created_at      String
+
+  @@map("webhook_deliveries")
+}

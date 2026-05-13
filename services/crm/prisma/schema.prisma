@@ -1,0 +1,69 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model Lead {
+  lead_id            String  @id
+  client_id          String
+  first_name         String
+  last_name          String
+  email              String
+  phone              String?
+  source             String
+  status             String  @default("new")
+  score              Int     @default(0)
+  assigned_producer  String?
+  tags               String  @default("[]")
+  notes              String?
+  last_activity_date String?
+  created_at         String
+  updated_at         String
+
+  @@map("leads")
+}
+
+model Campaign {
+  campaign_id     String @id
+  name            String
+  type            String
+  status          String @default("active")
+  enrolled_count  Int    @default(0)
+  conversion_rate Float  @default(0)
+
+  enrollments CampaignEnrollment[]
+
+  @@map("campaigns")
+}
+
+model CampaignEnrollment {
+  enrollment_id  String  @id
+  campaign_id    String
+  client_id      String
+  trigger_reason String?
+  metadata       String?
+  enrolled_at    String
+  sequence_step  Int     @default(1)
+
+  campaign Campaign @relation(fields: [campaign_id], references: [campaign_id])
+
+  @@map("campaign_enrollments")
+}
+
+model RetentionRisk {
+  client_id            String  @id
+  client_name          String
+  risk_score           Int
+  rate_increase_pct    Float?
+  months_since_contact Int?
+  email_open_rate      Float?
+  policies_count       Int?
+  recommended_action   String?
+  assigned_producer    String?
+
+  @@map("retention_risks")
+}

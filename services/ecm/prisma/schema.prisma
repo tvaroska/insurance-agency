@@ -1,0 +1,54 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model Document {
+  document_id     String  @id
+  client_id       String
+  document_type   String
+  filename        String
+  mime_type       String
+  file_size_bytes Int
+  status          String  @default("uploaded")
+  upload_date     String
+  signer_name     String?
+  signer_email    String?
+  signed_date     String?
+  expiration_date String?
+  tags            String  @default("[]")
+
+  @@map("documents")
+}
+
+model Envelope {
+  envelope_id     String  @id
+  client_id       String
+  document_ids    String  @default("[]")
+  signers         String  @default("[]")
+  status          String  @default("created")
+  message         String?
+  redirect_url    String?
+  created_at      String
+  completed_at    String?
+  expiration_date String
+
+  @@map("envelopes")
+}
+
+model MarketingAsset {
+  asset_id       String  @id
+  name           String
+  description    String?
+  category       String
+  mime_type      String
+  url            String
+  version        String
+  published_date String
+
+  @@map("marketing_assets")
+}

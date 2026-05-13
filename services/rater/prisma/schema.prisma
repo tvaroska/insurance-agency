@@ -1,0 +1,63 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model QuoteRequest {
+  request_id    String  @id
+  client_id     String
+  policy_type   String
+  effective_date String?
+  status        String  @default("pending")
+  submitted_at  String
+  completed_at  String?
+  expires_at    String?
+  risk_data     String
+  created_at    String
+
+  carrier_quotes CarrierQuote[]
+
+  @@map("quote_requests")
+}
+
+model CarrierQuote {
+  quote_id       String  @id
+  request_id     String
+  carrier_code   String
+  carrier_name   String
+  status         String  @default("pending")
+  premium_annual Float?
+  premium_monthly Float?
+  coverages      String  @default("[]")
+  deductibles    String  @default("{}")
+  decline_reason String?
+  valid_until    String?
+  bound_at       String?
+  created_at     String
+
+  quote_request QuoteRequest @relation(fields: [request_id], references: [request_id])
+
+  @@map("carrier_quotes")
+}
+
+model Carrier {
+  carrier_code       String   @id
+  carrier_name       String
+  states             String
+  policy_types       String
+  risk_categories    String
+  appetite_level     String
+  min_driver_age     Int?
+  max_vehicles       Int?
+  accepts_sr22       Boolean? @default(false)
+  surplus_lines_only Boolean? @default(false)
+  sr22_available     Boolean? @default(false)
+  citizens_eligible  Boolean? @default(false)
+  state_restrictions String   @default("[]")
+
+  @@map("carriers")
+}

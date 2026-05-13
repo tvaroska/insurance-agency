@@ -1,0 +1,82 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model Quote {
+  quote_id              String  @id
+  request_id            String
+  client_id             String
+  policy_type           String
+  premium_annual        Float?
+  premium_monthly       Float?
+  coverages             String
+  deductibles           String
+  status                String  @default("quoted")
+  decline_reason        String?
+  valid_until           String?
+  submitted_at          String
+  underwriting_status   String  @default("pending_review")
+  underwriting_notes    String?
+  property_address      String?
+  property_details      String?
+  photo_checklist       String?
+  inspection_status     String? @default("not_scheduled")
+  inspection_scheduled_at String?
+  inspection_completed_at String?
+  inspection_notes      String?
+
+  underwriting_conditions UnderwritingCondition[]
+
+  @@map("quotes")
+}
+
+model Policy {
+  policy_id       String @id
+  client_id       String
+  policy_type     String
+  effective_date  String
+  expiration_date String
+  premium_current Float
+  status          String @default("active")
+  coverages       String
+  created_at      String
+  updated_at      String
+
+  documents PolicyDocument[]
+
+  @@map("policies")
+}
+
+model PolicyDocument {
+  document_id    String  @id
+  policy_id      String
+  document_type  String
+  filename       String
+  file_size_bytes Int
+  version        Int     @default(1)
+  supersedes     String?
+  created_at     String
+
+  policy Policy @relation(fields: [policy_id], references: [policy_id])
+
+  @@map("policy_documents")
+}
+
+model UnderwritingCondition {
+  condition_id   String  @id
+  quote_id       String
+  condition_type String
+  description    String
+  status         String  @default("pending")
+  created_at     String
+  resolved_at    String?
+
+  quote Quote @relation(fields: [quote_id], references: [quote_id])
+
+  @@map("underwriting_conditions")
+}

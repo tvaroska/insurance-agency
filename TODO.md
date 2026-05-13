@@ -1,7 +1,7 @@
 # Privy/gym — Development Plan
 
-**Last Updated:** 2026-03-30
-**Current Focus:** Sprint 1 (Evaluation System)
+**Last Updated:** 2026-05-13
+**Current Focus:** Sprint 2 (Kubernetes & PostgreSQL)
 **Cadence:** 2-week sprints
 **Repo:** gym
 
@@ -89,6 +89,61 @@ No open issues.
   5 tests: full pipeline all-pass (scenario 01), partial output failures with weighted scoring, E&O trap failure overrides score to 0, E&O trap caught preserves score, report structure validation. Fixture: pre-recorded OTLP JSON for scenario 01 clean.
   Files: `eval/__tests__/integration.test.ts`, `eval/__tests__/fixtures/otlp-scenario01.json`
   Plan: `.claude/plans/mighty-jingling-graham.md`
+
+---
+
+## Sprint 2: Kubernetes & PostgreSQL
+
+**Theme:** Replace Drizzle/SQLite with Prisma for database independence, then add Kubernetes manifests with PostgreSQL operator support. Prisma's single schema works across SQLite (local dev, Docker Compose) and PostgreSQL (k8s) with zero query changes.
+
+### Phase 1: Drizzle → Prisma Migration
+
+- [x] `S2-DB-1` **Prisma schema per service** — P0 *(done 2026-05-13)*
+  Created `prisma/schema.prisma` + `prisma.config.ts` (Prisma 7 format) for all 8 services, translating existing Drizzle models. Added `prisma`, `@prisma/client` deps. Drizzle deps kept until S2-DB-2 swaps queries.
+  Files: `services/*/prisma/schema.prisma`, `services/*/prisma.config.ts`, `services/*/package.json`
+  Plan: `.claude/plans/lazy-nibbling-turtle.md`
+
+- [ ] `S2-DB-2` **Replace Drizzle queries with Prisma Client** — P0
+  Swap all Drizzle query builder calls (`db.select()`, `db.insert()`, etc.) to Prisma Client equivalents (`prisma.client.findMany()`, `prisma.client.create()`, etc.) across all route handlers. Remove `db.ts` and `schema.ts` from each service; replace with a `prisma.ts` that exports a shared `PrismaClient` instance.
+  Files: `services/*/src/**/*.ts`
+
+- [ ] `S2-DB-3` **Seed scripts for Prisma** — P1
+  Rewrite each service's `seed.ts` to use Prisma Client instead of Drizzle inserts. Register as `prisma db seed` in `package.json`. Support `SEED_MODE=clean|realistic` via env var.
+  Files: `services/*/src/seed.ts`, `services/*/package.json`
+
+- [ ] `S2-DB-4` **Runtime seeding** — P1
+  Move seed from Dockerfile `RUN` (build-time) to a startup entrypoint that runs `prisma migrate deploy && prisma db seed` if the DB is empty. Remove `RUN bun run src/seed.ts` from all 8 Dockerfiles.
+  Files: `services/*/Dockerfile`, `scripts/entrypoint.sh`
+
+### Phase 2: Test Adaptation
+
+- [ ] `S2-TEST-1` **Update test setup for Prisma** — P1
+  Update test `setup.ts` files to use Prisma Client with SQLite for fast in-memory tests. Ensure all existing tests pass. Add a CI step that runs tests against PG via `TEST_DATABASE_URL`.
+  Files: `services/*/src/__tests__/setup.ts`
+
+### Phase 3: Kubernetes Manifests
+
+- [ ] `S2-K8S-1` **PostgreSQL operator cluster** — P0
+  CloudNativePG `Cluster` CR with one instance, 8 databases (one per service). Include `initdb` SQL to create databases. Document operator installation prerequisites.
+  Files: `k8s/postgres.yaml`
+
+- [ ] `S2-K8S-2` **Service deployments** — P1
+  Deployment + ClusterIP Service for each of the 8 services. Env vars from ConfigMap (ports, service URLs) and Secret (JWT_SECRET, DATABASE_URL). Liveness/readiness probes on `/health`. Prisma schema set to `provider = "postgresql"` via build arg or multi-provider config.
+  Files: `k8s/services/*.yaml`
+
+- [ ] `S2-K8S-3` **Seed Job** — P1
+  Kubernetes Job that runs `prisma migrate deploy && prisma db seed` against PG after the cluster is ready. Supports `SEED_MODE` via ConfigMap. Can be re-run for reset.
+  Files: `k8s/seed-job.yaml`
+
+- [ ] `S2-K8S-4` **Kustomize overlays** — P2
+  Base + overlays for `clean` and `realistic` seed modes. Optional ingress overlay for external access.
+  Files: `k8s/kustomization.yaml`, `k8s/overlays/`
+
+### Phase 4: Docker Compose Update
+
+- [ ] `S2-COMPOSE-1` **Docker Compose with PG option** — P2
+  `docker-compose.pg.yaml` override that adds a Postgres container and sets `DATABASE_URL` on all services. Default `docker-compose.yml` continues to work with embedded SQLite via Prisma.
+  Files: `docker-compose.pg.yaml`
 
 ---
 

@@ -1,0 +1,77 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model Claim {
+  claim_id          String  @id
+  policy_id         String
+  client_id         String
+  claim_type        String
+  status            String  @default("reported")
+  loss_date         String
+  reported_date     String
+  loss_description  String
+  loss_location     String?
+  reserve_amount    Float?
+  settlement_amount Float?
+  adjuster_id       String?
+  notes             String?
+  created_at        String
+  updated_at        String
+
+  adjuster  Adjuster?       @relation(fields: [adjuster_id], references: [adjuster_id])
+  documents ClaimDocument[]
+  timeline  ClaimTimeline[]
+
+  @@map("claims")
+}
+
+model Adjuster {
+  adjuster_id     String @id
+  first_name      String
+  last_name       String
+  email           String
+  phone           String?
+  specialty       String
+  active          Int    @default(1)
+  max_open_claims Int    @default(25)
+  created_at      String
+
+  claims Claim[]
+
+  @@map("adjusters")
+}
+
+model ClaimDocument {
+  document_id   String  @id
+  claim_id      String
+  document_type String
+  file_name     String
+  file_path     String
+  uploaded_by   String?
+  uploaded_at   String
+
+  claim Claim @relation(fields: [claim_id], references: [claim_id])
+
+  @@map("claim_documents")
+}
+
+model ClaimTimeline {
+  event_id    String  @id
+  claim_id    String
+  event_type  String
+  description String
+  old_value   String?
+  new_value   String?
+  created_by  String?
+  created_at  String
+
+  claim Claim @relation(fields: [claim_id], references: [claim_id])
+
+  @@map("claim_timeline")
+}
