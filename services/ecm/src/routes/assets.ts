@@ -1,17 +1,15 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
 import {
   requireScopes,
   checkEnum,
   throwIfErrors,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { marketingAssets } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -40,30 +38,29 @@ assetsRouter.get(
       ]);
     }
 
-    const { where: cursorWhere, orderBy, limit: queryLimit } =
-      applyCursorPagination({
+    const { where: cursorWhere, orderBy, take } =
+      applyPrismaCursorPagination({
         cursor,
         limit: limit!,
         orderBy: [
-          { column: marketingAssets.published_date, direction: "desc" },
-          { column: marketingAssets.asset_id, direction: "desc" },
+          { field: "published_date", direction: "desc" },
+          { field: "asset_id", direction: "desc" },
         ],
       });
 
-    const filters: ReturnType<typeof eq>[] = [];
+    const filters: Record<string, unknown>[] = [];
     if (query.category) {
-      filters.push(eq(marketingAssets.category, query.category));
+      filters.push({ category: query.category });
     }
     if (cursorWhere) {
       filters.push(cursorWhere);
     }
 
-    const rows = await db
-      .select()
-      .from(marketingAssets)
-      .where(filters.length > 0 ? and(...filters) : undefined)
-      .orderBy(...orderBy)
-      .limit(queryLimit);
+    const rows = await prisma.marketingAsset.findMany({
+      where: filters.length > 0 ? { AND: filters } : undefined,
+      orderBy,
+      take,
+    });
 
     return c.json(
       paginatedResponse(

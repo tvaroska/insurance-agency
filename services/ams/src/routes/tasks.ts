@@ -1,9 +1,8 @@
 import { Hono } from "hono";
-import { and, eq, lte, gte } from "drizzle-orm";
 import {
   requireScopes,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   notFoundError,
   validationError,
@@ -15,8 +14,8 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { tasks } from "../schema";
+import { prisma } from "../prisma";
+import type { Task } from "../generated/prisma/client";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -60,31 +59,30 @@ tasksRouter.get("/", requireScopes("ams:tasks:read"), async (c) => {
   // Parse pagination
   const { limit, cursor } = parsePaginationParams(query);
 
-  const { where: cursorWhere, orderBy, limit: queryLimit } = applyCursorPagination({
+  const { where: cursorWhere, orderBy, take } = applyPrismaCursorPagination({
     cursor,
     limit: limit!,
     orderBy: [
-      { column: tasks.due_date, direction: "asc" },
-      { column: tasks.id, direction: "asc" },
+      { field: "due_date", direction: "asc" },
+      { field: "id", direction: "asc" },
     ],
   });
 
   // Build filter conditions
-  const filters: ReturnType<typeof eq>[] = [];
-  if (query.status) filters.push(eq(tasks.status, query.status));
-  if (query.priority) filters.push(eq(tasks.priority, query.priority));
-  if (query.assigned_to) filters.push(eq(tasks.assigned_to, query.assigned_to));
-  if (query.client_id) filters.push(eq(tasks.related_client_id, query.client_id));
-  if (query.due_date_before) filters.push(lte(tasks.due_date, query.due_date_before));
-  if (query.due_date_after) filters.push(gte(tasks.due_date, query.due_date_after));
+  const filters: Record<string, unknown>[] = [];
+  if (query.status) filters.push({ status: query.status });
+  if (query.priority) filters.push({ priority: query.priority });
+  if (query.assigned_to) filters.push({ assigned_to: query.assigned_to });
+  if (query.client_id) filters.push({ related_client_id: query.client_id });
+  if (query.due_date_before) filters.push({ due_date: { lte: query.due_date_before } });
+  if (query.due_date_after) filters.push({ due_date: { gte: query.due_date_after } });
   if (cursorWhere) filters.push(cursorWhere);
 
-  const rows = await db
-    .select()
-    .from(tasks)
-    .where(filters.length > 0 ? and(...filters) : undefined)
-    .orderBy(...orderBy)
-    .limit(queryLimit);
+  const rows = await prisma.task.findMany({
+    where: filters.length > 0 ? { AND: filters } : undefined,
+    orderBy,
+    take,
+  });
 
   const mapped = rows.map(mapTaskRow);
 
@@ -131,9 +129,9 @@ tasksRouter.post("/", requireScopes("ams:tasks:write"), async (c) => {
     updated_at: now,
   };
 
-  await db.insert(tasks).values(record);
+  await prisma.task.create({ data: record });
 
-  return c.json(mapTaskRow(record), 201);
+  return c.json(mapTaskRow(record as Task), 201);
 });
 
 // ── Update task ─────────────────────────────────────────────────────
@@ -182,11 +180,10 @@ tasksRouter.patch(
     ]);
 
     // Verify task exists
-    const [existing] = await db
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(eq(tasks.id, taskId))
-      .limit(1);
+    const existing = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { id: true },
+    });
 
     if (!existing) {
       throw notFoundError("task");
@@ -205,14 +202,10 @@ tasksRouter.patch(
     if (body.description !== undefined)
       updates.description = body.description ?? null;
 
-    await db.update(tasks).set(updates).where(eq(tasks.id, taskId));
-
-    // Re-select the full updated record
-    const [updated] = await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, taskId))
-      .limit(1);
+    const updated = await prisma.task.update({
+      where: { id: taskId },
+      data: updates,
+    });
 
     return c.json(mapTaskRow(updated));
   },
@@ -220,7 +213,7 @@ tasksRouter.patch(
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function mapTaskRow(row: typeof tasks.$inferSelect) {
+function mapTaskRow(row: Task) {
   return {
     id: row.id,
     title: row.title,

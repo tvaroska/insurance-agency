@@ -6,11 +6,13 @@ import { createTestDb, makeWebhook } from "./setup";
 
 let testDb: ReturnType<typeof createTestDb>["db"];
 let testSqlite: Database;
+let testPrisma: ReturnType<typeof createTestDb>["prisma"];
 
 beforeEach(() => {
   const created = createTestDb();
   testDb = created.db;
   testSqlite = created.sqlite;
+  testPrisma = created.prisma;
 });
 
 import { handleManageWebhook } from "../tools/manage_webhook";
@@ -23,7 +25,7 @@ describe("manage_webhook - subscribe", () => {
         url: "https://example.com/hooks",
         events: ["message.received", "message.delivered"],
       },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBeUndefined();
     const parsed = JSON.parse(result.content[0].text as string);
@@ -41,7 +43,7 @@ describe("manage_webhook - subscribe", () => {
         url: "https://example.com/hooks",
         events: ["message.received"],
       },
-      testDb,
+      testPrisma,
     );
     const rows = testDb.select().from(schema.webhooks).all();
     expect(rows.length).toBe(1);
@@ -51,7 +53,7 @@ describe("manage_webhook - subscribe", () => {
   test("returns error when url is missing", async () => {
     const result = await handleManageWebhook(
       { action: "subscribe", events: ["message.received"] },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);
@@ -61,7 +63,7 @@ describe("manage_webhook - subscribe", () => {
   test("returns error when events is missing", async () => {
     const result = await handleManageWebhook(
       { action: "subscribe", url: "https://example.com/hooks" },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
   });
@@ -73,7 +75,7 @@ describe("manage_webhook - subscribe", () => {
         url: "https://example.com/hooks",
         events: ["invalid.event"],
       },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);
@@ -88,7 +90,7 @@ describe("manage_webhook - unsubscribe", () => {
 
     const result = await handleManageWebhook(
       { action: "unsubscribe", webhook_id: "whk_to_delete" },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBeUndefined();
     const parsed = JSON.parse(result.content[0].text as string);
@@ -102,7 +104,7 @@ describe("manage_webhook - unsubscribe", () => {
   test("returns error when webhook_id is missing", async () => {
     const result = await handleManageWebhook(
       { action: "unsubscribe" },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);
@@ -112,7 +114,7 @@ describe("manage_webhook - unsubscribe", () => {
   test("returns error for non-existent webhook_id", async () => {
     const result = await handleManageWebhook(
       { action: "unsubscribe", webhook_id: "whk_nonexistent" },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);
@@ -122,12 +124,12 @@ describe("manage_webhook - unsubscribe", () => {
 
 describe("manage_webhook - invalid action", () => {
   test("returns error for missing action", async () => {
-    const result = await handleManageWebhook({}, testDb);
+    const result = await handleManageWebhook({}, testPrisma);
     expect(result.isError).toBe(true);
   });
 
   test("returns error for invalid action", async () => {
-    const result = await handleManageWebhook({ action: "invalid" }, testDb);
+    const result = await handleManageWebhook({ action: "invalid" }, testPrisma);
     expect(result.isError).toBe(true);
   });
 });

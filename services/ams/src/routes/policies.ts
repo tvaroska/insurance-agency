@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { eq, and, lte, gte } from "drizzle-orm";
 import {
   requireScopes,
   notFoundError,
@@ -11,13 +10,12 @@ import {
   checkMaxLength,
   throwIfErrors,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { clients, policies, coverages, endorsements } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -56,29 +54,28 @@ policiesRouter.get("/", requireScopes("ams:policies:read"), async (c) => {
   }
 
   const { limit, cursor } = parsePaginationParams(query);
-  const { where: cursorWhere, orderBy, limit: queryLimit } = applyCursorPagination({
+  const { where: cursorWhere, orderBy, take } = applyPrismaCursorPagination({
     cursor,
     limit: limit!,
     orderBy: [
-      { column: policies.expiration_date, direction: "desc" },
-      { column: policies.policy_id, direction: "desc" },
+      { field: "expiration_date", direction: "desc" },
+      { field: "policy_id", direction: "desc" },
     ],
   });
 
-  const filters: ReturnType<typeof eq>[] = [];
-  if (query.status) filters.push(eq(policies.status, query.status));
-  if (query.client_id) filters.push(eq(policies.client_id, query.client_id));
-  if (query.policy_type) filters.push(eq(policies.policy_type, query.policy_type));
-  if (query.expiration_before) filters.push(lte(policies.expiration_date, query.expiration_before));
-  if (query.expiration_after) filters.push(gte(policies.expiration_date, query.expiration_after));
+  const filters: Record<string, unknown>[] = [];
+  if (query.status) filters.push({ status: query.status });
+  if (query.client_id) filters.push({ client_id: query.client_id });
+  if (query.policy_type) filters.push({ policy_type: query.policy_type });
+  if (query.expiration_before) filters.push({ expiration_date: { lte: query.expiration_before } });
+  if (query.expiration_after) filters.push({ expiration_date: { gte: query.expiration_after } });
   if (cursorWhere) filters.push(cursorWhere);
 
-  const rows = await db
-    .select()
-    .from(policies)
-    .where(filters.length > 0 ? and(...filters) : undefined)
-    .orderBy(...orderBy)
-    .limit(queryLimit);
+  const rows = await prisma.policy.findMany({
+    where: filters.length > 0 ? { AND: filters } : undefined,
+    orderBy,
+    take,
+  });
 
   return c.json(paginatedResponse(rows, limit!, ["expiration_date", "policy_id"], cursor));
 });
@@ -87,9 +84,9 @@ policiesRouter.get("/", requireScopes("ams:policies:read"), async (c) => {
 
 policiesRouter.get("/:id", requireScopes("ams:policies:read"), async (c) => {
   const policyId = c.req.param("id");
-  const [policy] = await db.select().from(policies).where(eq(policies.policy_id, policyId)).limit(1);
+  const policy = await prisma.policy.findUnique({ where: { policy_id: policyId } });
   if (!policy) throw notFoundError("policy");
-  const policyCoverages = await db.select().from(coverages).where(eq(coverages.policy_id, policyId));
+  const policyCoverages = await prisma.coverage.findMany({ where: { policy_id: policyId } });
   return c.json({ ...policy, coverages: policyCoverages });
 });
 
@@ -140,11 +137,10 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
   }
 
   // Verify client exists
-  const [client] = await db
-    .select({ id: clients.id })
-    .from(clients)
-    .where(eq(clients.id, body.client_id))
-    .limit(1);
+  const client = await prisma.client.findUnique({
+    where: { id: body.client_id },
+    select: { id: true },
+  });
 
   if (!client) {
     throw notFoundError("client");
@@ -168,7 +164,7 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
     updated_at: now,
   };
 
-  await db.insert(policies).values(record);
+  await prisma.policy.create({ data: record });
 
   // Insert coverages
   const coverageRecords = body.coverages.map((cov: { type: string; limit?: string; deductible?: number }) => ({
@@ -178,7 +174,9 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
     deductible: cov.deductible ?? null,
   }));
 
-  await db.insert(coverages).values(coverageRecords);
+  for (const covRecord of coverageRecords) {
+    await prisma.coverage.create({ data: covRecord });
+  }
 
   return c.json(
     {
@@ -238,11 +236,10 @@ policiesRouter.post(
     ]);
 
     // Verify policy exists
-    const [policy] = await db
-      .select({ policy_id: policies.policy_id, status: policies.status })
-      .from(policies)
-      .where(eq(policies.policy_id, policyId))
-      .limit(1);
+    const policy = await prisma.policy.findUnique({
+      where: { policy_id: policyId },
+      select: { policy_id: true, status: true },
+    });
 
     if (!policy) {
       throw notFoundError("policy");
@@ -275,7 +272,7 @@ policiesRouter.post(
       updated_at: now,
     };
 
-    await db.insert(endorsements).values(record);
+    await prisma.endorsement.create({ data: record });
 
     return c.json(
       {

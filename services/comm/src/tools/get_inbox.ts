@@ -1,14 +1,9 @@
-import { and, eq, gte, lte, desc } from "drizzle-orm";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import type { PrismaClient } from "../generated/prisma/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import type * as schemaTypes from "../schema";
-import { messages } from "../schema";
 import {
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
 } from "@evergreen/shared";
-
-type DB = BunSQLiteDatabase<typeof schemaTypes>;
 
 const VALID_CHANNELS = ["email", "sms", "phone", "whatsapp"] as const;
 const VALID_DIRECTIONS = ["inbound", "outbound"] as const;
@@ -53,7 +48,7 @@ export const getInboxToolDef = {
 
 export async function handleGetInbox(
   args: Record<string, unknown>,
-  db: DB,
+  db: PrismaClient,
 ): Promise<CallToolResult> {
   const channel = args.channel as string | undefined;
   const direction = args.direction as string | undefined;
@@ -68,33 +63,31 @@ export async function handleGetInbox(
   const {
     where: cursorWhere,
     orderBy,
-    limit: queryLimit,
-  } = applyCursorPagination({
+    take,
+  } = applyPrismaCursorPagination({
     cursor,
     limit,
     orderBy: [
-      { column: messages.timestamp, direction: "desc" },
-      { column: messages.message_id, direction: "desc" },
+      { field: "timestamp", direction: "desc" },
+      { field: "message_id", direction: "desc" },
     ],
   });
 
   // Build filters
-  const filters = [];
-  if (channel) filters.push(eq(messages.channel, channel));
-  if (direction) filters.push(eq(messages.direction, direction));
-  if (read !== undefined) filters.push(eq(messages.read, read));
-  if (clientId) filters.push(eq(messages.client_id, clientId));
-  if (since) filters.push(gte(messages.timestamp, since));
-  if (until) filters.push(lte(messages.timestamp, until));
+  const filters: Record<string, unknown>[] = [];
+  if (channel) filters.push({ channel });
+  if (direction) filters.push({ direction });
+  if (read !== undefined) filters.push({ read });
+  if (clientId) filters.push({ client_id: clientId });
+  if (since) filters.push({ timestamp: { gte: since } });
+  if (until) filters.push({ timestamp: { lte: until } });
   if (cursorWhere) filters.push(cursorWhere);
 
-  const rows = db
-    .select()
-    .from(messages)
-    .where(filters.length > 0 ? and(...filters) : undefined)
-    .orderBy(...orderBy)
-    .limit(queryLimit)
-    .all();
+  const rows = await db.message.findMany({
+    where: filters.length > 0 ? { AND: filters } : undefined,
+    orderBy,
+    take,
+  });
 
   // Map DB rows to API response format
   const mapped = rows.map((row) => ({

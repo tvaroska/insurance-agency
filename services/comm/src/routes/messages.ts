@@ -4,7 +4,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
+import { prisma } from "../prisma";
 import { handleSendMessage } from "../tools/send_message";
 import { handleGetInbox } from "../tools/get_inbox";
 
@@ -20,7 +20,7 @@ messagesRouter.post(
   async (c) => {
     const body = await c.req.json();
 
-    const result = await handleSendMessage(body, db);
+    const result = await handleSendMessage(body, prisma);
 
     if (result.isError) {
       const parsed = JSON.parse(result.content[0].text as string);
@@ -50,7 +50,7 @@ messagesRouter.get(
     if (query.limit) args.limit = Number(query.limit);
     if (query.cursor) args.cursor = query.cursor;
 
-    const result = await handleGetInbox(args, db);
+    const result = await handleGetInbox(args, prisma);
     const parsed = JSON.parse(result.content[0].text as string);
     return c.json(parsed);
   },
@@ -74,7 +74,7 @@ messagesRouter.get(
     if (query.limit) args.limit = Number(query.limit);
     if (query.cursor) args.cursor = query.cursor;
 
-    const result = await handleGetInbox(args, db);
+    const result = await handleGetInbox(args, prisma);
     const parsed = JSON.parse(result.content[0].text as string);
     return c.json(parsed);
   },

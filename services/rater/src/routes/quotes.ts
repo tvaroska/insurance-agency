@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { eq, and, like } from "drizzle-orm";
 import {
   requireScopes,
   notFoundError,
@@ -11,8 +10,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { quoteRequests, carrierQuotes, carriers } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -111,7 +109,7 @@ quotesRouter.post(
 
     // Find eligible carriers by state and policy_type
     const state = body.client.address.state;
-    const allCarriers = await db.select().from(carriers);
+    const allCarriers = await prisma.carrier.findMany();
 
     const eligible = allCarriers.filter((carrier) => {
       const states: string[] = JSON.parse(carrier.states);
@@ -133,17 +131,19 @@ quotesRouter.post(
     if (body.business) riskData.business = body.business;
 
     // Insert quote request
-    await db.insert(quoteRequests).values({
-      request_id: requestId,
-      client_id: `${body.client.first_name}-${body.client.last_name}`.toLowerCase(),
-      policy_type: body.policy_type,
-      effective_date: body.effective_date,
-      status: eligible.length > 0 ? "completed" : "pending",
-      submitted_at: now,
-      completed_at: eligible.length > 0 ? now : null,
-      expires_at: null,
-      risk_data: JSON.stringify(riskData),
-      created_at: now,
+    await prisma.quoteRequest.create({
+      data: {
+        request_id: requestId,
+        client_id: `${body.client.first_name}-${body.client.last_name}`.toLowerCase(),
+        policy_type: body.policy_type,
+        effective_date: body.effective_date,
+        status: eligible.length > 0 ? "completed" : "pending",
+        submitted_at: now,
+        completed_at: eligible.length > 0 ? now : null,
+        expires_at: null,
+        risk_data: JSON.stringify(riskData),
+        created_at: now,
+      },
     });
 
     // Simulate carrier quotes for each eligible carrier
@@ -156,22 +156,24 @@ quotesRouter.post(
         Math.round((800 + Math.random() * 4200) * 100) / 100;
       const premiumMonthly = Math.round((premiumAnnual / 12) * 100) / 100;
 
-      await db.insert(carrierQuotes).values({
-        quote_id: quoteId,
-        request_id: requestId,
-        carrier_code: carrier.carrier_code,
-        carrier_name: carrier.carrier_name,
-        status: "quoted",
-        premium_annual: premiumAnnual,
-        premium_monthly: premiumMonthly,
-        coverages: JSON.stringify(body.requested_coverages),
-        deductibles: "{}",
-        decline_reason: null,
-        valid_until: new Date(
-          Date.now() + 30 * 24 * 60 * 60 * 1000,
-        ).toISOString(),
-        bound_at: null,
-        created_at: now,
+      await prisma.carrierQuote.create({
+        data: {
+          quote_id: quoteId,
+          request_id: requestId,
+          carrier_code: carrier.carrier_code,
+          carrier_name: carrier.carrier_name,
+          status: "quoted",
+          premium_annual: premiumAnnual,
+          premium_monthly: premiumMonthly,
+          coverages: JSON.stringify(body.requested_coverages),
+          deductibles: "{}",
+          decline_reason: null,
+          valid_until: new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          bound_at: null,
+          created_at: now,
+        },
       });
     }
 
@@ -202,21 +204,18 @@ quotesRouter.get(
     const requestId = c.req.param("request_id");
 
     // Fetch the quote request
-    const [request] = await db
-      .select()
-      .from(quoteRequests)
-      .where(eq(quoteRequests.request_id, requestId))
-      .limit(1);
+    const request = await prisma.quoteRequest.findUnique({
+      where: { request_id: requestId },
+    });
 
     if (!request) {
       throw notFoundError("quote request");
     }
 
     // Fetch all carrier quotes for this request
-    const quotes = await db
-      .select()
-      .from(carrierQuotes)
-      .where(eq(carrierQuotes.request_id, requestId));
+    const quotes = await prisma.carrierQuote.findMany({
+      where: { request_id: requestId },
+    });
 
     // Determine overall status
     let status = request.status;
@@ -295,11 +294,9 @@ quotesRouter.post(
     }
 
     // Look up the quote
-    const [quote] = await db
-      .select()
-      .from(carrierQuotes)
-      .where(eq(carrierQuotes.quote_id, quoteId))
-      .limit(1);
+    const quote = await prisma.carrierQuote.findUnique({
+      where: { quote_id: quoteId },
+    });
 
     if (!quote) {
       throw notFoundError("quote");
@@ -331,11 +328,9 @@ quotesRouter.post(
     }
 
     // Check state minimum violations for auto policies
-    const [quoteRequest] = await db
-      .select()
-      .from(quoteRequests)
-      .where(eq(quoteRequests.request_id, quote.request_id))
-      .limit(1);
+    const quoteRequest = await prisma.quoteRequest.findUnique({
+      where: { request_id: quote.request_id },
+    });
 
     if (quoteRequest && quoteRequest.policy_type === "personal_auto") {
       const riskData = JSON.parse(quoteRequest.risk_data);
@@ -397,17 +392,16 @@ quotesRouter.post(
 
     // Bind the quote
     const now = new Date().toISOString();
-    await db
-      .update(carrierQuotes)
-      .set({ status: "bound", bound_at: now })
-      .where(eq(carrierQuotes.quote_id, quoteId));
+    await prisma.carrierQuote.update({
+      where: { quote_id: quoteId },
+      data: { status: "bound", bound_at: now },
+    });
 
     // Get the associated quote request for effective_date
-    const [request] = await db
-      .select({ effective_date: quoteRequests.effective_date })
-      .from(quoteRequests)
-      .where(eq(quoteRequests.request_id, quote.request_id))
-      .limit(1);
+    const request = await prisma.quoteRequest.findUnique({
+      where: { request_id: quote.request_id },
+      select: { effective_date: true },
+    });
 
     // Generate policy ID
     const year = new Date().getFullYear();

@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
 import {
   requireScopes,
   notFoundError,
@@ -10,8 +9,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { quotes } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -36,11 +34,9 @@ underwritingRouter.post(
     ]);
 
     // Check quote exists
-    const [quote] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.quote_id, quoteId))
-      .limit(1);
+    const quote = await prisma.quote.findUnique({
+      where: { quote_id: quoteId },
+    });
 
     if (!quote) {
       throw notFoundError("quote");
@@ -64,38 +60,35 @@ underwritingRouter.post(
     const now = new Date().toISOString();
 
     // Update quote
-    await db
-      .update(quotes)
-      .set({
+    await prisma.quote.update({
+      where: { quote_id: quoteId },
+      data: {
         underwriting_status: newStatus,
         underwriting_notes: body.notes ?? null,
-      })
-      .where(eq(quotes.quote_id, quoteId))
-      .run();
+      },
+    });
 
     // Fetch updated quote
-    const [updated] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.quote_id, quoteId))
-      .limit(1);
+    const updated = await prisma.quote.findUnique({
+      where: { quote_id: quoteId },
+    });
 
     return c.json(
       {
-        quote_id: updated.quote_id,
-        request_id: updated.request_id,
-        client_id: updated.client_id,
-        policy_type: updated.policy_type,
-        premium_annual: updated.premium_annual,
-        premium_monthly: updated.premium_monthly,
-        coverages: JSON.parse(updated.coverages),
-        deductibles: JSON.parse(updated.deductibles),
-        status: updated.status,
-        decline_reason: updated.decline_reason,
-        valid_until: updated.valid_until,
-        submitted_at: updated.submitted_at,
-        underwriting_status: updated.underwriting_status,
-        underwriting_notes: updated.underwriting_notes,
+        quote_id: updated!.quote_id,
+        request_id: updated!.request_id,
+        client_id: updated!.client_id,
+        policy_type: updated!.policy_type,
+        premium_annual: updated!.premium_annual,
+        premium_monthly: updated!.premium_monthly,
+        coverages: JSON.parse(updated!.coverages),
+        deductibles: JSON.parse(updated!.deductibles),
+        status: updated!.status,
+        decline_reason: updated!.decline_reason,
+        valid_until: updated!.valid_until,
+        submitted_at: updated!.submitted_at,
+        underwriting_status: updated!.underwriting_status,
+        underwriting_notes: updated!.underwriting_notes,
         decided_at: now,
       },
       200,

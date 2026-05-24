@@ -1,9 +1,8 @@
 import { Hono } from "hono";
-import { and, eq, gte, lte } from "drizzle-orm";
 import {
   requireScopes,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   checkEnum,
   checkFormat,
@@ -11,8 +10,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { commissions } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -39,31 +37,30 @@ accountingRouter.get("/commissions", requireScopes("ams:accounting:read"), async
   const { limit, cursor } = parsePaginationParams(query);
 
   // Build cursor pagination (ordered by effective_date DESC, commission_id DESC)
-  const { where: cursorWhere, orderBy, limit: queryLimit } = applyCursorPagination({
+  const { where: cursorWhere, orderBy, take } = applyPrismaCursorPagination({
     cursor,
     limit: limit!,
     orderBy: [
-      { column: commissions.effective_date, direction: "desc" },
-      { column: commissions.commission_id, direction: "desc" },
+      { field: "effective_date", direction: "desc" },
+      { field: "commission_id", direction: "desc" },
     ],
   });
 
   // Build filter conditions
-  const filters: ReturnType<typeof eq>[] = [];
-  if (query.carrier_code) filters.push(eq(commissions.carrier_code, query.carrier_code));
-  if (query.transaction_type) filters.push(eq(commissions.transaction_type, query.transaction_type));
-  if (query.status) filters.push(eq(commissions.status, query.status));
-  if (query.effective_date_from) filters.push(gte(commissions.effective_date, query.effective_date_from));
-  if (query.effective_date_to) filters.push(lte(commissions.effective_date, query.effective_date_to));
-  if (query.producer_id) filters.push(eq(commissions.producer_id, query.producer_id));
+  const filters: Record<string, unknown>[] = [];
+  if (query.carrier_code) filters.push({ carrier_code: query.carrier_code });
+  if (query.transaction_type) filters.push({ transaction_type: query.transaction_type });
+  if (query.status) filters.push({ status: query.status });
+  if (query.effective_date_from) filters.push({ effective_date: { gte: query.effective_date_from } });
+  if (query.effective_date_to) filters.push({ effective_date: { lte: query.effective_date_to } });
+  if (query.producer_id) filters.push({ producer_id: query.producer_id });
   if (cursorWhere) filters.push(cursorWhere);
 
-  const rows = await db
-    .select()
-    .from(commissions)
-    .where(filters.length > 0 ? and(...filters) : undefined)
-    .orderBy(...orderBy)
-    .limit(queryLimit);
+  const rows = await prisma.commission.findMany({
+    where: filters.length > 0 ? { AND: filters } : undefined,
+    orderBy,
+    take,
+  });
 
   // Map rows to API shape
   const mapped = rows.map((row) => ({

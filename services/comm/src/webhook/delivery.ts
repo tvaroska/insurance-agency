@@ -1,10 +1,5 @@
-import { eq } from "drizzle-orm";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import type * as schemaTypes from "../schema";
-import { webhooks, webhookDeliveries } from "../schema";
+import type { PrismaClient } from "../generated/prisma/client";
 import { signPayload, buildWebhookEnvelope } from "./signing";
-
-type DB = BunSQLiteDatabase<typeof schemaTypes>;
 
 export interface WebhookDeliveryRecord {
   delivery_id: string;
@@ -26,16 +21,14 @@ export interface WebhookDeliveryRecord {
  * Looks up active webhooks subscribed to the event type,
  * computes HMAC-SHA256 signature, and records delivery.
  */
-export function simulateDelivery(
-  db: DB,
+export async function simulateDelivery(
+  db: PrismaClient,
   eventType: string,
   eventData: unknown,
-): WebhookDeliveryRecord[] {
-  const activeWebhooks = db
-    .select()
-    .from(webhooks)
-    .where(eq(webhooks.active, true))
-    .all();
+): Promise<WebhookDeliveryRecord[]> {
+  const activeWebhooks = await db.webhook.findMany({
+    where: { active: true },
+  });
 
   const deliveries: WebhookDeliveryRecord[] = [];
 
@@ -62,7 +55,7 @@ export function simulateDelivery(
       created_at: now,
     };
 
-    db.insert(webhookDeliveries).values(delivery).run();
+    await db.webhookDelivery.create({ data: delivery });
 
     deliveries.push({ ...delivery, signature });
   }

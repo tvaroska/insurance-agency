@@ -5,8 +5,8 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../schema";
 import { createTestDb, makeMessage, makePhoneMessage } from "./setup";
 
-const { sqlite: testSqlite, db: testDb } = createTestDb();
-mock.module("../db", () => ({ db: testDb, sqlite: testSqlite }));
+const { sqlite: testSqlite, db: testDb, prisma: testPrisma } = createTestDb();
+mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { handleGetInbox } from "../tools/get_inbox";
 
@@ -84,7 +84,7 @@ beforeAll(() => {
 
 describe("get_inbox - no filters", () => {
   test("returns all messages with default pagination", async () => {
-    const result = await handleGetInbox({}, testDb);
+    const result = await handleGetInbox({}, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data).toBeArray();
     expect(parsed.data.length).toBe(6);
@@ -92,7 +92,7 @@ describe("get_inbox - no filters", () => {
   });
 
   test("returns messages ordered by timestamp desc", async () => {
-    const result = await handleGetInbox({}, testDb);
+    const result = await handleGetInbox({}, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     const timestamps = parsed.data.map((m: any) => m.timestamp);
     for (let i = 1; i < timestamps.length; i++) {
@@ -103,7 +103,7 @@ describe("get_inbox - no filters", () => {
 
 describe("get_inbox - channel filter", () => {
   test("filters by email channel", async () => {
-    const result = await handleGetInbox({ channel: "email" }, testDb);
+    const result = await handleGetInbox({ channel: "email" }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data.length).toBe(3);
     for (const m of parsed.data) {
@@ -112,7 +112,7 @@ describe("get_inbox - channel filter", () => {
   });
 
   test("filters by sms channel", async () => {
-    const result = await handleGetInbox({ channel: "sms" }, testDb);
+    const result = await handleGetInbox({ channel: "sms" }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data.length).toBe(2);
     for (const m of parsed.data) {
@@ -121,7 +121,7 @@ describe("get_inbox - channel filter", () => {
   });
 
   test("filters by phone channel and includes phone-specific fields", async () => {
-    const result = await handleGetInbox({ channel: "phone" }, testDb);
+    const result = await handleGetInbox({ channel: "phone" }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data.length).toBe(1);
     const msg = parsed.data[0];
@@ -134,7 +134,7 @@ describe("get_inbox - channel filter", () => {
 
 describe("get_inbox - direction filter", () => {
   test("filters by inbound direction", async () => {
-    const result = await handleGetInbox({ direction: "inbound" }, testDb);
+    const result = await handleGetInbox({ direction: "inbound" }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data.length).toBe(4);
     for (const m of parsed.data) {
@@ -143,7 +143,7 @@ describe("get_inbox - direction filter", () => {
   });
 
   test("filters by outbound direction", async () => {
-    const result = await handleGetInbox({ direction: "outbound" }, testDb);
+    const result = await handleGetInbox({ direction: "outbound" }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data.length).toBe(2);
   });
@@ -151,7 +151,7 @@ describe("get_inbox - direction filter", () => {
 
 describe("get_inbox - other filters", () => {
   test("filters by read status", async () => {
-    const result = await handleGetInbox({ read: false }, testDb);
+    const result = await handleGetInbox({ read: false }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data.length).toBe(2);
     for (const m of parsed.data) {
@@ -160,7 +160,7 @@ describe("get_inbox - other filters", () => {
   });
 
   test("filters by client_id", async () => {
-    const result = await handleGetInbox({ client_id: "CLI-001" }, testDb);
+    const result = await handleGetInbox({ client_id: "CLI-001" }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data.length).toBe(3);
     for (const m of parsed.data) {
@@ -171,14 +171,14 @@ describe("get_inbox - other filters", () => {
   test("filters by date range (since/until)", async () => {
     const result = await handleGetInbox(
       { since: "2025-09-01T00:00:00Z", until: "2025-11-01T00:00:00Z" },
-      testDb,
+      testPrisma,
     );
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data.length).toBe(2); // MSG-003, MSG-004
   });
 
   test("returns empty data for no matches", async () => {
-    const result = await handleGetInbox({ client_id: "CLI-999" }, testDb);
+    const result = await handleGetInbox({ client_id: "CLI-999" }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data).toEqual([]);
     expect(parsed.pagination.has_more).toBe(false);
@@ -187,7 +187,7 @@ describe("get_inbox - other filters", () => {
 
 describe("get_inbox - pagination", () => {
   test("limits results", async () => {
-    const result = await handleGetInbox({ limit: 2 }, testDb);
+    const result = await handleGetInbox({ limit: 2 }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.data.length).toBe(2);
     expect(parsed.pagination.has_more).toBe(true);
@@ -195,13 +195,13 @@ describe("get_inbox - pagination", () => {
   });
 
   test("paginates with cursor", async () => {
-    const firstPage = await handleGetInbox({ limit: 3 }, testDb);
+    const firstPage = await handleGetInbox({ limit: 3 }, testPrisma);
     const firstParsed = JSON.parse(firstPage.content[0].text as string);
     expect(firstParsed.data.length).toBe(3);
 
     const secondPage = await handleGetInbox(
       { limit: 3, cursor: firstParsed.pagination.next_cursor },
-      testDb,
+      testPrisma,
     );
     const secondParsed = JSON.parse(secondPage.content[0].text as string);
     expect(secondParsed.data.length).toBe(3);
@@ -218,7 +218,7 @@ describe("get_inbox - pagination", () => {
 
 describe("get_inbox - response format", () => {
   test("maps from_addr/to_addr back to from/to", async () => {
-    const result = await handleGetInbox({ client_id: "CLI-001", direction: "inbound" }, testDb);
+    const result = await handleGetInbox({ client_id: "CLI-001", direction: "inbound" }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     const msg = parsed.data[0];
     expect(msg).toHaveProperty("from");

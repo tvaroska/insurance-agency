@@ -6,8 +6,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { quotes } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -109,8 +108,8 @@ quickQuoteRouter.post(
       { type: "uninsured_motorist", limit: "100/300" },
     ];
 
-    db.insert(quotes)
-      .values({
+    await prisma.quote.create({
+      data: {
         quote_id: quoteId,
         request_id: requestId,
         client_id: body.client_id,
@@ -134,8 +133,8 @@ quickQuoteRouter.post(
         driver_dob: body.driver_dob || null,
         driver_license: body.driver_license || null,
         coverage_config: JSON.stringify(defaultCoverages),
-      })
-      .run();
+      },
+    });
 
     return c.json(
       {

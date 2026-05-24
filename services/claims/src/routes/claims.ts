@@ -1,9 +1,8 @@
 import { Hono } from "hono";
-import { and, eq, like, gte, lte, sql } from "drizzle-orm";
 import {
   requireScopes,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   notFoundError,
   validationError,
@@ -16,13 +15,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import {
-  claims,
-  adjusters,
-  claimDocuments,
-  claimTimeline,
-} from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -70,20 +63,18 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 
 // ── Helper: generate next claim ID ──
 
-function generateClaimId(): string {
+async function generateClaimId(): Promise<string> {
   const year = new Date().getFullYear();
-  const row = db
-    .select({ count: sql<number>`count(*)` })
-    .from(claims)
-    .where(like(claims.claim_id, `CLM-${year}-%`))
-    .get();
-  const seq = (row?.count ?? 0) + 1;
+  const count = await prisma.claim.count({
+    where: { claim_id: { startsWith: `CLM-${year}-` } },
+  });
+  const seq = count + 1;
   return `CLM-${year}-${String(seq).padStart(6, "0")}`;
 }
 
 // ── Helper: add timeline event ──
 
-function addTimelineEvent(opts: {
+async function addTimelineEvent(opts: {
   claim_id: string;
   event_type: string;
   description: string;
@@ -92,8 +83,8 @@ function addTimelineEvent(opts: {
   created_by?: string | null;
 }) {
   const event_id = `EVT-${crypto.randomUUID().slice(0, 8)}`;
-  db.insert(claimTimeline)
-    .values({
+  await prisma.claimTimeline.create({
+    data: {
       event_id,
       claim_id: opts.claim_id,
       event_type: opts.event_type,
@@ -102,13 +93,13 @@ function addTimelineEvent(opts: {
       new_value: opts.new_value ?? null,
       created_by: opts.created_by ?? null,
       created_at: new Date().toISOString(),
-    })
-    .run();
+    },
+  });
 }
 
 // ── Helper: create FNOL claim from validated body ──
 
-async function createFnolClaim(body: Record<string, unknown>, dbInstance: any) {
+async function createFnolClaim(body: Record<string, unknown>) {
   throwIfErrors([
     checkRequired("policy_id", body.policy_id),
     checkRequired("client_id", body.client_id),
@@ -143,7 +134,7 @@ async function createFnolClaim(body: Record<string, unknown>, dbInstance: any) {
   }
 
   const now = new Date().toISOString();
-  const claim_id = generateClaimId();
+  const claim_id = await generateClaimId();
 
   const newClaim = {
     claim_id,
@@ -163,9 +154,9 @@ async function createFnolClaim(body: Record<string, unknown>, dbInstance: any) {
     updated_at: now,
   };
 
-  dbInstance.insert(claims).values(newClaim).run();
+  await prisma.claim.create({ data: newClaim });
 
-  addTimelineEvent({
+  await addTimelineEvent({
     claim_id,
     event_type: "status_change",
     description: "Claim filed — status set to reported.",
@@ -189,7 +180,7 @@ claimsRouter.post("/", requireScopes("claims:write"), async (c) => {
     body.loss_description = body.description;
   }
 
-  const result = await createFnolClaim(body, db);
+  const result = await createFnolClaim(body);
   return c.json(result, 201);
 });
 
@@ -197,7 +188,7 @@ claimsRouter.post("/", requireScopes("claims:write"), async (c) => {
 
 claimsRouter.post("/fnol", requireScopes("claims:write"), async (c) => {
   const body = await c.req.json();
-  const result = await createFnolClaim(body, db);
+  const result = await createFnolClaim(body);
   return c.json(result, 201);
 });
 
@@ -232,31 +223,30 @@ claimsRouter.get("/", requireScopes("claims:read"), async (c) => {
   const {
     where: cursorWhere,
     orderBy,
-    limit: queryLimit,
-  } = applyCursorPagination({
+    take,
+  } = applyPrismaCursorPagination({
     cursor,
     limit: limit!,
     orderBy: [
-      { column: claims.created_at, direction: "desc" },
-      { column: claims.claim_id, direction: "desc" },
+      { field: "created_at", direction: "desc" },
+      { field: "claim_id", direction: "desc" },
     ],
   });
 
-  const filters: ReturnType<typeof eq>[] = [];
-  if (query.client_id) filters.push(eq(claims.client_id, query.client_id));
-  if (query.policy_id) filters.push(eq(claims.policy_id, query.policy_id));
-  if (query.status) filters.push(eq(claims.status, query.status));
-  if (query.claim_type) filters.push(eq(claims.claim_type, query.claim_type));
-  if (query.date_from) filters.push(gte(claims.loss_date, query.date_from));
-  if (query.date_to) filters.push(lte(claims.loss_date, query.date_to));
+  const filters: Record<string, unknown>[] = [];
+  if (query.client_id) filters.push({ client_id: query.client_id });
+  if (query.policy_id) filters.push({ policy_id: query.policy_id });
+  if (query.status) filters.push({ status: query.status });
+  if (query.claim_type) filters.push({ claim_type: query.claim_type });
+  if (query.date_from) filters.push({ loss_date: { gte: query.date_from } });
+  if (query.date_to) filters.push({ loss_date: { lte: query.date_to } });
   if (cursorWhere) filters.push(cursorWhere);
 
-  const rows = await db
-    .select()
-    .from(claims)
-    .where(filters.length > 0 ? and(...filters) : undefined)
-    .orderBy(...orderBy)
-    .limit(queryLimit);
+  const rows = await prisma.claim.findMany({
+    where: filters.length > 0 ? { AND: filters } : undefined,
+    orderBy,
+    take,
+  });
 
   return c.json(
     paginatedResponse(
@@ -273,11 +263,9 @@ claimsRouter.get("/", requireScopes("claims:read"), async (c) => {
 claimsRouter.get("/:claim_id", requireScopes("claims:read"), async (c) => {
   const claimId = c.req.param("claim_id");
 
-  const [claim] = await db
-    .select()
-    .from(claims)
-    .where(eq(claims.claim_id, claimId))
-    .limit(1);
+  const claim = await prisma.claim.findUnique({
+    where: { claim_id: claimId },
+  });
 
   if (!claim) {
     throw notFoundError("claim");
@@ -286,28 +274,21 @@ claimsRouter.get("/:claim_id", requireScopes("claims:read"), async (c) => {
   // Fetch adjuster details if assigned
   let adjuster = null;
   if (claim.adjuster_id) {
-    const [adj] = await db
-      .select()
-      .from(adjusters)
-      .where(eq(adjusters.adjuster_id, claim.adjuster_id))
-      .limit(1);
-    if (adj) {
-      adjuster = adj;
-    }
+    adjuster = await prisma.adjuster.findUnique({
+      where: { adjuster_id: claim.adjuster_id },
+    });
   }
 
   // Fetch timeline
-  const timeline = await db
-    .select()
-    .from(claimTimeline)
-    .where(eq(claimTimeline.claim_id, claimId))
-    .orderBy(claimTimeline.created_at);
+  const timeline = await prisma.claimTimeline.findMany({
+    where: { claim_id: claimId },
+    orderBy: { created_at: "asc" },
+  });
 
   // Fetch documents
-  const documents = await db
-    .select()
-    .from(claimDocuments)
-    .where(eq(claimDocuments.claim_id, claimId));
+  const documents = await prisma.claimDocument.findMany({
+    where: { claim_id: claimId },
+  });
 
   return c.json({
     ...claim,
@@ -329,22 +310,18 @@ claimsRouter.post(
     throwIfErrors([checkRequired("adjuster_id", body.adjuster_id)]);
 
     // Verify claim exists
-    const [claim] = await db
-      .select()
-      .from(claims)
-      .where(eq(claims.claim_id, claimId))
-      .limit(1);
+    const claim = await prisma.claim.findUnique({
+      where: { claim_id: claimId },
+    });
 
     if (!claim) {
       throw notFoundError("claim");
     }
 
     // Verify adjuster exists and is active
-    const [adjuster] = await db
-      .select()
-      .from(adjusters)
-      .where(eq(adjusters.adjuster_id, body.adjuster_id))
-      .limit(1);
+    const adjuster = await prisma.adjuster.findUnique({
+      where: { adjuster_id: body.adjuster_id },
+    });
 
     if (!adjuster) {
       throw notFoundError("adjuster");
@@ -361,18 +338,14 @@ claimsRouter.post(
     }
 
     // Check capacity
-    const openCount = db
-      .select({ count: sql<number>`count(*)` })
-      .from(claims)
-      .where(
-        and(
-          eq(claims.adjuster_id, body.adjuster_id),
-          sql`${claims.status} NOT IN ('settled', 'denied')`,
-        ),
-      )
-      .get();
+    const openCount = await prisma.claim.count({
+      where: {
+        adjuster_id: body.adjuster_id,
+        status: { notIn: ["settled", "denied"] },
+      },
+    });
 
-    if ((openCount?.count ?? 0) >= adjuster.max_open_claims) {
+    if (openCount >= adjuster.max_open_claims) {
       throw validationError([
         {
           field: "adjuster_id",
@@ -393,12 +366,12 @@ claimsRouter.post(
       updates.status = "assigned";
     }
 
-    await db
-      .update(claims)
-      .set(updates)
-      .where(eq(claims.claim_id, claimId));
+    await prisma.claim.update({
+      where: { claim_id: claimId },
+      data: updates,
+    });
 
-    addTimelineEvent({
+    await addTimelineEvent({
       claim_id: claimId,
       event_type: "assignment",
       description: `Adjuster ${adjuster.first_name} ${adjuster.last_name} assigned.`,
@@ -407,7 +380,7 @@ claimsRouter.post(
     });
 
     if (claim.status === "reported") {
-      addTimelineEvent({
+      await addTimelineEvent({
         claim_id: claimId,
         event_type: "status_change",
         description: "Status changed from reported to assigned.",
@@ -417,11 +390,9 @@ claimsRouter.post(
     }
 
     // Return updated claim
-    const [updated] = await db
-      .select()
-      .from(claims)
-      .where(eq(claims.claim_id, claimId))
-      .limit(1);
+    const updated = await prisma.claim.findUnique({
+      where: { claim_id: claimId },
+    });
 
     return c.json(updated);
   },
@@ -474,11 +445,9 @@ claimsRouter.patch(
     ]);
 
     // Verify claim exists
-    const [claim] = await db
-      .select()
-      .from(claims)
-      .where(eq(claims.claim_id, claimId))
-      .limit(1);
+    const claim = await prisma.claim.findUnique({
+      where: { claim_id: claimId },
+    });
 
     if (!claim) {
       throw notFoundError("claim");
@@ -508,14 +477,14 @@ claimsRouter.patch(
       updates.settlement_amount = body.settlement_amount;
     if (body.notes !== undefined) updates.notes = body.notes;
 
-    await db
-      .update(claims)
-      .set(updates)
-      .where(eq(claims.claim_id, claimId));
+    await prisma.claim.update({
+      where: { claim_id: claimId },
+      data: updates,
+    });
 
     // Timeline events
     if (body.status !== undefined && body.status !== claim.status) {
-      addTimelineEvent({
+      await addTimelineEvent({
         claim_id: claimId,
         event_type: "status_change",
         description: `Status changed from ${claim.status} to ${body.status}.`,
@@ -528,7 +497,7 @@ claimsRouter.patch(
       body.reserve_amount !== undefined &&
       body.reserve_amount !== claim.reserve_amount
     ) {
-      addTimelineEvent({
+      await addTimelineEvent({
         claim_id: claimId,
         event_type: "reserve_change",
         description: `Reserve amount changed from ${claim.reserve_amount ?? "none"} to ${body.reserve_amount}.`,
@@ -538,18 +507,16 @@ claimsRouter.patch(
     }
 
     if (body.notes !== undefined && body.notes !== claim.notes) {
-      addTimelineEvent({
+      await addTimelineEvent({
         claim_id: claimId,
         event_type: "note",
         description: "Notes updated.",
       });
     }
 
-    const [updated] = await db
-      .select()
-      .from(claims)
-      .where(eq(claims.claim_id, claimId))
-      .limit(1);
+    const updated = await prisma.claim.findUnique({
+      where: { claim_id: claimId },
+    });
 
     return c.json(updated);
   },
@@ -564,21 +531,19 @@ claimsRouter.get(
     const claimId = c.req.param("claim_id");
 
     // Verify claim exists
-    const [claim] = await db
-      .select({ claim_id: claims.claim_id })
-      .from(claims)
-      .where(eq(claims.claim_id, claimId))
-      .limit(1);
+    const claim = await prisma.claim.findUnique({
+      where: { claim_id: claimId },
+      select: { claim_id: true },
+    });
 
     if (!claim) {
       throw notFoundError("claim");
     }
 
-    const events = await db
-      .select()
-      .from(claimTimeline)
-      .where(eq(claimTimeline.claim_id, claimId))
-      .orderBy(claimTimeline.created_at);
+    const events = await prisma.claimTimeline.findMany({
+      where: { claim_id: claimId },
+      orderBy: { created_at: "asc" },
+    });
 
     return c.json({ data: events });
   },
@@ -607,11 +572,10 @@ claimsRouter.post(
     ]);
 
     // Verify claim exists
-    const [claim] = await db
-      .select({ claim_id: claims.claim_id })
-      .from(claims)
-      .where(eq(claims.claim_id, claimId))
-      .limit(1);
+    const claim = await prisma.claim.findUnique({
+      where: { claim_id: claimId },
+      select: { claim_id: true },
+    });
 
     if (!claim) {
       throw notFoundError("claim");
@@ -630,9 +594,9 @@ claimsRouter.post(
       uploaded_at: now,
     };
 
-    db.insert(claimDocuments).values(newDoc).run();
+    await prisma.claimDocument.create({ data: newDoc });
 
-    addTimelineEvent({
+    await addTimelineEvent({
       claim_id: claimId,
       event_type: "document_upload",
       description: `Document uploaded: ${body.file_name} (${body.document_type}).`,

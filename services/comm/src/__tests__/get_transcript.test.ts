@@ -5,8 +5,8 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../schema";
 import { createTestDb, makePhoneMessage } from "./setup";
 
-const { sqlite: testSqlite, db: testDb } = createTestDb();
-mock.module("../db", () => ({ db: testDb, sqlite: testSqlite }));
+const { sqlite: testSqlite, db: testDb, prisma: testPrisma } = createTestDb();
+mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { handleGetTranscript } from "../tools/get_transcript";
 
@@ -43,7 +43,7 @@ beforeAll(() => {
 
 describe("get_transcript - success", () => {
   test("returns transcript for valid call_id", async () => {
-    const result = await handleGetTranscript({ call_id: "CALL-001" }, testDb);
+    const result = await handleGetTranscript({ call_id: "CALL-001" }, testPrisma);
     expect(result.isError).toBeUndefined();
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.call_id).toBe("CALL-001");
@@ -56,13 +56,13 @@ describe("get_transcript - success", () => {
   });
 
   test("extracts agent name from transcript", async () => {
-    const result = await handleGetTranscript({ call_id: "CALL-001" }, testDb);
+    const result = await handleGetTranscript({ call_id: "CALL-001" }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.agent_name).toBe("Amy");
   });
 
   test("extracts different agent names", async () => {
-    const result = await handleGetTranscript({ call_id: "CALL-002" }, testDb);
+    const result = await handleGetTranscript({ call_id: "CALL-002" }, testPrisma);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.agent_name).toBe("Tom");
   });
@@ -70,7 +70,7 @@ describe("get_transcript - success", () => {
 
 describe("get_transcript - errors", () => {
   test("returns error for missing call_id", async () => {
-    const result = await handleGetTranscript({}, testDb);
+    const result = await handleGetTranscript({}, testPrisma);
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);
     expect(parsed.error).toBe("call_id is required");
@@ -79,7 +79,7 @@ describe("get_transcript - errors", () => {
   test("returns error for non-existent call_id", async () => {
     const result = await handleGetTranscript(
       { call_id: "CALL-999" },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);

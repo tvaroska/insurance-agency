@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { eq, inArray } from "drizzle-orm";
 import {
   requireScopes,
   notFoundError,
@@ -10,8 +9,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { envelopes, documents } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -66,10 +64,10 @@ envelopesRouter.post(
     }
 
     // Verify all documents exist
-    const existingDocs = await db
-      .select({ document_id: documents.document_id })
-      .from(documents)
-      .where(inArray(documents.document_id, body.document_ids));
+    const existingDocs = await prisma.document.findMany({
+      where: { document_id: { in: body.document_ids } },
+      select: { document_id: true },
+    });
 
     const existingIds = new Set(existingDocs.map((d) => d.document_id));
     const missingIds = body.document_ids.filter(
@@ -96,8 +94,8 @@ envelopesRouter.post(
       }),
     );
 
-    db.insert(envelopes)
-      .values({
+    await prisma.envelope.create({
+      data: {
         envelope_id: envelopeId,
         client_id: body.client_id,
         document_ids: JSON.stringify(body.document_ids),
@@ -108,8 +106,8 @@ envelopesRouter.post(
         created_at: createdAt,
         completed_at: null,
         expiration_date: expirationDate.toISOString(),
-      })
-      .run();
+      },
+    });
 
     return c.json(
       {

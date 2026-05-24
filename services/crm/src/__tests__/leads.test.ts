@@ -3,13 +3,21 @@ import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../schema";
+import { PrismaClient } from "../generated/prisma/client";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { mkdtempSync } from "fs";
+import { join } from "path";
 
-// ── Mock db module with in-memory database ──
-const testSqlite = new Database(":memory:");
+const tmpDir = mkdtempSync("/tmp/test-crm-");
+const dbPath = join(tmpDir, "test.db");
+const testSqlite = new Database(dbPath);
+testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
 const testDb = drizzle(testSqlite, { schema });
 
-mock.module("../db", () => ({ db: testDb, sqlite: testSqlite }));
+const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
+const testPrisma = new PrismaClient({ adapter: testAdapter });
+mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { leadsRouter } from "../routes/leads";
 import { createTestApp, createTables, authHeader, makeLead } from "./setup";
@@ -709,17 +717,7 @@ describe("GET /v1/leads/:id - success", () => {
 
 describe("POST /v1/leads/:id/enroll - success", () => {
   it("enrolls lead in a campaign", async () => {
-    // First, seed a campaign
-    const { db: testDb } = require("../db");
-    const schema = require("../schema");
-    testDb.insert(schema.campaigns).values({
-      campaign_id: "camp_test_enroll",
-      name: "Test Enrollment Campaign",
-      type: "welcome",
-      status: "active",
-      enrolled_count: 0,
-      conversion_rate: 0,
-    }).run();
+    testSqlite.exec(`INSERT OR IGNORE INTO campaigns (campaign_id, name, type, status, enrolled_count, conversion_rate) VALUES ('camp_test_enroll', 'Test Enrollment Campaign', 'welcome', 'active', 0, 0)`);
 
     const headers = await authHeader(["crm:campaigns:enroll"]);
     const res = await app.request(`${LEADS_URL}/lead_001/enroll`, {

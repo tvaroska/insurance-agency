@@ -1,13 +1,11 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
 import {
   requireScopes,
   notFoundError,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { policies, idCards } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -20,22 +18,18 @@ idCardsRouter.get(
   async (c) => {
     const policyId = c.req.param("policy_id");
 
-    const [policy] = await db
-      .select()
-      .from(policies)
-      .where(eq(policies.policy_id, policyId))
-      .limit(1);
+    const policy = await prisma.policy.findUnique({
+      where: { policy_id: policyId },
+    });
 
     if (!policy) {
       throw notFoundError("policy");
     }
 
     // Check for existing ID card
-    const [existingCard] = await db
-      .select()
-      .from(idCards)
-      .where(eq(idCards.policy_id, policyId))
-      .limit(1);
+    const existingCard = await prisma.idCard.findFirst({
+      where: { policy_id: policyId },
+    });
 
     if (existingCard) {
       return c.json({
@@ -65,14 +59,14 @@ idCardsRouter.get(
       })),
     };
 
-    db.insert(idCards)
-      .values({
+    await prisma.idCard.create({
+      data: {
         card_id: cardId,
         policy_id: policyId,
         card_data: JSON.stringify(cardData),
         issued_at: now,
-      })
-      .run();
+      },
+    });
 
     return c.json({
       card_id: cardId,

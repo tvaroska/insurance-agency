@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { z } from "zod";
-import type * as schemaTypes from "./schema";
+import type { PrismaClient } from "./generated/prisma/client";
 import { getInboxToolDef, handleGetInbox } from "./tools/get_inbox";
 import { sendMessageToolDef, handleSendMessage } from "./tools/send_message";
 import {
@@ -13,9 +12,7 @@ import {
   handleManageWebhook,
 } from "./tools/manage_webhook";
 
-type DB = BunSQLiteDatabase<typeof schemaTypes>;
-
-export function createServer(db: DB): McpServer {
+export function createServer(db: PrismaClient): McpServer {
   const server = new McpServer(
     { name: "evergreen-comm", version: "1.4.0" },
     { capabilities: { tools: {} } },

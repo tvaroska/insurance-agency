@@ -1,10 +1,5 @@
-import { eq } from "drizzle-orm";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import type { PrismaClient } from "../generated/prisma/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import type * as schemaTypes from "../schema";
-import { webhooks } from "../schema";
-
-type DB = BunSQLiteDatabase<typeof schemaTypes>;
 
 const VALID_EVENTS = [
   "message.received",
@@ -59,7 +54,7 @@ function generateSecret(): string {
 
 export async function handleManageWebhook(
   args: Record<string, unknown>,
-  db: DB,
+  db: PrismaClient,
 ): Promise<CallToolResult> {
   const action = args.action as string | undefined;
 
@@ -86,7 +81,7 @@ export async function handleManageWebhook(
 
 async function handleSubscribe(
   args: Record<string, unknown>,
-  db: DB,
+  db: PrismaClient,
 ): Promise<CallToolResult> {
   const url = args.url as string | undefined;
   const events = args.events as string[] | undefined;
@@ -117,16 +112,16 @@ async function handleSubscribe(
   const secret = generateSecret();
   const now = new Date().toISOString();
 
-  db.insert(webhooks)
-    .values({
+  await db.webhook.create({
+    data: {
       webhook_id: webhookId,
       url: url!,
       events: JSON.stringify(events),
       secret,
       active: true,
       created_at: now,
-    })
-    .run();
+    },
+  });
 
   return {
     content: [
@@ -146,7 +141,7 @@ async function handleSubscribe(
 
 async function handleUnsubscribe(
   args: Record<string, unknown>,
-  db: DB,
+  db: PrismaClient,
 ): Promise<CallToolResult> {
   const webhookId = args.webhook_id as string | undefined;
 
@@ -164,11 +159,9 @@ async function handleUnsubscribe(
     };
   }
 
-  const existing = db
-    .select()
-    .from(webhooks)
-    .where(eq(webhooks.webhook_id, webhookId))
-    .get();
+  const existing = await db.webhook.findUnique({
+    where: { webhook_id: webhookId },
+  });
 
   if (!existing) {
     return {
@@ -185,7 +178,9 @@ async function handleUnsubscribe(
     };
   }
 
-  db.delete(webhooks).where(eq(webhooks.webhook_id, webhookId)).run();
+  await db.webhook.delete({
+    where: { webhook_id: webhookId },
+  });
 
   return {
     content: [

@@ -4,7 +4,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
+import { prisma } from "../prisma";
 import { handleManageWebhook } from "../tools/manage_webhook";
 
 type AppVariables = CorrelationVariables & AuthVariables;
@@ -21,7 +21,7 @@ webhooksRouter.post(
 
     const result = await handleManageWebhook(
       { action: "subscribe", url: body.url, events: body.events },
-      db,
+      prisma,
     );
 
     if (result.isError) {

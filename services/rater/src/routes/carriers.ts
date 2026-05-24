@@ -1,17 +1,15 @@
 import { Hono } from "hono";
-import { like, and } from "drizzle-orm";
 import {
   requireScopes,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   checkEnum,
   throwIfErrors,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { carriers } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -33,36 +31,33 @@ const listCarriers = async (c: any) => {
     const {
       where: cursorWhere,
       orderBy,
-      limit: queryLimit,
-    } = applyCursorPagination({
+      take,
+    } = applyPrismaCursorPagination({
       cursor,
       limit: limit!,
-      orderBy: [{ column: carriers.carrier_code, direction: "asc" }],
+      orderBy: [{ field: "carrier_code", direction: "asc" }],
     });
 
     // Build filter conditions
-    const filters: ReturnType<typeof like>[] = [];
+    const filters: Record<string, unknown>[] = [];
 
     if (query.state) {
-      // SQLite JSON containment: check if the state code is in the JSON array
-      filters.push(like(carriers.states, `%"${query.state}"%`));
+      // JSON containment: check if the state code is in the JSON array string
+      filters.push({ states: { contains: query.state } });
     }
     if (query.policy_type) {
-      filters.push(like(carriers.policy_types, `%"${query.policy_type}"%`));
+      filters.push({ policy_types: { contains: query.policy_type } });
     }
     if (query.risk_category) {
-      filters.push(
-        like(carriers.risk_categories, `%"${query.risk_category}"%`),
-      );
+      filters.push({ risk_categories: { contains: query.risk_category } });
     }
-    if (cursorWhere) filters.push(cursorWhere as ReturnType<typeof like>);
+    if (cursorWhere) filters.push(cursorWhere);
 
-    const rows = await db
-      .select()
-      .from(carriers)
-      .where(filters.length > 0 ? and(...filters) : undefined)
-      .orderBy(...orderBy)
-      .limit(queryLimit);
+    const rows = await prisma.carrier.findMany({
+      where: filters.length > 0 ? { AND: filters } : undefined,
+      orderBy,
+      take,
+    });
 
     // Parse JSON fields for response
     const mapped = rows.map((row) => ({

@@ -1,10 +1,6 @@
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import type { PrismaClient } from "../generated/prisma/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import type * as schemaTypes from "../schema";
-import { messages } from "../schema";
 import { simulateDelivery } from "../webhook/delivery";
-
-type DB = BunSQLiteDatabase<typeof schemaTypes>;
 
 const VALID_CHANNELS = ["email", "sms", "whatsapp"] as const;
 
@@ -44,7 +40,7 @@ export const sendMessageToolDef = {
 
 export async function handleSendMessage(
   args: Record<string, unknown>,
-  db: DB,
+  db: PrismaClient,
 ): Promise<CallToolResult> {
   const to = args.to as string | undefined;
   const channel = args.channel as string | undefined;
@@ -80,8 +76,8 @@ export async function handleSendMessage(
   const messageId = `msg_${crypto.randomUUID()}`;
   const now = new Date().toISOString();
 
-  db.insert(messages)
-    .values({
+  await db.message.create({
+    data: {
       message_id: messageId,
       client_id: clientId ?? "unknown",
       direction: "outbound",
@@ -96,11 +92,11 @@ export async function handleSendMessage(
       template_id: templateId ?? null,
       topics: "[]",
       attachments: "[]",
-    })
-    .run();
+    },
+  });
 
   // Trigger webhook delivery for message.delivered event
-  simulateDelivery(db, "message.delivered", {
+  await simulateDelivery(db, "message.delivered", {
     message_id: messageId,
     channel,
     to,

@@ -1,17 +1,15 @@
 import { Hono } from "hono";
-import { eq, and, gte } from "drizzle-orm";
 import {
   requireScopes,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   checkRange,
   throwIfErrors,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { retentionRisks } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -41,32 +39,31 @@ analyticsRouter.get(
     const {
       where: cursorWhere,
       orderBy,
-      limit: queryLimit,
-    } = applyCursorPagination({
+      take,
+    } = applyPrismaCursorPagination({
       cursor,
       limit: limit!,
       orderBy: [
-        { column: retentionRisks.risk_score, direction: "desc" },
-        { column: retentionRisks.client_id, direction: "desc" },
+        { field: "risk_score", direction: "desc" },
+        { field: "client_id", direction: "desc" },
       ],
     });
 
     // Build filter conditions
-    const filters: ReturnType<typeof eq>[] = [];
+    const filters: Record<string, unknown>[] = [];
 
-    filters.push(gte(retentionRisks.risk_score, minRiskScore) as ReturnType<typeof eq>);
+    filters.push({ risk_score: { gte: minRiskScore } });
 
     if (query.assigned_producer) {
-      filters.push(eq(retentionRisks.assigned_producer, query.assigned_producer));
+      filters.push({ assigned_producer: query.assigned_producer });
     }
-    if (cursorWhere) filters.push(cursorWhere as ReturnType<typeof eq>);
+    if (cursorWhere) filters.push(cursorWhere);
 
-    const rows = await db
-      .select()
-      .from(retentionRisks)
-      .where(and(...filters))
-      .orderBy(...orderBy)
-      .limit(queryLimit);
+    const rows = await prisma.retentionRisk.findMany({
+      where: { AND: filters },
+      orderBy,
+      take,
+    });
 
     // Shape response with nested factors
     const mapped = rows.map((row) => ({

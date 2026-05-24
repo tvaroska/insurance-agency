@@ -2,8 +2,8 @@ import { mock } from "bun:test";
 import { createTestDb, makeMessage } from "./setup";
 
 // Create test db and mock module before importing routes
-const { sqlite: testSqlite, db: testDb } = createTestDb();
-mock.module("../db", () => ({ db: testDb, sqlite: testSqlite }));
+const { sqlite: testSqlite, db: testDb, prisma: testPrisma } = createTestDb();
+mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { describe, expect, test, beforeAll } from "bun:test";
 import { Hono } from "hono";

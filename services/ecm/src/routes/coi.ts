@@ -7,8 +7,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { documents } from "../schema";
+import { prisma } from "../prisma";
 import { fetchClient, fetchClientPolicies, fetchAllClients, type AmsPolicy } from "../clients/ams-client";
 
 type AppVariables = CorrelationVariables & AuthVariables;
@@ -78,7 +77,7 @@ coiRouter.post(
       tags: JSON.stringify(["coi", policy.policy_type]),
     };
 
-    db.insert(documents).values(record).run();
+    await prisma.document.create({ data: record });
 
     return c.json(
       {

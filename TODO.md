@@ -103,9 +103,10 @@ No open issues.
   Files: `services/*/prisma/schema.prisma`, `services/*/prisma.config.ts`, `services/*/package.json`
   Plan: `.claude/plans/lazy-nibbling-turtle.md`
 
-- [ ] `S2-DB-2` **Replace Drizzle queries with Prisma Client** — P0
-  Swap all Drizzle query builder calls (`db.select()`, `db.insert()`, etc.) to Prisma Client equivalents (`prisma.client.findMany()`, `prisma.client.create()`, etc.) across all route handlers. Remove `db.ts` and `schema.ts` from each service; replace with a `prisma.ts` that exports a shared `PrismaClient` instance.
-  Files: `services/*/src/**/*.ts`
+- [x] `S2-DB-2` **Replace Drizzle queries with Prisma Client** — P0 *(done 2026-05-23)*
+  Converted all 34 route/tool files from Drizzle to Prisma Client across 8 services. Created `prisma.ts` singletons with `PrismaLibSql` adapter. Added `applyPrismaCursorPagination` to shared pagination helper. Deleted `db.ts` from all services. All 624 tests pass.
+  Files: `services/*/src/routes/*.ts`, `services/*/src/prisma.ts`, `packages/shared/src/pagination.ts`
+  Plan: `.claude/plans/reflective-floating-stallman.md`
 
 - [ ] `S2-DB-3` **Seed scripts for Prisma** — P1
   Rewrite each service's `seed.ts` to use Prisma Client instead of Drizzle inserts. Register as `prisma db seed` in `package.json`. Support `SEED_MODE=clean|realistic` via env var.

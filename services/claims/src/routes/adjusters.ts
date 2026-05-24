@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { eq, sql } from "drizzle-orm";
 import {
   requireScopes,
   checkEnum,
@@ -7,8 +6,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { adjusters, claims } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -28,7 +26,7 @@ adjustersRouter.get("/", requireScopes("claims:read"), async (c) => {
       : null,
   ]);
 
-  const rows = await db.select().from(adjusters);
+  const rows = await prisma.adjuster.findMany();
 
   // Apply filters in JS (small dataset)
   let filtered = rows;
@@ -41,18 +39,16 @@ adjustersRouter.get("/", requireScopes("claims:read"), async (c) => {
   }
 
   // Count open claims per adjuster
-  const openCounts = db
-    .select({
-      adjuster_id: claims.adjuster_id,
-      count: sql<number>`count(*)`,
-    })
-    .from(claims)
-    .where(sql`${claims.status} NOT IN ('settled', 'denied')`)
-    .groupBy(claims.adjuster_id)
-    .all();
+  const openCounts = await prisma.claim.groupBy({
+    by: ["adjuster_id"],
+    where: {
+      status: { notIn: ["settled", "denied"] },
+    },
+    _count: { _all: true },
+  });
 
   const countMap = new Map(
-    openCounts.map((r) => [r.adjuster_id, r.count]),
+    openCounts.map((r) => [r.adjuster_id, r._count._all]),
   );
 
   const data = filtered.map((a) => ({

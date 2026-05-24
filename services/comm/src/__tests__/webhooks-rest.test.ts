@@ -1,8 +1,8 @@
 import { mock } from "bun:test";
 import { createTestDb } from "./setup";
 
-const { sqlite: testSqlite, db: testDb } = createTestDb();
-mock.module("../db", () => ({ db: testDb, sqlite: testSqlite }));
+const { sqlite: testSqlite, db: testDb, prisma: testPrisma } = createTestDb();
+mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";

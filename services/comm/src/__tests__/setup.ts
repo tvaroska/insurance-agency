@@ -1,9 +1,18 @@
 import { Database } from "bun:sqlite";
-import { createTestDatabase } from "@evergreen/shared";
+import { PrismaClient } from "../generated/prisma/client";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { mkdtempSync } from "fs";
+import { join } from "path";
+import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../schema";
 
 export function createTestDb() {
-  const { sqlite, db } = createTestDatabase(schema);
+  const tmpDir = mkdtempSync("/tmp/test-comm-");
+  const dbPath = join(tmpDir, "test.db");
+  const sqlite = new Database(dbPath);
+  sqlite.exec("PRAGMA journal_mode = WAL;");
+  sqlite.exec("PRAGMA foreign_keys = ON;");
+  const db = drizzle(sqlite, { schema });
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS messages (
       message_id TEXT PRIMARY KEY,
@@ -49,7 +58,9 @@ export function createTestDb() {
       created_at TEXT NOT NULL
     );
   `);
-  return { sqlite, db };
+  const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
+  const prisma = new PrismaClient({ adapter });
+  return { sqlite, db, prisma };
 }
 
 // ── Entity factories ──

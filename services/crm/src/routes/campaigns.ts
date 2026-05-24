@@ -1,9 +1,8 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
 import {
   requireScopes,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   notFoundError,
   conflictError,
@@ -15,8 +14,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { campaigns, campaignEnrollments } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -43,24 +41,23 @@ campaignsRouter.get(
     const {
       where: cursorWhere,
       orderBy,
-      limit: queryLimit,
-    } = applyCursorPagination({
+      take,
+    } = applyPrismaCursorPagination({
       cursor,
       limit: limit!,
-      orderBy: [{ column: campaigns.campaign_id, direction: "asc" }],
+      orderBy: [{ field: "campaign_id", direction: "asc" }],
     });
 
-    const filters: ReturnType<typeof eq>[] = [];
-    if (query.status) filters.push(eq(campaigns.status, query.status));
-    if (query.type) filters.push(eq(campaigns.type, query.type));
-    if (cursorWhere) filters.push(cursorWhere as ReturnType<typeof eq>);
+    const filters: Record<string, unknown>[] = [];
+    if (query.status) filters.push({ status: query.status });
+    if (query.type) filters.push({ type: query.type });
+    if (cursorWhere) filters.push(cursorWhere);
 
-    const rows = await db
-      .select()
-      .from(campaigns)
-      .where(filters.length > 0 ? and(...filters) : undefined)
-      .orderBy(...orderBy)
-      .limit(queryLimit);
+    const rows = await prisma.campaign.findMany({
+      where: filters.length > 0 ? { AND: filters } : undefined,
+      orderBy,
+      take,
+    });
 
     return c.json(
       paginatedResponse(rows, limit!, ["campaign_id"], cursor),
@@ -86,11 +83,9 @@ campaignsRouter.post(
     ]);
 
     // Verify campaign exists
-    const [campaign] = await db
-      .select()
-      .from(campaigns)
-      .where(eq(campaigns.campaign_id, campaignId))
-      .limit(1);
+    const campaign = await prisma.campaign.findUnique({
+      where: { campaign_id: campaignId },
+    });
 
     if (!campaign) {
       throw notFoundError("campaign");
@@ -104,16 +99,13 @@ campaignsRouter.post(
     }
 
     // Check for duplicate enrollment
-    const [existingEnrollment] = await db
-      .select({ enrollment_id: campaignEnrollments.enrollment_id })
-      .from(campaignEnrollments)
-      .where(
-        and(
-          eq(campaignEnrollments.campaign_id, campaignId),
-          eq(campaignEnrollments.client_id, body.client_id),
-        ),
-      )
-      .limit(1);
+    const existingEnrollment = await prisma.campaignEnrollment.findFirst({
+      where: {
+        campaign_id: campaignId,
+        client_id: body.client_id,
+      },
+      select: { enrollment_id: true },
+    });
 
     if (existingEnrollment) {
       throw conflictError(
@@ -125,8 +117,8 @@ campaignsRouter.post(
     const enrollmentId = `enr_${Math.random().toString(36).slice(2, 10)}`;
     const enrolledAt = new Date().toISOString();
 
-    await db.insert(campaignEnrollments)
-      .values({
+    await prisma.campaignEnrollment.create({
+      data: {
         enrollment_id: enrollmentId,
         campaign_id: campaignId,
         client_id: body.client_id,
@@ -134,14 +126,14 @@ campaignsRouter.post(
         metadata: body.metadata ? JSON.stringify(body.metadata) : null,
         enrolled_at: enrolledAt,
         sequence_step: 1,
-      })
-      .run();
+      },
+    });
 
     // Increment enrolled_count
-    await db.update(campaigns)
-      .set({ enrolled_count: campaign.enrolled_count + 1 })
-      .where(eq(campaigns.campaign_id, campaignId))
-      .run();
+    await prisma.campaign.update({
+      where: { campaign_id: campaignId },
+      data: { enrolled_count: campaign.enrolled_count + 1 },
+    });
 
     return c.json(
       {

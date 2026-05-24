@@ -6,8 +6,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { quotes, underwritingConditions } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -44,8 +43,8 @@ submissionsRouter.post(
     // Schedule inspection automatically
     const inspectionDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    db.insert(quotes)
-      .values({
+    await prisma.quote.create({
+      data: {
         quote_id: quoteId,
         request_id: requestId,
         client_id: body.client_id,
@@ -62,8 +61,8 @@ submissionsRouter.post(
         photo_checklist: JSON.stringify(body.photo_checklist || []),
         inspection_status: "scheduled",
         inspection_scheduled_at: inspectionDate,
-      })
-      .run();
+      },
+    });
 
     // Create default underwriting conditions
     const conditions = [
@@ -74,16 +73,16 @@ submissionsRouter.post(
 
     let condCounter = 1;
     for (const cond of conditions) {
-      db.insert(underwritingConditions)
-        .values({
+      await prisma.underwritingCondition.create({
+        data: {
           condition_id: `COND-${quoteId}-${condCounter++}`,
           quote_id: quoteId,
           condition_type: cond.type,
           description: cond.desc,
           status: "pending",
           created_at: now,
-        })
-        .run();
+        },
+      });
     }
 
     return c.json(

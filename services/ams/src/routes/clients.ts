@@ -1,9 +1,8 @@
 import { Hono } from "hono";
-import { and, eq, like, inArray, sql } from "drizzle-orm";
 import {
   requireScopes,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   notFoundError,
   conflictError,
@@ -15,8 +14,8 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { clients, policies, coverages, tasks } from "../schema";
+import { prisma } from "../prisma";
+import type { Client } from "../generated/prisma/client";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -37,30 +36,29 @@ clientsRouter.get("/", requireScopes("ams:clients:read"), async (c) => {
   const { limit, cursor } = parsePaginationParams(query);
 
   // Build cursor pagination (ordered by last_name ASC, first_name ASC, id ASC)
-  const { where: cursorWhere, orderBy, limit: queryLimit } = applyCursorPagination({
+  const { where: cursorWhere, orderBy, take } = applyPrismaCursorPagination({
     cursor,
     limit: limit!,
     orderBy: [
-      { column: clients.last_name, direction: "asc" },
-      { column: clients.first_name, direction: "asc", cursorKey: "first_name" },
-      { column: clients.id, direction: "asc" },
+      { field: "last_name", direction: "asc" },
+      { field: "first_name", direction: "asc", cursorKey: "first_name" },
+      { field: "id", direction: "asc" },
     ],
   });
 
   // Build filter conditions
-  const filters: ReturnType<typeof eq>[] = [];
-  if (query.status) filters.push(eq(clients.status, query.status));
-  if (query.last_name) filters.push(like(clients.last_name, `${query.last_name}%`));
-  if (query.email) filters.push(eq(clients.email, query.email));
-  if (query.household_id) filters.push(eq(clients.household_id, query.household_id));
+  const filters: Record<string, unknown>[] = [];
+  if (query.status) filters.push({ status: query.status });
+  if (query.last_name) filters.push({ last_name: { startsWith: query.last_name } });
+  if (query.email) filters.push({ email: query.email });
+  if (query.household_id) filters.push({ household_id: query.household_id });
   if (cursorWhere) filters.push(cursorWhere);
 
-  const rows = await db
-    .select()
-    .from(clients)
-    .where(filters.length > 0 ? and(...filters) : undefined)
-    .orderBy(...orderBy)
-    .limit(queryLimit);
+  const rows = await prisma.client.findMany({
+    where: filters.length > 0 ? { AND: filters } : undefined,
+    orderBy,
+    take,
+  });
 
   // Map rows to API shape (nest address fields)
   const mapped = rows.map(mapClientRow);
@@ -74,11 +72,7 @@ clientsRouter.get("/", requireScopes("ams:clients:read"), async (c) => {
 clientsRouter.get("/:id", requireScopes("ams:clients:read"), async (c) => {
   const clientId = c.req.param("id");
 
-  const [row] = await db
-    .select()
-    .from(clients)
-    .where(eq(clients.id, clientId))
-    .limit(1);
+  const row = await prisma.client.findUnique({ where: { id: clientId } });
 
   if (!row) {
     throw notFoundError("client");
@@ -112,11 +106,10 @@ clientsRouter.post("/", requireScopes("ams:clients:write"), async (c) => {
   ]);
 
   // Check for duplicate email
-  const [existing] = await db
-    .select({ id: clients.id })
-    .from(clients)
-    .where(eq(clients.email, body.email))
-    .limit(1);
+  const existing = await prisma.client.findFirst({
+    where: { email: body.email },
+    select: { id: true },
+  });
 
   if (existing) {
     throw conflictError(`A client with email '${body.email}' already exists.`);
@@ -126,29 +119,29 @@ clientsRouter.post("/", requireScopes("ams:clients:write"), async (c) => {
   const clientId = `CL-${Math.random().toString(36).slice(2, 8)}`;
   const address = body.address ?? {};
 
-  const record = {
-    id: clientId,
-    first_name: body.first_name,
-    last_name: body.last_name,
-    dob: body.dob ?? null,
-    email: body.email,
-    phone: body.phone ?? null,
-    address_street: address.street ?? null,
-    address_city: address.city ?? null,
-    address_state: address.state ?? null,
-    address_zip: address.zip ?? null,
-    driver_license_number: body.driver_license_number ?? null,
-    occupation: body.occupation ?? null,
-    marital_status: body.marital_status ?? null,
-    household_id: body.household_id ?? null,
-    preferred_contact_method: body.preferred_contact_method ?? null,
-    preferred_contact_time: body.preferred_contact_time ?? null,
-    status: body.status ?? "active",
-    created_at: now,
-    updated_at: now,
-  };
-
-  await db.insert(clients).values(record);
+  const record = await prisma.client.create({
+    data: {
+      id: clientId,
+      first_name: body.first_name,
+      last_name: body.last_name,
+      dob: body.dob ?? null,
+      email: body.email,
+      phone: body.phone ?? null,
+      address_street: address.street ?? null,
+      address_city: address.city ?? null,
+      address_state: address.state ?? null,
+      address_zip: address.zip ?? null,
+      driver_license_number: body.driver_license_number ?? null,
+      occupation: body.occupation ?? null,
+      marital_status: body.marital_status ?? null,
+      household_id: body.household_id ?? null,
+      preferred_contact_method: body.preferred_contact_method ?? null,
+      preferred_contact_time: body.preferred_contact_time ?? null,
+      status: body.status ?? "active",
+      created_at: now,
+      updated_at: now,
+    },
+  });
 
   return c.json(mapClientRow(record), 201);
 });
@@ -193,11 +186,10 @@ clientsRouter.patch("/:id", requireScopes("ams:clients:write"), async (c) => {
   ]);
 
   // Verify client exists
-  const [existing] = await db
-    .select({ id: clients.id })
-    .from(clients)
-    .where(eq(clients.id, clientId))
-    .limit(1);
+  const existing = await prisma.client.findUnique({
+    where: { id: clientId },
+    select: { id: true },
+  });
 
   if (!existing) {
     throw notFoundError("client");
@@ -205,13 +197,12 @@ clientsRouter.patch("/:id", requireScopes("ams:clients:write"), async (c) => {
 
   // Check email uniqueness if changing email
   if (body.email !== undefined) {
-    const [duplicate] = await db
-      .select({ id: clients.id })
-      .from(clients)
-      .where(eq(clients.email, body.email))
-      .limit(1);
+    const duplicate = await prisma.client.findFirst({
+      where: { email: body.email, NOT: { id: clientId } },
+      select: { id: true },
+    });
 
-    if (duplicate && duplicate.id !== clientId) {
+    if (duplicate) {
       throw conflictError(`A client with email '${body.email}' already exists.`);
     }
   }
@@ -241,20 +232,17 @@ clientsRouter.patch("/:id", requireScopes("ams:clients:write"), async (c) => {
   if (body.preferred_contact_time !== undefined) updates.preferred_contact_time = body.preferred_contact_time ?? null;
   if (body.status !== undefined) updates.status = body.status;
 
-  await db.update(clients).set(updates).where(eq(clients.id, clientId));
-
-  const [updated] = await db
-    .select()
-    .from(clients)
-    .where(eq(clients.id, clientId))
-    .limit(1);
+  const updated = await prisma.client.update({
+    where: { id: clientId },
+    data: updates,
+  });
 
   return c.json(mapClientRow(updated));
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function mapClientRow(row: typeof clients.$inferSelect) {
+function mapClientRow(row: Client) {
   return {
     id: row.id,
     first_name: row.first_name,
@@ -287,13 +275,12 @@ clientsRouter.get("/:id/policies", requireScopes("ams:policies:read"), async (c)
   const clientId = c.req.param("id");
 
   // Verify client exists
-  const client = await db
-    .select({ id: clients.id })
-    .from(clients)
-    .where(eq(clients.id, clientId))
-    .limit(1);
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    select: { id: true },
+  });
 
-  if (client.length === 0) {
+  if (!client) {
     throw notFoundError("client");
   }
 
@@ -309,36 +296,33 @@ clientsRouter.get("/:id/policies", requireScopes("ams:policies:read"), async (c)
   const { limit, cursor } = parsePaginationParams(query);
 
   // Build cursor pagination (ordered by effective_date DESC, policy_id DESC)
-  const { where: cursorWhere, orderBy, limit: queryLimit } = applyCursorPagination({
+  const { where: cursorWhere, orderBy, take } = applyPrismaCursorPagination({
     cursor,
     limit: limit!,
     orderBy: [
-      { column: policies.effective_date, direction: "desc" },
-      { column: policies.policy_id, direction: "desc" },
+      { field: "effective_date", direction: "desc" },
+      { field: "policy_id", direction: "desc" },
     ],
   });
 
   // Build filter conditions
-  const filters: ReturnType<typeof eq>[] = [];
-  filters.push(eq(policies.client_id, clientId));
-  if (query.policy_type) filters.push(eq(policies.policy_type, query.policy_type));
-  if (query.status) filters.push(eq(policies.status, query.status));
+  const filters: Record<string, unknown>[] = [{ client_id: clientId }];
+  if (query.policy_type) filters.push({ policy_type: query.policy_type });
+  if (query.status) filters.push({ status: query.status });
   if (cursorWhere) filters.push(cursorWhere);
 
-  const rows = await db
-    .select()
-    .from(policies)
-    .where(and(...filters))
-    .orderBy(...orderBy)
-    .limit(queryLimit);
+  const rows = await prisma.policy.findMany({
+    where: { AND: filters },
+    orderBy,
+    take,
+  });
 
   // Batch-fetch coverages for returned policies
   const policyIds = rows.map((r) => r.policy_id);
   const coverageRows = policyIds.length > 0
-    ? await db
-        .select()
-        .from(coverages)
-        .where(inArray(coverages.policy_id, policyIds))
+    ? await prisma.coverage.findMany({
+        where: { policy_id: { in: policyIds } },
+      })
     : [];
 
   // Group coverages by policy_id
@@ -391,65 +375,52 @@ clientsRouter.post("/:id/merge", requireScopes("ams:clients:write"), async (c) =
   }
 
   // Verify both clients exist
-  const [target] = await db
-    .select()
-    .from(clients)
-    .where(eq(clients.id, targetId))
-    .limit(1);
+  const target = await prisma.client.findUnique({ where: { id: targetId } });
   if (!target) throw notFoundError("client");
 
-  const [source] = await db
-    .select({ id: clients.id })
-    .from(clients)
-    .where(eq(clients.id, sourceId))
-    .limit(1);
+  const source = await prisma.client.findUnique({
+    where: { id: sourceId },
+    select: { id: true },
+  });
   if (!source) throw notFoundError("client");
 
   // Count entities to move
-  const [polCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(policies)
-    .where(eq(policies.client_id, sourceId));
-  const policiesMoved = polCount.count;
+  const policiesMoved = await prisma.policy.count({
+    where: { client_id: sourceId },
+  });
 
-  const [taskCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(tasks)
-    .where(eq(tasks.related_client_id, sourceId));
-  const tasksMoved = taskCount.count;
+  const tasksMoved = await prisma.task.count({
+    where: { related_client_id: sourceId },
+  });
 
   // Re-parent policies
   const now = new Date().toISOString();
   if (policiesMoved > 0) {
-    await db
-      .update(policies)
-      .set({ client_id: targetId, updated_at: now })
-      .where(eq(policies.client_id, sourceId));
+    await prisma.policy.updateMany({
+      where: { client_id: sourceId },
+      data: { client_id: targetId, updated_at: now },
+    });
   }
 
   // Re-parent tasks
   if (tasksMoved > 0) {
-    await db
-      .update(tasks)
-      .set({ related_client_id: targetId, updated_at: now })
-      .where(eq(tasks.related_client_id, sourceId));
+    await prisma.task.updateMany({
+      where: { related_client_id: sourceId },
+      data: { related_client_id: targetId, updated_at: now },
+    });
   }
 
   // Set source client inactive
-  await db
-    .update(clients)
-    .set({ status: "inactive", updated_at: now })
-    .where(eq(clients.id, sourceId));
+  await prisma.client.update({
+    where: { id: sourceId },
+    data: { status: "inactive", updated_at: now },
+  });
 
   // Re-fetch target (updated_at may not have changed, but return fresh data)
-  const [updatedTarget] = await db
-    .select()
-    .from(clients)
-    .where(eq(clients.id, targetId))
-    .limit(1);
+  const updatedTarget = await prisma.client.findUnique({ where: { id: targetId } });
 
   return c.json({
-    target_client: mapClientRow(updatedTarget),
+    target_client: mapClientRow(updatedTarget!),
     source_client_id: sourceId,
     policies_moved: policiesMoved,
     tasks_moved: tasksMoved,
@@ -470,11 +441,10 @@ clientsRouter.get("/household/:household_id", requireScopes("ams:clients:read"),
   const householdId = c.req.param("household_id");
 
   // Get all household members
-  const members = await db
-    .select()
-    .from(clients)
-    .where(eq(clients.household_id, householdId))
-    .orderBy(clients.last_name, clients.first_name);
+  const members = await prisma.client.findMany({
+    where: { household_id: householdId },
+    orderBy: [{ last_name: "asc" }, { first_name: "asc" }],
+  });
 
   if (members.length === 0) {
     throw notFoundError("household");
@@ -482,18 +452,16 @@ clientsRouter.get("/household/:household_id", requireScopes("ams:clients:read"),
 
   // Get all policies for household members
   const memberIds = members.map((m) => m.id);
-  const policyRows = await db
-    .select()
-    .from(policies)
-    .where(inArray(policies.client_id, memberIds));
+  const policyRows = await prisma.policy.findMany({
+    where: { client_id: { in: memberIds } },
+  });
 
   // Get coverages for all policies
   const policyIds = policyRows.map((p) => p.policy_id);
   const coverageRows = policyIds.length > 0
-    ? await db
-        .select()
-        .from(coverages)
-        .where(inArray(coverages.policy_id, policyIds))
+    ? await prisma.coverage.findMany({
+        where: { policy_id: { in: policyIds } },
+      })
     : [];
 
   // Group policies by client

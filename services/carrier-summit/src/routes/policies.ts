@@ -1,13 +1,11 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
 import {
   requireScopes,
   notFoundError,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { policies, policyDocuments } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -21,21 +19,18 @@ policiesRouter.get(
     const policyId = c.req.param("policy_id");
 
     // Check policy exists
-    const [policy] = await db
-      .select()
-      .from(policies)
-      .where(eq(policies.policy_id, policyId))
-      .limit(1);
+    const policy = await prisma.policy.findUnique({
+      where: { policy_id: policyId },
+    });
 
     if (!policy) {
       throw notFoundError("policy");
     }
 
     // Get documents for this policy
-    const docs = await db
-      .select()
-      .from(policyDocuments)
-      .where(eq(policyDocuments.policy_id, policyId));
+    const docs = await prisma.policyDocument.findMany({
+      where: { policy_id: policyId },
+    });
 
     return c.json({
       policy_id: policyId,

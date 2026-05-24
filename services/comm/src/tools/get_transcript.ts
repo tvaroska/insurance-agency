@@ -1,10 +1,5 @@
-import { eq } from "drizzle-orm";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import type { PrismaClient } from "../generated/prisma/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import type * as schemaTypes from "../schema";
-import { messages } from "../schema";
-
-type DB = BunSQLiteDatabase<typeof schemaTypes>;
 
 export const getTranscriptToolDef = {
   name: "get_transcript",
@@ -36,7 +31,7 @@ function extractAgentName(transcript: string | null): string | null {
 
 export async function handleGetTranscript(
   args: Record<string, unknown>,
-  db: DB,
+  db: PrismaClient,
 ): Promise<CallToolResult> {
   const callId = args.call_id as string | undefined;
 
@@ -49,11 +44,9 @@ export async function handleGetTranscript(
     };
   }
 
-  const row = db
-    .select()
-    .from(messages)
-    .where(eq(messages.call_id, callId))
-    .get();
+  const row = await db.message.findFirst({
+    where: { call_id: callId },
+  });
 
   if (!row) {
     return {

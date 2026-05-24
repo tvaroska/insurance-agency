@@ -1,9 +1,8 @@
 import { Hono } from "hono";
-import { eq, and, gte, desc } from "drizzle-orm";
 import {
   requireScopes,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   notFoundError,
   conflictError,
@@ -16,8 +15,8 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { leads, campaigns, campaignEnrollments } from "../schema";
+import { prisma } from "../prisma";
+import type { Lead } from "../generated/prisma/client";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -63,42 +62,41 @@ leadsRouter.get(
     const {
       where: cursorWhere,
       orderBy,
-      limit: queryLimit,
-    } = applyCursorPagination({
+      take,
+    } = applyPrismaCursorPagination({
       cursor,
       limit: limit!,
       orderBy: [
-        { column: leads.score, direction: "desc" },
-        { column: leads.lead_id, direction: "desc" },
+        { field: "score", direction: "desc" },
+        { field: "lead_id", direction: "desc" },
       ],
     });
 
     // Build filter conditions
-    const filters: ReturnType<typeof eq>[] = [];
+    const filters: Record<string, unknown>[] = [];
 
     if (query.client_id) {
-      filters.push(eq(leads.client_id, query.client_id));
+      filters.push({ client_id: query.client_id });
     }
     if (query.status) {
-      filters.push(eq(leads.status, query.status));
+      filters.push({ status: query.status });
     }
     if (query.source) {
-      filters.push(eq(leads.source, query.source));
+      filters.push({ source: query.source });
     }
     if (query.assigned_producer) {
-      filters.push(eq(leads.assigned_producer, query.assigned_producer));
+      filters.push({ assigned_producer: query.assigned_producer });
     }
     if (query.min_score !== undefined) {
-      filters.push(gte(leads.score, Number(query.min_score)));
+      filters.push({ score: { gte: Number(query.min_score) } });
     }
-    if (cursorWhere) filters.push(cursorWhere as ReturnType<typeof eq>);
+    if (cursorWhere) filters.push(cursorWhere);
 
-    const rows = await db
-      .select()
-      .from(leads)
-      .where(filters.length > 0 ? and(...filters) : undefined)
-      .orderBy(...orderBy)
-      .limit(queryLimit);
+    const rows = await prisma.lead.findMany({
+      where: filters.length > 0 ? { AND: filters } : undefined,
+      orderBy,
+      take,
+    });
 
     // Parse JSON fields
     const mapped = rows.map(mapLeadRow);
@@ -132,39 +130,38 @@ leadsRouter.get(
     const {
       where: cursorWhere,
       orderBy,
-      limit: queryLimit,
-    } = applyCursorPagination({
+      take,
+    } = applyPrismaCursorPagination({
       cursor,
       limit: limit!,
       orderBy: [
-        { column: leads.score, direction: "desc" },
-        { column: leads.lead_id, direction: "desc" },
+        { field: "score", direction: "desc" },
+        { field: "lead_id", direction: "desc" },
       ],
     });
 
     // Build filter conditions
-    const filters: ReturnType<typeof eq>[] = [];
+    const filters: Record<string, unknown>[] = [];
 
     if (query.status) {
-      filters.push(eq(leads.status, query.status));
+      filters.push({ status: query.status });
     }
     if (query.source) {
-      filters.push(eq(leads.source, query.source));
+      filters.push({ source: query.source });
     }
     if (query.assigned_producer) {
-      filters.push(eq(leads.assigned_producer, query.assigned_producer));
+      filters.push({ assigned_producer: query.assigned_producer });
     }
     if (query.min_score !== undefined) {
-      filters.push(gte(leads.score, Number(query.min_score)));
+      filters.push({ score: { gte: Number(query.min_score) } });
     }
-    if (cursorWhere) filters.push(cursorWhere as ReturnType<typeof eq>);
+    if (cursorWhere) filters.push(cursorWhere);
 
-    const rows = await db
-      .select()
-      .from(leads)
-      .where(filters.length > 0 ? and(...filters) : undefined)
-      .orderBy(...orderBy)
-      .limit(queryLimit);
+    const rows = await prisma.lead.findMany({
+      where: filters.length > 0 ? { AND: filters } : undefined,
+      orderBy,
+      take,
+    });
 
     // Parse JSON fields
     const mapped = rows.map(mapLeadRow);
@@ -183,11 +180,9 @@ leadsRouter.get(
   async (c) => {
     const leadId = c.req.param("id");
 
-    const [lead] = await db
-      .select()
-      .from(leads)
-      .where(eq(leads.lead_id, leadId))
-      .limit(1);
+    const lead = await prisma.lead.findUnique({
+      where: { lead_id: leadId },
+    });
 
     if (!lead) {
       throw notFoundError("lead");
@@ -241,9 +236,9 @@ leadsRouter.post(
       updated_at: now,
     };
 
-    await db.insert(leads).values(record);
+    await prisma.lead.create({ data: record });
 
-    return c.json(mapLeadRow(record), 201);
+    return c.json(mapLeadRow(record as Lead), 201);
   },
 );
 
@@ -293,11 +288,10 @@ leadsRouter.patch(
     ]);
 
     // Verify lead exists
-    const [existing] = await db
-      .select({ lead_id: leads.lead_id })
-      .from(leads)
-      .where(eq(leads.lead_id, leadId))
-      .limit(1);
+    const existing = await prisma.lead.findUnique({
+      where: { lead_id: leadId },
+      select: { lead_id: true },
+    });
 
     if (!existing) {
       throw notFoundError("lead");
@@ -317,14 +311,10 @@ leadsRouter.patch(
     if (body.assigned_producer !== undefined)
       updates.assigned_producer = body.assigned_producer ?? null;
 
-    await db.update(leads).set(updates).where(eq(leads.lead_id, leadId));
-
-    // Re-select
-    const [updated] = await db
-      .select()
-      .from(leads)
-      .where(eq(leads.lead_id, leadId))
-      .limit(1);
+    const updated = await prisma.lead.update({
+      where: { lead_id: leadId },
+      data: updates,
+    });
 
     return c.json(mapLeadRow(updated));
   },
@@ -344,22 +334,18 @@ leadsRouter.post(
     ]);
 
     // Verify lead exists
-    const [lead] = await db
-      .select()
-      .from(leads)
-      .where(eq(leads.lead_id, leadId))
-      .limit(1);
+    const lead = await prisma.lead.findUnique({
+      where: { lead_id: leadId },
+    });
 
     if (!lead) {
       throw notFoundError("lead");
     }
 
     // Verify campaign exists and is active
-    const [campaign] = await db
-      .select()
-      .from(campaigns)
-      .where(eq(campaigns.campaign_id, body.campaign_id))
-      .limit(1);
+    const campaign = await prisma.campaign.findUnique({
+      where: { campaign_id: body.campaign_id },
+    });
 
     if (!campaign) {
       throw notFoundError("campaign");
@@ -373,16 +359,13 @@ leadsRouter.post(
 
     // Check for duplicate enrollment
     const clientId = lead.client_id;
-    const [existingEnrollment] = await db
-      .select({ enrollment_id: campaignEnrollments.enrollment_id })
-      .from(campaignEnrollments)
-      .where(
-        and(
-          eq(campaignEnrollments.campaign_id, body.campaign_id),
-          eq(campaignEnrollments.client_id, clientId),
-        ),
-      )
-      .limit(1);
+    const existingEnrollment = await prisma.campaignEnrollment.findFirst({
+      where: {
+        campaign_id: body.campaign_id,
+        client_id: clientId,
+      },
+      select: { enrollment_id: true },
+    });
 
     if (existingEnrollment) {
       throw conflictError(
@@ -394,8 +377,8 @@ leadsRouter.post(
     const enrollmentId = `enr_${Math.random().toString(36).slice(2, 10)}`;
     const enrolledAt = new Date().toISOString();
 
-    db.insert(campaignEnrollments)
-      .values({
+    await prisma.campaignEnrollment.create({
+      data: {
         enrollment_id: enrollmentId,
         campaign_id: body.campaign_id,
         client_id: clientId,
@@ -403,14 +386,14 @@ leadsRouter.post(
         metadata: body.metadata ? JSON.stringify(body.metadata) : null,
         enrolled_at: enrolledAt,
         sequence_step: 1,
-      })
-      .run();
+      },
+    });
 
     // Increment enrolled_count
-    db.update(campaigns)
-      .set({ enrolled_count: campaign.enrolled_count + 1 })
-      .where(eq(campaigns.campaign_id, body.campaign_id))
-      .run();
+    await prisma.campaign.update({
+      where: { campaign_id: body.campaign_id },
+      data: { enrolled_count: campaign.enrolled_count + 1 },
+    });
 
     return c.json(
       {
@@ -427,7 +410,7 @@ leadsRouter.post(
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function mapLeadRow(row: typeof leads.$inferSelect) {
+function mapLeadRow(row: Lead) {
   return {
     lead_id: row.lead_id,
     client_id: row.client_id,

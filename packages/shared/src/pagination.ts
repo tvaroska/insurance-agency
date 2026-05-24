@@ -146,6 +146,68 @@ export function applyCursorPagination(opts: {
   return { where, orderBy: orderBySql, limit: limit + 1 };
 }
 
+// ── Prisma cursor-pagination helper ────────────────────────────────
+
+export interface PrismaCursorOrderSpec {
+  field: string;
+  direction: "asc" | "desc";
+  /** Key name used in the cursor object. Defaults to the field name. */
+  cursorKey?: string;
+}
+
+export interface PrismaCursorPaginationResult {
+  /** WHERE condition to apply (undefined on first page). */
+  where: Record<string, unknown> | undefined;
+  /** ORDER BY spec for Prisma findMany. */
+  orderBy: Record<string, "asc" | "desc">[];
+  /** Number of rows to take (limit + 1 for has_more detection). */
+  take: number;
+}
+
+/**
+ * Build Prisma WHERE + ORDER BY objects for cursor-based pagination.
+ *
+ * Uses tuple comparison semantics for multi-column cursors:
+ * `(a, b) > (cursor_a, cursor_b)` is equivalent to
+ * `a > cursor_a OR (a = cursor_a AND b > cursor_b)`.
+ */
+export function applyPrismaCursorPagination(opts: {
+  cursor: string | undefined;
+  limit: number;
+  orderBy: PrismaCursorOrderSpec[];
+}): PrismaCursorPaginationResult {
+  const { cursor, limit, orderBy } = opts;
+
+  const orderByPrisma = orderBy.map((spec) => ({ [spec.field]: spec.direction }));
+
+  if (!cursor) {
+    return { where: undefined, orderBy: orderByPrisma, take: limit + 1 };
+  }
+
+  const cursorKeys = orderBy.map((spec) => spec.cursorKey ?? spec.field);
+  const values = requireValidCursor(cursor, cursorKeys);
+
+  const conditions: Record<string, unknown>[] = [];
+  for (let i = 0; i < orderBy.length; i++) {
+    const eqParts: Record<string, unknown>[] = [];
+    for (let j = 0; j < i; j++) {
+      const key = cursorKeys[j];
+      eqParts.push({ [orderBy[j].field]: values![key] });
+    }
+    const key = cursorKeys[i];
+    const cmp =
+      orderBy[i].direction === "asc"
+        ? { [orderBy[i].field]: { gt: values![key] } }
+        : { [orderBy[i].field]: { lt: values![key] } };
+
+    conditions.push(eqParts.length > 0 ? { AND: [...eqParts, cmp] } : cmp);
+  }
+
+  const where = conditions.length === 1 ? conditions[0] : { OR: conditions };
+
+  return { where, orderBy: orderByPrisma, take: limit + 1 };
+}
+
 // ── Response builder ────────────────────────────────────────────────
 
 /**

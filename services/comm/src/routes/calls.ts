@@ -4,7 +4,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
+import { prisma } from "../prisma";
 import { handleGetTranscript } from "../tools/get_transcript";
 
 type AppVariables = CorrelationVariables & AuthVariables;
@@ -19,7 +19,7 @@ callsRouter.get(
   async (c) => {
     const callId = c.req.param("call_id");
 
-    const result = await handleGetTranscript({ call_id: callId }, db);
+    const result = await handleGetTranscript({ call_id: callId }, prisma);
 
     if (result.isError) {
       const parsed = JSON.parse(result.content[0].text as string);

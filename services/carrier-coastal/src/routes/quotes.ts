@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
 import {
   requireScopes,
   notFoundError,
@@ -9,8 +8,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { quotes } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -86,22 +84,24 @@ quotesRouter.post(
       let annual = body.policy_type === "bop" ? 2800 : 1400;
       annual = Math.round(annual * (1 + (score - 50) / 100) * 100) / 100;
 
-      await db.insert(quotes).values({
-        quote_id: newQuoteId,
-        request_id: requestId,
-        client_id: body.client_id,
-        policy_type: body.policy_type,
-        premium_annual: annual,
-        premium_monthly: Math.round((annual / 12) * 100) / 100,
-        coverages: JSON.stringify(coverages),
-        deductibles: JSON.stringify({}),
-        status: "assessed",
-        submitted_at: now,
-        risk_score: score,
-        risk_tier: tier,
-        risk_factors: JSON.stringify(factors),
-        assessed_at: now,
-      }).run();
+      await prisma.quote.create({
+        data: {
+          quote_id: newQuoteId,
+          request_id: requestId,
+          client_id: body.client_id,
+          policy_type: body.policy_type,
+          premium_annual: annual,
+          premium_monthly: Math.round((annual / 12) * 100) / 100,
+          coverages: JSON.stringify(coverages),
+          deductibles: JSON.stringify({}),
+          status: "assessed",
+          submitted_at: now,
+          risk_score: score,
+          risk_tier: tier,
+          risk_factors: JSON.stringify(factors),
+          assessed_at: now,
+        },
+      });
 
       return c.json(
         {
@@ -124,11 +124,9 @@ quotesRouter.post(
     const quoteId = body.quote_id;
 
     // Check quote exists
-    const [quote] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.quote_id, quoteId))
-      .limit(1);
+    const quote = await prisma.quote.findUnique({
+      where: { quote_id: quoteId },
+    });
 
     if (!quote) {
       throw notFoundError("quote");
@@ -148,40 +146,37 @@ quotesRouter.post(
     const now = new Date().toISOString();
 
     // Update quote with risk assessment
-    await db
-      .update(quotes)
-      .set({
+    await prisma.quote.update({
+      where: { quote_id: quoteId },
+      data: {
         status: "assessed",
         risk_score: score,
         risk_tier: tier,
         risk_factors: JSON.stringify(factors),
         assessed_at: now,
-      })
-      .where(eq(quotes.quote_id, quoteId))
-      .run();
+      },
+    });
 
     // Fetch updated quote
-    const [updated] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.quote_id, quoteId))
-      .limit(1);
+    const updated = await prisma.quote.findUnique({
+      where: { quote_id: quoteId },
+    });
 
     return c.json(
       {
-        quote_id: updated.quote_id,
-        request_id: updated.request_id,
-        client_id: updated.client_id,
-        policy_type: updated.policy_type,
-        premium_annual: updated.premium_annual,
-        premium_monthly: updated.premium_monthly,
-        coverages: JSON.parse(updated.coverages),
-        deductibles: JSON.parse(updated.deductibles),
-        status: updated.status,
-        risk_score: updated.risk_score,
-        risk_tier: updated.risk_tier,
-        assessed_at: updated.assessed_at,
-        submitted_at: updated.submitted_at,
+        quote_id: updated!.quote_id,
+        request_id: updated!.request_id,
+        client_id: updated!.client_id,
+        policy_type: updated!.policy_type,
+        premium_annual: updated!.premium_annual,
+        premium_monthly: updated!.premium_monthly,
+        coverages: JSON.parse(updated!.coverages),
+        deductibles: JSON.parse(updated!.deductibles),
+        status: updated!.status,
+        risk_score: updated!.risk_score,
+        risk_tier: updated!.risk_tier,
+        assessed_at: updated!.assessed_at,
+        submitted_at: updated!.submitted_at,
       },
       201,
     );
@@ -195,11 +190,9 @@ quotesRouter.get(
   async (c) => {
     const quoteId = c.req.param("quote_id");
 
-    const [quote] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.quote_id, quoteId))
-      .limit(1);
+    const quote = await prisma.quote.findUnique({
+      where: { quote_id: quoteId },
+    });
 
     if (!quote) {
       throw notFoundError("quote");

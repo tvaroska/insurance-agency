@@ -7,11 +7,13 @@ import { createTestDb, makeWebhook } from "./setup";
 
 let testDb: ReturnType<typeof createTestDb>["db"];
 let testSqlite: Database;
+let testPrisma: ReturnType<typeof createTestDb>["prisma"];
 
 beforeEach(() => {
   const created = createTestDb();
   testDb = created.db;
   testSqlite = created.sqlite;
+  testPrisma = created.prisma;
 });
 
 // Import dynamically isn't needed since we test the handler directly
@@ -21,7 +23,7 @@ describe("send_message - validation", () => {
   test("returns error when 'to' is missing", async () => {
     const result = await handleSendMessage(
       { channel: "email", body: "Hello" },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);
@@ -31,7 +33,7 @@ describe("send_message - validation", () => {
   test("returns error when 'channel' is missing", async () => {
     const result = await handleSendMessage(
       { to: "test@example.com", body: "Hello" },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
   });
@@ -39,7 +41,7 @@ describe("send_message - validation", () => {
   test("returns error when 'body' is missing", async () => {
     const result = await handleSendMessage(
       { to: "test@example.com", channel: "email" },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);
@@ -49,7 +51,7 @@ describe("send_message - validation", () => {
   test("returns error for invalid channel", async () => {
     const result = await handleSendMessage(
       { to: "test@example.com", channel: "telegram", body: "Hi" },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);
@@ -59,7 +61,7 @@ describe("send_message - validation", () => {
   test("returns error when email channel lacks subject", async () => {
     const result = await handleSendMessage(
       { to: "test@example.com", channel: "email", body: "Hello" },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);
@@ -74,7 +76,7 @@ describe("send_message - validation", () => {
         body: "Hi",
         template_id: "bad_format",
       },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text as string);
@@ -92,7 +94,7 @@ describe("send_message - success", () => {
         body: "Your policy has been renewed.",
         client_id: "CLI-001",
       },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBeUndefined();
     const parsed = JSON.parse(result.content[0].text as string);
@@ -109,7 +111,7 @@ describe("send_message - success", () => {
         body: "Your policy renews on 3/1.",
         client_id: "CLI-002",
       },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBeUndefined();
     const parsed = JSON.parse(result.content[0].text as string);
@@ -126,7 +128,7 @@ describe("send_message - success", () => {
         body: "Hello",
         template_id: "tmpl_renewal_reminder",
       },
-      testDb,
+      testPrisma,
     );
     expect(result.isError).toBeUndefined();
   });
@@ -140,7 +142,7 @@ describe("send_message - success", () => {
         body: "Test body",
         client_id: "CLI-005",
       },
-      testDb,
+      testPrisma,
     );
 
     const rows = testDb.select().from(schema.messages).all();
@@ -170,7 +172,7 @@ describe("send_message - webhook trigger", () => {
         body: "Hello",
         client_id: "CLI-001",
       },
-      testDb,
+      testPrisma,
     );
 
     const deliveries = testDb

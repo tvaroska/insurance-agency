@@ -1,4 +1,5 @@
 datasource db {
+  url      = env("DATABASE_URL")
   provider = "sqlite"
 }
 

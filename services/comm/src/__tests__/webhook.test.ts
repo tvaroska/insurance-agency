@@ -46,13 +46,15 @@ describe("webhook retry delay", () => {
 
 describe("webhook delivery simulation", () => {
   let testDb: ReturnType<typeof createTestDb>["db"];
+  let testPrisma: ReturnType<typeof createTestDb>["prisma"];
 
   beforeEach(() => {
     const created = createTestDb();
     testDb = created.db;
+    testPrisma = created.prisma;
   });
 
-  test("creates delivery records for matching webhooks", () => {
+  test("creates delivery records for matching webhooks", async () => {
     testDb
       .insert(schema.webhooks)
       .values(
@@ -62,7 +64,7 @@ describe("webhook delivery simulation", () => {
       )
       .run();
 
-    const deliveries = simulateDelivery(testDb, "message.delivered", {
+    const deliveries = await simulateDelivery(testPrisma, "message.delivered", {
       message_id: "msg_test",
     });
     expect(deliveries.length).toBe(1);
@@ -71,7 +73,7 @@ describe("webhook delivery simulation", () => {
     expect(deliveries[0].signature).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  test("does not create deliveries for non-matching events", () => {
+  test("does not create deliveries for non-matching events", async () => {
     testDb
       .insert(schema.webhooks)
       .values(
@@ -81,13 +83,13 @@ describe("webhook delivery simulation", () => {
       )
       .run();
 
-    const deliveries = simulateDelivery(testDb, "message.delivered", {
+    const deliveries = await simulateDelivery(testPrisma, "message.delivered", {
       message_id: "msg_test",
     });
     expect(deliveries.length).toBe(0);
   });
 
-  test("persists delivery records in database", () => {
+  test("persists delivery records in database", async () => {
     testDb
       .insert(schema.webhooks)
       .values(
@@ -97,7 +99,7 @@ describe("webhook delivery simulation", () => {
       )
       .run();
 
-    simulateDelivery(testDb, "message.received", { message_id: "msg_test" });
+    await simulateDelivery(testPrisma, "message.received", { message_id: "msg_test" });
 
     const rows = testDb.select().from(schema.webhookDeliveries).all();
     expect(rows.length).toBe(1);

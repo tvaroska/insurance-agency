@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
 import {
   requireScopes,
   notFoundError,
@@ -11,8 +10,7 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { quotes, policies } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -36,11 +34,9 @@ bindingRouter.post(
     ]);
 
     // Check quote exists
-    const [quote] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.quote_id, quoteId))
-      .limit(1);
+    const quote = await prisma.quote.findUnique({
+      where: { quote_id: quoteId },
+    });
 
     if (!quote) {
       throw notFoundError("quote");
@@ -68,8 +64,8 @@ bindingRouter.post(
     const policyId = `POL-CSTL-${Date.now()}`;
 
     // Create policy
-    db.insert(policies)
-      .values({
+    await prisma.policy.create({
+      data: {
         policy_id: policyId,
         client_id: quote.client_id,
         policy_type: quote.policy_type,
@@ -80,20 +76,19 @@ bindingRouter.post(
         coverages: quote.coverages,
         created_at: now,
         updated_at: now,
-      })
-      .run();
+      },
+    });
 
     // Update quote
-    await db
-      .update(quotes)
-      .set({
+    await prisma.quote.update({
+      where: { quote_id: quoteId },
+      data: {
         status: "bound",
         bind_status: "bound",
         bound_at: now,
         policy_id: policyId,
-      })
-      .where(eq(quotes.quote_id, quoteId))
-      .run();
+      },
+    });
 
     return c.json({
       quote_id: quoteId,

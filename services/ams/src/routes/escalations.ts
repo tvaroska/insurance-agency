@@ -1,9 +1,8 @@
 import { Hono } from "hono";
-import { and, eq, gte, lte } from "drizzle-orm";
 import {
   requireScopes,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   notFoundError,
   checkRequired,
@@ -13,8 +12,8 @@ import {
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { escalations, escalationEvents } from "../schema";
+import { prisma } from "../prisma";
+import type { Escalation, EscalationEvent } from "../generated/prisma/client";
 import { processEscalation } from "../manager/engine";
 
 type AppVariables = CorrelationVariables & AuthVariables;
@@ -63,18 +62,20 @@ escalationsRouter.post(
       updated_at: now,
     };
 
-    await db.insert(escalations).values(record);
+    await prisma.escalation.create({ data: record });
 
-    await db.insert(escalationEvents).values({
-      escalation_id: escalationId,
-      event_type: "created",
-      from_status: null,
-      to_status: "pending",
-      details: null,
-      created_at: now,
+    await prisma.escalationEvent.create({
+      data: {
+        escalation_id: escalationId,
+        event_type: "created",
+        from_status: null,
+        to_status: "pending",
+        details: null,
+        created_at: now,
+      },
     });
 
-    return c.json(mapEscalationRow(record), 201);
+    return c.json(mapEscalationRow(record as Escalation), 201);
   },
 );
 
@@ -86,11 +87,9 @@ escalationsRouter.get(
   async (c) => {
     const id = c.req.param("id");
 
-    const [row] = await db
-      .select()
-      .from(escalations)
-      .where(eq(escalations.escalation_id, id))
-      .limit(1);
+    const row = await prisma.escalation.findUnique({
+      where: { escalation_id: id },
+    });
 
     if (!row) {
       throw notFoundError("escalation");
@@ -100,10 +99,10 @@ escalationsRouter.get(
     const newPollCount = row.poll_count + 1;
 
     // Always increment poll_count
-    await db
-      .update(escalations)
-      .set({ poll_count: newPollCount, updated_at: now })
-      .where(eq(escalations.escalation_id, id));
+    await prisma.escalation.update({
+      where: { escalation_id: id },
+      data: { poll_count: newPollCount, updated_at: now },
+    });
 
     // If pending and poll_count reaches 2, process via manager engine
     if (row.status === "pending" && newPollCount >= 2) {
@@ -120,18 +119,18 @@ escalationsRouter.get(
         resolved_at: now,
       };
 
-      await db
-        .update(escalations)
-        .set({
+      await prisma.escalation.update({
+        where: { escalation_id: id },
+        data: {
           status: decision.decision,
           manager_response: JSON.stringify(managerResponse),
           updated_at: now,
-        })
-        .where(eq(escalations.escalation_id, id));
+        },
+      });
 
       // Audit events
-      await db.insert(escalationEvents).values([
-        {
+      await prisma.escalationEvent.create({
+        data: {
           escalation_id: id,
           event_type: "manager_reviewed",
           from_status: "pending",
@@ -139,7 +138,10 @@ escalationsRouter.get(
           details: JSON.stringify({ template_id: decision.template_id }),
           created_at: now,
         },
-        {
+      });
+
+      await prisma.escalationEvent.create({
+        data: {
           escalation_id: id,
           event_type: "status_changed",
           from_status: "pending",
@@ -147,32 +149,28 @@ escalationsRouter.get(
           details: null,
           created_at: now,
         },
-      ]);
+      });
 
       // Re-read for response
-      const [updated] = await db
-        .select()
-        .from(escalations)
-        .where(eq(escalations.escalation_id, id))
-        .limit(1);
+      const updated = await prisma.escalation.findUnique({
+        where: { escalation_id: id },
+      });
 
       // Fetch audit trail
-      const events = await db
-        .select()
-        .from(escalationEvents)
-        .where(eq(escalationEvents.escalation_id, id));
+      const events = await prisma.escalationEvent.findMany({
+        where: { escalation_id: id },
+      });
 
       return c.json({
-        ...mapEscalationRow(updated),
+        ...mapEscalationRow(updated!),
         events: events.map(mapEventRow),
       });
     }
 
     // Return current state (still pending or already resolved)
-    const events = await db
-      .select()
-      .from(escalationEvents)
-      .where(eq(escalationEvents.escalation_id, id));
+    const events = await prisma.escalationEvent.findMany({
+      where: { escalation_id: id },
+    });
 
     return c.json({
       ...mapEscalationRow({ ...row, poll_count: newPollCount, updated_at: now }),
@@ -213,28 +211,27 @@ escalationsRouter.get(
 
     const { limit, cursor } = parsePaginationParams(query);
 
-    const { where: cursorWhere, orderBy, limit: queryLimit } = applyCursorPagination({
+    const { where: cursorWhere, orderBy, take } = applyPrismaCursorPagination({
       cursor,
       limit: limit!,
       orderBy: [
-        { column: escalations.created_at, direction: "desc" },
-        { column: escalations.escalation_id, direction: "desc" },
+        { field: "created_at", direction: "desc" },
+        { field: "escalation_id", direction: "desc" },
       ],
     });
 
-    const filters: ReturnType<typeof eq>[] = [];
-    if (query.status) filters.push(eq(escalations.status, query.status));
-    if (query.client_id) filters.push(eq(escalations.client_id, query.client_id));
-    if (query.created_after) filters.push(gte(escalations.created_at, query.created_after));
-    if (query.created_before) filters.push(lte(escalations.created_at, query.created_before));
+    const filters: Record<string, unknown>[] = [];
+    if (query.status) filters.push({ status: query.status });
+    if (query.client_id) filters.push({ client_id: query.client_id });
+    if (query.created_after) filters.push({ created_at: { gte: query.created_after } });
+    if (query.created_before) filters.push({ created_at: { lte: query.created_before } });
     if (cursorWhere) filters.push(cursorWhere);
 
-    const rows = await db
-      .select()
-      .from(escalations)
-      .where(filters.length > 0 ? and(...filters) : undefined)
-      .orderBy(...orderBy)
-      .limit(queryLimit);
+    const rows = await prisma.escalation.findMany({
+      where: filters.length > 0 ? { AND: filters } : undefined,
+      orderBy,
+      take,
+    });
 
     const mapped = rows.map(mapEscalationRow);
 
@@ -246,7 +243,7 @@ escalationsRouter.get(
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function mapEscalationRow(row: typeof escalations.$inferSelect) {
+function mapEscalationRow(row: Escalation) {
   return {
     escalation_id: row.escalation_id,
     client_id: row.client_id,
@@ -262,7 +259,7 @@ function mapEscalationRow(row: typeof escalations.$inferSelect) {
   };
 }
 
-function mapEventRow(row: typeof escalationEvents.$inferSelect) {
+function mapEventRow(row: EscalationEvent) {
   return {
     id: row.id,
     escalation_id: row.escalation_id,

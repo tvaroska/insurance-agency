@@ -1,13 +1,11 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
 import {
   requireScopes,
   notFoundError,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { quotes } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -20,11 +18,9 @@ quotesRouter.get(
   async (c) => {
     const quoteId = c.req.param("quote_id");
 
-    const [quote] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.quote_id, quoteId))
-      .limit(1);
+    const quote = await prisma.quote.findUnique({
+      where: { quote_id: quoteId },
+    });
 
     if (!quote) {
       throw notFoundError("quote");

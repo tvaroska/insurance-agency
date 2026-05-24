@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createServer } from "./server";
-import { db } from "./db";
+import { prisma } from "./prisma";
 import {
   oauthTokenEndpoint,
   correlationId,
@@ -45,7 +45,7 @@ app.route("/v1", api);
 // Stateless mode: each request creates a fresh transport + server pair
 app.all("/mcp", async (c) => {
   const transport = new WebStandardStreamableHTTPServerTransport();
-  const server = createServer(db);
+  const server = createServer(prisma);
   await server.connect(transport);
   return transport.handleRequest(c.req.raw);
 });

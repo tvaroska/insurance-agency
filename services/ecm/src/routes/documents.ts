@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { eq, and, gte, lte } from "drizzle-orm";
 import {
   requireScopes,
   notFoundError,
@@ -7,13 +6,12 @@ import {
   checkEnum,
   throwIfErrors,
   parsePaginationParams,
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   paginatedResponse,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
-import { db } from "../db";
-import { documents } from "../schema";
+import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -69,8 +67,8 @@ documentsRouter.post(
     const documentId = `doc_${Math.random().toString(36).slice(2, 10)}`;
     const uploadDate = new Date().toISOString();
 
-    db.insert(documents)
-      .values({
+    await prisma.document.create({
+      data: {
         document_id: documentId,
         client_id: clientId!,
         document_type: documentType!,
@@ -80,8 +78,8 @@ documentsRouter.post(
         status: "uploaded",
         upload_date: uploadDate,
         tags: JSON.stringify(tags.length > 0 ? tags : []),
-      })
-      .run();
+      },
+    });
 
     return c.json(
       {
@@ -113,33 +111,31 @@ documentsRouter.get(
       ]);
     }
 
-    const { where: cursorWhere, orderBy, limit: queryLimit } =
-      applyCursorPagination({
+    const { where: cursorWhere, orderBy, take } =
+      applyPrismaCursorPagination({
         cursor,
         limit: limit!,
         orderBy: [
-          { column: documents.upload_date, direction: "desc" },
-          { column: documents.document_id, direction: "desc" },
+          { field: "upload_date", direction: "desc" },
+          { field: "document_id", direction: "desc" },
         ],
       });
 
-    const filters: ReturnType<typeof eq>[] = [
-      eq(documents.client_id, clientId),
+    const filters: Record<string, unknown>[] = [
+      { client_id: clientId },
     ];
     if (query.status) {
-      filters.push(eq(documents.status, query.status));
+      filters.push({ status: query.status });
     }
     if (cursorWhere) {
       filters.push(cursorWhere);
     }
-    const where = and(...filters);
 
-    const rows = await db
-      .select()
-      .from(documents)
-      .where(where)
-      .orderBy(...orderBy)
-      .limit(queryLimit);
+    const rows = await prisma.document.findMany({
+      where: { AND: filters },
+      orderBy,
+      take,
+    });
 
     if (rows.length === 0 && !cursor) {
       throw notFoundError("client documents");
@@ -159,13 +155,13 @@ documentsRouter.get(
     );
 
     // Determine compliance status from ALL client documents (not just this page)
-    const allDocs = await db
-      .select({
-        document_type: documents.document_type,
-        expiration_date: documents.expiration_date,
-      })
-      .from(documents)
-      .where(eq(documents.client_id, clientId));
+    const allDocs = await prisma.document.findMany({
+      where: { client_id: clientId },
+      select: {
+        document_type: true,
+        expiration_date: true,
+      },
+    });
 
     const presentTypes = new Set(allDocs.map((d) => d.document_type));
     const now = new Date().toISOString();
@@ -230,42 +226,41 @@ documentsRouter.get(
     }
     throwIfErrors(errors);
 
-    const { where: cursorWhere, orderBy, limit: queryLimit } =
-      applyCursorPagination({
+    const { where: cursorWhere, orderBy, take } =
+      applyPrismaCursorPagination({
         cursor,
         limit: limit!,
         orderBy: [
-          { column: documents.upload_date, direction: "desc" },
-          { column: documents.document_id, direction: "desc" },
+          { field: "upload_date", direction: "desc" },
+          { field: "document_id", direction: "desc" },
         ],
       });
 
-    const filters: ReturnType<typeof eq>[] = [];
+    const filters: Record<string, unknown>[] = [];
     if (query.status) {
-      filters.push(eq(documents.status, query.status));
+      filters.push({ status: query.status });
     }
     if (query.document_type) {
-      filters.push(eq(documents.document_type, query.document_type));
+      filters.push({ document_type: query.document_type });
     }
     if (query.client_id) {
-      filters.push(eq(documents.client_id, query.client_id));
+      filters.push({ client_id: query.client_id });
     }
     if (query.date_from) {
-      filters.push(gte(documents.upload_date, query.date_from));
+      filters.push({ upload_date: { gte: query.date_from } });
     }
     if (query.date_to) {
-      filters.push(lte(documents.upload_date, query.date_to));
+      filters.push({ upload_date: { lte: query.date_to } });
     }
     if (cursorWhere) {
       filters.push(cursorWhere);
     }
 
-    const rows = await db
-      .select()
-      .from(documents)
-      .where(filters.length > 0 ? and(...filters) : undefined)
-      .orderBy(...orderBy)
-      .limit(queryLimit);
+    const rows = await prisma.document.findMany({
+      where: filters.length > 0 ? { AND: filters } : undefined,
+      orderBy,
+      take,
+    });
 
     const mapped = rows.map((row) => ({
       ...row,

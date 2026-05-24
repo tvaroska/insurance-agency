@@ -2,12 +2,21 @@ import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../schema";
+import { PrismaClient } from "../generated/prisma/client";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { mkdtempSync } from "fs";
+import { join } from "path";
 
-const testSqlite = new Database(":memory:");
+const tmpDir = mkdtempSync("/tmp/test-ams-");
+const dbPath = join(tmpDir, "test.db");
+const testSqlite = new Database(dbPath);
+testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
 const testDb = drizzle(testSqlite, { schema });
 
-mock.module("../db", () => ({ db: testDb, sqlite: testSqlite }));
+const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
+const testPrisma = new PrismaClient({ adapter: testAdapter });
+mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { describe, expect, test, beforeAll } from "bun:test";
 import { accountingRouter } from "../routes/accounting";

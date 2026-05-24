@@ -10,6 +10,7 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
+    "@prisma/adapter-libsql": "^7.8.0",
     "yaml": "^2.8.3"
   }
 }

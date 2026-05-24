@@ -16,10 +16,9 @@
   },
   "dependencies": {
     "@evergreen/shared": "workspace:*",
-    "drizzle-orm": "^0.45.1",
+    "@prisma/client": "^7.8.0",
     "hono": "^4.7.4",
     "prisma": "^7.8.0",
-    "@prisma/client": "^7.8.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -28,6 +27,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",
     "drizzle-kit": "^0.30.5",
+    "drizzle-orm": "^0.45.1",
     "vite": "^6.0.0"
   }
 }
