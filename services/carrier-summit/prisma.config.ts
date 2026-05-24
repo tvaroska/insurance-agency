@@ -5,4 +5,5 @@ export default defineConfig({
   datasource: {
     url: process.env.DATABASE_URL ?? "file:./data/carrier-summit.db",
   },
+  seed: "bun run src/seed.ts",
 });

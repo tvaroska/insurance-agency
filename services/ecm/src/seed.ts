@@ -1,7 +1,5 @@
-import { db, sqlite } from "./db";
-import { documents, envelopes, marketingAssets } from "./schema";
+import { prisma } from "./prisma";
 import { join } from "path";
-import { sql } from "drizzle-orm";
 
 const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
 const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
@@ -60,58 +58,55 @@ async function loadJson<T>(filename: string): Promise<T> {
   return file.json() as Promise<T>;
 }
 
-function createTables() {
-  sqlite.exec(`
+async function createTables() {
+  await prisma.$executeRawUnsafe(`
     DROP TABLE IF EXISTS marketing_assets;
     DROP TABLE IF EXISTS envelopes;
     DROP TABLE IF EXISTS documents;
-
-    CREATE TABLE IF NOT EXISTS documents (
-      document_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
-      document_type TEXT NOT NULL,
-      filename TEXT NOT NULL,
-      mime_type TEXT NOT NULL,
-      file_size_bytes INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'uploaded',
-      upload_date TEXT NOT NULL,
-      signer_name TEXT,
-      signer_email TEXT,
-      signed_date TEXT,
-      expiration_date TEXT,
-      tags TEXT NOT NULL DEFAULT '[]'
-    );
-
-    CREATE TABLE IF NOT EXISTS envelopes (
-      envelope_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
-      document_ids TEXT NOT NULL DEFAULT '[]',
-      signers TEXT NOT NULL DEFAULT '[]',
-      status TEXT NOT NULL DEFAULT 'created',
-      message TEXT,
-      redirect_url TEXT,
-      created_at TEXT NOT NULL,
-      completed_at TEXT,
-      expiration_date TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS marketing_assets (
-      asset_id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      description TEXT,
-      category TEXT NOT NULL,
-      mime_type TEXT NOT NULL,
-      url TEXT NOT NULL,
-      version TEXT NOT NULL,
-      published_date TEXT NOT NULL
-    );
   `);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS documents (
+    document_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    document_type TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    file_size_bytes INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'uploaded',
+    upload_date TEXT NOT NULL,
+    signer_name TEXT,
+    signer_email TEXT,
+    signed_date TEXT,
+    expiration_date TEXT,
+    tags TEXT NOT NULL DEFAULT '[]'
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS envelopes (
+    envelope_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    document_ids TEXT NOT NULL DEFAULT '[]',
+    signers TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'created',
+    message TEXT,
+    redirect_url TEXT,
+    created_at TEXT NOT NULL,
+    completed_at TEXT,
+    expiration_date TEXT NOT NULL
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS marketing_assets (
+    asset_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    category TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    url TEXT NOT NULL,
+    version TEXT NOT NULL,
+    published_date TEXT NOT NULL
+  )`);
 }
 
 async function seed() {
   console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
   console.log("Creating tables...");
-  createTables();
+  await createTables();
 
   console.log("Loading seed data...");
   const [docsData, envelopesData, assetsData] = await Promise.all([
@@ -124,84 +119,63 @@ async function seed() {
     `Loaded: ${docsData.length} documents, ${envelopesData.length} envelopes, ${assetsData.length} marketing assets`,
   );
 
-  // Clear existing data
-  console.log("Clearing existing data...");
-  db.delete(envelopes).run();
-  db.delete(documents).run();
-  db.delete(marketingAssets).run();
-
   // Insert documents
   console.log("Seeding documents...");
-  for (const d of docsData) {
-    db.insert(documents)
-      .values({
-        document_id: d.document_id,
-        client_id: d.client_id,
-        document_type: d.document_type,
-        filename: d.filename,
-        mime_type: d.mime_type,
-        file_size_bytes: d.file_size_bytes,
-        status: d.status,
-        upload_date: d.upload_date,
-        signer_name: d.signer_name,
-        signer_email: d.signer_email,
-        signed_date: d.signed_date,
-        expiration_date: d.expiration_date ?? null,
-        tags: JSON.stringify(d.tags ?? []),
-      })
-      .run();
-  }
+  await prisma.document.createMany({
+    data: docsData.map((d) => ({
+      document_id: d.document_id,
+      client_id: d.client_id,
+      document_type: d.document_type,
+      filename: d.filename,
+      mime_type: d.mime_type,
+      file_size_bytes: d.file_size_bytes,
+      status: d.status,
+      upload_date: d.upload_date,
+      signer_name: d.signer_name,
+      signer_email: d.signer_email,
+      signed_date: d.signed_date,
+      expiration_date: d.expiration_date ?? null,
+      tags: JSON.stringify(d.tags ?? []),
+    })),
+  });
 
   // Insert envelopes
   console.log("Seeding envelopes...");
-  for (const e of envelopesData) {
-    db.insert(envelopes)
-      .values({
-        envelope_id: e.envelope_id,
-        client_id: e.client_id,
-        document_ids: JSON.stringify(e.document_ids),
-        signers: JSON.stringify(e.signers),
-        status: e.status,
-        message: e.message,
-        redirect_url: e.redirect_url,
-        created_at: e.created_at,
-        completed_at: e.completed_at,
-        expiration_date: e.expiration_date,
-      })
-      .run();
-  }
+  await prisma.envelope.createMany({
+    data: envelopesData.map((e) => ({
+      envelope_id: e.envelope_id,
+      client_id: e.client_id,
+      document_ids: JSON.stringify(e.document_ids),
+      signers: JSON.stringify(e.signers),
+      status: e.status,
+      message: e.message,
+      redirect_url: e.redirect_url,
+      created_at: e.created_at,
+      completed_at: e.completed_at,
+      expiration_date: e.expiration_date,
+    })),
+  });
 
   // Insert marketing assets
   console.log("Seeding marketing assets...");
-  for (const a of assetsData) {
-    db.insert(marketingAssets)
-      .values({
-        asset_id: a.asset_id,
-        name: a.name,
-        description: a.description,
-        category: a.category,
-        mime_type: a.mime_type,
-        url: a.url,
-        version: a.version,
-        published_date: a.published_date,
-      })
-      .run();
-  }
+  await prisma.marketingAsset.createMany({
+    data: assetsData.map((a) => ({
+      asset_id: a.asset_id,
+      name: a.name,
+      description: a.description,
+      category: a.category,
+      mime_type: a.mime_type,
+      url: a.url,
+      version: a.version,
+      published_date: a.published_date,
+    })),
+  });
 
   // Verify counts
   const counts = {
-    documents: db
-      .select({ count: sql<number>`count(*)` })
-      .from(documents)
-      .get()!.count,
-    envelopes: db
-      .select({ count: sql<number>`count(*)` })
-      .from(envelopes)
-      .get()!.count,
-    marketing_assets: db
-      .select({ count: sql<number>`count(*)` })
-      .from(marketingAssets)
-      .get()!.count,
+    documents: await prisma.document.count(),
+    envelopes: await prisma.envelope.count(),
+    marketing_assets: await prisma.marketingAsset.count(),
   };
 
   console.log("\nSeed complete:");

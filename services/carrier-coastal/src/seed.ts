@@ -1,7 +1,5 @@
-import { db, sqlite } from "./db";
-import { quotes, policies, idCards } from "./schema";
+import { prisma } from "./prisma";
 import { join } from "path";
-import { sql } from "drizzle-orm";
 
 const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
 const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
@@ -54,65 +52,6 @@ async function loadJson<T>(filename: string): Promise<T> {
   return file.json() as Promise<T>;
 }
 
-function createTables() {
-  sqlite.exec(`
-    DROP TABLE IF EXISTS id_cards;
-    DROP TABLE IF EXISTS policies;
-    DROP TABLE IF EXISTS quotes;
-
-    CREATE TABLE IF NOT EXISTS quotes (
-      quote_id TEXT PRIMARY KEY,
-      request_id TEXT NOT NULL,
-      client_id TEXT NOT NULL,
-      policy_type TEXT NOT NULL,
-      premium_annual REAL,
-      premium_monthly REAL,
-      premium_semi_annual REAL,
-      coverages TEXT NOT NULL,
-      deductibles TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'quoted',
-      decline_reason TEXT,
-      valid_until TEXT,
-      submitted_at TEXT NOT NULL,
-      risk_score INTEGER,
-      risk_tier TEXT,
-      risk_factors TEXT,
-      assessed_at TEXT,
-      bind_status TEXT NOT NULL DEFAULT 'unbound',
-      bound_at TEXT,
-      policy_id TEXT,
-      vin TEXT,
-      vehicle_year INTEGER,
-      vehicle_make TEXT,
-      vehicle_model TEXT,
-      driver_name TEXT,
-      driver_dob TEXT,
-      driver_license TEXT,
-      coverage_config TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS policies (
-      policy_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
-      policy_type TEXT NOT NULL,
-      effective_date TEXT NOT NULL,
-      expiration_date TEXT NOT NULL,
-      premium_current REAL NOT NULL,
-      status TEXT NOT NULL DEFAULT 'active',
-      coverages TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS id_cards (
-      card_id TEXT PRIMARY KEY,
-      policy_id TEXT NOT NULL REFERENCES policies(policy_id),
-      card_data TEXT NOT NULL,
-      issued_at TEXT NOT NULL
-    );
-  `);
-}
-
 function computeRiskScore(quoteId: string): number {
   let hash = 0;
   for (let i = 0; i < quoteId.length; i++) {
@@ -147,10 +86,66 @@ function generateRiskFactors(score: number) {
   ];
 }
 
+async function createTables() {
+  await prisma.$executeRawUnsafe(`
+    DROP TABLE IF EXISTS id_cards;
+    DROP TABLE IF EXISTS policies;
+    DROP TABLE IF EXISTS quotes;
+  `);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS quotes (
+    quote_id TEXT PRIMARY KEY,
+    request_id TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    policy_type TEXT NOT NULL,
+    premium_annual REAL,
+    premium_monthly REAL,
+    premium_semi_annual REAL,
+    coverages TEXT NOT NULL,
+    deductibles TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'quoted',
+    decline_reason TEXT,
+    valid_until TEXT,
+    submitted_at TEXT NOT NULL,
+    risk_score INTEGER,
+    risk_tier TEXT,
+    risk_factors TEXT,
+    assessed_at TEXT,
+    bind_status TEXT NOT NULL DEFAULT 'unbound',
+    bound_at TEXT,
+    policy_id TEXT,
+    vin TEXT,
+    vehicle_year INTEGER,
+    vehicle_make TEXT,
+    vehicle_model TEXT,
+    driver_name TEXT,
+    driver_dob TEXT,
+    driver_license TEXT,
+    coverage_config TEXT
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS policies (
+    policy_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    policy_type TEXT NOT NULL,
+    effective_date TEXT NOT NULL,
+    expiration_date TEXT NOT NULL,
+    premium_current REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    coverages TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS id_cards (
+    card_id TEXT PRIMARY KEY,
+    policy_id TEXT NOT NULL REFERENCES policies(policy_id),
+    card_data TEXT NOT NULL,
+    issued_at TEXT NOT NULL
+  )`);
+}
+
 async function seed() {
   console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
   console.log("Creating tables...");
-  createTables();
+  await createTables();
 
   console.log("Loading seed data...");
   const [quoteRequests, allPolicies] = await Promise.all([
@@ -178,29 +173,22 @@ async function seed() {
     `Found: ${coastalQuotes.length} Coastal Star quotes, ${coastalPolicies.length} Coastal Star policies`,
   );
 
-  // Clear existing data (reverse FK order)
-  console.log("Clearing existing data...");
-  db.delete(policies).run();
-  db.delete(quotes).run();
-
   // Insert policies first (quotes may reference them)
   console.log("Seeding policies...");
-  for (const p of coastalPolicies) {
-    db.insert(policies)
-      .values({
-        policy_id: p.policy_id,
-        client_id: p.client_id,
-        policy_type: p.policy_type,
-        effective_date: p.effective_date,
-        expiration_date: p.expiration_date,
-        premium_current: p.premium_current,
-        status: p.status,
-        coverages: JSON.stringify(p.coverages),
-        created_at: p.created_at,
-        updated_at: p.updated_at,
-      })
-      .run();
-  }
+  await prisma.policy.createMany({
+    data: coastalPolicies.map((p) => ({
+      policy_id: p.policy_id,
+      client_id: p.client_id,
+      policy_type: p.policy_type,
+      effective_date: p.effective_date,
+      expiration_date: p.expiration_date,
+      premium_current: p.premium_current,
+      status: p.status,
+      coverages: JSON.stringify(p.coverages),
+      created_at: p.created_at,
+      updated_at: p.updated_at,
+    })),
+  });
 
   // Insert quotes with risk assessment data
   console.log("Seeding quotes...");
@@ -210,7 +198,6 @@ async function seed() {
     const factors = generateRiskFactors(score);
     const isBound = result.status === "bound";
 
-    // Find matching policy for bound quotes (match by client_id)
     let linkedPolicyId: string | null = null;
     if (isBound) {
       const matchingPolicy = coastalPolicies.find(
@@ -219,8 +206,8 @@ async function seed() {
       linkedPolicyId = matchingPolicy?.policy_id ?? null;
     }
 
-    db.insert(quotes)
-      .values({
+    await prisma.quote.create({
+      data: {
         quote_id: result.quote_id,
         request_id: request.request_id,
         client_id: request.client_id,
@@ -240,18 +227,14 @@ async function seed() {
         bind_status: isBound ? "bound" : "unbound",
         bound_at: isBound ? request.submitted_at : null,
         policy_id: linkedPolicyId,
-      })
-      .run();
+      },
+    });
   }
 
   // Verify counts
   const counts = {
-    quotes: db.select({ count: sql<number>`count(*)` }).from(quotes).get()!
-      .count,
-    policies: db
-      .select({ count: sql<number>`count(*)` })
-      .from(policies)
-      .get()!.count,
+    quotes: await prisma.quote.count(),
+    policies: await prisma.policy.count(),
   };
 
   console.log("\nSeed complete:");

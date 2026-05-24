@@ -1,7 +1,5 @@
-import { db, sqlite } from "./db";
-import { clients, policies, coverages, endorsements, commissions, tasks, escalations, escalationEvents } from "./schema";
+import { prisma } from "./prisma";
 import { join } from "path";
-import { sql } from "drizzle-orm";
 
 const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
 const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
@@ -95,8 +93,9 @@ async function loadJson<T>(filename: string): Promise<T> {
   return file.json() as Promise<T>;
 }
 
-function createTables() {
-  sqlite.exec(`
+async function createTables() {
+  await prisma.$executeRawUnsafe(`
+    DROP TABLE IF EXISTS escalation_events;
     DROP TABLE IF EXISTS escalations;
     DROP TABLE IF EXISTS tasks;
     DROP TABLE IF EXISTS commissions;
@@ -104,125 +103,117 @@ function createTables() {
     DROP TABLE IF EXISTS coverages;
     DROP TABLE IF EXISTS policies;
     DROP TABLE IF EXISTS clients;
-
-    CREATE TABLE IF NOT EXISTS clients (
-      id TEXT PRIMARY KEY,
-      first_name TEXT NOT NULL,
-      last_name TEXT NOT NULL,
-      dob TEXT,
-      email TEXT NOT NULL,
-      phone TEXT,
-      address_street TEXT,
-      address_city TEXT,
-      address_state TEXT,
-      address_zip TEXT,
-      driver_license_number TEXT,
-      occupation TEXT,
-      marital_status TEXT,
-      household_id TEXT,
-      preferred_contact_method TEXT,
-      preferred_contact_time TEXT,
-      status TEXT NOT NULL DEFAULT 'active',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS policies (
-      policy_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL REFERENCES clients(id),
-      carrier_code TEXT NOT NULL,
-      policy_type TEXT NOT NULL,
-      effective_date TEXT NOT NULL,
-      expiration_date TEXT NOT NULL,
-      premium_current REAL NOT NULL,
-      premium_prior REAL,
-      status TEXT NOT NULL DEFAULT 'active',
-      multi_policy_discount INTEGER DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS coverages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      policy_id TEXT NOT NULL REFERENCES policies(policy_id),
-      type TEXT NOT NULL,
-      "limit" TEXT,
-      deductible REAL
-    );
-
-    CREATE TABLE IF NOT EXISTS endorsements (
-      endorsement_id TEXT PRIMARY KEY,
-      policy_id TEXT NOT NULL REFERENCES policies(policy_id),
-      effective_date TEXT NOT NULL,
-      change_type TEXT NOT NULL,
-      changes TEXT NOT NULL,
-      premium_delta REAL,
-      status TEXT NOT NULL DEFAULT 'pending_review',
-      notes TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS commissions (
-      commission_id TEXT PRIMARY KEY,
-      policy_id TEXT NOT NULL REFERENCES policies(policy_id),
-      carrier_code TEXT NOT NULL,
-      transaction_type TEXT NOT NULL,
-      gross_amount REAL NOT NULL,
-      net_amount REAL NOT NULL,
-      commission_rate REAL NOT NULL,
-      effective_date TEXT NOT NULL,
-      payment_date TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      producer_id TEXT,
-      created_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS tasks (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      description TEXT,
-      status TEXT NOT NULL DEFAULT 'open',
-      priority TEXT NOT NULL DEFAULT 'medium',
-      task_type TEXT,
-      assigned_to TEXT,
-      related_client_id TEXT,
-      related_policy_id TEXT,
-      due_date TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS escalations (
-      escalation_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
-      policy_id TEXT,
-      reason TEXT NOT NULL,
-      summary TEXT NOT NULL,
-      context TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      manager_response TEXT,
-      poll_count INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS escalation_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      escalation_id TEXT NOT NULL REFERENCES escalations(escalation_id),
-      event_type TEXT NOT NULL,
-      from_status TEXT,
-      to_status TEXT,
-      details TEXT,
-      created_at TEXT NOT NULL
-    );
   `);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS clients (
+    id TEXT PRIMARY KEY,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    dob TEXT,
+    email TEXT NOT NULL,
+    phone TEXT,
+    address_street TEXT,
+    address_city TEXT,
+    address_state TEXT,
+    address_zip TEXT,
+    driver_license_number TEXT,
+    occupation TEXT,
+    marital_status TEXT,
+    household_id TEXT,
+    preferred_contact_method TEXT,
+    preferred_contact_time TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS policies (
+    policy_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL REFERENCES clients(id),
+    carrier_code TEXT NOT NULL,
+    policy_type TEXT NOT NULL,
+    effective_date TEXT NOT NULL,
+    expiration_date TEXT NOT NULL,
+    premium_current REAL NOT NULL,
+    premium_prior REAL,
+    status TEXT NOT NULL DEFAULT 'active',
+    multi_policy_discount INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS coverages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    policy_id TEXT NOT NULL REFERENCES policies(policy_id),
+    type TEXT NOT NULL,
+    "limit" TEXT,
+    deductible REAL
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS endorsements (
+    endorsement_id TEXT PRIMARY KEY,
+    policy_id TEXT NOT NULL REFERENCES policies(policy_id),
+    effective_date TEXT NOT NULL,
+    change_type TEXT NOT NULL,
+    changes TEXT NOT NULL,
+    premium_delta REAL,
+    status TEXT NOT NULL DEFAULT 'pending_review',
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS commissions (
+    commission_id TEXT PRIMARY KEY,
+    policy_id TEXT NOT NULL REFERENCES policies(policy_id),
+    carrier_code TEXT NOT NULL,
+    transaction_type TEXT NOT NULL,
+    gross_amount REAL NOT NULL,
+    net_amount REAL NOT NULL,
+    commission_rate REAL NOT NULL,
+    effective_date TEXT NOT NULL,
+    payment_date TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    producer_id TEXT,
+    created_at TEXT NOT NULL
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'open',
+    priority TEXT NOT NULL DEFAULT 'medium',
+    task_type TEXT,
+    assigned_to TEXT,
+    related_client_id TEXT,
+    related_policy_id TEXT,
+    due_date TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS escalations (
+    escalation_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    policy_id TEXT,
+    reason TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    context TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    manager_response TEXT,
+    poll_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS escalation_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    escalation_id TEXT NOT NULL REFERENCES escalations(escalation_id),
+    event_type TEXT NOT NULL,
+    from_status TEXT,
+    to_status TEXT,
+    details TEXT,
+    created_at TEXT NOT NULL
+  )`);
 }
 
 async function seed() {
   console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
   console.log("Creating tables...");
-  createTables();
+  await createTables();
 
   console.log("Loading seed data...");
   const [
@@ -245,21 +236,10 @@ async function seed() {
     `${tasksData.length} tasks`
   );
 
-  // Clear existing data (reverse FK order)
-  console.log("Clearing existing data...");
-  db.delete(escalationEvents).run();
-  db.delete(escalations).run();
-  db.delete(tasks).run();
-  db.delete(commissions).run();
-  db.delete(endorsements).run();
-  db.delete(coverages).run();
-  db.delete(policies).run();
-  db.delete(clients).run();
-
   // Insert clients
   console.log("Seeding clients...");
-  for (const c of clientsData) {
-    db.insert(clients).values({
+  await prisma.client.createMany({
+    data: clientsData.map((c) => ({
       id: c.id,
       first_name: c.first_name,
       last_name: c.last_name,
@@ -279,41 +259,45 @@ async function seed() {
       status: c.status,
       created_at: c.created_at,
       updated_at: c.updated_at,
-    }).run();
-  }
+    })),
+  });
 
   // Insert policies + coverages
   console.log("Seeding policies and coverages...");
   for (const p of policiesData) {
-    db.insert(policies).values({
-      policy_id: p.policy_id,
-      client_id: p.client_id,
-      carrier_code: p.carrier_code,
-      policy_type: p.policy_type,
-      effective_date: p.effective_date,
-      expiration_date: p.expiration_date,
-      premium_current: p.premium_current,
-      premium_prior: p.premium_prior ?? null,
-      status: p.status,
-      multi_policy_discount: p.multi_policy_discount ?? false,
-      created_at: p.created_at,
-      updated_at: p.updated_at,
-    }).run();
-
-    for (const cov of p.coverages) {
-      db.insert(coverages).values({
+    await prisma.policy.create({
+      data: {
         policy_id: p.policy_id,
-        type: cov.type,
-        limit: cov.limit != null ? String(cov.limit) : null,
-        deductible: cov.deductible ?? null,
-      }).run();
+        client_id: p.client_id,
+        carrier_code: p.carrier_code,
+        policy_type: p.policy_type,
+        effective_date: p.effective_date,
+        expiration_date: p.expiration_date,
+        premium_current: p.premium_current,
+        premium_prior: p.premium_prior ?? null,
+        status: p.status,
+        multi_policy_discount: p.multi_policy_discount ?? false,
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+      },
+    });
+
+    if (p.coverages.length > 0) {
+      await prisma.coverage.createMany({
+        data: p.coverages.map((cov) => ({
+          policy_id: p.policy_id,
+          type: cov.type,
+          limit: cov.limit != null ? String(cov.limit) : null,
+          deductible: cov.deductible ?? null,
+        })),
+      });
     }
   }
 
   // Insert endorsements
   console.log("Seeding endorsements...");
-  for (const e of endorsementsData) {
-    db.insert(endorsements).values({
+  await prisma.endorsement.createMany({
+    data: endorsementsData.map((e) => ({
       endorsement_id: e.endorsement_id,
       policy_id: e.policy_id,
       effective_date: e.effective_date,
@@ -324,13 +308,13 @@ async function seed() {
       notes: e.notes ?? null,
       created_at: e.created_at,
       updated_at: e.updated_at,
-    }).run();
-  }
+    })),
+  });
 
   // Insert commissions
   console.log("Seeding commissions...");
-  for (const com of commissionsData) {
-    db.insert(commissions).values({
+  await prisma.commission.createMany({
+    data: commissionsData.map((com) => ({
       commission_id: com.commission_id,
       policy_id: com.policy_id,
       carrier_code: com.carrier_code,
@@ -343,13 +327,13 @@ async function seed() {
       status: com.status,
       producer_id: com.producer_id ?? null,
       created_at: com.created_at,
-    }).run();
-  }
+    })),
+  });
 
   // Insert tasks
   console.log("Seeding tasks...");
-  for (const t of tasksData) {
-    db.insert(tasks).values({
+  await prisma.task.createMany({
+    data: tasksData.map((t) => ({
       id: t.id,
       title: t.title,
       description: t.description ?? null,
@@ -361,17 +345,17 @@ async function seed() {
       due_date: t.due_date ?? null,
       created_at: t.created_at,
       updated_at: t.updated_at,
-    }).run();
-  }
+    })),
+  });
 
   // Verify counts
   const counts = {
-    clients: db.select({ count: sql<number>`count(*)` }).from(clients).get()!.count,
-    policies: db.select({ count: sql<number>`count(*)` }).from(policies).get()!.count,
-    coverages: db.select({ count: sql<number>`count(*)` }).from(coverages).get()!.count,
-    endorsements: db.select({ count: sql<number>`count(*)` }).from(endorsements).get()!.count,
-    commissions: db.select({ count: sql<number>`count(*)` }).from(commissions).get()!.count,
-    tasks: db.select({ count: sql<number>`count(*)` }).from(tasks).get()!.count,
+    clients: await prisma.client.count(),
+    policies: await prisma.policy.count(),
+    coverages: await prisma.coverage.count(),
+    endorsements: await prisma.endorsement.count(),
+    commissions: await prisma.commission.count(),
+    tasks: await prisma.task.count(),
   };
 
   console.log("\nSeed complete:");

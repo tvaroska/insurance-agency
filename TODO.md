@@ -108,9 +108,10 @@ No open issues.
   Files: `services/*/src/routes/*.ts`, `services/*/src/prisma.ts`, `packages/shared/src/pagination.ts`
   Plan: `.claude/plans/reflective-floating-stallman.md`
 
-- [ ] `S2-DB-3` **Seed scripts for Prisma** — P1
-  Rewrite each service's `seed.ts` to use Prisma Client instead of Drizzle inserts. Register as `prisma db seed` in `package.json`. Support `SEED_MODE=clean|realistic` via env var.
-  Files: `services/*/src/seed.ts`, `services/*/package.json`
+- [x] `S2-DB-3` **Seed scripts for Prisma** — P1 *(done 2026-05-24)*
+  Rewrote all 8 service seed.ts from Drizzle to Prisma Client. Table creation via `$executeRawUnsafe`, data insertion via `createMany`/`create`. Registered as `prisma db seed` in `prisma.config.ts`. All 624 tests pass.
+  Files: `services/*/src/seed.ts`, `services/*/prisma.config.ts`
+  Plan: `.claude/plans/validated-marinating-squirrel.md`
 
 - [ ] `S2-DB-4` **Runtime seeding** — P1
   Move seed from Dockerfile `RUN` (build-time) to a startup entrypoint that runs `prisma migrate deploy && prisma db seed` if the DB is empty. Remove `RUN bun run src/seed.ts` from all 8 Dockerfiles.
