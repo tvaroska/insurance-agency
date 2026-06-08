@@ -33,14 +33,9 @@ COPY services/carrier-summit/tsconfig.json services/carrier-summit/
 COPY --from=ui-builder /app/services/carrier-summit/public services/carrier-summit/public
 COPY data/seed data/seed
 COPY data/seed-clean data/seed-clean
-
-ARG SEED_MODE=realistic
-ENV SEED_MODE=${SEED_MODE}
+COPY scripts/entrypoint.sh /app/entrypoint.sh
 
 WORKDIR /app/services/carrier-summit
 
-# Seed database at build time
-RUN mkdir -p data && bun run src/seed.ts
-
 EXPOSE 3005
-CMD ["bun", "run", "src/index.ts"]
+CMD ["/app/entrypoint.sh"]

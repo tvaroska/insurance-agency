@@ -17,3 +17,7 @@ Drizzle/SQLite → Prisma for database independence. Prisma's single schema work
 - **S2-DB-3** Seed scripts for Prisma *(2026-05-24)*
   Rewrote all 8 service `seed.ts` from Drizzle ORM to Prisma Client. Table creation via `prisma.$executeRawUnsafe()` (DROP IF EXISTS + CREATE IF NOT EXISTS), data insertion via `createMany`/`create`. Registered as `prisma db seed` in each `prisma.config.ts`. Supports `SEED_MODE=clean|realistic` via env var. All 624 tests pass.
   Plan: `.claude/plans/validated-marinating-squirrel.md`
+
+- **S2-DB-4** Runtime seeding *(2026-06-08)*
+  Moved DB seeding from Dockerfile build-time (`RUN`) to container startup via shared `scripts/entrypoint.sh`. Seeds on first start if DB file is empty/missing, then starts the service. `SEED_MODE` moved from build arg to runtime env var — changing seed mode no longer requires a rebuild. All 619 tests pass.
+  Plan: `.claude/plans/validated-marinating-squirrel.md`

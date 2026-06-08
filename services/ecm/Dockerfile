@@ -18,14 +18,9 @@ COPY packages/shared packages/shared
 COPY services/ecm services/ecm
 COPY data/seed data/seed
 COPY data/seed-clean data/seed-clean
-
-ARG SEED_MODE=realistic
-ENV SEED_MODE=${SEED_MODE}
+COPY scripts/entrypoint.sh /app/entrypoint.sh
 
 WORKDIR /app/services/ecm
 
-# Seed database at build time
-RUN mkdir -p data && bun run src/seed.ts
-
 EXPOSE 3003
-CMD ["bun", "run", "src/index.ts"]
+CMD ["/app/entrypoint.sh"]

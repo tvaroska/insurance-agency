@@ -113,9 +113,10 @@ No open issues.
   Files: `services/*/src/seed.ts`, `services/*/prisma.config.ts`
   Plan: `.claude/plans/validated-marinating-squirrel.md`
 
-- [ ] `S2-DB-4` **Runtime seeding** — P1
-  Move seed from Dockerfile `RUN` (build-time) to a startup entrypoint that runs `prisma migrate deploy && prisma db seed` if the DB is empty. Remove `RUN bun run src/seed.ts` from all 8 Dockerfiles.
-  Files: `services/*/Dockerfile`, `scripts/entrypoint.sh`
+- [x] `S2-DB-4` **Runtime seeding** — P1 *(done 2026-06-08)*
+  Created shared `scripts/entrypoint.sh` that seeds on first start if DB is empty. Removed build-time `RUN bun run src/seed.ts` from all 8 Dockerfiles. Moved `SEED_MODE` from build arg to runtime env var in docker-compose.yml. All 619 tests pass.
+  Files: `scripts/entrypoint.sh`, `services/*/Dockerfile`, `docker-compose.yml`, `CLAUDE.md`
+  Plan: `.claude/plans/validated-marinating-squirrel.md`
 
 ### Phase 2: Test Adaptation
 

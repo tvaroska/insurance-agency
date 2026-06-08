@@ -18,14 +18,9 @@ COPY packages/shared packages/shared
 COPY services/rater services/rater
 COPY data/seed data/seed
 COPY data/seed-clean data/seed-clean
-
-ARG SEED_MODE=realistic
-ENV SEED_MODE=${SEED_MODE}
+COPY scripts/entrypoint.sh /app/entrypoint.sh
 
 WORKDIR /app/services/rater
 
-# Seed database at build time
-RUN mkdir -p data && bun run src/seed.ts
-
 EXPOSE 3001
-CMD ["bun", "run", "src/index.ts"]
+CMD ["/app/entrypoint.sh"]

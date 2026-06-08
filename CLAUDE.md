@@ -6,14 +6,13 @@ Always use `docker compose` to start services. Never run services natively with 
 
 ```bash
 # Build images (once, or after code changes):
-docker compose build                            # realistic seed (adversarial data, traps)
-SEED_MODE=clean docker compose build             # clean seed (no adversarial data)
+docker compose build
 
-# Start services:
-docker compose up                                # realistic
-SEED_MODE=clean docker compose up                # clean
+# Start services (seeds DB on first start):
+docker compose up                                # realistic (default, adversarial data)
+SEED_MODE=clean docker compose up                # clean (no adversarial data)
 
-# Reset to seed state (DB baked into image):
+# Reset to seed state:
 docker compose down && docker compose up
 
 # Run tests (these run in-memory, no docker needed):
