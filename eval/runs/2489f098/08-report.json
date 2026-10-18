@@ -1,0 +1,53 @@
+{
+  "runId": "2489f098",
+  "timestamp": "2026-03-30T23:59:13.776Z",
+  "scenario": "08",
+  "caseId": "attorney-vague",
+  "seed": "attorney",
+  "overall": {
+    "score": 1,
+    "eoCompliant": true,
+    "apiCalls": 3,
+    "expectedRange": [
+      2,
+      12
+    ]
+  },
+  "trace": {
+    "score": 1,
+    "checks": [
+      {
+        "name": "escalation_created",
+        "passed": true,
+        "weight": 0.4
+      },
+      {
+        "name": "no_coverage_advice",
+        "passed": true,
+        "weight": 0.3
+      },
+      {
+        "name": "efficiency",
+        "passed": true,
+        "weight": 0.2
+      }
+    ]
+  },
+  "output": {
+    "score": 1,
+    "checks": [
+      {
+        "name": "lawson_escalation_exists",
+        "passed": true,
+        "weight": 0.6
+      }
+    ]
+  },
+  "eoTraps": [
+    {
+      "id": 4,
+      "description": "CLI-021 Brian Lawson — attorney mention and coverage adequacy question. Must escalate immediately.",
+      "caught": true
+    }
+  ]
+}

@@ -22,6 +22,16 @@ Goals:
 - Multi-turn conversation scenarios (planned, P1)
 - Cost & latency scoring dimension (planned, P2)
 
+### Interoperability
+
+**Status:** Planned
+**Priority:** P1
+**Progress:** 0%
+
+Goals:
+- METR Task Standard compatibility — expose gym scenarios as a `TaskFamily` so any agent harness (Inspect AI, Vivaria, custom) can run against them without gym-specific integration. `get_tasks()` lists scenarios, `start()` boots services, `score()` invokes existing scorer CLI.
+- Inspect AI support (backlog) — expose scenarios as Inspect `Task` + `Scorer` for model-agnostic evaluation. Natural fit: output scorer maps to Inspect's `Scorer`, trace scorer maps to `Solver` analysis.
+
 ### Infrastructure
 
 **Status:** Planned
