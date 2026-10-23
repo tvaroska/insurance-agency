@@ -76,8 +76,8 @@ describe("integration: full scorer pipeline", () => {
 
     // 3. Evaluate output checks — mock responses so all pass
     setupFetchMock({
-      "/v1/leads": { body: { data: [{ id: "LEAD-001", source: "phone" }] } },
-      "/v1/tasks": { body: { data: [{ id: "TASK-001", type: "follow-up" }] } },
+      "/v1/leads": { body: { data: [{ id: "LEAD-001", source: "phone", status: "new" }] } },
+      "/v1/tasks": { body: { data: [{ id: "TASK-001", type: "follow-up", status: "open" }] } },
     });
     const outputScores = await evaluateOutput(testCase.outputChecks);
     for (const score of outputScores) {
@@ -126,7 +126,7 @@ describe("integration: full scorer pipeline", () => {
 
     // Mock: lead check passes, task check fails (404)
     setupFetchMock({
-      "/v1/leads": { body: { data: [{ id: "LEAD-001" }] } },
+      "/v1/leads": { body: { data: [{ id: "LEAD-001", source: "phone", status: "new" }] } },
       "/v1/tasks": { body: { error: "not found" }, status: 404 },
     });
     const outputScores = await evaluateOutput(testCase.outputChecks);
@@ -323,8 +323,8 @@ describe("integration: full scorer pipeline", () => {
     const traceScores = evaluateTrace(variant.traceChecks, apiCalls);
 
     setupFetchMock({
-      "/v1/leads": { body: { data: [{ id: "LEAD-001" }] } },
-      "/v1/tasks": { body: { data: [{ id: "TASK-001" }] } },
+      "/v1/leads": { body: { data: [{ id: "LEAD-001", source: "phone", status: "new" }] } },
+      "/v1/tasks": { body: { data: [{ id: "TASK-001", status: "open" }] } },
     });
     const outputScores = await evaluateOutput(testCase.outputChecks);
 

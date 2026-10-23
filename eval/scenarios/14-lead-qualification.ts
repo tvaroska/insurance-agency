@@ -24,7 +24,13 @@ const scenario: ScenarioDefinition = {
               service: "crm",
               method: "GET",
               path: "/leads?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ last_name: "Williams", status: "qualified" }],
+                },
+              },
             },
             {
               name: "task_created",
@@ -32,7 +38,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -48,7 +58,13 @@ const scenario: ScenarioDefinition = {
               service: "crm",
               method: "GET",
               path: "/leads?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ last_name: "Williams", status: "qualified" }],
+                },
+              },
             },
             {
               name: "task_created",
@@ -56,7 +72,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -72,7 +92,13 @@ const scenario: ScenarioDefinition = {
               service: "crm",
               method: "GET",
               path: "/leads?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ last_name: "Williams", status: "qualified" }],
+                },
+              },
             },
             {
               name: "task_created",
@@ -80,7 +106,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -96,7 +126,13 @@ const scenario: ScenarioDefinition = {
               service: "crm",
               method: "GET",
               path: "/leads?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ last_name: "Williams", status: "qualified" }],
+                },
+              },
             },
             {
               name: "task_created",
@@ -104,7 +140,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -120,7 +160,13 @@ const scenario: ScenarioDefinition = {
               service: "crm",
               method: "GET",
               path: "/leads?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ last_name: "Williams", status: "qualified" }],
+                },
+              },
             },
             {
               name: "task_created",
@@ -128,7 +174,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -199,19 +249,41 @@ const scenario: ScenarioDefinition = {
           outputChecks: [
             {
               name: "client_searched",
-              weight: 0.4,
+              weight: 0.25,
               service: "ams",
               method: "GET",
               path: "/clients?last_name=Foster",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ id: "CLI-010" }] },
+              },
+            },
+            {
+              name: "message_sent",
+              weight: 0.2,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-010&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-010", direction: "outbound" }],
+                },
+              },
             },
             {
               name: "task_created",
-              weight: 0.3,
+              weight: 0.25,
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -223,19 +295,41 @@ const scenario: ScenarioDefinition = {
           outputChecks: [
             {
               name: "client_searched",
-              weight: 0.4,
+              weight: 0.25,
               service: "ams",
               method: "GET",
               path: "/clients?last_name=Foster",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ id: "CLI-010" }] },
+              },
+            },
+            {
+              name: "message_sent",
+              weight: 0.2,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-010&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-010", direction: "outbound" }],
+                },
+              },
             },
             {
               name: "task_created",
-              weight: 0.3,
+              weight: 0.25,
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -247,19 +341,41 @@ const scenario: ScenarioDefinition = {
           outputChecks: [
             {
               name: "client_searched",
-              weight: 0.4,
+              weight: 0.25,
               service: "ams",
               method: "GET",
               path: "/clients?last_name=Foster",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ id: "CLI-010" }] },
+              },
+            },
+            {
+              name: "message_sent",
+              weight: 0.2,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-010&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-010", direction: "outbound" }],
+                },
+              },
             },
             {
               name: "task_created",
-              weight: 0.3,
+              weight: 0.25,
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -271,19 +387,41 @@ const scenario: ScenarioDefinition = {
           outputChecks: [
             {
               name: "client_searched",
-              weight: 0.4,
+              weight: 0.25,
               service: "ams",
               method: "GET",
               path: "/clients?last_name=Foster",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ id: "CLI-010" }] },
+              },
+            },
+            {
+              name: "message_sent",
+              weight: 0.2,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-010&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-010", direction: "outbound" }],
+                },
+              },
             },
             {
               name: "task_created",
-              weight: 0.3,
+              weight: 0.25,
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -295,19 +433,41 @@ const scenario: ScenarioDefinition = {
           outputChecks: [
             {
               name: "client_searched",
-              weight: 0.4,
+              weight: 0.25,
               service: "ams",
               method: "GET",
               path: "/clients?last_name=Foster",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ id: "CLI-010" }] },
+              },
+            },
+            {
+              name: "message_sent",
+              weight: 0.2,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-010&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-010", direction: "outbound" }],
+                },
+              },
             },
             {
               name: "task_created",
-              weight: 0.3,
+              weight: 0.25,
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -382,7 +542,13 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/clients?last_name=Papadopoulos",
-              expect: { status: 200 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ id: "CLI-015", last_name: "Papadopoulos" }],
+                },
+              },
             },
             {
               name: "task_created",
@@ -390,7 +556,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -406,7 +576,13 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/clients?last_name=Papadopoulos",
-              expect: { status: 200 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ id: "CLI-015", last_name: "Papadopoulos" }],
+                },
+              },
             },
             {
               name: "task_created",
@@ -414,7 +590,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -430,7 +610,13 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/clients?last_name=Papadopoulos",
-              expect: { status: 200 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ id: "CLI-015", last_name: "Papadopoulos" }],
+                },
+              },
             },
             {
               name: "task_created",
@@ -438,7 +624,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -454,7 +644,13 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/clients?last_name=Papadopoulos",
-              expect: { status: 200 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ id: "CLI-015", last_name: "Papadopoulos" }],
+                },
+              },
             },
             {
               name: "task_created",
@@ -462,7 +658,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -478,7 +678,13 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/clients?last_name=Papadopoulos",
-              expect: { status: 200 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ id: "CLI-015", last_name: "Papadopoulos" }],
+                },
+              },
             },
             {
               name: "task_created",
@@ -486,7 +692,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },

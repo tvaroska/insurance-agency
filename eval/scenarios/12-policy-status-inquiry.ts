@@ -19,20 +19,32 @@ const scenario: ScenarioDefinition = {
           difficulty: "scripted",
           outputChecks: [
             {
-              name: "client_found",
-              weight: 0.3,
-              service: "ams",
-              method: "GET",
-              path: "/clients/CLI-023",
-              expect: { status: 200 },
-            },
-            {
               name: "message_sent",
               weight: 0.3,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-023&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-023", direction: "outbound" }],
+                },
+              },
+            },
+            {
+              name: "task_created",
+              weight: 0.3,
               service: "ams",
               method: "GET",
-              path: "/tasks?limit=50",
-              expect: { status: 200 },
+              path: "/tasks?related_client_id=CLI-023",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ related_client_id: "CLI-023", status: "open" }],
+                },
+              },
             },
           ],
         },
@@ -43,20 +55,32 @@ const scenario: ScenarioDefinition = {
           difficulty: "explicit",
           outputChecks: [
             {
-              name: "client_found",
-              weight: 0.3,
-              service: "ams",
-              method: "GET",
-              path: "/clients/CLI-023",
-              expect: { status: 200 },
-            },
-            {
               name: "message_sent",
               weight: 0.3,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-023&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-023", direction: "outbound" }],
+                },
+              },
+            },
+            {
+              name: "task_created",
+              weight: 0.3,
               service: "ams",
               method: "GET",
-              path: "/tasks?limit=50",
-              expect: { status: 200 },
+              path: "/tasks?related_client_id=CLI-023",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ related_client_id: "CLI-023", status: "open" }],
+                },
+              },
             },
           ],
         },
@@ -67,20 +91,32 @@ const scenario: ScenarioDefinition = {
           difficulty: "natural",
           outputChecks: [
             {
-              name: "client_found",
-              weight: 0.3,
-              service: "ams",
-              method: "GET",
-              path: "/clients/CLI-023",
-              expect: { status: 200 },
-            },
-            {
               name: "message_sent",
               weight: 0.3,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-023&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-023", direction: "outbound" }],
+                },
+              },
+            },
+            {
+              name: "task_created",
+              weight: 0.3,
               service: "ams",
               method: "GET",
-              path: "/tasks?limit=50",
-              expect: { status: 200 },
+              path: "/tasks?related_client_id=CLI-023",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ related_client_id: "CLI-023", status: "open" }],
+                },
+              },
             },
           ],
         },
@@ -91,20 +127,32 @@ const scenario: ScenarioDefinition = {
           difficulty: "vague",
           outputChecks: [
             {
-              name: "client_found",
-              weight: 0.3,
-              service: "ams",
-              method: "GET",
-              path: "/clients/CLI-023",
-              expect: { status: 200 },
-            },
-            {
               name: "message_sent",
               weight: 0.3,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-023&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-023", direction: "outbound" }],
+                },
+              },
+            },
+            {
+              name: "task_created",
+              weight: 0.3,
               service: "ams",
               method: "GET",
-              path: "/tasks?limit=50",
-              expect: { status: 200 },
+              path: "/tasks?related_client_id=CLI-023",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ related_client_id: "CLI-023", status: "open" }],
+                },
+              },
             },
           ],
         },
@@ -115,20 +163,32 @@ const scenario: ScenarioDefinition = {
           difficulty: "adversarial",
           outputChecks: [
             {
-              name: "client_found",
-              weight: 0.3,
-              service: "ams",
-              method: "GET",
-              path: "/clients/CLI-023",
-              expect: { status: 200 },
-            },
-            {
               name: "message_sent",
               weight: 0.3,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-023&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-023", direction: "outbound" }],
+                },
+              },
+            },
+            {
+              name: "task_created",
+              weight: 0.3,
               service: "ams",
               method: "GET",
-              path: "/tasks?limit=50",
-              expect: { status: 200 },
+              path: "/tasks?related_client_id=CLI-023",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ related_client_id: "CLI-023", status: "open" }],
+                },
+              },
             },
           ],
         },
@@ -188,12 +248,32 @@ const scenario: ScenarioDefinition = {
           difficulty: "scripted",
           outputChecks: [
             {
-              name: "client_found",
+              name: "message_sent",
+              weight: 0.3,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-012&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-012", direction: "outbound" }],
+                },
+              },
+            },
+            {
+              name: "task_created",
               weight: 0.3,
               service: "ams",
               method: "GET",
-              path: "/clients/CLI-012",
-              expect: { status: 200 },
+              path: "/tasks?related_client_id=CLI-012",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ related_client_id: "CLI-012", status: "open" }],
+                },
+              },
             },
           ],
         },
@@ -204,12 +284,32 @@ const scenario: ScenarioDefinition = {
           difficulty: "explicit",
           outputChecks: [
             {
-              name: "client_found",
+              name: "message_sent",
+              weight: 0.3,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-012&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-012", direction: "outbound" }],
+                },
+              },
+            },
+            {
+              name: "task_created",
               weight: 0.3,
               service: "ams",
               method: "GET",
-              path: "/clients/CLI-012",
-              expect: { status: 200 },
+              path: "/tasks?related_client_id=CLI-012",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ related_client_id: "CLI-012", status: "open" }],
+                },
+              },
             },
           ],
         },
@@ -220,12 +320,32 @@ const scenario: ScenarioDefinition = {
           difficulty: "natural",
           outputChecks: [
             {
-              name: "client_found",
+              name: "message_sent",
+              weight: 0.3,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-012&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-012", direction: "outbound" }],
+                },
+              },
+            },
+            {
+              name: "task_created",
               weight: 0.3,
               service: "ams",
               method: "GET",
-              path: "/clients/CLI-012",
-              expect: { status: 200 },
+              path: "/tasks?related_client_id=CLI-012",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ related_client_id: "CLI-012", status: "open" }],
+                },
+              },
             },
           ],
         },
@@ -236,12 +356,32 @@ const scenario: ScenarioDefinition = {
           difficulty: "vague",
           outputChecks: [
             {
-              name: "client_found",
+              name: "message_sent",
+              weight: 0.3,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-012&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-012", direction: "outbound" }],
+                },
+              },
+            },
+            {
+              name: "task_created",
               weight: 0.3,
               service: "ams",
               method: "GET",
-              path: "/clients/CLI-012",
-              expect: { status: 200 },
+              path: "/tasks?related_client_id=CLI-012",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ related_client_id: "CLI-012", status: "open" }],
+                },
+              },
             },
           ],
         },
@@ -252,12 +392,32 @@ const scenario: ScenarioDefinition = {
           difficulty: "adversarial",
           outputChecks: [
             {
-              name: "client_found",
+              name: "message_sent",
+              weight: 0.3,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-012&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-012", direction: "outbound" }],
+                },
+              },
+            },
+            {
+              name: "task_created",
               weight: 0.3,
               service: "ams",
               method: "GET",
-              path: "/clients/CLI-012",
-              expect: { status: 200 },
+              path: "/tasks?related_client_id=CLI-012",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ related_client_id: "CLI-012", status: "open" }],
+                },
+              },
             },
           ],
         },
@@ -345,11 +505,29 @@ const scenario: ScenarioDefinition = {
           outputChecks: [
             {
               name: "escalation_created",
-              weight: 0.5,
+              weight: 0.35,
               service: "ams",
               method: "GET",
               path: "/escalations?client_id=CLI-023",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ client_id: "CLI-023" }] },
+              },
+            },
+            {
+              name: "message_sent",
+              weight: 0.25,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-023&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-023", direction: "outbound" }],
+                },
+              },
             },
           ],
         },
@@ -361,11 +539,29 @@ const scenario: ScenarioDefinition = {
           outputChecks: [
             {
               name: "escalation_created",
-              weight: 0.5,
+              weight: 0.35,
               service: "ams",
               method: "GET",
               path: "/escalations?client_id=CLI-023",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ client_id: "CLI-023" }] },
+              },
+            },
+            {
+              name: "message_sent",
+              weight: 0.25,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-023&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-023", direction: "outbound" }],
+                },
+              },
             },
           ],
         },
@@ -377,11 +573,29 @@ const scenario: ScenarioDefinition = {
           outputChecks: [
             {
               name: "escalation_created",
-              weight: 0.5,
+              weight: 0.35,
               service: "ams",
               method: "GET",
               path: "/escalations?client_id=CLI-023",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ client_id: "CLI-023" }] },
+              },
+            },
+            {
+              name: "message_sent",
+              weight: 0.25,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-023&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-023", direction: "outbound" }],
+                },
+              },
             },
           ],
         },
@@ -393,11 +607,29 @@ const scenario: ScenarioDefinition = {
           outputChecks: [
             {
               name: "escalation_created",
-              weight: 0.5,
+              weight: 0.35,
               service: "ams",
               method: "GET",
               path: "/escalations?client_id=CLI-023",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ client_id: "CLI-023" }] },
+              },
+            },
+            {
+              name: "message_sent",
+              weight: 0.25,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-023&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-023", direction: "outbound" }],
+                },
+              },
             },
           ],
         },
@@ -409,11 +641,29 @@ const scenario: ScenarioDefinition = {
           outputChecks: [
             {
               name: "escalation_created",
-              weight: 0.5,
+              weight: 0.35,
               service: "ams",
               method: "GET",
               path: "/escalations?client_id=CLI-023",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ client_id: "CLI-023" }] },
+              },
+            },
+            {
+              name: "message_sent",
+              weight: 0.25,
+              service: "comm",
+              method: "GET",
+              path: "/messages?client_id=CLI-023&direction=outbound",
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: {
+                  data: [{ client_id: "CLI-023", direction: "outbound" }],
+                },
+              },
             },
           ],
         },

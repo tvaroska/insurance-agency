@@ -7,7 +7,11 @@ const realisticOutputChecks = [
     service: "ams",
     method: "GET" as const,
     path: "/escalations?client_id=CLI-027",
-    expect: { status: 200, arrayMinLength: 1 },
+    expect: {
+      status: 200,
+      arrayMinLength: 1,
+      bodyMatch: { data: [{ client_id: "CLI-027" }] },
+    },
   },
   {
     name: "adams_below_minimum_escalated",
@@ -15,7 +19,11 @@ const realisticOutputChecks = [
     service: "ams",
     method: "GET" as const,
     path: "/escalations?client_id=CLI-024",
-    expect: { status: 200, arrayMinLength: 1 },
+    expect: {
+      status: 200,
+      arrayMinLength: 1,
+      bodyMatch: { data: [{ client_id: "CLI-024" }] },
+    },
   },
   {
     name: "critical_escalations_created",
@@ -23,7 +31,11 @@ const realisticOutputChecks = [
     service: "ams",
     method: "GET" as const,
     path: "/escalations?limit=50",
-    expect: { status: 200, arrayMinLength: 2 },
+    expect: {
+      status: 200,
+      arrayMinLength: 2,
+      bodyMatch: { data: [{ status: "pending" }] },
+    },
   },
   {
     name: "remediation_tasks_created",
@@ -32,7 +44,11 @@ const realisticOutputChecks = [
     method: "GET" as const,
     path: "/tasks?limit=50",
     // Realistic seed starts with 8 tasks; audit must create new remediation tasks
-    expect: { status: 200, arrayMinLength: 10 },
+    expect: {
+      status: 200,
+      arrayMinLength: 10,
+      bodyMatch: { data: [{ status: "open" }] },
+    },
   },
   {
     name: "duplicate_records_merged_or_flagged",
@@ -40,7 +56,11 @@ const realisticOutputChecks = [
     service: "ams",
     method: "GET" as const,
     path: "/tasks?limit=100",
-    expect: { status: 200, arrayMinLength: 9 },
+    expect: {
+      status: 200,
+      arrayMinLength: 10,
+      bodyMatch: { data: [{ status: "open" }] },
+    },
   },
 ];
 
@@ -68,7 +88,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/clients?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ status: "active" }] },
+              },
             },
             {
               name: "task_created",
@@ -76,7 +100,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -92,7 +120,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/clients?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ status: "active" }] },
+              },
             },
             {
               name: "task_created",
@@ -100,7 +132,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -116,7 +152,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/clients?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ status: "active" }] },
+              },
             },
             {
               name: "task_created",
@@ -124,7 +164,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -139,7 +183,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/clients?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ status: "active" }] },
+              },
             },
             {
               name: "task_created",
@@ -147,7 +195,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -163,7 +215,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/clients?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 1,
+                bodyMatch: { data: [{ status: "active" }] },
+              },
             },
             {
               name: "task_created",
@@ -171,7 +227,11 @@ const scenario: ScenarioDefinition = {
               service: "ams",
               method: "GET",
               path: "/tasks?limit=50",
-              expect: { status: 200, arrayMinLength: 1 },
+              expect: {
+                status: 200,
+                arrayMinLength: 9,
+                bodyMatch: { data: [{ status: "open" }] },
+              },
             },
           ],
         },
@@ -362,7 +422,11 @@ const scenario: ScenarioDefinition = {
             service: "ams",
             method: "GET",
             path: "/escalations?limit=50",
-            expect: { status: 200, arrayMinLength: 2 },
+            expect: {
+              status: 200,
+              arrayMinLength: 2,
+              bodyMatch: { data: [{ status: "pending" }] },
+            },
           },
         },
         {
@@ -386,7 +450,11 @@ const scenario: ScenarioDefinition = {
             service: "ams",
             method: "GET",
             path: "/tasks?limit=50",
-            expect: { status: 200, arrayMinLength: 9 },
+            expect: {
+              status: 200,
+              arrayMinLength: 10,
+              bodyMatch: { data: [{ status: "open" }] },
+            },
           },
         },
       ],

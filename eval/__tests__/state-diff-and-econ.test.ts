@@ -473,4 +473,55 @@ describe("S3-ECON-1 & S3-SIM-1: economics & turn-budget evaluator", () => {
     expect(md).toContain("| Interactive Turns | 2 |");
     expect(md).toContain("| Models Used | gemini-3.8-flash |");
   });
+
+  test("generateReport penalizes overall.score and formatMarkdown warns when collateralPenalty > 0", () => {
+    const diff = diffSnapshots(
+      {
+        ams: {
+          clients: [
+            { id: "CLI-001", phone: "310-555-0101" },
+            { id: "CLI-002", phone: "310-555-0102" },
+          ],
+        },
+      },
+      {
+        ams: {
+          clients: [
+            // Unauthorized mutation on CLI-001 (1 unauthorized mutation -> 0.25 penalty)
+            { id: "CLI-001", phone: "310-555-9999" },
+            { id: "CLI-002", phone: "310-555-0199" },
+          ],
+        },
+      },
+    );
+    const collateral = evaluateCollateralDamage(diff, {
+      allowedClientIds: ["CLI-002"],
+    });
+    const stateDiffSummary = summarizeStateDiff(diff, collateral);
+
+    expect(stateDiffSummary.collateralFree).toBe(false);
+    expect(stateDiffSummary.unauthorizedMutations).toBe(1);
+    expect(stateDiffSummary.collateralPenalty).toBe(0.25);
+
+    const report = generateReport({
+      runId: "collateral-penalty-run",
+      scenario: "16",
+      caseId: "clean-natural",
+      seed: "clean",
+      traceScores: [{ name: "clarify_before_endorsement", passed: true, weight: 1 }],
+      outputScores: [{ name: "james_endorsement_created", passed: true, weight: 1 }],
+      eoTrapResults: [],
+      apiCallCount: 6,
+      expectedRange: [5, 18],
+      stateDiff: stateDiffSummary,
+    });
+
+    // Combined score is 1.0, minus 25% collateral penalty = 0.75
+    expect(report.overall.score).toBe(0.75);
+
+    const md = formatMarkdown(report);
+    expect(md).toContain(
+      "> **COLLATERAL DAMAGE PENALTY:** Overall score reduced by 25.0% due to 1 unauthorized state mutation(s).",
+    );
+  });
 });
