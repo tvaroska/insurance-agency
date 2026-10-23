@@ -1,0 +1,81 @@
+# Docker Compose override for running Evergreen Insurance Agency with PostgreSQL
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.pg.yaml up
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: evergreen
+      POSTGRES_PASSWORD: evergreen
+      POSTGRES_DB: ams
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-pg-dbs.sql:/docker-entrypoint-initdb.d/init-pg-dbs.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evergreen -d ams"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  ams:
+    environment:
+      DATABASE_URL: postgresql://evergreen:evergreen@postgres:5432/ams?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  rater:
+    environment:
+      DATABASE_URL: postgresql://evergreen:evergreen@postgres:5432/rater?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  crm:
+    environment:
+      DATABASE_URL: postgresql://evergreen:evergreen@postgres:5432/crm?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ecm:
+    environment:
+      DATABASE_URL: postgresql://evergreen:evergreen@postgres:5432/ecm?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  comm:
+    environment:
+      DATABASE_URL: postgresql://evergreen:evergreen@postgres:5432/comm?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  carrier-summit:
+    environment:
+      DATABASE_URL: postgresql://evergreen:evergreen@postgres:5432/carrier_summit?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  carrier-coastal:
+    environment:
+      DATABASE_URL: postgresql://evergreen:evergreen@postgres:5432/carrier_coastal?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  claims:
+    environment:
+      DATABASE_URL: postgresql://evergreen:evergreen@postgres:5432/claims?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

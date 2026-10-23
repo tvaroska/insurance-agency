@@ -43,9 +43,9 @@ class TaskFamily:
         return (
             f"You are an insurance agency assistant with access to the Evergreen Insurance API.\n"
             f"The API services ({services_desc}) are running on localhost ports 3000-3007.\n"
-            f"All endpoints require a Bearer token obtained via POST /auth/token "
-            f"(client_credentials grant, client_id=agent, client_secret=agent-secret).\n\n"
-            f"OpenAPI specs are available at each service's /openapi.json endpoint.\n\n"
+            f"All endpoints require a Bearer token obtained via POST /oauth/token "
+            f"(client_credentials grant, client_id=agent-full, client_secret=dev-secret).\n\n"
+            f"OpenAPI specs are available in the specs/ directory.\n\n"
             f"## Task\n\n{task['prompt']}\n\n"
             f"## Submission\n\n"
             f"When finished, submit the path to your OTLP trace file (JSON format) "

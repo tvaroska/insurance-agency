@@ -959,6 +959,7 @@ components:
             - surplus_lines
             - principal_review
             - backdating
+            - attorney_involvement
           description: Reason code for the escalation.
           example: premium_threshold
         summary:
@@ -1012,6 +1013,7 @@ components:
             - surplus_lines
             - principal_review
             - backdating
+            - attorney_involvement
         summary:
           type: string
           maxLength: 2000
@@ -2044,9 +2046,48 @@ paths:
           $ref: "#/components/responses/500InternalServerError"
 
   # -------------------------------------------------------------------------
-  # POST /policies/{id}/endorsements
+  # GET & POST /policies/{id}/endorsements
   # -------------------------------------------------------------------------
   /policies/{id}/endorsements:
+    get:
+      operationId: listPolicyEndorsements
+      summary: List endorsements for a policy
+      description: |
+        Retrieve all endorsement requests associated with a specific policy,
+        ordered by creation date ascending.
+      tags:
+        - Endorsements
+      security:
+        - oauth2:
+            - ams:policies:read
+      parameters:
+        - name: id
+          in: path
+          description: Policy identifier (e.g., `POL-PA-2024-001847`).
+          required: true
+          schema:
+            type: string
+          example: "POL-PA-2024-001847"
+      responses:
+        "200":
+          description: A list of endorsements for the policy.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Endorsement"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
     post:
       operationId: createEndorsement
       summary: Request a policy endorsement

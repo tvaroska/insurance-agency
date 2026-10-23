@@ -1,0 +1,39 @@
+# CloudNativePG Cluster for Evergreen Insurance Agency
+# Prerequisite: CloudNativePG Operator v1.23+ installed in cluster
+#   kubectl apply --server-side -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.23/releases/cnpg-1.23.1.yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: evergreen-pg
+  labels:
+    app.kubernetes.io/part-of: evergreen-insurance
+    app.kubernetes.io/component: database
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+  storage:
+    size: 2Gi
+  bootstrap:
+    initdb:
+      database: ams
+      owner: evergreen
+      postInitApplicationSQL:
+        - CREATE DATABASE rater OWNER evergreen;
+        - CREATE DATABASE crm OWNER evergreen;
+        - CREATE DATABASE ecm OWNER evergreen;
+        - CREATE DATABASE comm OWNER evergreen;
+        - CREATE DATABASE carrier_summit OWNER evergreen;
+        - CREATE DATABASE carrier_coastal OWNER evergreen;
+        - CREATE DATABASE claims OWNER evergreen;
+        - GRANT ALL PRIVILEGES ON DATABASE ams TO evergreen;
+        - GRANT ALL PRIVILEGES ON DATABASE rater TO evergreen;
+        - GRANT ALL PRIVILEGES ON DATABASE crm TO evergreen;
+        - GRANT ALL PRIVILEGES ON DATABASE ecm TO evergreen;
+        - GRANT ALL PRIVILEGES ON DATABASE comm TO evergreen;
+        - GRANT ALL PRIVILEGES ON DATABASE carrier_summit TO evergreen;
+        - GRANT ALL PRIVILEGES ON DATABASE carrier_coastal TO evergreen;
+        - GRANT ALL PRIVILEGES ON DATABASE claims TO evergreen;
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "256MB"

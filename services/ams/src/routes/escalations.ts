@@ -27,6 +27,7 @@ const ESCALATION_REASONS = [
   "surplus_lines",
   "principal_review",
   "backdating",
+  "attorney_involvement",
 ] as const;
 
 // ── POST / ──────────────────────────────────────────────────────────
@@ -36,11 +37,12 @@ escalationsRouter.post(
   requireScopes("ams:escalations:write"),
   async (c) => {
     const body = await c.req.json();
+    const reason = body.reason ?? body.reason_code;
 
     throwIfErrors([
       checkRequired("client_id", body.client_id),
-      checkRequired("reason", body.reason),
-      checkEnum("reason", body.reason, ESCALATION_REASONS),
+      checkRequired("reason", reason),
+      checkEnum("reason", reason, ESCALATION_REASONS),
       checkRequired("summary", body.summary),
       body.summary ? checkMaxLength("summary", body.summary, 2000) : null,
     ]);
@@ -52,7 +54,7 @@ escalationsRouter.post(
       escalation_id: escalationId,
       client_id: body.client_id,
       policy_id: body.policy_id ?? null,
-      reason: body.reason,
+      reason,
       summary: body.summary,
       context: body.context ? JSON.stringify(body.context) : null,
       status: "pending",

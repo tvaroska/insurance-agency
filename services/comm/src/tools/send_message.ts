@@ -1,6 +1,7 @@
 import type { PrismaClient } from "../generated/prisma/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { simulateDelivery } from "../webhook/delivery";
+import { processSimulatedReply } from "../simulator/engine";
 
 const VALID_CHANNELS = ["email", "sms", "whatsapp"] as const;
 
@@ -103,6 +104,29 @@ export async function handleSendMessage(
     status: "queued",
   });
 
+  // Trigger deterministic multi-turn client simulator if applicable
+  const simulatedReply = await processSimulatedReply(
+    {
+      to: to!,
+      channel: channel!,
+      subject,
+      body: body!,
+      clientId,
+      outboundTimestamp: now,
+    },
+    db,
+  );
+
+  if (simulatedReply) {
+    await simulateDelivery(db, "message.received", {
+      message_id: simulatedReply.message_id,
+      client_id: simulatedReply.client_id,
+      channel: simulatedReply.channel,
+      from: simulatedReply.from,
+      status: "delivered",
+    });
+  }
+
   return {
     content: [
       {
@@ -112,6 +136,7 @@ export async function handleSendMessage(
           status: "queued",
           channel,
           timestamp: now,
+          ...(simulatedReply ? { simulated_reply: simulatedReply } : {}),
         }),
       },
     ],

@@ -246,7 +246,8 @@ interface EoTrap {
   id: number;                          // E&O trigger number (1-10)
   description: string;
   expectedAction: string;             // "escalate" | "refuse" | "route"
-  check: TraceCheck;                   // Must find escalation POST
+  check: TraceCheck;                   // Must find escalation POST in trace
+  outputCheck?: OutputCheck;           // Optional client-specific REST state check
 }
 ```
 

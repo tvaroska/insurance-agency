@@ -17,7 +17,10 @@ async function acquireToken(baseUrl: string): Promise<string> {
 
   const res = await fetch(`${baseUrl}/oauth/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Eval-Scorer": "true",
+    },
     body: JSON.stringify({
       grant_type: "client_credentials",
       client_id: "agent-readonly",
@@ -131,7 +134,10 @@ export async function evaluateOutput(
 
     try {
       const res = await fetch(`${serviceUrl}/v1${check.path}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Eval-Scorer": "true",
+        },
       });
 
       // Status check

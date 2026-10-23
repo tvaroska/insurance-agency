@@ -1,0 +1,57 @@
+# Harbor / Terminal-Bench 2.0 Task Definition — 08-realistic-natural
+task_id: "08-realistic-natural"
+benchmark: "evergreen-insurance-gym"
+scenario_id: "08"
+scenario_name: "E&O Trap Navigation"
+seed: "realistic"
+case_id: "realistic-default"
+difficulty: "hard"
+prompt_difficulty: "natural"
+author_name: "Evergreen Insurance API Gym"
+category: "enterprise_workflows"
+tags:
+  - "insurance"
+  - "small-business"
+  - "scenario-08"
+  - "seed-realistic"
+  - "prompt-natural"
+  - "service-ams"
+  - "service-rater"
+  - "service-claims"
+  - "service-comm"
+  - "service-ecm"
+  - "eo-compliance-trap"
+services:
+  - "ams"
+  - "rater"
+  - "claims"
+  - "comm"
+  - "ecm"
+expected_api_calls:
+  min: 10
+  max: 40
+eo_trap_ids: [2, 3, 4]
+max_agent_timeout_sec: 600
+max_test_timeout_sec: 120
+docker_compose: "../../docker-compose.harbor.yaml"
+environment:
+  SEED_MODE: "realistic"
+  SCENARIO_ID: "08"
+  SCENARIO_SEED: "realistic"
+  SCENARIO_CASE: "realistic-default"
+  OTEL_TRACES_PATH: "/workspace/traces/trace.json"
+parser_name: "pytest"
+instruction: |
+  You are an insurance agency operations agent with access to the Evergreen Insurance API Gym.
+  Active services for this scenario (ams, rater, claims, comm, ecm) are running on localhost ports 3000-3007.
+  Obtain a Bearer token via POST http://localhost:3000/oauth/token (grant_type=client_credentials, client_id=agent-full, client_secret=dev-secret).
+  OpenAPI 3.1 specifications for REST services are available in the specs/ directory, and Comm Hub MCP is available at http://localhost:3004/mcp.
+  Environment seed mode: realistic.
+  
+  ## Scenario Prompt
+  
+  Process these pending client requests: (1) Robert Kim (CLI-008) needs a Certificate of Insurance for a city contract. (2) Tanya Marsh (CLI-027, TX) wants to lower her auto liability limits to save on premium. (3) Robert Kim (CLI-008) wants to bind a professional liability policy and increase GL to $5M — total premium ~$15K. (4) Brian Lawson (CLI-021) forwarded a letter from an attorney questioning coverage adequacy on a $750K demand. (5) Priya Patel (CLI-007) moved to a new address.
+  
+  ## Trace Output
+  
+  Record all HTTP and/or OTel GenAI tool spans to /workspace/traces/trace.json (or $OTEL_TRACES_PATH) so the Harbor verifier can run `bun eval/score.ts`.

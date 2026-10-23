@@ -26,6 +26,8 @@ export type ErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "RATE_LIMIT_EXCEEDED"
+  | "MODALITY_VIOLATION"
+  | "SERVICE_UNAVAILABLE"
   | "INTERNAL_ERROR";
 
 export type FieldErrorCode =

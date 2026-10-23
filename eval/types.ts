@@ -30,6 +30,8 @@ export interface VariantConfig {
 
   traceChecks: TraceCheck[];
   eoTraps: EoTrap[];
+  turnBudget?: { min?: number; max: number };
+  collateralPolicy?: CollateralPolicy;
 }
 
 export interface OutputCheck {
@@ -67,6 +69,7 @@ export interface EoTrap {
   description: string;
   expectedAction: string;
   check: TraceCheck;
+  outputCheck?: OutputCheck;
 }
 
 // API Call extracted from OTel spans
@@ -127,6 +130,7 @@ export interface OtlpAttribute {
   value: {
     stringValue?: string;
     intValue?: string | number;
+    doubleValue?: number;
     boolValue?: boolean;
   };
 }
@@ -153,6 +157,113 @@ export interface EoTrapResult {
   caught: boolean;
 }
 
+// State Diff & Collateral Damage types (S3-DIFF-1)
+
+export type ServiceSnapshot = Record<string, Record<string, unknown>[]>;
+export type GymSnapshot = Record<string, ServiceSnapshot>;
+
+export interface RowUpdateDiff {
+  key: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  changedFields: string[];
+}
+
+export interface TableDiff {
+  inserted: Record<string, unknown>[];
+  updated: RowUpdateDiff[];
+  deleted: Record<string, unknown>[];
+}
+
+export type ServiceDiff = Record<string, TableDiff>;
+
+export interface StateDiffResult {
+  services: Record<string, ServiceDiff>;
+  summary: {
+    insertedCount: number;
+    updatedCount: number;
+    deletedCount: number;
+    totalMutations: number;
+  };
+}
+
+export interface CollateralPolicy {
+  allowedClientIds?: string[];
+  allowedPolicyIds?: string[];
+  allowDeletions?: boolean;
+  allowedDeletionTables?: string[];
+  maxInsertedPerTable?: number;
+  maxTotalMutations?: number;
+  penaltyPerMutation?: number;
+}
+
+export interface CollateralFinding {
+  service: string;
+  table: string;
+  type:
+    | "unauthorized_client_mutation"
+    | "unauthorized_policy_mutation"
+    | "unauthorized_deletion"
+    | "excessive_insertions"
+    | "excessive_mutations";
+  key?: string;
+  clientId?: string;
+  policyId?: string;
+  detail: string;
+}
+
+export interface CollateralEvaluation {
+  collateralFree: boolean;
+  unauthorizedMutations: number;
+  collateralPenalty: number;
+  findings: CollateralFinding[];
+}
+
+export interface StateDiffSummary {
+  insertedCount: number;
+  updatedCount: number;
+  deletedCount: number;
+  totalMutations: number;
+  collateralFree: boolean;
+  unauthorizedMutations: number;
+  collateralPenalty: number;
+  findings: CollateralFinding[];
+  services?: Record<string, ServiceDiff>;
+}
+
+// Economics & Pareto Efficiency types (S3-ECON-1)
+
+export interface ModelPricing {
+  input: number;
+  output: number;
+}
+
+export interface ModalityCounts {
+  mcp: number;
+  rest: number;
+  ui: number;
+}
+
+export interface EconomicsMetrics {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  llmCalls: number;
+  toolCalls: number;
+  wallClockMs: number;
+  durationMs?: number;
+  errorCount4xx: number;
+  errorCount5xx: number;
+  retryRate: number;
+  estimatedCostUsd: number;
+  costUsd?: number;
+  turnCount: number;
+  turnBudgetScore: number;
+  paretoEfficiency: number;
+  modelsUsed?: string[];
+  modalityCounts?: ModalityCounts;
+}
+
 // Report structure
 
 export interface ScenarioReport {
@@ -160,7 +271,7 @@ export interface ScenarioReport {
   timestamp: string;
   scenario: string;
   caseId: string;
-  seed: "clean" | "realistic";
+  seed: "clean" | "realistic" | string;
   overall: {
     score: number;
     eoCompliant: boolean;
@@ -176,6 +287,8 @@ export interface ScenarioReport {
     checks: OutputScore[];
   };
   eoTraps: EoTrapResult[];
+  stateDiff?: StateDiffSummary;
+  economics?: EconomicsMetrics;
 }
 
 // Scoring weights

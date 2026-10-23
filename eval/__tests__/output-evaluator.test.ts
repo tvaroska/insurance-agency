@@ -109,6 +109,20 @@ describe("evaluateOutput", () => {
       });
       expect(tokenCalls).toHaveLength(1);
     });
+
+    test("attaches X-Eval-Scorer: true header on token and check requests", async () => {
+      const fetchMock = mockFetch({
+        "/v1/clients": { body: [] },
+      });
+      globalThis.fetch = fetchMock as typeof fetch;
+
+      await evaluateOutput([makeCheck()], BASE_URLS);
+
+      for (const call of fetchMock.mock.calls) {
+        const init = (call as unknown[])[1] as { headers?: Record<string, string> } | undefined;
+        expect(init?.headers?.["X-Eval-Scorer"]).toBe("true");
+      }
+    });
   });
 
   describe("status checks", () => {

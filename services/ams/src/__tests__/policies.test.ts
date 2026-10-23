@@ -497,3 +497,51 @@ describe("GET /v1/policies/:id - retrieval", () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ── GET /v1/policies/:id/endorsements — List policy endorsements ────
+
+describe("GET /v1/policies/:id/endorsements", () => {
+  test("returns empty array when policy has no endorsements", async () => {
+    const res = await app.request("/v1/policies/POL-003/endorsements", {
+      headers: await authHeader(["ams:policies:read"]),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toEqual([]);
+  });
+
+  test("returns created endorsements with parsed changes", async () => {
+    const createRes = await app.request("/v1/policies/POL-001/endorsements", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(await authHeader(["ams:policies:endorsements"])),
+      },
+      body: JSON.stringify({
+        effective_date: "2026-03-01",
+        change_type: "modify_coverage",
+        changes: { coverage: "collision", deductible: 1000 },
+        notes: "Raised deductible per client pivot",
+      }),
+    });
+    expect(createRes.status).toBe(201);
+
+    const listRes = await app.request("/v1/policies/POL-001/endorsements", {
+      headers: await authHeader(["ams:policies:read"]),
+    });
+    expect(listRes.status).toBe(200);
+    const body = await listRes.json();
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data[0].policy_id).toBe("POL-001");
+    expect(body.data[0].change_type).toBe("modify_coverage");
+    expect(body.data[0].changes).toEqual({ coverage: "collision", deductible: 1000 });
+  });
+
+  test("returns 404 for nonexistent policy", async () => {
+    const res = await app.request("/v1/policies/POL-NONEXISTENT/endorsements", {
+      headers: await authHeader(["ams:policies:read"]),
+    });
+    expect(res.status).toBe(404);
+  });
+});
+

@@ -24,6 +24,9 @@ export const RULES: ManagerRule[] = [
   { reason: "surplus_lines", keywords: ["no license", "missing license", "unlicensed"], template_id: "surplus_lines_license_missing" },
   { reason: "surplus_lines", template_id: "surplus_lines_approval" },
 
+  // Attorney involvement — always confirmed for legal referral
+  { reason: "attorney_involvement", template_id: "attorney_referral_confirmation" },
+
   // Principal review
   { reason: "principal_review", keywords: ["deny", "decline", "reject", "not acceptable"], template_id: "principal_approval_denied" },
   { reason: "principal_review", keywords: ["high value", "high-value"], template_id: "high_value_property_approval" },

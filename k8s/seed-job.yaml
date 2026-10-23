@@ -1,0 +1,126 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: evergreen-seed-job
+  labels:
+    app: evergreen-seed
+    app.kubernetes.io/part-of: evergreen-insurance
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: evergreen-seed
+        app.kubernetes.io/part-of: evergreen-insurance
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-pg
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h evergreen-pg-rw -p 5432 -U evergreen; do
+                echo "Waiting for evergreen-pg-rw:5432..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
+      containers:
+        - name: seed-ams
+          image: evergreen/ams:latest
+          command: ["sh", "-c", "bunx prisma db seed || bun run src/seed.ts"]
+          envFrom:
+            - configMapRef:
+                name: evergreen-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evergreen-secrets
+                  key: DATABASE_URL_AMS
+        - name: seed-rater
+          image: evergreen/rater:latest
+          command: ["sh", "-c", "bunx prisma db seed || bun run src/seed.ts"]
+          envFrom:
+            - configMapRef:
+                name: evergreen-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evergreen-secrets
+                  key: DATABASE_URL_RATER
+        - name: seed-crm
+          image: evergreen/crm:latest
+          command: ["sh", "-c", "bunx prisma db seed || bun run src/seed.ts"]
+          envFrom:
+            - configMapRef:
+                name: evergreen-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evergreen-secrets
+                  key: DATABASE_URL_CRM
+        - name: seed-ecm
+          image: evergreen/ecm:latest
+          command: ["sh", "-c", "bunx prisma db seed || bun run src/seed.ts"]
+          envFrom:
+            - configMapRef:
+                name: evergreen-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evergreen-secrets
+                  key: DATABASE_URL_ECM
+        - name: seed-comm
+          image: evergreen/comm:latest
+          command: ["sh", "-c", "bunx prisma db seed || bun run src/seed.ts"]
+          envFrom:
+            - configMapRef:
+                name: evergreen-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evergreen-secrets
+                  key: DATABASE_URL_COMM
+        - name: seed-carrier-summit
+          image: evergreen/carrier-summit:latest
+          command: ["sh", "-c", "bunx prisma db seed || bun run src/seed.ts"]
+          envFrom:
+            - configMapRef:
+                name: evergreen-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evergreen-secrets
+                  key: DATABASE_URL_CARRIER_SUMMIT
+        - name: seed-carrier-coastal
+          image: evergreen/carrier-coastal:latest
+          command: ["sh", "-c", "bunx prisma db seed || bun run src/seed.ts"]
+          envFrom:
+            - configMapRef:
+                name: evergreen-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evergreen-secrets
+                  key: DATABASE_URL_CARRIER_COASTAL
+        - name: seed-claims
+          image: evergreen/claims:latest
+          command: ["sh", "-c", "bunx prisma db seed || bun run src/seed.ts"]
+          envFrom:
+            - configMapRef:
+                name: evergreen-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evergreen-secrets
+                  key: DATABASE_URL_CLAIMS

@@ -15,6 +15,11 @@ import scenario12 from "./12-policy-status-inquiry";
 import scenario13 from "./13-certificate-of-insurance";
 import scenario14 from "./14-lead-qualification";
 import scenario15 from "./15-commission-reconciliation";
+import scenario16 from "./16-multiturn-household-swap";
+import scenario17 from "./17-multiturn-coi-venue-pivot";
+import scenario18 from "./18-multiturn-endorsement-backdate-trap";
+import scenario19 from "./19-multiturn-claim-reversal-attorney";
+import scenario20 from "./20-multiturn-quote-bind-state-min";
 
 export const scenarios: Record<string, ScenarioDefinition> = {
   "01": scenario01,
@@ -32,4 +37,9 @@ export const scenarios: Record<string, ScenarioDefinition> = {
   "13": scenario13,
   "14": scenario14,
   "15": scenario15,
+  "16": scenario16,
+  "17": scenario17,
+  "18": scenario18,
+  "19": scenario19,
+  "20": scenario20,
 };

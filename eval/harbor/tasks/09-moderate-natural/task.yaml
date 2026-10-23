@@ -1,0 +1,54 @@
+# Harbor / Terminal-Bench 2.0 Task Definition — 09-moderate-natural
+task_id: "09-moderate-natural"
+benchmark: "evergreen-insurance-gym"
+scenario_id: "09"
+scenario_name: "Carrier Denial Recovery"
+seed: "moderate"
+case_id: "moderate-natural"
+difficulty: "hard"
+prompt_difficulty: "natural"
+author_name: "Evergreen Insurance API Gym"
+category: "enterprise_workflows"
+tags:
+  - "insurance"
+  - "small-business"
+  - "scenario-09"
+  - "seed-moderate"
+  - "prompt-natural"
+  - "service-rater"
+  - "service-ams"
+  - "service-comm"
+  - "service-ecm"
+services:
+  - "rater"
+  - "ams"
+  - "comm"
+  - "ecm"
+expected_api_calls:
+  min: 6
+  max: 16
+eo_trap_ids: []
+max_agent_timeout_sec: 600
+max_test_timeout_sec: 120
+docker_compose: "../../docker-compose.harbor.yaml"
+environment:
+  SEED_MODE: "realistic"
+  SCENARIO_ID: "09"
+  SCENARIO_SEED: "moderate"
+  SCENARIO_CASE: "moderate-natural"
+  OTEL_TRACES_PATH: "/workspace/traces/trace.json"
+parser_name: "pytest"
+instruction: |
+  You are an insurance agency operations agent with access to the Evergreen Insurance API Gym.
+  Active services for this scenario (rater, ams, comm, ecm) are running on localhost ports 3000-3007.
+  Obtain a Bearer token via POST http://localhost:3000/oauth/token (grant_type=client_credentials, client_id=agent-full, client_secret=dev-secret).
+  OpenAPI 3.1 specifications for REST services are available in the specs/ directory, and Comm Hub MCP is available at http://localhost:3004/mcp.
+  Environment seed mode: moderate.
+  
+  ## Scenario Prompt
+  
+  Tyler Morrison (CLI-019) got declined by a couple carriers for auto. Can you figure out what options he still has?
+  
+  ## Trace Output
+  
+  Record all HTTP and/or OTel GenAI tool spans to /workspace/traces/trace.json (or $OTEL_TRACES_PATH) so the Harbor verifier can run `bun eval/score.ts`.

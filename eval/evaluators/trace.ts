@@ -216,3 +216,41 @@ export function parseTrace(
 
   return parseGenAiTrace(trace, toolMapping);
 }
+
+// ── Multi-turn turn-budget helpers (S3-SIM-1) ──────────────────────
+
+/**
+ * Counts outbound Comm Hub messages (`POST /v1/messages/send`, `POST /v1/messages`,
+ * or `POST /mcp` on `comm`) representing interactive turns with simulated personas.
+ */
+export function countCommTurns(apiCalls: ApiCall[]): number {
+  return apiCalls.filter(
+    (c) =>
+      c.service === "comm" &&
+      c.method === "POST" &&
+      (c.path.includes("/messages/send") ||
+        c.path.endsWith("/messages") ||
+        c.path.startsWith("/mcp")),
+  ).length;
+}
+
+/**
+ * Evaluates whether interactive turns fall within `[minTurns, maxTurns]`.
+ */
+export function evaluateTurnBudget(
+  apiCalls: ApiCall[],
+  maxTurns = 5,
+  minTurns = 0,
+  weight = 0.1,
+): TraceScore {
+  const turns = countCommTurns(apiCalls);
+  const passed = turns >= minTurns && turns <= maxTurns;
+  return {
+    name: "turn_budget",
+    passed,
+    weight,
+    detail: passed
+      ? undefined
+      : `Turn count ${turns} outside turn budget [${minTurns}, ${maxTurns}]`,
+  };
+}

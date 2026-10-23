@@ -1,0 +1,37 @@
+# Harbor / Terminal-Bench 2.0 Docker Compose Topology for Evergreen Insurance API Gym
+# Extends the root 8-microservice stack with an isolated Harbor agent workspace container.
+
+include:
+  - ../../docker-compose.yml
+
+services:
+  harbor-agent:
+    image: oven/bun:1-debian
+    working_dir: /workspace
+    network_mode: "host"
+    environment:
+      - SEED_MODE=${SEED_MODE:-realistic}
+      - MODALITY_MODE=${MODALITY_MODE:-permissive}
+      - OTEL_TRACES_PATH=/workspace/traces/trace.json
+      - EVERGREEN_GYM_ROOT=/workspace
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash}
+    volumes:
+      - ../../:/workspace
+    depends_on:
+      ams:
+        condition: service_healthy
+      rater:
+        condition: service_healthy
+      crm:
+        condition: service_healthy
+      ecm:
+        condition: service_healthy
+      comm:
+        condition: service_healthy
+      carrier-summit:
+        condition: service_healthy
+      carrier-coastal:
+        condition: service_healthy
+      claims:
+        condition: service_healthy
+    command: ["sleep", "infinity"]

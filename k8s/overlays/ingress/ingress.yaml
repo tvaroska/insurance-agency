@@ -1,0 +1,70 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: evergreen-ingress
+  labels:
+    app.kubernetes.io/part-of: evergreen-insurance
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: evergreen.local
+      http:
+        paths:
+          - path: /ams(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ams
+                port:
+                  number: 3000
+          - path: /rater(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: rater
+                port:
+                  number: 3001
+          - path: /crm(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: crm
+                port:
+                  number: 3002
+          - path: /ecm(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ecm
+                port:
+                  number: 3003
+          - path: /comm(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: comm
+                port:
+                  number: 3004
+          - path: /carrier-summit(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: carrier-summit
+                port:
+                  number: 3005
+          - path: /carrier-coastal(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: carrier-coastal
+                port:
+                  number: 3006
+          - path: /claims(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: claims
+                port:
+                  number: 3007

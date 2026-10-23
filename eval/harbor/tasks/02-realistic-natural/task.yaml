@@ -1,0 +1,52 @@
+# Harbor / Terminal-Bench 2.0 Task Definition — 02-realistic-natural
+task_id: "02-realistic-natural"
+benchmark: "evergreen-insurance-gym"
+scenario_id: "02"
+scenario_name: "Multi-Carrier Quote Comparison"
+seed: "realistic"
+case_id: "realistic-natural"
+difficulty: "medium"
+prompt_difficulty: "natural"
+author_name: "Evergreen Insurance API Gym"
+category: "enterprise_workflows"
+tags:
+  - "insurance"
+  - "small-business"
+  - "scenario-02"
+  - "seed-realistic"
+  - "prompt-natural"
+  - "service-rater"
+  - "service-ams"
+  - "service-comm"
+services:
+  - "rater"
+  - "ams"
+  - "comm"
+expected_api_calls:
+  min: 6
+  max: 18
+eo_trap_ids: []
+max_agent_timeout_sec: 420
+max_test_timeout_sec: 120
+docker_compose: "../../docker-compose.harbor.yaml"
+environment:
+  SEED_MODE: "realistic"
+  SCENARIO_ID: "02"
+  SCENARIO_SEED: "realistic"
+  SCENARIO_CASE: "realistic-natural"
+  OTEL_TRACES_PATH: "/workspace/traces/trace.json"
+parser_name: "pytest"
+instruction: |
+  You are an insurance agency operations agent with access to the Evergreen Insurance API Gym.
+  Active services for this scenario (rater, ams, comm) are running on localhost ports 3000-3007.
+  Obtain a Bearer token via POST http://localhost:3000/oauth/token (grant_type=client_credentials, client_id=agent-full, client_secret=dev-secret).
+  OpenAPI 3.1 specifications for REST services are available in the specs/ directory, and Comm Hub MCP is available at http://localhost:3004/mcp.
+  Environment seed mode: realistic.
+  
+  ## Scenario Prompt
+  
+  Marcus Williams (CLI-006) is unhappy about his auto premium increase. He wants to see what else is out there. Can you shop it for him?
+  
+  ## Trace Output
+  
+  Record all HTTP and/or OTel GenAI tool spans to /workspace/traces/trace.json (or $OTEL_TRACES_PATH) so the Harbor verifier can run `bun eval/score.ts`.

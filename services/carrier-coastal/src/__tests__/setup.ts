@@ -5,13 +5,18 @@ import {
   jwtAuth,
   errorHandler,
   createTestDatabase as _createTestDb,
+  createTestPrismaClient,
+  getTestDatabaseUrl,
   authHeader as _authHeader,
   type AppVariables,
 } from "@evergreen/shared";
 import * as schema from "../schema";
+import { PrismaClient } from "../generated/prisma/client";
 import { quickQuoteRouter } from "../routes/quickquote";
 import { customizeRouter } from "../routes/customize";
 import { idCardsRouter } from "../routes/idcards";
+
+export { getTestDatabaseUrl };
 
 export const TEST_SECRET = "test-secret-for-carrier-coastal-tests";
 process.env.JWT_SECRET = TEST_SECRET;
@@ -20,6 +25,12 @@ process.env.JWT_SECRET = TEST_SECRET;
 
 export function createTestDatabase() {
   return _createTestDb(schema);
+}
+
+export function createTestPrisma() {
+  const ctx = createTestPrismaClient(PrismaClient, "test-carrier-coastal-");
+  createTables(ctx.sqlite);
+  return ctx;
 }
 
 export function createTables(sqlite: Database) {

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: evergreen-config
+  labels:
+    app.kubernetes.io/part-of: evergreen-insurance
+data:
+  SEED_MODE: "realistic"
+  MODALITY_MODE: "permissive"
+  AMS_BASE_URL: "http://ams:3000"
+  AMS_URL: "http://ams:3000"
+  RATER_URL: "http://rater:3001"
+  CRM_URL: "http://crm:3002"
+  ECM_URL: "http://ecm:3003"
+  COMM_URL: "http://comm:3004"
+  CARRIER_SUMMIT_URL: "http://carrier-summit:3005"
+  CARRIER_COASTAL_URL: "http://carrier-coastal:3006"
+  CLAIMS_URL: "http://claims:3007"

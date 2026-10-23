@@ -11,6 +11,7 @@ x-service-base: &service-base
   environment: &base-env
     JWT_SECRET: dev-secret
     SEED_MODE: ${SEED_MODE:-realistic}
+    MODALITY_MODE: ${MODALITY_MODE:-permissive}
 
 services:
   ams:

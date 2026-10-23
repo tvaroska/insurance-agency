@@ -119,6 +119,19 @@ describe("POST /v1/escalations - success", () => {
     expect(body.created_at).toBeDefined();
   });
 
+  test("returns 201 when reason_code alias and attorney_involvement are used", async () => {
+    const headers = await authHeader(["ams:escalations:write"]);
+    const res = await postEscalation({
+      client_id: "CLI-021",
+      reason_code: "attorney_involvement",
+      summary: "Client received attorney demand letter",
+    }, headers);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.client_id).toBe("CLI-021");
+    expect(body.reason).toBe("attorney_involvement");
+  });
+
   test("creates audit event on creation", async () => {
     const headers = await authHeader(["ams:escalations:write"]);
     const res = await postEscalation({
@@ -406,6 +419,15 @@ describe("Manager engine - decisions", () => {
     });
     expect(result.decision).toBe("approved");
     expect(result.template_id).toBe("principal_approval_granted");
+  });
+
+  test("attorney_involvement returns approved with attorney_referral_confirmation", () => {
+    const result = processEscalation({
+      reason: "attorney_involvement",
+      summary: "Client forwarded demand letter from attorney",
+    });
+    expect(result.decision).toBe("approved");
+    expect(result.template_id).toBe("attorney_referral_confirmation");
   });
 
   test("backdating always returns denied", () => {

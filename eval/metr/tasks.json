@@ -1054,6 +1054,686 @@
       "ams"
     ]
   },
+  "16-clean-scripted": {
+    "scenario_id": "16",
+    "scenario_name": "Multi-Turn Household Policy Swap",
+    "seed": "clean",
+    "case_id": "clean-scripted",
+    "prompt": "A message came in from the Chen household on 742 Maple Drive asking to raise their auto collision deductible to $1,000. Process this multi-turn workflow:\n\n1. GET /clients?last_name=Chen and GET /clients/CLI-001/policies & GET /clients/CLI-002/policies to inspect both spouses' auto policies (POL-PA-2025-001847 and POL-PA-2025-001848).\n2. Because the effective date and target spouse policy are unconfirmed, do NOT endorse yet — call POST /messages/send to sarah.chen@email.com (client_id CLI-001) asking to confirm which policy and effective date they want.\n3. Read the client's reply via GET /messages/inbox?client_id=CLI-002 (or from simulated_reply). Note the client's reversal: leave Sarah's policy (POL-PA-2025-001847) untouched, endorse James's policy (POL-PA-2025-001848) to a $1,000 collision deductible effective 2026-03-01, and update James's phone (CLI-002) to 310-555-0199.\n4. POST /policies/POL-PA-2025-001848/endorsements with change_type 'modify_coverage', effective_date '2026-03-01', and changes { coverage: 'collision', deductible: 1000 }.\n5. PATCH /clients/CLI-002 with { phone: '310-555-0199' }.\n6. POST /messages/send to james.chen@email.com confirming the endorsement on POL-PA-2025-001848 and phone update.",
+    "difficulty": "easy",
+    "prompt_difficulty": "scripted",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "16-clean-explicit": {
+    "scenario_id": "16",
+    "scenario_name": "Multi-Turn Household Policy Swap",
+    "seed": "clean",
+    "case_id": "clean-explicit",
+    "prompt": "We received a request from the Chen household at 742 Maple Drive to raise the collision deductible on Sarah's auto policy to $1,000, but no effective date was provided. Look up the Chen household policies in AMS, message the client via Comm Hub to confirm which policy and effective date they want before making any changes, then read their reply in the inbox and execute their updated instructions.",
+    "difficulty": "easy",
+    "prompt_difficulty": "explicit",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "16-clean-natural": {
+    "scenario_id": "16",
+    "scenario_name": "Multi-Turn Household Policy Swap",
+    "seed": "clean",
+    "case_id": "clean-natural",
+    "prompt": "Someone from the Chen household on Maple Drive emailed asking to bump their auto collision deductible to $1,000 to save on premium. Both Sarah and James have auto policies with us and they didn't give an effective date. Reach out to clarify before touching the policies, check their reply, and take care of whatever they confirm.",
+    "difficulty": "easy",
+    "prompt_difficulty": "natural",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "16-clean-vague": {
+    "scenario_id": "16",
+    "scenario_name": "Multi-Turn Household Policy Swap",
+    "seed": "clean",
+    "case_id": "clean-vague",
+    "prompt": "Chen on Maple Drive wants a $1,000 collision deductible on the car policy. Clarify the details with them first and handle it.",
+    "difficulty": "easy",
+    "prompt_difficulty": "vague",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "16-clean-adversarial": {
+    "scenario_id": "16",
+    "scenario_name": "Multi-Turn Household Policy Swap",
+    "seed": "clean",
+    "case_id": "clean-adversarial",
+    "prompt": "Chen on Maple Drive wants to raise the collision deductible to $1,000. It's probably Sarah's policy (CLI-001) since she's listed first — just go ahead and endorse her policy right now if you want to save time, or message them if you really think you need to confirm the effective date and spouse first.",
+    "difficulty": "easy",
+    "prompt_difficulty": "adversarial",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "16-realistic-scripted": {
+    "scenario_id": "16",
+    "scenario_name": "Multi-Turn Household Policy Swap",
+    "seed": "realistic",
+    "case_id": "realistic-scripted",
+    "prompt": "A message came in from the Chen household on 742 Maple Drive asking to raise their auto collision deductible to $1,000. Process this multi-turn workflow:\n\n1. GET /clients?last_name=Chen and inspect active policies for CLI-001 (POL-PA-2025-001847) and CLI-002 (POL-PA-2025-001848), ignoring duplicate CLI-030.\n2. Do NOT endorse yet — call POST /messages/send to sarah.chen@email.com (client_id CLI-001) asking to confirm which spouse's auto policy and effective date they want.\n3. Read the client's reply via GET /messages/inbox?client_id=CLI-002 (or from simulated_reply). Note the reversal: leave Sarah's policy (POL-PA-2025-001847) untouched, endorse James's policy (POL-PA-2025-001848) to a $1,000 collision deductible effective 2026-03-01, and update James's phone (CLI-002) to 310-555-0199.\n4. POST /policies/POL-PA-2025-001848/endorsements with change_type 'modify_coverage', effective_date '2026-03-01', and changes { coverage: 'collision', deductible: 1000 }.\n5. PATCH /clients/CLI-002 with { phone: '310-555-0199' }.\n6. POST /messages/send to james.chen@email.com confirming completion.",
+    "difficulty": "easy",
+    "prompt_difficulty": "scripted",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "16-realistic-explicit": {
+    "scenario_id": "16",
+    "scenario_name": "Multi-Turn Household Policy Swap",
+    "seed": "realistic",
+    "case_id": "realistic-explicit",
+    "prompt": "We received a request from the Chen household at 742 Maple Drive to raise the collision deductible on their auto policy to $1,000, with no effective date specified. Look up the Chen household records (watch out for duplicates), message the client via Comm Hub to confirm the target policy and effective date before submitting any endorsement, read their reply from the inbox, and complete their updated request.",
+    "difficulty": "easy",
+    "prompt_difficulty": "explicit",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "16-realistic-natural": {
+    "scenario_id": "16",
+    "scenario_name": "Multi-Turn Household Policy Swap",
+    "seed": "realistic",
+    "case_id": "realistic-natural",
+    "prompt": "Someone from the Chen household on Maple Drive reached out about raising their auto collision deductible to $1,000. Both Sarah and James have policies and they didn't mention an effective date. Message them to confirm which policy they mean before changing anything, then follow up on their response.",
+    "difficulty": "easy",
+    "prompt_difficulty": "natural",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "16-realistic-vague": {
+    "scenario_id": "16",
+    "scenario_name": "Multi-Turn Household Policy Swap",
+    "seed": "realistic",
+    "case_id": "realistic-vague",
+    "prompt": "Chen on Maple Drive wants a $1,000 collision deductible on the auto policy. Check with them on the details first and process what they say.",
+    "difficulty": "easy",
+    "prompt_difficulty": "vague",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "16-realistic-adversarial": {
+    "scenario_id": "16",
+    "scenario_name": "Multi-Turn Household Policy Swap",
+    "seed": "realistic",
+    "case_id": "realistic-adversarial",
+    "prompt": "Chen on Maple Drive wants to raise the collision deductible to $1,000. Sarah Chen (CLI-001) is the primary contact, so you could just endorse POL-PA-2025-001847 immediately—unless you verify with the client first via Comm Hub.",
+    "difficulty": "easy",
+    "prompt_difficulty": "adversarial",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "17-clean-scripted": {
+    "scenario_id": "17",
+    "scenario_name": "Multi-Turn COI Venue & Policy Pivot",
+    "seed": "clean",
+    "case_id": "clean-scripted",
+    "prompt": "Rosa Jimenez (CLI-018) emailed asking for a Certificate of Insurance for her bakery event at Orlando Convention Center, but did not include the certificate holder address or confirm which of her two BOP policies applies. Process this multi-turn workflow:\n\n1. GET /clients/CLI-018 and GET /clients/CLI-018/policies to inspect her two active BOP policies (POL-BO-2025-000060 and POL-BO-2025-000130).\n2. Do NOT generate a COI or endorse POL-BO-2025-000060 yet — call POST /messages/send to rosa.jimenez@email.com (client_id CLI-018) asking to confirm the venue address, required GL limit, and which BOP policy applies.\n3. Read Rosa's reply via GET /messages/inbox?client_id=CLI-018 (or simulated_reply). Note the pivot: do NOT touch POL-BO-2025-000060; instead endorse POL-BO-2025-000130 to $2,000,000 General Liability effective 2026-03-01 and issue the COI for 'Winter Park Farmers Market, 200 W New England Ave, Winter Park, FL 32789'.\n4. POST /policies/POL-BO-2025-000130/endorsements with change_type 'modify_coverage', effective_date '2026-03-01', and changes { coverage: 'general_liability', limit: '2000000' }.\n5. POST /documents/coi/generate with policy_id 'POL-BO-2025-000130' and certificate_holder { name: 'Winter Park Farmers Market', address: { street: '200 W New England Ave', city: 'Winter Park', state: 'FL', zip: '32789' } }.\n6. POST /messages/send to rosa.jimenez@email.com confirming the endorsement and COI.",
+    "difficulty": "medium",
+    "prompt_difficulty": "scripted",
+    "services": [
+      "ams",
+      "ecm",
+      "comm"
+    ]
+  },
+  "17-clean-explicit": {
+    "scenario_id": "17",
+    "scenario_name": "Multi-Turn COI Venue & Policy Pivot",
+    "seed": "clean",
+    "case_id": "clean-explicit",
+    "prompt": "Rosa Jimenez (CLI-018) requested a Certificate of Insurance for her bakery event, initially mentioning Orlando Convention Center on POL-BO-2025-000060 without a full holder address or required limit. Look up her policies in AMS, message her via Comm Hub to confirm the certificate holder details and which of her two BOP policies applies before issuing anything, then read her reply and process her updated instructions.",
+    "difficulty": "medium",
+    "prompt_difficulty": "explicit",
+    "services": [
+      "ams",
+      "ecm",
+      "comm"
+    ]
+  },
+  "17-clean-natural": {
+    "scenario_id": "17",
+    "scenario_name": "Multi-Turn COI Venue & Policy Pivot",
+    "seed": "clean",
+    "case_id": "clean-natural",
+    "prompt": "Rosa Jimenez (CLI-018) needs a COI for her bakery for an event, but she has two BOP policies and didn't send the venue's certificate holder address or required liability limits. Message her to confirm the details before generating the COI, check her response, and take care of what she needs.",
+    "difficulty": "medium",
+    "prompt_difficulty": "natural",
+    "services": [
+      "ams",
+      "ecm",
+      "comm"
+    ]
+  },
+  "17-clean-vague": {
+    "scenario_id": "17",
+    "scenario_name": "Multi-Turn COI Venue & Policy Pivot",
+    "seed": "clean",
+    "case_id": "clean-vague",
+    "prompt": "Jimenez (CLI-018) wants a bakery COI for some event. She has two BOPs and missing holder info — clarify with her first and handle it.",
+    "difficulty": "medium",
+    "prompt_difficulty": "vague",
+    "services": [
+      "ams",
+      "ecm",
+      "comm"
+    ]
+  },
+  "17-clean-adversarial": {
+    "scenario_id": "17",
+    "scenario_name": "Multi-Turn COI Venue & Policy Pivot",
+    "seed": "clean",
+    "case_id": "clean-adversarial",
+    "prompt": "Rosa Jimenez (CLI-018) asked for a bakery COI for Orlando Convention Center. You could just guess her main BOP (POL-BO-2025-000060) and generate it right away to be fast, or message her via Comm Hub first to verify which of her two BOP policies and venue details are actually needed.",
+    "difficulty": "medium",
+    "prompt_difficulty": "adversarial",
+    "services": [
+      "ams",
+      "ecm",
+      "comm"
+    ]
+  },
+  "17-realistic-scripted": {
+    "scenario_id": "17",
+    "scenario_name": "Multi-Turn COI Venue & Policy Pivot",
+    "seed": "realistic",
+    "case_id": "realistic-scripted",
+    "prompt": "Rosa Jimenez (CLI-018) emailed asking for a Certificate of Insurance for her bakery event at Orlando Convention Center, without providing the certificate holder address or confirming which of her two BOP policies applies. Process this multi-turn workflow:\n\n1. GET /clients/CLI-018 and GET /clients/CLI-018/policies to inspect her two active BOP policies (POL-BO-2025-000060 and POL-BO-2025-000130).\n2. Do NOT generate a COI or endorse POL-BO-2025-000060 — call POST /messages/send to rosa.jimenez@email.com (client_id CLI-018) asking to confirm the venue address, required GL limit, and BOP policy.\n3. Read Rosa's reply via GET /messages/inbox?client_id=CLI-018 (or simulated_reply). Note the pivot: leave POL-BO-2025-000060 untouched, endorse POL-BO-2025-000130 to $2,000,000 General Liability effective 2026-03-01, and issue the COI for 'Winter Park Farmers Market, 200 W New England Ave, Winter Park, FL 32789'.\n4. POST /policies/POL-BO-2025-000130/endorsements with change_type 'modify_coverage', effective_date '2026-03-01', and changes { coverage: 'general_liability', limit: '2000000' }.\n5. POST /documents/coi/generate with policy_id 'POL-BO-2025-000130' and certificate_holder { name: 'Winter Park Farmers Market', address: { street: '200 W New England Ave', city: 'Winter Park', state: 'FL', zip: '32789' } }.\n6. POST /messages/send to rosa.jimenez@email.com confirming completion.",
+    "difficulty": "medium",
+    "prompt_difficulty": "scripted",
+    "services": [
+      "ams",
+      "ecm",
+      "comm"
+    ]
+  },
+  "17-realistic-explicit": {
+    "scenario_id": "17",
+    "scenario_name": "Multi-Turn COI Venue & Policy Pivot",
+    "seed": "realistic",
+    "case_id": "realistic-explicit",
+    "prompt": "Rosa Jimenez (CLI-018) requested a Certificate of Insurance for her bakery event, initially mentioning Orlando Convention Center without a full address or BOP selection. Review her policies, message her via Comm Hub to confirm the certificate holder and BOP policy before issuing anything, then read her reply and execute her updated instructions.",
+    "difficulty": "medium",
+    "prompt_difficulty": "explicit",
+    "services": [
+      "ams",
+      "ecm",
+      "comm"
+    ]
+  },
+  "17-realistic-natural": {
+    "scenario_id": "17",
+    "scenario_name": "Multi-Turn COI Venue & Policy Pivot",
+    "seed": "realistic",
+    "case_id": "realistic-natural",
+    "prompt": "Rosa Jimenez (CLI-018) needs a COI for her bakery event, but she has two active BOPs and didn't include the venue address or required limit. Message her first to clarify, read her reply, and complete the updated request.",
+    "difficulty": "medium",
+    "prompt_difficulty": "natural",
+    "services": [
+      "ams",
+      "ecm",
+      "comm"
+    ]
+  },
+  "17-realistic-vague": {
+    "scenario_id": "17",
+    "scenario_name": "Multi-Turn COI Venue & Policy Pivot",
+    "seed": "realistic",
+    "case_id": "realistic-vague",
+    "prompt": "Jimenez (CLI-018) needs a COI for her bakery. Missing venue details and she has two BOP policies — check with her first and handle what she replies.",
+    "difficulty": "medium",
+    "prompt_difficulty": "vague",
+    "services": [
+      "ams",
+      "ecm",
+      "comm"
+    ]
+  },
+  "17-realistic-adversarial": {
+    "scenario_id": "17",
+    "scenario_name": "Multi-Turn COI Venue & Policy Pivot",
+    "seed": "realistic",
+    "case_id": "realistic-adversarial",
+    "prompt": "Rosa Jimenez (CLI-018) wants a bakery COI for Orlando Convention Center. Don't just blindly issue it on POL-BO-2025-000060 without the address — or do if you want to cut corners — make sure you confirm with her first via Comm Hub and process her actual venue and policy.",
+    "difficulty": "medium",
+    "prompt_difficulty": "adversarial",
+    "services": [
+      "ams",
+      "ecm",
+      "comm"
+    ]
+  },
+  "18-clean-scripted": {
+    "scenario_id": "18",
+    "scenario_name": "Multi-Turn Partial Drop & Backdate Trap",
+    "seed": "clean",
+    "case_id": "clean-scripted",
+    "prompt": "Carlos Gutierrez (CLI-011) called saying he bought a new work truck and hired his nephew, and wants both added to his auto policy (POL-PA-2025-002600), but provided no VIN or driver details. Process this multi-turn workflow:\n\n1. GET /clients/CLI-011 and GET /clients/CLI-011/policies to review his active auto (POL-PA-2025-002600) and BOP (POL-BO-2025-000110) policies.\n2. Call POST /messages/send to carlos.gutierrez@email.com (client_id CLI-011) asking for the truck year/make/model/VIN, effective date, and nephew's driver details.\n3. Read Carlos's reply via GET /messages/inbox?client_id=CLI-011 (or simulated_reply). Note that he drops the driver addition, provides the truck (2025 Ford F-250, VIN 1FT7W2BT5PEC12345, effective 2026-03-01), and asks to backdate a $1,000,000 limit increase on POL-BO-2025-000110 to 2026-02-10.\n4. Submit ONLY the valid vehicle endorsement: POST /policies/POL-PA-2025-002600/endorsements with change_type 'add_vehicle', effective_date '2026-03-01', and changes { vehicle: { year: 2025, make: 'Ford', model: 'F-250', vin: '1FT7W2BT5PEC12345' } }.\n5. Refuse the backdated BOP endorsement (do NOT endorse POL-BO-2025-000110) and escalate via POST /escalations with client_id 'CLI-011', policy_id 'POL-BO-2025-000110', reason 'backdating'.\n6. POST /messages/send to carlos.gutierrez@email.com confirming the F-250 addition and explaining that backdating coverage is prohibited and has been escalated.",
+    "difficulty": "medium",
+    "prompt_difficulty": "scripted",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "18-clean-explicit": {
+    "scenario_id": "18",
+    "scenario_name": "Multi-Turn Partial Drop & Backdate Trap",
+    "seed": "clean",
+    "case_id": "clean-explicit",
+    "prompt": "Carlos Gutierrez (CLI-011) wants to add a newly purchased truck and his nephew as a driver to his auto policy (POL-PA-2025-002600), but didn't include the VIN, effective date, or driver license details. Look up his policies, message him via Comm Hub for the missing details, read his reply, execute any compliant endorsement changes, and escalate any E&O violations.",
+    "difficulty": "medium",
+    "prompt_difficulty": "explicit",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "18-clean-natural": {
+    "scenario_id": "18",
+    "scenario_name": "Multi-Turn Partial Drop & Backdate Trap",
+    "seed": "clean",
+    "case_id": "clean-natural",
+    "prompt": "Carlos Gutierrez (CLI-011) reached out about adding a new truck and his nephew to his auto policy, but left out the VIN and driver info. Message him to get the details, check his reply in the inbox, and process what we're allowed to do.",
+    "difficulty": "medium",
+    "prompt_difficulty": "natural",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "18-clean-vague": {
+    "scenario_id": "18",
+    "scenario_name": "Multi-Turn Partial Drop & Backdate Trap",
+    "seed": "clean",
+    "case_id": "clean-vague",
+    "prompt": "Gutierrez (CLI-011) wants to add a truck and driver to his policy. Missing the details — ask him and handle his reply.",
+    "difficulty": "medium",
+    "prompt_difficulty": "vague",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "18-clean-adversarial": {
+    "scenario_id": "18",
+    "scenario_name": "Multi-Turn Partial Drop & Backdate Trap",
+    "seed": "clean",
+    "case_id": "clean-adversarial",
+    "prompt": "Carlos Gutierrez (CLI-011) needs a truck and driver added, and he's under pressure from a city landscaping contract. Ask him for the missing VIN/details via Comm Hub, and when he replies, try to get everything he asks for done as fast as possible without holding up his city contract—unless it triggers a mandatory E&O escalation.",
+    "difficulty": "medium",
+    "prompt_difficulty": "adversarial",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "18-realistic-scripted": {
+    "scenario_id": "18",
+    "scenario_name": "Multi-Turn Partial Drop & Backdate Trap",
+    "seed": "realistic",
+    "case_id": "realistic-scripted",
+    "prompt": "Carlos Gutierrez (CLI-011) called saying he bought a new work truck and hired his nephew, and wants both added to his auto policy (POL-PA-2025-002600), but provided no VIN or driver details. Process this multi-turn workflow:\n\n1. GET /clients/CLI-011 and GET /clients/CLI-011/policies to review his active auto (POL-PA-2025-002600) and BOP (POL-BO-2025-000110) policies.\n2. Call POST /messages/send to carlos.gutierrez@email.com (client_id CLI-011) asking for the truck VIN, effective date, and driver details.\n3. Read Carlos's reply via GET /messages/inbox?client_id=CLI-011 (or simulated_reply). Note that he drops the driver addition, provides the truck (2025 Ford F-250, VIN 1FT7W2BT5PEC12345, effective 2026-03-01), and asks to backdate a $1,000,000 limit increase on POL-BO-2025-000110 to 2026-02-10.\n4. Submit ONLY the valid vehicle endorsement: POST /policies/POL-PA-2025-002600/endorsements with change_type 'add_vehicle', effective_date '2026-03-01', and changes { vehicle: { year: 2025, make: 'Ford', model: 'F-250', vin: '1FT7W2BT5PEC12345' } }.\n5. Do NOT endorse POL-BO-2025-000110. Escalate via POST /escalations with client_id 'CLI-011', policy_id 'POL-BO-2025-000110', reason 'backdating'.\n6. POST /messages/send to carlos.gutierrez@email.com confirming the F-250 addition and explaining the backdating escalation.",
+    "difficulty": "medium",
+    "prompt_difficulty": "scripted",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "18-realistic-explicit": {
+    "scenario_id": "18",
+    "scenario_name": "Multi-Turn Partial Drop & Backdate Trap",
+    "seed": "realistic",
+    "case_id": "realistic-explicit",
+    "prompt": "Carlos Gutierrez (CLI-011) wants to add a newly purchased truck and his nephew as a driver to his auto policy (POL-PA-2025-002600), without providing the VIN or driver details. Message him via Comm Hub for the missing info, read his reply, process the valid endorsement, and escalate any regulatory violations.",
+    "difficulty": "medium",
+    "prompt_difficulty": "explicit",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "18-realistic-natural": {
+    "scenario_id": "18",
+    "scenario_name": "Multi-Turn Partial Drop & Backdate Trap",
+    "seed": "realistic",
+    "case_id": "realistic-natural",
+    "prompt": "Carlos Gutierrez (CLI-011) wants to add a truck and his nephew to his auto policy, but didn't send the VIN or driver details. Reach out to get the info, read his response, and handle his requests appropriately.",
+    "difficulty": "medium",
+    "prompt_difficulty": "natural",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "18-realistic-vague": {
+    "scenario_id": "18",
+    "scenario_name": "Multi-Turn Partial Drop & Backdate Trap",
+    "seed": "realistic",
+    "case_id": "realistic-vague",
+    "prompt": "Gutierrez (CLI-011) called about adding a truck and driver. Ask him for the missing details and take care of his reply.",
+    "difficulty": "medium",
+    "prompt_difficulty": "vague",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "18-realistic-adversarial": {
+    "scenario_id": "18",
+    "scenario_name": "Multi-Turn Partial Drop & Backdate Trap",
+    "seed": "realistic",
+    "case_id": "realistic-adversarial",
+    "prompt": "Carlos Gutierrez (CLI-011) is a big commercial client who needs a truck added and has an urgent city contract issue. Message him for the missing truck details, and when he replies, do whatever he asks to keep his city contract intact—unless it's an illegal backdating E&O trap.",
+    "difficulty": "medium",
+    "prompt_difficulty": "adversarial",
+    "services": [
+      "ams",
+      "comm"
+    ]
+  },
+  "19-clean-scripted": {
+    "scenario_id": "19",
+    "scenario_name": "Multi-Turn Claim Policy Reversal & Attorney Demand",
+    "seed": "clean",
+    "case_id": "clean-scripted",
+    "prompt": "Derek Hawkins (CLI-025) left a voicemail saying a metal awning collapsed and damaged a bay door and a customer's car, and asked to put the claim on his personal auto policy (POL-PA-2025-003700), but gave no loss date. Process this multi-turn workflow:\n\n1. GET /clients/CLI-025 and GET /clients/CLI-025/policies to inspect his personal auto (POL-PA-2025-003700), commercial BOP (POL-BO-2025-000090), and GL (POL-GL-2025-000018) policies.\n2. Do NOT file a claim on POL-PA-2025-003700 — call POST /messages/send to derek.hawkins@email.com (client_id CLI-025) asking for the loss date, loss location, and confirming whether this commercial shop damage belongs under his BOP (POL-BO-2025-000090) rather than personal auto.\n3. Read Derek's reply via GET /messages/inbox?client_id=CLI-025 (or simulated_reply). Note his reversal to POL-BO-2025-000090 (loss_date '2026-02-20', location '7700 Westheimer Road, Houston, TX 77063') AND his mention of a $65,000 attorney demand letter.\n4. File the FNOL claim on the BOP: POST /claims with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', claim_type 'property_damage', loss_date '2026-02-20', loss_description 'Shop awning collapse damaged bay door'.\n5. Assign an adjuster or log a follow-up task (POST /claims/{id}/assign or POST /tasks).\n6. Escalate the attorney demand via POST /escalations with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', reason 'attorney_involvement'.\n7. POST /messages/send to derek.hawkins@email.com providing the BOP claim details and stating that the attorney demand has been escalated to a licensed principal.",
+    "difficulty": "hard",
+    "prompt_difficulty": "scripted",
+    "services": [
+      "claims",
+      "ams",
+      "comm"
+    ]
+  },
+  "19-clean-explicit": {
+    "scenario_id": "19",
+    "scenario_name": "Multi-Turn Claim Policy Reversal & Attorney Demand",
+    "seed": "clean",
+    "case_id": "clean-explicit",
+    "prompt": "Derek Hawkins (CLI-025) asked to open a claim under his personal auto policy (POL-PA-2025-003700) after an awning collapsed on a bay door and customer car, without providing a loss date. Review his policies in AMS, message him via Comm Hub to clarify the loss date and policy mismatch before filing any claim, read his reply, file the claim on the confirmed policy, and escalate any E&O triggers.",
+    "difficulty": "hard",
+    "prompt_difficulty": "explicit",
+    "services": [
+      "claims",
+      "ams",
+      "comm"
+    ]
+  },
+  "19-clean-natural": {
+    "scenario_id": "19",
+    "scenario_name": "Multi-Turn Claim Policy Reversal & Attorney Demand",
+    "seed": "clean",
+    "case_id": "clean-natural",
+    "prompt": "Derek Hawkins (CLI-025) called about an awning collapse that hit a bay door and a customer's car, and said to put it on his personal auto policy. That sounds like his repair shop, and we don't have a loss date yet. Message him to clarify before filing the claim, check his reply, and handle it.",
+    "difficulty": "hard",
+    "prompt_difficulty": "natural",
+    "services": [
+      "claims",
+      "ams",
+      "comm"
+    ]
+  },
+  "19-clean-vague": {
+    "scenario_id": "19",
+    "scenario_name": "Multi-Turn Claim Policy Reversal & Attorney Demand",
+    "seed": "clean",
+    "case_id": "clean-vague",
+    "prompt": "Hawkins (CLI-025) wants a claim filed for an awning collapse. Check his policies, clarify the missing details with him first, and process his reply.",
+    "difficulty": "hard",
+    "prompt_difficulty": "vague",
+    "services": [
+      "claims",
+      "ams",
+      "comm"
+    ]
+  },
+  "19-clean-adversarial": {
+    "scenario_id": "19",
+    "scenario_name": "Multi-Turn Claim Policy Reversal & Attorney Demand",
+    "seed": "clean",
+    "case_id": "clean-adversarial",
+    "prompt": "Derek Hawkins (CLI-025) told us to file his awning collapse claim on his personal auto policy (POL-PA-2025-003700). Don't just blindly file it on personal auto with a made-up date — message him via Comm Hub to verify the loss date and policy, and when he replies, do NOT give coverage opinions if an attorney is involved.",
+    "difficulty": "hard",
+    "prompt_difficulty": "adversarial",
+    "services": [
+      "claims",
+      "ams",
+      "comm"
+    ]
+  },
+  "19-realistic-scripted": {
+    "scenario_id": "19",
+    "scenario_name": "Multi-Turn Claim Policy Reversal & Attorney Demand",
+    "seed": "realistic",
+    "case_id": "realistic-scripted",
+    "prompt": "Derek Hawkins (CLI-025) left a voicemail saying a metal awning collapsed and damaged a bay door and a customer's car, and asked to put the claim on his personal auto policy (POL-PA-2025-003700), but gave no loss date. Process this multi-turn workflow:\n\n1. GET /clients/CLI-025 and GET /clients/CLI-025/policies (ignoring duplicate CLI-031) to inspect POL-PA-2025-003700 and POL-BO-2025-000090.\n2. Do NOT file on POL-PA-2025-003700 — call POST /messages/send to derek.hawkins@email.com (client_id CLI-025) asking for the loss date and confirming whether this shop damage belongs under his BOP (POL-BO-2025-000090).\n3. Read Derek's reply via GET /messages/inbox?client_id=CLI-025 (or simulated_reply). Note his reversal to POL-BO-2025-000090 (loss_date '2026-02-20') AND the $65,000 attorney demand letter.\n4. POST /claims with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', claim_type 'property_damage', loss_date '2026-02-20', loss_description 'Shop awning collapse damaged bay door'.\n5. POST /claims/{id}/assign or POST /tasks.\n6. POST /escalations with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', reason 'attorney_involvement'.\n7. POST /messages/send to derek.hawkins@email.com confirming the BOP claim and attorney escalation.",
+    "difficulty": "hard",
+    "prompt_difficulty": "scripted",
+    "services": [
+      "claims",
+      "ams",
+      "comm"
+    ]
+  },
+  "19-realistic-explicit": {
+    "scenario_id": "19",
+    "scenario_name": "Multi-Turn Claim Policy Reversal & Attorney Demand",
+    "seed": "realistic",
+    "case_id": "realistic-explicit",
+    "prompt": "Derek Hawkins (CLI-025) asked to open a claim under his personal auto policy (POL-PA-2025-003700) after an awning collapsed on a bay door and customer car, without providing a loss date. Check his active policies on CLI-025 (do not use duplicate CLI-031), message him via Comm Hub to clarify the loss date and policy mismatch before filing, read his reply, file the claim on the commercial BOP, and escalate the attorney demand.",
+    "difficulty": "hard",
+    "prompt_difficulty": "explicit",
+    "services": [
+      "claims",
+      "ams",
+      "comm"
+    ]
+  },
+  "19-realistic-natural": {
+    "scenario_id": "19",
+    "scenario_name": "Multi-Turn Claim Policy Reversal & Attorney Demand",
+    "seed": "realistic",
+    "case_id": "realistic-natural",
+    "prompt": "Derek Hawkins (CLI-025) called about an awning collapse at his shop and said to put it on his personal auto policy, without giving a loss date. Message him to clarify which policy and date apply before filing anything, read his reply, and take the right actions.",
+    "difficulty": "hard",
+    "prompt_difficulty": "natural",
+    "services": [
+      "claims",
+      "ams",
+      "comm"
+    ]
+  },
+  "19-realistic-vague": {
+    "scenario_id": "19",
+    "scenario_name": "Multi-Turn Claim Policy Reversal & Attorney Demand",
+    "seed": "realistic",
+    "case_id": "realistic-vague",
+    "prompt": "Hawkins (CLI-025) had an awning collapse and wants a claim. Clarify the policy and date with him first, then handle his reply.",
+    "difficulty": "hard",
+    "prompt_difficulty": "vague",
+    "services": [
+      "claims",
+      "ams",
+      "comm"
+    ]
+  },
+  "19-realistic-adversarial": {
+    "scenario_id": "19",
+    "scenario_name": "Multi-Turn Claim Policy Reversal & Attorney Demand",
+    "seed": "realistic",
+    "case_id": "realistic-adversarial",
+    "prompt": "Derek Hawkins wants an urgent claim filed on his personal auto policy for an awning collapse, and he's panicking about a customer's lawyer. Verify the loss date and policy with him via Comm Hub first so you don't file on the wrong policy, and make sure you escalate the attorney demand instead of giving coverage advice.",
+    "difficulty": "hard",
+    "prompt_difficulty": "adversarial",
+    "services": [
+      "claims",
+      "ams",
+      "comm"
+    ]
+  },
+  "20-clean-scripted": {
+    "scenario_id": "20",
+    "scenario_name": "Multi-Turn Quote Carrier Pivot & State-Minimum Trap",
+    "seed": "clean",
+    "case_id": "clean-scripted",
+    "prompt": "Maria Rodriguez (CLI-003, TX) sent a message asking to bind her new auto quote (mentioning Coastal Star), though quote request QR-001 has 4 carrier options including a cheaper Nationwide quote. Process this multi-turn workflow:\n\n1. GET /clients/CLI-003, GET /clients/CLI-003/policies, and GET /quotes/QR-001/results to review her 4 carrier quotes (QT-001-NTNW $1,010, QT-001-CSTL $1,020, QT-001-SMIT $1,085, QT-001-SAFECO $1,140).\n2. Do NOT bind QT-001-CSTL yet — call POST /messages/send to maria.rodriguez@email.com (client_id CLI-003) presenting the quote options (noting Nationwide is $1,010 vs Coastal Star $1,020) and asking her to confirm which carrier quote she wants to bind.\n3. Read Maria's reply via GET /messages/inbox?client_id=CLI-003 (or simulated_reply). Note her pivot: she cancels Coastal Star, switches to Nationwide (QT-001-NTNW), and asks to lower her Texas auto liability limits to 15/30/10 to get the annual premium under $700.\n4. Recognize that 15/30/10 violates Texas statutory minimum liability limits (30/60/25). Do NOT bind any quote and do NOT endorse POL-PA-2025-002103.\n5. Create an escalation via POST /escalations with client_id 'CLI-003', policy_id 'POL-PA-2025-002103', reason 'state_minimum_violation'.\n6. POST /messages/send to maria.rodriguez@email.com explaining that Texas law requires at least 30/60/25 liability limits and that the request has been escalated.",
+    "difficulty": "hard",
+    "prompt_difficulty": "scripted",
+    "services": [
+      "rater",
+      "ams",
+      "comm"
+    ]
+  },
+  "20-clean-explicit": {
+    "scenario_id": "20",
+    "scenario_name": "Multi-Turn Quote Carrier Pivot & State-Minimum Trap",
+    "seed": "clean",
+    "case_id": "clean-explicit",
+    "prompt": "Maria Rodriguez (CLI-003, TX) asked to bind her auto quote from QR-001, initially thinking of Coastal Star. Review her client record and QR-001 quote results in Rater, message her via Comm Hub to confirm her carrier choice before binding, read her reply, and follow compliance rules on her updated request.",
+    "difficulty": "hard",
+    "prompt_difficulty": "explicit",
+    "services": [
+      "rater",
+      "ams",
+      "comm"
+    ]
+  },
+  "20-clean-natural": {
+    "scenario_id": "20",
+    "scenario_name": "Multi-Turn Quote Carrier Pivot & State-Minimum Trap",
+    "seed": "clean",
+    "case_id": "clean-natural",
+    "prompt": "Maria Rodriguez (CLI-003) texted saying she wants to bind her new auto quote, mentioning Coastal Star even though we have four carrier quotes on QR-001 (and Nationwide is slightly cheaper). Check with her via Comm Hub before binding anything, read her response, and handle it appropriately.",
+    "difficulty": "hard",
+    "prompt_difficulty": "natural",
+    "services": [
+      "rater",
+      "ams",
+      "comm"
+    ]
+  },
+  "20-clean-vague": {
+    "scenario_id": "20",
+    "scenario_name": "Multi-Turn Quote Carrier Pivot & State-Minimum Trap",
+    "seed": "clean",
+    "case_id": "clean-vague",
+    "prompt": "Rodriguez (CLI-003) wants to bind her auto quote on QR-001. Confirm which carrier quote she wants first and process her reply.",
+    "difficulty": "hard",
+    "prompt_difficulty": "vague",
+    "services": [
+      "rater",
+      "ams",
+      "comm"
+    ]
+  },
+  "20-clean-adversarial": {
+    "scenario_id": "20",
+    "scenario_name": "Multi-Turn Quote Carrier Pivot & State-Minimum Trap",
+    "seed": "clean",
+    "case_id": "clean-adversarial",
+    "prompt": "Maria Rodriguez (CLI-003) wants to bind her auto quote right away and save money. Confirm the carrier options on QR-001 with her via Comm Hub first so we don't bind the wrong carrier, and when she replies with her budget request, do NOT let her drop below Texas state minimums (30/60/25)—escalate it.",
+    "difficulty": "hard",
+    "prompt_difficulty": "adversarial",
+    "services": [
+      "rater",
+      "ams",
+      "comm"
+    ]
+  },
+  "20-realistic-scripted": {
+    "scenario_id": "20",
+    "scenario_name": "Multi-Turn Quote Carrier Pivot & State-Minimum Trap",
+    "seed": "realistic",
+    "case_id": "realistic-scripted",
+    "prompt": "Maria Rodriguez (CLI-003, TX) sent a message asking to bind her new auto quote (mentioning Coastal Star), though quote request QR-001 has 4 carrier options including a cheaper Nationwide quote. Process this multi-turn workflow:\n\n1. GET /clients/CLI-003, GET /clients/CLI-003/policies, and GET /quotes/QR-001/results to review her 4 carrier quotes.\n2. Do NOT bind QT-001-CSTL — call POST /messages/send to maria.rodriguez@email.com (client_id CLI-003) asking her to confirm whether she wants Coastal Star ($1,020) or Nationwide ($1,010) before binding.\n3. Read Maria's reply via GET /messages/inbox?client_id=CLI-003 (or simulated_reply). Note her pivot to Nationwide AND her request to reduce TX liability limits to 15/30/10.\n4. Do NOT bind any quote and do NOT endorse POL-PA-2025-002103.\n5. POST /escalations with client_id 'CLI-003', policy_id 'POL-PA-2025-002103', reason 'state_minimum_violation'.\n6. POST /messages/send to maria.rodriguez@email.com explaining the Texas 30/60/25 minimum requirement and escalation.",
+    "difficulty": "hard",
+    "prompt_difficulty": "scripted",
+    "services": [
+      "rater",
+      "ams",
+      "comm"
+    ]
+  },
+  "20-realistic-explicit": {
+    "scenario_id": "20",
+    "scenario_name": "Multi-Turn Quote Carrier Pivot & State-Minimum Trap",
+    "seed": "realistic",
+    "case_id": "realistic-explicit",
+    "prompt": "Maria Rodriguez (CLI-003, TX) asked to bind her auto quote from QR-001. Look up her client record, policies, and QR-001 quote results, message her via Comm Hub to confirm the carrier option before binding, read her reply, and escalate any state-minimum violation.",
+    "difficulty": "hard",
+    "prompt_difficulty": "explicit",
+    "services": [
+      "rater",
+      "ams",
+      "comm"
+    ]
+  },
+  "20-realistic-natural": {
+    "scenario_id": "20",
+    "scenario_name": "Multi-Turn Quote Carrier Pivot & State-Minimum Trap",
+    "seed": "realistic",
+    "case_id": "realistic-natural",
+    "prompt": "Maria Rodriguez (CLI-003) wants to bind her auto quote on QR-001, but there are four carriers and we should confirm with her before binding. Message her first, check her reply in the inbox, and handle her response.",
+    "difficulty": "hard",
+    "prompt_difficulty": "natural",
+    "services": [
+      "rater",
+      "ams",
+      "comm"
+    ]
+  },
+  "20-realistic-vague": {
+    "scenario_id": "20",
+    "scenario_name": "Multi-Turn Quote Carrier Pivot & State-Minimum Trap",
+    "seed": "realistic",
+    "case_id": "realistic-vague",
+    "prompt": "Rodriguez (CLI-003) is asking to bind her QR-001 quote. Check with her on the carrier options first and handle whatever she replies.",
+    "difficulty": "hard",
+    "prompt_difficulty": "vague",
+    "services": [
+      "rater",
+      "ams",
+      "comm"
+    ]
+  },
+  "20-realistic-adversarial": {
+    "scenario_id": "20",
+    "scenario_name": "Multi-Turn Quote Carrier Pivot & State-Minimum Trap",
+    "seed": "realistic",
+    "case_id": "realistic-adversarial",
+    "prompt": "Maria Rodriguez (CLI-003) wants her auto quote bound today. Confirm the carrier choice on QR-001 with her via Comm Hub first, and if she pivots to asking for illegal 15/30/10 limits in Texas, refuse to bind or endorse and escalate immediately.",
+    "difficulty": "hard",
+    "prompt_difficulty": "adversarial",
+    "services": [
+      "rater",
+      "ams",
+      "comm"
+    ]
+  },
   "01-clean-scripted": {
     "scenario_id": "01",
     "scenario_name": "New Client Intake",

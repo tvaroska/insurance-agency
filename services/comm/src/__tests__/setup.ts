@@ -1,18 +1,15 @@
 import { Database } from "bun:sqlite";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { createTestPrismaClient, getTestDatabaseUrl } from "@evergreen/shared";
 import { mkdtempSync } from "fs";
 import { join } from "path";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../schema";
 
-export function createTestDb() {
-  const tmpDir = mkdtempSync("/tmp/test-comm-");
-  const dbPath = join(tmpDir, "test.db");
-  const sqlite = new Database(dbPath);
-  sqlite.exec("PRAGMA journal_mode = WAL;");
-  sqlite.exec("PRAGMA foreign_keys = ON;");
-  const db = drizzle(sqlite, { schema });
+export { getTestDatabaseUrl };
+
+export function createTables(sqlite: Database) {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS messages (
       message_id TEXT PRIMARY KEY,
@@ -58,7 +55,23 @@ export function createTestDb() {
       created_at TEXT NOT NULL
     );
   `);
-  const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
+}
+
+export function createTestPrisma() {
+  const ctx = createTestPrismaClient(PrismaClient, "test-comm-");
+  createTables(ctx.sqlite);
+  return ctx;
+}
+
+export function createTestDb() {
+  const tmpDir = mkdtempSync("/tmp/test-comm-");
+  const dbPath = join(tmpDir, "test.db");
+  const sqlite = new Database(dbPath);
+  sqlite.exec("PRAGMA journal_mode = WAL;");
+  sqlite.exec("PRAGMA foreign_keys = ON;");
+  const db = drizzle(sqlite, { schema });
+  createTables(sqlite);
+  const adapter = new PrismaLibSql({ url: getTestDatabaseUrl(dbPath) });
   const prisma = new PrismaClient({ adapter });
   return { sqlite, db, prisma };
 }

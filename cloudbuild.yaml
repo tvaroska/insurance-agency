@@ -1,0 +1,72 @@
+# Google Cloud Build CI/CD pipeline for Evergreen Insurance Agency
+# Executes unit tests across packages/shared, all 8 microservices, eval,
+# K8s/Compose manifest verification, and TEST_DATABASE_URL test verification.
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+steps:
+  # ------------------------------------------------------------------------- #
+  # 1. Install Workspace Dependencies                                         #
+  # ------------------------------------------------------------------------- #
+  - id: install-deps
+    name: oven/bun:1
+    waitFor: ["-"]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        bun install --frozen-lockfile
+
+  # ------------------------------------------------------------------------- #
+  # 2. Shared Package & Microservice Unit Tests (SQLite In-Memory)            #
+  # ------------------------------------------------------------------------- #
+  - id: unit-tests
+    name: oven/bun:1
+    waitFor: ["install-deps"]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        (cd packages/shared && bun test)
+        for svc in ams rater crm ecm comm carrier-summit carrier-coastal claims; do
+          echo "=== Running unit tests for services/${svc} ==="
+          (cd "services/${svc}" && bun test)
+        done
+
+  # ------------------------------------------------------------------------- #
+  # 3. Evaluation System & K8s/Compose Manifest Verification                  #
+  # ------------------------------------------------------------------------- #
+  - id: eval-and-manifest-tests
+    name: oven/bun:1
+    waitFor: ["install-deps"]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        bun test eval/__tests__/
+        bun test tests/k8s-manifests.test.ts
+
+  # ------------------------------------------------------------------------- #
+  # 4. Database Test Execution via TEST_DATABASE_URL                          #
+  # ------------------------------------------------------------------------- #
+  - id: test-database-url-suite
+    name: oven/bun:1
+    waitFor: ["install-deps"]
+    entrypoint: bash
+    env:
+      - TEST_DATABASE_URL=file::memory:?cache=shared
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        for svc in ams rater crm ecm comm carrier-summit carrier-coastal claims; do
+          echo "=== Verifying TEST_DATABASE_URL test suite for services/${svc} ==="
+          (cd "services/${svc}" && TEST_DATABASE_URL="${TEST_DATABASE_URL}" bun test)
+        done
+
+timeout: "600s"

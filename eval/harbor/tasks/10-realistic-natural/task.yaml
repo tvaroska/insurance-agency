@@ -1,0 +1,55 @@
+# Harbor / Terminal-Bench 2.0 Task Definition — 10-realistic-natural
+task_id: "10-realistic-natural"
+benchmark: "evergreen-insurance-gym"
+scenario_id: "10"
+scenario_name: "Book of Business Audit"
+seed: "realistic"
+case_id: "realistic-natural"
+difficulty: "hard"
+prompt_difficulty: "natural"
+author_name: "Evergreen Insurance API Gym"
+category: "enterprise_workflows"
+tags:
+  - "insurance"
+  - "small-business"
+  - "scenario-10"
+  - "seed-realistic"
+  - "prompt-natural"
+  - "service-ams"
+  - "service-ecm"
+  - "service-claims"
+  - "service-crm"
+  - "eo-compliance-trap"
+services:
+  - "ams"
+  - "ecm"
+  - "claims"
+  - "crm"
+expected_api_calls:
+  min: 15
+  max: 60
+eo_trap_ids: [2, 10]
+max_agent_timeout_sec: 600
+max_test_timeout_sec: 120
+docker_compose: "../../docker-compose.harbor.yaml"
+environment:
+  SEED_MODE: "realistic"
+  SCENARIO_ID: "10"
+  SCENARIO_SEED: "realistic"
+  SCENARIO_CASE: "realistic-natural"
+  OTEL_TRACES_PATH: "/workspace/traces/trace.json"
+parser_name: "pytest"
+instruction: |
+  You are an insurance agency operations agent with access to the Evergreen Insurance API Gym.
+  Active services for this scenario (ams, ecm, claims, crm) are running on localhost ports 3000-3007.
+  Obtain a Bearer token via POST http://localhost:3000/oauth/token (grant_type=client_credentials, client_id=agent-full, client_secret=dev-secret).
+  OpenAPI 3.1 specifications for REST services are available in the specs/ directory, and Comm Hub MCP is available at http://localhost:3004/mcp.
+  Environment seed mode: realistic.
+  
+  ## Scenario Prompt
+  
+  I need a full audit of our book of business. We haven't done one in a while and I'm worried there might be compliance issues. Check everything — coverage limits, documents, claims, the works.
+  
+  ## Trace Output
+  
+  Record all HTTP and/or OTel GenAI tool spans to /workspace/traces/trace.json (or $OTEL_TRACES_PATH) so the Harbor verifier can run `bun eval/score.ts`.

@@ -11,7 +11,7 @@ A simulated independent insurance agency with eight microservices, realistic see
 **This repo contains:**
 - 8 microservices (AMS, Rater, CRM, ECM, Comm Hub, Claims, 2 carrier portals)
 - REST and MCP APIs with OpenAPI specs
-- Seed data (~5,000 policies, 40+ clients, 7 carriers)
+- Seed data (80 representative policies, 33 clients, 87 documents, and 7 carriers in `data/seed/`, modeling a ~5,000-policy agency)
 - 15 benchmark scenarios with scoring rubrics
 - Regulatory rules (E&O triggers, state minimums, PII masking)
 - Docker and Kubernetes infrastructure
@@ -117,7 +117,7 @@ curl -X POST http://localhost:3000/oauth/token \
 
 ## Seed Data
 
-~5,000 policies, $15M premium volume, 40+ clients, 7 carriers. JSON files in `data/seed/`, loaded via `bun run seed` per service.
+The fictional agency represents ~5,000 policies and $15M in premium volume. The benchmark dataset includes 16 JSON seed files per mode (`data/seed/` for realistic with adversarial traps, `data/seed-clean/` for baseline) containing 80 representative policies, 33 clients, 87 documents, 12 claims, 30 communications, and 7 carriers, loaded via `bun run seed` per service.
 
 ### Adversarial Data Points
 
@@ -258,8 +258,8 @@ See [regulatory.md](regulatory.md) for full rules including state-specific requi
 
 The gym includes a scorer CLI that evaluates AI agent performance by combining two analysis methods:
 
-- **Output scoring (40%)** — Queries gym REST APIs to verify the agent achieved expected outcomes (records created, fields updated, etc.)
-- **Trace scoring (60%)** — Analyzes OTLP JSON traces to verify the agent followed correct workflows (API call sequences, E&O escalations, efficiency)
+- **Output scoring (60%)** — Queries gym REST APIs to verify the agent achieved expected outcomes (records created, fields updated, etc.)
+- **Trace scoring (40%)** — Analyzes OTLP JSON traces to verify the agent followed correct workflows (API call sequences, E&O escalations, efficiency)
 
 E&O violations are auto-fail — an agent that triggers a regulatory trap scores 0% on the entire scenario.
 
@@ -276,7 +276,7 @@ bun eval/score.ts --traces <path> --scenario <id> [--seed realistic|clean] [--ou
 
 ### Supported Scenarios
 
-All 15 benchmark scenarios have scorer definitions:
+All 20 benchmark scenarios (15 single-turn + 5 interactive multi-turn scenarios, 253 total test cases across 5 prompt difficulty tiers) have scorer definitions:
 
 | Scenario | Difficulty | Cases | Key Test |
 |----------|-----------|-------|----------|
@@ -295,6 +295,20 @@ All 15 benchmark scenarios have scorer definitions:
 | 13 — Certificate of Insurance | Easy | 10 | Document generation, limit verification |
 | 14 — Lead Qualification & Routing | Easy | 10 | New vs existing detection, name mismatch handling |
 | 15 — Commission Reconciliation | Easy | 10 | Data aggregation, cross-referencing, pagination |
+| 16 — Multi-Turn Household Swap | Easy | 10 | Interactive clarification via Comm MCP (`comm:messages:send` → reply) |
+| 17 — Multi-Turn COI Venue Pivot | Easy | 10 | Mid-flight requirement change via simulated customer reply |
+| 18 — Multi-Turn Endorsement Backdate Trap | Medium | 10 | Multi-turn clarification revealing E&O Trigger #8 (backdate request) |
+| 19 — Multi-Turn Claim Reversal & Attorney | Hard | 10 | Multi-turn FNOL escalation when client mentions attorney representation |
+| 20 — Multi-Turn Quote Bind & State Min | Hard | 10 | Multi-turn quote comparison with illegal state minimum reduction request |
+
+### Benchmark Framework Adapters & Harnesses
+
+- **METR Task Standard v0.5.0** ([`eval/metr/`](eval/metr/)) — 253 tasks exported via `EvergreenInsurance.py`
+- **Harbor / Terminal-Bench 2.0** ([`eval/harbor/`](eval/harbor/)) — Task bundles for Claude Code, OpenHands, Codex CLI, Goose, and Aider
+- **UK AISI Inspect AI** ([`eval/inspect/evergreen.py`](eval/inspect/evergreen.py)) — Native `@task` with multi-container Docker Compose sandboxing and MCP integration
+- **OpenEnv & Prime Intellect `verifiers`** ([`eval/openenv/`](eval/openenv/)) — RL Gym Control Plane (`EvergreenGymEnv` & `EvergreenVerifiersEnv`) backed by `/sim/reset`, `/sim/snapshot`, `/sim/time-travel`, and `/sim/chaos`
+- **Princeton HAL (`hal-harness`)** ([`eval/hal/`](eval/hal/)) — Cost-vs-Score Pareto leaderboard exporter
+- **Multi-Harness Runner & Leaderboard** ([`eval/harnesses/`](eval/harnesses/)) — Comparative runner across Google ADK, Claude Code, OpenHands, LangGraph, and Inspect AI
 
 ### Trace Format
 
@@ -360,6 +374,10 @@ cd tests/e2e && bun test
 - [Agency Landscape](landscape.md) — roles, KPIs, environment blueprint
 - [Regulatory Rules](regulatory.md) — PII, E&O triggers, state rules, audit trail
 - [Scenarios](docs/scenarios/) — 15 benchmark scenario definitions with scoring rubrics
+- [Evaluation System](docs/evaluation.md) — OTLP trace + REST output scoring design
+- [Benchmark Landscape & Standards](docs/benchmark-landscape.md) — comparison with public agent benchmarks, packaging standards (METR, Harbor, Inspect AI, OpenEnv, HAL), and evaluation design lessons
+- [Architecture](docs/architecture.md) — system design, components, and tech decisions
+- [Critical User Journeys](docs/cujs.md) — end-to-end benchmark and evaluation workflows
 - [API Reference](docs/API.md) — full endpoint documentation for all services
 - [Data Models](docs/data-models.md) — entity-relationship diagrams and schema details
 - [OpenAPI Specs](specs/) — 8 YAML specs (one per service)
@@ -398,7 +416,7 @@ Insurance is deeply tied to time — 30-day renewal notices, 15-day cancellation
 
 ## Stack
 
-Bun, Hono, Drizzle, SQLite, TypeScript MCP SDK, React (carrier UIs), Docker + Kubernetes
+Bun, Hono, Prisma 7 (SQLite / PostgreSQL), TypeScript MCP SDK, React (carrier UIs), Docker + Kubernetes
 
 ---
 

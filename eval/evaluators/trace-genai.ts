@@ -78,17 +78,47 @@ function extractHttpFromResponse(attrs: OtlpAttribute[]): HttpMeta | undefined {
   return undefined;
 }
 
+const BUILTIN_MCP_TOOL_MAPPING: ToolMapping = {
+  "comm:messages:send": {
+    method: "POST",
+    path: "/v1/messages/send",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
+  "comm:messages:read": {
+    method: "GET",
+    path: "/v1/messages/inbox",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
+  "comm:messages:inbox": {
+    method: "GET",
+    path: "/v1/messages/inbox",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
+};
+
 /**
- * Fall back to tool name → OpenAPI spec mapping.
+ * Fall back to tool name → OpenAPI spec mapping (or built-in Comm MCP tool mapping).
  */
 function extractHttpFromMapping(
   attrs: OtlpAttribute[],
   toolMapping?: ToolMapping,
 ): HttpMeta | undefined {
-  if (!toolMapping) return undefined;
-
   const toolName = getStringAttr(attrs, "gen_ai.tool.name");
   if (!toolName) return undefined;
+
+  if (BUILTIN_MCP_TOOL_MAPPING[toolName]) {
+    const mcpMap = BUILTIN_MCP_TOOL_MAPPING[toolName];
+    return {
+      method: mcpMap.method,
+      url: `${mcpMap.baseUrl}${mcpMap.path}`,
+      statusCode: mcpMap.method === "POST" ? 201 : 200,
+    };
+  }
+
+  if (!toolMapping) return undefined;
 
   // Try exact match first, then strip service prefix (e.g., "ams_listClients" → "listClients")
   let mapping = toolMapping[toolName];
@@ -164,3 +194,14 @@ export function parseGenAiTrace(
 
   return calls.sort((a, b) => a.timestamp - b.timestamp);
 }
+
+export {
+  MODEL_PRICING_PER_1M,
+  DEFAULT_MODEL_PRICING,
+  normalizeModelName,
+  resolveModelPricing,
+  calculateModelCost,
+  computeTurnBudgetScore,
+  computeParetoEfficiency,
+  extractEconomicsMetrics,
+} from "./economics";

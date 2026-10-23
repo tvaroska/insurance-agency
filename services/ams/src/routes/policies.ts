@@ -197,6 +197,53 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
   );
 });
 
+// ── List endorsements for a policy ────────────────────────────────────
+
+policiesRouter.get(
+  "/:id/endorsements",
+  requireScopes("ams:policies:read"),
+  async (c) => {
+    const policyId = c.req.param("id");
+
+    const policy = await prisma.policy.findUnique({
+      where: { policy_id: policyId },
+      select: { policy_id: true },
+    });
+
+    if (!policy) {
+      throw notFoundError("policy");
+    }
+
+    const rows = await prisma.endorsement.findMany({
+      where: { policy_id: policyId },
+      orderBy: { created_at: "asc" },
+    });
+
+    const data = rows.map((row) => {
+      let parsedChanges: unknown = row.changes;
+      try {
+        parsedChanges = JSON.parse(row.changes);
+      } catch {
+        // Keep raw string if not JSON
+      }
+      return {
+        endorsement_id: row.endorsement_id,
+        policy_id: row.policy_id,
+        effective_date: row.effective_date,
+        change_type: row.change_type,
+        changes: parsedChanges,
+        premium_delta: row.premium_delta,
+        status: row.status,
+        notes: row.notes,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      };
+    });
+
+    return c.json({ data });
+  },
+);
+
 // ── Create endorsement ────────────────────────────────────────────────
 
 const CHANGE_TYPES = [

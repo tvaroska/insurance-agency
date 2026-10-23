@@ -1,20 +1,38 @@
 # Privy/gym — Development Plan
 
-**Last Updated:** 2026-05-13
-**Current Focus:** Sprint 2 (Kubernetes & PostgreSQL)
+**Last Updated:** 2026-10-23
+**Current Focus:** v0.5.0 Complete (Sprint 0, Sprint 1, Sprint 2 & Sprint 3 All Complete)
 **Cadence:** 2-week sprints
 **Repo:** gym
 
 > See [docs/roadmap.md](docs/roadmap.md) for strategic overview
 > See [docs/features/](docs/features/) for feature history
 
-<!-- Counters: BUG=0 SEC=0 INFRA=1 PERF=0 DEBT=0 REL=0 -->
+<!-- Counters: BUG=3 SEC=0 INFRA=2 PERF=0 DEBT=2 REL=0 -->
 
 ---
 
-## Sprint 0: Critical Issues
+## Sprint 0: Critical Issues & Review Findings
 
-No open issues.
+- [x] `S0-BUG-1` **Fix broken OAuth instructions in METR wrapper** — P0 *(done 2026-10-19)*
+  `eval/metr/EvergreenInsurance.py` (`get_instructions()`) instructs agents to call `POST /auth/token` with `client_id=agent` and `client_secret=agent-secret`. Updated to match `packages/shared/src/auth.ts`: `POST /oauth/token` with `client_id=agent-full` and `client_secret=dev-secret`, plus OpenAPI spec references (`specs/`).
+  Files: `eval/metr/EvergreenInsurance.py`
+
+- [x] `S0-BUG-2` **Fix Scenario 08 escalation reason_code vs AMS schema mismatch** — P0 *(done 2026-10-19)*
+  Added `attorney_involvement` to `ESCALATION_REASONS` in `services/ams/src/routes/escalations.ts`, added `reason ?? reason_code` field alias support, added manager persona rule (`template_id: "attorney_referral_confirmation"`) in `services/ams/src/manager/rules.ts`, updated `specs/ams.yaml`, and added unit tests in `services/ams/src/__tests__/escalations.test.ts`.
+  Files: `services/ams/src/routes/escalations.ts`, `services/ams/src/manager/rules.ts`, `specs/ams.yaml`, `services/ams/src/__tests__/escalations.test.ts`
+
+- [x] `S0-BUG-3` **Per-trap E&O verification & audit output checks (Scenarios 08 & 10)** — P1 *(done 2026-10-19)*
+  Extended `EoTrap` in `eval/types.ts` and `eval/score.ts` with optional `outputCheck?: OutputCheck`. Added client-specific output checks (`CLI-027`, `CLI-008`, `CLI-021`) to all `eoTraps` in `eval/scenarios/08-eo-trap-navigation.ts`. Replaced vacuous `GET /clients/{id}/policies` checks in `eval/scenarios/10-book-of-business-audit.ts` with assertions on `CLI-027` and `CLI-024` escalations (`arrayMinLength: 1`), total critical escalations (`arrayMinLength: 2`), and remediation tasks (`arrayMinLength: 10`).
+  Files: `eval/scenarios/08-eo-trap-navigation.ts`, `eval/scenarios/10-book-of-business-audit.ts`, `eval/types.ts`, `eval/score.ts`
+
+- [x] `S0-DEBT-1` **Align Trace vs Output scoring weights (40/60 vs 60/40)** — P1 *(done 2026-10-19)*
+  Aligned `README.md` with `eval/types.ts` (`DEFAULT_WEIGHTS = { trace: 0.4, output: 0.6 }`), `docs/evaluation.md`, and `eval/__tests__/integration.test.ts` (Output 60% / Trace 40%).
+  Files: `README.md`, `TODO.md`, `docs/features/evaluation-system.md`
+
+- [x] `S0-DEBT-2` **Clean up stale planning and architecture docs** — P2 *(done 2026-10-19)*
+  Removed stale `PLAN.md`, populated `docs/architecture.md` and `docs/cujs.md`, and clarified seed data row counts (80 policies, 33 clients, 87 documents across 16 JSON files modeling a ~5,000-policy agency) and Prisma 7 stack in `README.md`.
+  Files: `PLAN.md`, `docs/architecture.md`, `docs/cujs.md`, `README.md`
 
 ---
 
@@ -120,33 +138,89 @@ No open issues.
 
 ### Phase 2: Test Adaptation
 
-- [ ] `S2-TEST-1` **Update test setup for Prisma** — P1
-  Update test `setup.ts` files to use Prisma Client with SQLite for fast in-memory tests. Ensure all existing tests pass. Add a CI step that runs tests against PG via `TEST_DATABASE_URL`.
-  Files: `services/*/src/__tests__/setup.ts`
+- [x] `S2-TEST-1` **Update test setup for Prisma** — P1 *(done 2026-10-23)*
+  Updated `packages/shared/src/testing.ts` and `services/*/src/__tests__/setup.ts` across all 8 services with `createTestPrisma` / `getTestDatabaseUrl` supporting SQLite and `TEST_DATABASE_URL` PostgreSQL overrides. Added Google Cloud Build CI (`cloudbuild.yaml`) running unit tests across all services, shared packages, eval suites, and K8s manifests.
+  Files: `packages/shared/src/testing.ts`, `services/*/src/__tests__/setup.ts`, `cloudbuild.yaml`
 
 ### Phase 3: Kubernetes Manifests
 
-- [ ] `S2-K8S-1` **PostgreSQL operator cluster** — P0
-  CloudNativePG `Cluster` CR with one instance, 8 databases (one per service). Include `initdb` SQL to create databases. Document operator installation prerequisites.
-  Files: `k8s/postgres.yaml`
+- [x] `S2-K8S-1` **PostgreSQL operator cluster** — P0 *(done 2026-10-23)*
+  CloudNativePG `Cluster` CR (`evergreen-pg`) with one instance and 8 databases (`ams`, `rater`, `crm`, `ecm`, `comm`, `carrier_summit`, `carrier_coastal`, `claims`) initialized via `postInitApplicationSQL`.
+  Files: `k8s/postgres.yaml`, `k8s/README.md`
 
-- [ ] `S2-K8S-2` **Service deployments** — P1
-  Deployment + ClusterIP Service for each of the 8 services. Env vars from ConfigMap (ports, service URLs) and Secret (JWT_SECRET, DATABASE_URL). Liveness/readiness probes on `/health`. Prisma schema set to `provider = "postgresql"` via build arg or multi-provider config.
-  Files: `k8s/services/*.yaml`
+- [x] `S2-K8S-2` **Service deployments** — P1 *(done 2026-10-23)*
+  Deployment + ClusterIP Service manifests for each of the 8 services (`k8s/services/*.yaml`), backed by `k8s/configmap.yaml` (`evergreen-config`) and `k8s/secret.yaml` (`evergreen-secrets`) with `/health` HTTP liveness/readiness probes.
+  Files: `k8s/services/*.yaml`, `k8s/configmap.yaml`, `k8s/secret.yaml`
 
-- [ ] `S2-K8S-3` **Seed Job** — P1
-  Kubernetes Job that runs `prisma migrate deploy && prisma db seed` against PG after the cluster is ready. Supports `SEED_MODE` via ConfigMap. Can be re-run for reset.
+- [x] `S2-K8S-3` **Seed Job** — P1 *(done 2026-10-23)*
+  Kubernetes `batch/v1` Job (`evergreen-seed-job`) with `wait-for-pg` initContainer and 8 seed containers supporting `SEED_MODE` via ConfigMap.
   Files: `k8s/seed-job.yaml`
 
-- [ ] `S2-K8S-4` **Kustomize overlays** — P2
-  Base + overlays for `clean` and `realistic` seed modes. Optional ingress overlay for external access.
-  Files: `k8s/kustomization.yaml`, `k8s/overlays/`
+- [x] `S2-K8S-4` **Kustomize overlays** — P2 *(done 2026-10-23)*
+  Base `k8s/kustomization.yaml` + overlays for `clean`, `realistic`, and `ingress` (`evergreen.local` path routing), verified by `tests/k8s-manifests.test.ts`.
+  Files: `k8s/kustomization.yaml`, `k8s/overlays/`, `tests/k8s-manifests.test.ts`
 
 ### Phase 4: Docker Compose Update
 
-- [ ] `S2-COMPOSE-1` **Docker Compose with PG option** — P2
-  `docker-compose.pg.yaml` override that adds a Postgres container and sets `DATABASE_URL` on all services. Default `docker-compose.yml` continues to work with embedded SQLite via Prisma.
-  Files: `docker-compose.pg.yaml`
+- [x] `S2-COMPOSE-1` **Docker Compose with PG option** — P2 *(done 2026-10-23)*
+  `docker-compose.pg.yaml` override with `postgres:16-alpine`, `scripts/init-pg-dbs.sql` initializing all 8 databases, healthcheck dependencies, and `DATABASE_URL` overrides across all 8 services.
+  Files: `docker-compose.pg.yaml`, `scripts/init-pg-dbs.sql`
+
+### Phase 5: Benchmark Interoperability (Harbor)
+
+- [x] `S2-INTOP-1` **Harbor / Terminal-Bench framework adapter (`eval/harbor/`)** — P1 *(done 2026-10-23)*
+  Packaged all 20 scenarios (253 task cases) into the Harbor task standard (`eval/harbor/export-harbor.ts`, `eval/harbor/tasks-manifest.json`, `eval/harbor/docker-compose.harbor.yaml`, and `eval/harbor/tasks/<task_id>/task.yaml` + `tests/test_outputs.py` invoking `bun eval/score.ts`).
+  Files: `eval/harbor/export-harbor.ts`, `eval/harbor/tasks/`, `eval/harbor/README.md`, `eval/harbor/__tests__/harbor.test.ts`
+
+---
+
+## Sprint 3: Small-Business Model & Harness Benchmark Upgrades
+
+**Theme:** Evolve Evergreen Insurance API Gym into a premier multi-modal benchmark for evaluating both foundation models and agent harnesses (e.g., Claude Code, OpenHands, Google ADK, LangGraph, custom loops) on realistic small-business operations, incorporating best practices from *AppWorld*, *$\tau$-bench*, *TheAgentCompany*, *ToolSandbox*, and *SWE-Lancer*.
+
+### Phase 1: State Diffing & Strict Modality Enforcement
+
+- [x] `S3-DIFF-1` **Snapshot-based database state diffing & collateral damage detection** — P0 *(done 2026-10-23)*
+  Added `GET /sim/snapshot` across all 8 services via `packages/shared/src/sim.ts` and implemented `fetchGymSnapshot`, `diffSnapshots`, and `evaluateCollateralDamage` in `eval/evaluators/state-diff.ts` with `--snapshot-before` / `--snapshot-after` CLI integration in `eval/score.ts`.
+  Files: `eval/evaluators/state-diff.ts`, `eval/evaluators/output.ts`, `eval/types.ts`, `eval/score.ts`, `packages/shared/src/sim.ts`
+
+- [x] `S3-MOD-1` **Strict 3-modality enforcement (`MODALITY_MODE=strict`)** — P1 *(done 2026-10-23)*
+  Added `strictModalityGuard` in `packages/shared/src/sim.ts` and mounted on `comm` (`/v1/*` blocked in `strict` mode in favor of `/mcp`), `carrier-summit`, and `carrier-coastal` (`/v1/summit/*` and `/v1/coastal/*` require `X-Portal-Session` from `/auth/portal-session` or browser UI interaction), while allowing scorer queries via `X-Eval-Scorer: true`.
+  Files: `packages/shared/src/sim.ts`, `services/comm/src/index.ts`, `services/carrier-summit/src/index.ts`, `services/carrier-coastal/src/index.ts`, `docker-compose.yml`
+
+### Phase 2: Interactive Multi-Turn & Long-Horizon Simulation
+
+- [x] `S3-SIM-1` **Interactive multi-turn customer & underwriter simulator** — P1 *(done 2026-10-23)*
+  Implemented deterministic template/rule-based conversation responder in `services/comm/src/simulator/{engine,rules}.ts` hooked into `comm:messages:send`, added 5 multi-turn scenarios (`16`–`20` in `eval/scenarios/`), and added turn-budget efficiency scoring in `eval/evaluators/trace.ts` and `eval/evaluators/economics.ts`.
+  Files: `services/comm/src/simulator/`, `eval/scenarios/16..20-multiturn-*.ts`, `eval/evaluators/trace.ts`, `eval/evaluators/economics.ts`
+
+- [x] `S3-SIM-2` **Time simulation (`POST /sim/time-travel`) & chaos injection (`POST /sim/chaos`)** — P2 *(done 2026-10-23)*
+  Implemented `POST /sim/time-travel`, `POST /sim/chaos`, `POST /sim/reset`, and `GET /sim/status` in `packages/shared/src/sim.ts` and mounted across all 8 services with domain lifecycle transitions (policy/quote/envelope expiration, campaign step advancement, claim status progression) and configurable HTTP error/latency fault injection.
+  Files: `packages/shared/src/sim.ts`, `services/*/src/index.ts`, `packages/shared/src/__tests__/sim.test.ts`, `services/ams/src/__tests__/sim-and-modality.test.ts`
+
+### Phase 3: Harness Economics & Multi-Harness Runner
+
+- [x] `S3-ECON-1` **Cost, token efficiency & latency Pareto scoring** — P1 *(done 2026-10-23)*
+  Implemented `extractEconomicsMetrics` in `eval/evaluators/economics.ts` parsing `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, LLM calls, wall-clock duration, 4xx/5xx error/retry rates, turn-budget efficiency, and per-model cost (`gemini-3.8-flash`, `gemini-4-argon`, `gemini-4.0-pro`, `gemini-3.5-flash-lite`, etc.) with Pareto efficiency in `eval/report.ts`.
+  Files: `eval/evaluators/economics.ts`, `eval/evaluators/trace-genai.ts`, `eval/report.ts`, `eval/types.ts`, `eval/__tests__/state-diff-and-econ.test.ts`
+
+- [x] `S3-HARN-1` **Reference multi-harness benchmark runner & leaderboard** — P2 *(done 2026-10-23)*
+  Implemented harness runner (`eval/harnesses/runner.ts`) and Pareto leaderboard generator (`eval/harnesses/leaderboard.ts`) for `google-adk`, `claude-code`, `openhands`, `langgraph`, and `inspect-ai`.
+  Files: `eval/harnesses/runner.ts`, `eval/harnesses/leaderboard.ts`, `eval/harnesses/README.md`, `eval/harnesses/__tests__/harnesses.test.ts`
+
+### Phase 4: Additional Benchmark & RL Environment Standards
+
+- [x] `S3-INTOP-2` **Native UK AISI `Inspect AI` `@task` definition (`eval/inspect/`)** — P2 *(done 2026-10-23)*
+  Implemented native Inspect AI `@task` (`eval/inspect/evergreen.py`) with multi-container Docker Compose sandboxing, native MCP server attachment (`http://localhost:3004/mcp`), and `@scorer` integration across all 253 tasks.
+  Files: `eval/inspect/evergreen.py`, `eval/inspect/README.md`, `eval/inspect/__tests__/inspect.test.ts`
+
+- [x] `S3-INTOP-3` **OpenEnv / Prime Intellect `verifiers` RL Gym Control Plane (`/sim/*`)** — P2 *(done 2026-10-23)*
+  Exposed `/sim/reset`, `/sim/snapshot`, `/sim/time-travel`, `/sim/chaos` on all 8 services and built `eval/openenv/client.ts` + `eval/openenv/evergreen_env.py` (`EvergreenGymEnv` and `EvergreenVerifiersEnv` `vf.ToolEnv` adapter).
+  Files: `eval/openenv/evergreen_env.py`, `eval/openenv/client.ts`, `eval/openenv/README.md`, `eval/openenv/__tests__/openenv.test.ts`, `packages/shared/src/sim.ts`
+
+- [x] `S3-INTOP-4` **Princeton HAL (`hal-harness`) leaderboard exporter** — P3 *(done 2026-10-23)*
+  Implemented `eval/hal/export-hal.ts` exporting `ScenarioReport`s and OTel `gen_ai.usage.*` token/cost/latency metrics into the Princeton Holistic Agent Leaderboard (`hal-harness`) JSON format.
+  Files: `eval/hal/export-hal.ts`, `eval/hal/README.md`, `eval/hal/__tests__/hal.test.ts`
 
 ---
 

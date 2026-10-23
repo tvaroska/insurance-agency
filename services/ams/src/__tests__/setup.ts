@@ -4,11 +4,19 @@ import {
   correlationId,
   jwtAuth,
   errorHandler,
+  chaosMiddleware,
+  createSimRouter,
   createTestDatabase as _createTestDb,
+  createTestPrismaClient,
+  getTestDatabaseUrl,
   authHeader as _authHeader,
   type AppVariables,
 } from "@evergreen/shared";
 import * as schema from "../schema";
+import { PrismaClient } from "../generated/prisma/client";
+import { prisma as defaultPrisma } from "../prisma";
+
+export { getTestDatabaseUrl };
 
 export const TEST_SECRET = "test-secret-for-ams-tests";
 process.env.JWT_SECRET = TEST_SECRET;
@@ -17,6 +25,12 @@ process.env.JWT_SECRET = TEST_SECRET;
 
 export function createTestDatabase() {
   return _createTestDb(schema);
+}
+
+export function createTestPrisma() {
+  const ctx = createTestPrismaClient(PrismaClient, "test-ams-");
+  createTables(ctx.sqlite);
+  return ctx;
 }
 
 export function createTables(sqlite: Database) {
@@ -143,10 +157,64 @@ export function createTestApp(routers: {
   accounting?: Hono<{ Variables: AppVariables }>;
   tasks?: Hono<{ Variables: AppVariables }>;
   escalations?: Hono<{ Variables: AppVariables }>;
+  prisma?: any;
+  onReset?: (seedMode: string) => Promise<void>;
 }) {
+  const activePrisma = routers.prisma ?? defaultPrisma;
   const app = new Hono<{ Variables: AppVariables }>();
   app.use("*", correlationId);
+  app.use("*", chaosMiddleware());
   app.onError(errorHandler);
+
+  app.get("/health", (c) =>
+    c.json({ status: "ok", service: "ams", timestamp: new Date().toISOString() }),
+  );
+
+  app.route(
+    "/sim",
+    createSimRouter({
+      serviceName: "ams",
+      prisma: activePrisma,
+      tables: [
+        { name: "clients", delegate: "client", orderBy: "id" },
+        { name: "policies", delegate: "policy", orderBy: "policy_id" },
+        { name: "coverages", delegate: "coverage", orderBy: "id" },
+        { name: "endorsements", delegate: "endorsement", orderBy: "endorsement_id" },
+        { name: "commissions", delegate: "commission", orderBy: "commission_id" },
+        { name: "tasks", delegate: "task", orderBy: "id" },
+        { name: "escalations", delegate: "escalation", orderBy: "escalation_id" },
+        { name: "escalation_events", delegate: "escalationEvent", orderBy: "id" },
+      ],
+      onTimeTravel: async (_days, simulatedNow) => {
+        const isoDate = simulatedNow.toISOString().slice(0, 10);
+        const isoNow = simulatedNow.toISOString();
+        const expiredPolicies = await activePrisma.policy.updateMany({
+          where: { status: "active", expiration_date: { lt: isoDate } },
+          data: { status: "expired", updated_at: isoNow },
+        });
+        const appliedEndorsements = await activePrisma.endorsement.updateMany({
+          where: { status: "pending_review", effective_date: { lte: isoDate } },
+          data: { status: "applied", updated_at: isoNow },
+        });
+        return {
+          policies_expired: expiredPolicies.count,
+          endorsements_applied: appliedEndorsements.count,
+        };
+      },
+      onReset:
+        routers.onReset ??
+        (async () => {
+          await activePrisma.escalationEvent.deleteMany();
+          await activePrisma.escalation.deleteMany();
+          await activePrisma.task.deleteMany();
+          await activePrisma.commission.deleteMany();
+          await activePrisma.endorsement.deleteMany();
+          await activePrisma.coverage.deleteMany();
+          await activePrisma.policy.deleteMany();
+          await activePrisma.client.deleteMany();
+        }),
+    }),
+  );
 
   const api = new Hono<{ Variables: AppVariables }>();
   api.use("*", jwtAuth);

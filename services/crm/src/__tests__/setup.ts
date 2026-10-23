@@ -5,15 +5,30 @@ import {
   jwtAuth,
   errorHandler,
   createTestDatabase as _createTestDb,
+  createTestPrismaClient,
+  getTestDatabaseUrl,
   authHeader as _authHeader,
   type AppVariables,
 } from "@evergreen/shared";
 import * as schema from "../schema";
+import { PrismaClient } from "../generated/prisma/client";
+
+export { getTestDatabaseUrl };
 
 export const TEST_SECRET = "test-secret-for-crm-tests";
 process.env.JWT_SECRET = TEST_SECRET;
 
 // ── Database helpers ──
+
+export function createTestDatabase() {
+  return _createTestDb(schema);
+}
+
+export function createTestPrisma() {
+  const ctx = createTestPrismaClient(PrismaClient, "test-crm-");
+  createTables(ctx.sqlite);
+  return ctx;
+}
 
 export function createTables(sqlite: Database) {
   sqlite.exec(`

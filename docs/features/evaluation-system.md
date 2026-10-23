@@ -47,15 +47,29 @@ Scorer that evaluates AI agent performance on 15 benchmark scenarios using outpu
 - **S1-TEST-2** Trace evaluator unit tests — `eval/__tests__/trace-evaluator.test.ts`. 32 tests: parseOtlpTrace, parseGenAiTrace, evaluateTrace (all 4 check types), parseTrace (unified auto-detect). Plan: `.claude/plans/synchronous-fluttering-tide.md`
 - **S1-TEST-3** Integration test — `eval/__tests__/integration.test.ts`. 5 tests: full pipeline all-pass (scenario 01 clean), partial output failures with weighted scoring verification, E&O trap failure overrides score to 0, E&O trap caught preserves score, report structure validation. Fixture: `eval/__tests__/fixtures/otlp-scenario01.json`. Plan: `.claude/plans/mighty-jingling-graham.md`
 
+### Sprint 0 Review Fixes (2026-10-19)
+
+- **S0-BUG-1** Fixed OAuth instructions in `eval/metr/EvergreenInsurance.py` (`POST /oauth/token`, `client_id=agent-full`, `client_secret=dev-secret`, OpenAPI specs in `specs/`).
+- **S0-BUG-2** Added `attorney_involvement` to `ESCALATION_REASONS` and `reason ?? reason_code` alias support in `services/ams/src/routes/escalations.ts`, added manager rule in `services/ams/src/manager/rules.ts`, updated `specs/ams.yaml`, and added unit tests in `services/ams/src/__tests__/escalations.test.ts`.
+- **S0-BUG-3** Added optional `outputCheck` to `EoTrap` (`eval/types.ts`, `eval/score.ts`), wired per-client escalation checks (`CLI-027`, `CLI-008`, `CLI-021`) into `eval/scenarios/08-eo-trap-navigation.ts`, and replaced vacuous `GET /clients/{id}/policies` checks in `eval/scenarios/10-book-of-business-audit.ts` with assertions on created escalations and remediation tasks.
+- **S0-DEBT-1** Reconciled Output (60%) / Trace (40%) weights across `README.md`, `eval/types.ts`, and `docs/evaluation.md`.
+- **S0-DEBT-2** Removed stale `PLAN.md`, populated `docs/architecture.md` and `docs/cujs.md`, and clarified seed data row counts and Prisma 7 stack in `README.md`.
+
 ## In Progress
 
 No work in progress.
 
 ## Planned Work
 
-See TODO.md Sprint 1 — Phase 4 (Tests).
+See [TODO.md](../../TODO.md) (Sprint 2 & Sprint 3) and [docs/specs.md](../specs.md) for full task breakdowns:
 
-### Multi-Turn Conversation Scenarios (Priority: P1)
+- **Harbor / Terminal-Bench Framework Adapter (`S2-INTOP-1`, Priority: P1 — Active Sprint 2 TODO):** Package the 15 scenarios (203 task cases) into Harbor format (`task.yaml` + `docker-compose.yaml` + `tests/test_outputs.py`) for zero-code benchmarking of Claude Code, OpenHands, Codex CLI, Goose, and Aider.
+- **Snapshot-Based State Diffing (`S3-DIFF-1`, Priority: P0):** Exact pre/post database state diffing across all 8 services to catch collateral damage (inspired by *AppWorld*).
+- **Strict 3-Modality Enforcement (`S3-MOD-1`, Priority: P1):** `MODALITY_MODE=strict` to require true MCP usage on `comm` and browser interaction on carrier portals when benchmarking agent harnesses.
+- **Multi-Harness Runner & Leaderboard (`S3-HARN-1`, Priority: P2):** Standardized evaluation runner and comparative leaderboard across models and harnesses (ADK, Claude Code, OpenHands, LangGraph, Inspect AI).
+- **Additional Benchmark & RL Standards (`S3-INTOP-2..4`, Priority: P2/P3 — Backlog):** Native UK AISI `Inspect AI` `@task` (`S3-INTOP-2`), OpenEnv / Prime Intellect `verifiers` RL control plane with fast `/sim/reset` (`S3-INTOP-3`), and Princeton HAL (`hal-harness`) Cost-vs-Score exporter (`S3-INTOP-4`).
+
+### Multi-Turn Conversation Scenarios (`S3-SIM-1`, Priority: P1)
 - **Problem:** All 15 scenarios are single-shot tasks. Enterprise agents rarely operate this way — real insurance workflows involve clarification loops ("Which vehicle was involved?"), partial information gathering across multiple interactions, and user corrections mid-task. Without multi-turn evaluation, the gym cannot measure an agent's ability to handle ambiguity, ask clarifying questions, or recover from misunderstandings — the dominant interaction pattern in production.
 - **Scope:**
   - Conversation simulator that feeds scripted user responses based on agent questions
