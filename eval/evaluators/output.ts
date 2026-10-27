@@ -106,6 +106,105 @@ function deepPartialMatch(
   return { matched: true };
 }
 
+function extractCandidateRecords(body: unknown): Record<string, unknown>[] {
+  if (Array.isArray(body)) {
+    return body.filter(
+      (item): item is Record<string, unknown> =>
+        typeof item === "object" && item !== null && !Array.isArray(item),
+    );
+  }
+  if (typeof body === "object" && body !== null) {
+    const obj = body as Record<string, unknown>;
+    if (Array.isArray(obj.data)) {
+      return obj.data.filter(
+        (item): item is Record<string, unknown> =>
+          typeof item === "object" && item !== null && !Array.isArray(item),
+      );
+    }
+    return [obj];
+  }
+  return [];
+}
+
+function getFieldByPath(record: Record<string, unknown>, dotPath: string): unknown {
+  const parts = dotPath.split(".");
+  let cur: unknown = record;
+  for (const part of parts) {
+    if (typeof cur !== "object" || cur === null || Array.isArray(cur)) {
+      return undefined;
+    }
+    cur = (cur as Record<string, unknown>)[part];
+  }
+  return cur;
+}
+
+export function evaluateBodyRegex(
+  body: unknown,
+  bodyRegex: Record<string, string | string[]>,
+): { matched: boolean; detail?: string } {
+  const candidates = extractCandidateRecords(body);
+  if (candidates.length === 0) {
+    return { matched: false, detail: "No candidate records found for bodyRegex check" };
+  }
+
+  const recordMatchesAll = (record: Record<string, unknown>): { ok: boolean; reason?: string } => {
+    for (const [fieldPath, rawPatterns] of Object.entries(bodyRegex)) {
+      const val = getFieldByPath(record, fieldPath);
+      const text = typeof val === "string" ? val : val !== undefined && val !== null ? JSON.stringify(val) : "";
+      const patterns = Array.isArray(rawPatterns) ? rawPatterns : [rawPatterns];
+      for (const pat of patterns) {
+        const re = new RegExp(pat, "i");
+        if (!re.test(text)) {
+          return {
+            ok: false,
+            reason: `Field '${fieldPath}' did not match regex /${pat}/i`,
+          };
+        }
+      }
+    }
+    return { ok: true };
+  };
+
+  let lastReason: string | undefined;
+  for (const candidate of candidates) {
+    const res = recordMatchesAll(candidate);
+    if (res.ok) {
+      return { matched: true };
+    }
+    lastReason = res.reason;
+  }
+
+  return {
+    matched: false,
+    detail: lastReason ?? "No record matched bodyRegex patterns",
+  };
+}
+
+export function evaluateBodyForbiddenRegex(
+  body: unknown,
+  bodyForbiddenRegex: Record<string, string | string[]>,
+): { matched: boolean; detail?: string } {
+  const candidates = extractCandidateRecords(body);
+  for (const candidate of candidates) {
+    for (const [fieldPath, rawPatterns] of Object.entries(bodyForbiddenRegex)) {
+      const val = getFieldByPath(candidate, fieldPath);
+      if (val === undefined || val === null) continue;
+      const text = typeof val === "string" ? val : JSON.stringify(val);
+      const patterns = Array.isArray(rawPatterns) ? rawPatterns : [rawPatterns];
+      for (const pat of patterns) {
+        const re = new RegExp(pat, "i");
+        if (re.test(text)) {
+          return {
+            matched: false,
+            detail: `Field '${fieldPath}' matched forbidden regex /${pat}/i`,
+          };
+        }
+      }
+    }
+  }
+  return { matched: true };
+}
+
 // ── Output evaluator ────────────────────────────────────────────────
 
 export async function evaluateOutput(
@@ -202,6 +301,34 @@ export async function evaluateOutput(
             passed: false,
             weight: check.weight,
             detail: result.detail ?? "Body match failed",
+          });
+          continue;
+        }
+      }
+
+      // Rule 0 regex content match check
+      if (check.expect.bodyRegex) {
+        const result = evaluateBodyRegex(body, check.expect.bodyRegex);
+        if (!result.matched) {
+          scores.push({
+            name: check.name,
+            passed: false,
+            weight: check.weight,
+            detail: result.detail ?? "bodyRegex check failed",
+          });
+          continue;
+        }
+      }
+
+      // Rule 0 forbidden regex content check
+      if (check.expect.bodyForbiddenRegex) {
+        const result = evaluateBodyForbiddenRegex(body, check.expect.bodyForbiddenRegex);
+        if (!result.matched) {
+          scores.push({
+            name: check.name,
+            passed: false,
+            weight: check.weight,
+            detail: result.detail ?? "bodyForbiddenRegex check failed",
           });
           continue;
         }

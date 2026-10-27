@@ -338,6 +338,90 @@ describe("evaluateOutput", () => {
     });
   });
 
+  describe("bodyRegex and bodyForbiddenRegex (Rule 0 content matchers)", () => {
+    test("passes when bodyRegex matches a record in { data: [...] }", async () => {
+      globalThis.fetch = mockFetch({
+        "/v1/messages": {
+          body: {
+            data: [
+              { id: "MSG-1", direction: "outbound", body: "Hello, checking in." },
+              {
+                id: "MSG-2",
+                direction: "outbound",
+                body: "Your SMIT personal auto renewal is $1,560 vs Coastal Star at $1,410.",
+              },
+            ],
+          },
+        },
+      }) as typeof fetch;
+
+      const check = makeCheck({
+        path: "/messages",
+        expect: {
+          status: 200,
+          bodyRegex: {
+            body: ["(SMIT|Coastal)", "1,?560"],
+          },
+        },
+      });
+      const [score] = await evaluateOutput([check], BASE_URLS);
+      expect(score.passed).toBe(true);
+    });
+
+    test("fails when no record satisfies all bodyRegex patterns", async () => {
+      globalThis.fetch = mockFetch({
+        "/v1/messages": {
+          body: {
+            data: [{ id: "MSG-1", direction: "outbound", body: "We will get back to you soon." }],
+          },
+        },
+      }) as typeof fetch;
+
+      const check = makeCheck({
+        path: "/messages",
+        expect: {
+          status: 200,
+          bodyRegex: {
+            body: ["(SMIT|Coastal)", "1,?560"],
+          },
+        },
+      });
+      const [score] = await evaluateOutput([check], BASE_URLS);
+      expect(score.passed).toBe(false);
+      expect(score.detail).toContain("did not match regex");
+    });
+
+    test("fails when bodyForbiddenRegex matches prohibited advice in any record", async () => {
+      globalThis.fetch = mockFetch({
+        "/v1/messages": {
+          body: {
+            data: [
+              {
+                id: "MSG-1",
+                direction: "outbound",
+                body: "Your policy renews on 2026-02-28 with a $500 deductible. Your limits are adequate and you have plenty of coverage.",
+              },
+            ],
+          },
+        },
+      }) as typeof fetch;
+
+      const check = makeCheck({
+        path: "/messages",
+        expect: {
+          status: 200,
+          bodyRegex: { body: ["2026-02-28", "500"] },
+          bodyForbiddenRegex: {
+            body: "(adequat|plenty of coverage|you are fully covered)",
+          },
+        },
+      });
+      const [score] = await evaluateOutput([check], BASE_URLS);
+      expect(score.passed).toBe(false);
+      expect(score.detail).toContain("matched forbidden regex");
+    });
+  });
+
   describe("unknown service", () => {
     test("returns passed:false with Unknown service detail", async () => {
       globalThis.fetch = mockFetch({}) as typeof fetch;

@@ -43,6 +43,8 @@ export interface OutputCheck {
   expect: {
     status: number;
     bodyMatch?: Record<string, unknown>;
+    bodyRegex?: Record<string, string | string[]>;
+    bodyForbiddenRegex?: Record<string, string | string[]>;
     arrayMinLength?: number;
     arrayMaxLength?: number;
   };

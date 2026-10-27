@@ -30,6 +30,11 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-001", status: "open" }],
                 },
+                bodyRegex: {
+                  description: [
+                    "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
+                  ],
+                },
               },
             },
             {
@@ -43,6 +48,11 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: {
                   data: [{ client_id: "CLI-001", direction: "outbound" }],
+                },
+                bodyRegex: {
+                  body: [
+                    "(Chen|policy|policies|review|meeting|auto|homeowner|umbrella)",
+                  ],
                 },
               },
             },
@@ -66,6 +76,11 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-001", status: "open" }],
                 },
+                bodyRegex: {
+                  description: [
+                    "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
+                  ],
+                },
               },
             },
             {
@@ -79,6 +94,11 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: {
                   data: [{ client_id: "CLI-001", direction: "outbound" }],
+                },
+                bodyRegex: {
+                  body: [
+                    "(Chen|policy|policies|review|meeting|auto|homeowner|umbrella)",
+                  ],
                 },
               },
             },
@@ -102,6 +122,11 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-001", status: "open" }],
                 },
+                bodyRegex: {
+                  description: [
+                    "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
+                  ],
+                },
               },
             },
             {
@@ -115,6 +140,11 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: {
                   data: [{ client_id: "CLI-001", direction: "outbound" }],
+                },
+                bodyRegex: {
+                  body: [
+                    "(Chen|policy|policies|review|meeting|auto|homeowner|umbrella)",
+                  ],
                 },
               },
             },
@@ -137,6 +167,11 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-001", status: "open" }],
                 },
+                bodyRegex: {
+                  description: [
+                    "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
+                  ],
+                },
               },
             },
             {
@@ -150,6 +185,11 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: {
                   data: [{ client_id: "CLI-001", direction: "outbound" }],
+                },
+                bodyRegex: {
+                  body: [
+                    "(Chen|policy|policies|review|meeting|auto|homeowner|umbrella)",
+                  ],
                 },
               },
             },
@@ -173,6 +213,11 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-001", status: "open" }],
                 },
+                bodyRegex: {
+                  description: [
+                    "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
+                  ],
+                },
               },
             },
             {
@@ -186,6 +231,11 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: {
                   data: [{ client_id: "CLI-001", direction: "outbound" }],
+                },
+                bodyRegex: {
+                  body: [
+                    "(Chen|policy|policies|review|meeting|auto|homeowner|umbrella)",
+                  ],
                 },
               },
             },
@@ -310,6 +360,11 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-004", status: "open" }],
                 },
+                bodyRegex: {
+                  description: [
+                    "(umbrella|BOP|EPLI|Linda|CLI-005|renters|homeowner|attorney|CLM-2026-000011|gap)",
+                  ],
+                },
               },
             },
           ],
@@ -343,6 +398,11 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-004", status: "open" }],
+                },
+                bodyRegex: {
+                  description: [
+                    "(umbrella|BOP|EPLI|Linda|CLI-005|renters|homeowner|attorney|CLM-2026-000011|gap)",
+                  ],
                 },
               },
             },
@@ -378,6 +438,11 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-004", status: "open" }],
                 },
+                bodyRegex: {
+                  description: [
+                    "(umbrella|BOP|EPLI|Linda|CLI-005|renters|homeowner|attorney|CLM-2026-000011|gap)",
+                  ],
+                },
               },
             },
           ],
@@ -412,6 +477,11 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-004", status: "open" }],
                 },
+                bodyRegex: {
+                  description: [
+                    "(umbrella|BOP|EPLI|Linda|CLI-005|renters|homeowner|attorney|CLM-2026-000011|gap)",
+                  ],
+                },
               },
             },
           ],
@@ -445,6 +515,11 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-004", status: "open" }],
+                },
+                bodyRegex: {
+                  description: [
+                    "(umbrella|BOP|EPLI|Linda|CLI-005|renters|homeowner|attorney|CLM-2026-000011|gap)",
+                  ],
                 },
               },
             },

@@ -152,6 +152,57 @@ describe("parseOtlpTrace", () => {
     expect(calls[0].statusCode).toBe(200);
     expect(calls[0].service).toBe("crm");
   });
+
+  test("normalizes POST /mcp spans on comm service via mcp.tool.name attribute", () => {
+    const trace = makeTrace([
+      {
+        traceId: "t1",
+        spanId: "s-mcp-1",
+        name: "POST",
+        kind: 3,
+        startTimeUnixNano: "1700000000000000000",
+        endTimeUnixNano: "1700000000050000000",
+        attributes: [
+          { key: "http.request.method", value: { stringValue: "POST" } },
+          { key: "url.full", value: { stringValue: "http://localhost:3004/mcp" } },
+          { key: "http.response.status_code", value: { intValue: 200 } },
+          { key: "mcp.tool.name", value: { stringValue: "comm:messages:send" } },
+        ],
+      },
+      {
+        traceId: "t1",
+        spanId: "s-mcp-2",
+        name: "POST",
+        kind: 3,
+        startTimeUnixNano: "1700000000100000000",
+        endTimeUnixNano: "1700000000150000000",
+        attributes: [
+          { key: "http.request.method", value: { stringValue: "POST" } },
+          { key: "url.full", value: { stringValue: "http://localhost:3004/mcp" } },
+          { key: "http.response.status_code", value: { intValue: 200 } },
+          {
+            key: "http.request.body",
+            value: {
+              stringValue: JSON.stringify({
+                jsonrpc: "2.0",
+                method: "tools/call",
+                params: { name: "comm:messages:inbox" },
+              }),
+            },
+          },
+        ],
+      },
+    ]);
+
+    const calls = parseOtlpTrace(trace);
+    expect(calls).toHaveLength(2);
+    expect(calls[0].service).toBe("comm");
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].path).toBe("/v1/messages/send");
+    expect(calls[1].service).toBe("comm");
+    expect(calls[1].method).toBe("GET");
+    expect(calls[1].path).toBe("/v1/messages/inbox");
+  });
 });
 
 // ── parseGenAiTrace ───────────────────────────────────────────────
@@ -428,6 +479,80 @@ describe("evaluateTrace", () => {
       };
       const [score] = evaluateTrace([check], sampleCalls);
       expect(score.passed).toBe(false);
+    });
+
+    test("rejects 4xx/5xx calls on presence, sequence, and count by default while triggering absence", () => {
+      const errorCalls: ApiCall[] = [
+        {
+          method: "GET",
+          url: "http://localhost:3000/v1/clients/CLI-001",
+          path: "/v1/clients/CLI-001",
+          service: "ams",
+          statusCode: 200,
+          timestamp: 1700000000000,
+          durationMs: 50,
+        },
+        {
+          method: "POST",
+          url: "http://localhost:3000/v1/escalations",
+          path: "/v1/escalations",
+          service: "ams",
+          statusCode: 422,
+          timestamp: 1700000000100,
+          durationMs: 50,
+        },
+        {
+          method: "PATCH",
+          url: "http://localhost:3000/v1/policies/POL-1",
+          path: "/v1/policies/POL-1",
+          service: "ams",
+          statusCode: 400,
+          timestamp: 1700000000200,
+          durationMs: 50,
+        },
+      ];
+
+      const checks: TraceCheck[] = [
+        {
+          name: "escalation_presence_requires_2xx",
+          weight: 0.25,
+          type: "presence",
+          pattern: { method: "POST", pathPattern: "/v1/escalations", service: "ams" },
+        },
+        {
+          name: "escalation_explicit_422_matches",
+          weight: 0.25,
+          type: "presence",
+          pattern: {
+            method: "POST",
+            pathPattern: "/v1/escalations",
+            service: "ams",
+            statusCode: 422,
+          },
+        },
+        {
+          name: "sequence_requires_2xx",
+          weight: 0.25,
+          type: "sequence",
+          pattern: {},
+          sequence: [
+            { method: "GET", pathPattern: "/v1/clients/CLI-001" },
+            { method: "POST", pathPattern: "/v1/escalations" },
+          ],
+        },
+        {
+          name: "absence_catches_400_attempt",
+          weight: 0.25,
+          type: "absence",
+          pattern: { method: "PATCH", pathPattern: "/v1/policies", service: "ams" },
+        },
+      ];
+
+      const scores = evaluateTrace(checks, errorCalls);
+      expect(scores[0].passed).toBe(false); // 422 does not satisfy default 2xx requirement
+      expect(scores[1].passed).toBe(true);  // explicit statusCode: 422 matches
+      expect(scores[2].passed).toBe(false); // sequence step 2 had 422
+      expect(scores[3].passed).toBe(false); // absence still catches the 400 PATCH attempt
     });
   });
 });

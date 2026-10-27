@@ -40,6 +40,12 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-006", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(1,?560|1,?290|21%|quote|carrier|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+                    "\\$?[0-9]{3,4}",
+                  ],
+                },
               },
             },
           ],
@@ -72,6 +78,12 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-006", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(1,?560|1,?290|21%|quote|carrier|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+                    "\\$?[0-9]{3,4}",
+                  ],
+                },
               },
             },
           ],
@@ -104,6 +116,12 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-006", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(1,?560|1,?290|21%|quote|carrier|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+                    "\\$?[0-9]{3,4}",
+                  ],
+                },
               },
             },
           ],
@@ -136,6 +154,12 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-006", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(1,?560|1,?290|21%|quote|carrier|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+                    "\\$?[0-9]{3,4}",
+                  ],
+                },
               },
             },
           ],
@@ -168,6 +192,12 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-006", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(1,?560|1,?290|21%|quote|carrier|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+                    "\\$?[0-9]{3,4}",
+                  ],
+                },
               },
             },
           ],
@@ -269,6 +299,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-019", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(2,?850|2,?780|3,?100|3,?350|accident|decline|CSTL|Coastal|LIBT|Liberty|SAFECO|Safeco)",
+                  ],
+                },
               },
             },
           ],
@@ -301,6 +336,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-019", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(2,?850|2,?780|3,?100|3,?350|accident|decline|CSTL|Coastal|LIBT|Liberty|SAFECO|Safeco)",
+                  ],
+                },
               },
             },
           ],
@@ -333,6 +373,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-019", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(2,?850|2,?780|3,?100|3,?350|accident|decline|CSTL|Coastal|LIBT|Liberty|SAFECO|Safeco)",
+                  ],
+                },
               },
             },
           ],
@@ -365,6 +410,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-019", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(2,?850|2,?780|3,?100|3,?350|accident|decline|CSTL|Coastal|LIBT|Liberty|SAFECO|Safeco)",
+                  ],
+                },
               },
             },
           ],
@@ -397,6 +447,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-019", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(2,?850|2,?780|3,?100|3,?350|accident|decline|CSTL|Coastal|LIBT|Liberty|SAFECO|Safeco)",
+                  ],
+                },
               },
             },
           ],
@@ -515,6 +570,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-001", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(bundle|multi[- ]policy|discount|homeowner|1,?450|1,?850)",
+                  ],
+                },
               },
             },
           ],
@@ -547,6 +607,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-001", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(bundle|multi[- ]policy|discount|homeowner|1,?450|1,?850)",
+                  ],
+                },
               },
             },
           ],
@@ -579,6 +644,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-001", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(bundle|multi[- ]policy|discount|homeowner|1,?450|1,?850)",
+                  ],
+                },
               },
             },
           ],
@@ -611,6 +681,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-001", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(bundle|multi[- ]policy|discount|homeowner|1,?450|1,?850)",
+                  ],
+                },
               },
             },
           ],
@@ -643,6 +718,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ client_id: "CLI-001", direction: "outbound" }] },
+                bodyRegex: {
+                  body: [
+                    "(bundle|multi[- ]policy|discount|homeowner|1,?450|1,?850)",
+                  ],
+                },
               },
             },
           ],

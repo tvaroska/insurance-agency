@@ -40,6 +40,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 9,
                 bodyMatch: { data: [{ status: "open" }] },
+                bodyRegex: {
+                  description: [
+                    "(SMIT|Summit|commission|217\\.5|277\\.5|198|46\\.8|739\\.8|517\\.86|reconcil)",
+                  ],
+                },
               },
             },
           ],
@@ -72,6 +77,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 9,
                 bodyMatch: { data: [{ status: "open" }] },
+                bodyRegex: {
+                  description: [
+                    "(SMIT|Summit|commission|217\\.5|277\\.5|198|46\\.8|739\\.8|517\\.86|reconcil)",
+                  ],
+                },
               },
             },
           ],
@@ -104,6 +114,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 9,
                 bodyMatch: { data: [{ status: "open" }] },
+                bodyRegex: {
+                  description: [
+                    "(SMIT|Summit|commission|217\\.5|277\\.5|198|46\\.8|739\\.8|517\\.86|reconcil)",
+                  ],
+                },
               },
             },
           ],
@@ -136,6 +151,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 9,
                 bodyMatch: { data: [{ status: "open" }] },
+                bodyRegex: {
+                  description: [
+                    "(SMIT|Summit|commission|217\\.5|277\\.5|198|46\\.8|739\\.8|517\\.86|reconcil)",
+                  ],
+                },
               },
             },
           ],
@@ -168,6 +188,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 9,
                 bodyMatch: { data: [{ status: "open" }] },
+                bodyRegex: {
+                  description: [
+                    "(SMIT|Summit|commission|217\\.5|277\\.5|198|46\\.8|739\\.8|517\\.86|reconcil)",
+                  ],
+                },
               },
             },
           ],
@@ -229,6 +254,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 9,
                 bodyMatch: { data: [{ status: "open" }] },
+                bodyRegex: {
+                  description: [
+                    "(discrepanc|cancel|expired|missing|commission|POL-|COM-)",
+                  ],
+                },
               },
             },
           ],
@@ -261,6 +291,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 9,
                 bodyMatch: { data: [{ status: "open" }] },
+                bodyRegex: {
+                  description: [
+                    "(discrepanc|cancel|expired|missing|commission|POL-|COM-)",
+                  ],
+                },
               },
             },
           ],
@@ -293,6 +328,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 9,
                 bodyMatch: { data: [{ status: "open" }] },
+                bodyRegex: {
+                  description: [
+                    "(discrepanc|cancel|expired|missing|commission|POL-|COM-)",
+                  ],
+                },
               },
             },
           ],
@@ -325,6 +365,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 9,
                 bodyMatch: { data: [{ status: "open" }] },
+                bodyRegex: {
+                  description: [
+                    "(discrepanc|cancel|expired|missing|commission|POL-|COM-)",
+                  ],
+                },
               },
             },
           ],
@@ -357,6 +402,11 @@ const scenario: ScenarioDefinition = {
                 status: 200,
                 arrayMinLength: 9,
                 bodyMatch: { data: [{ status: "open" }] },
+                bodyRegex: {
+                  description: [
+                    "(discrepanc|cancel|expired|missing|commission|POL-|COM-)",
+                  ],
+                },
               },
             },
           ],

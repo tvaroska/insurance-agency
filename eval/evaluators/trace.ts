@@ -8,7 +8,7 @@ import type {
   ToolMapping,
 } from "../types";
 import { PORT_SERVICE_MAP, SPAN_KIND_CLIENT } from "../types";
-import { parseGenAiTrace } from "./trace-genai";
+import { BUILTIN_MCP_TOOL_MAPPING, parseGenAiTrace } from "./trace-genai";
 
 // ── Attribute helpers ───────────────────────────────────────────────
 
@@ -27,6 +27,48 @@ function getAttr(
   return undefined;
 }
 
+function resolveMcpToolFromSpan(span: OtlpSpan): { method: string; path: string } | undefined {
+  const candidateAttrs = [
+    getAttr(span.attributes, "mcp.tool.name"),
+    getAttr(span.attributes, "gen_ai.tool.name"),
+    getAttr(span.attributes, "rpc.method"),
+  ];
+
+  for (const attrVal of candidateAttrs) {
+    if (typeof attrVal === "string" && BUILTIN_MCP_TOOL_MAPPING[attrVal]) {
+      const mapped = BUILTIN_MCP_TOOL_MAPPING[attrVal];
+      return { method: mapped.method, path: mapped.path };
+    }
+  }
+
+  const bodyRaw =
+    getAttr(span.attributes, "http.request.body") ??
+    getAttr(span.attributes, "mcp.request.body");
+  if (typeof bodyRaw === "string") {
+    try {
+      const parsed = JSON.parse(bodyRaw) as {
+        method?: string;
+        params?: { name?: string };
+        tool?: string;
+        name?: string;
+      };
+      const toolName = parsed?.params?.name ?? parsed?.tool ?? parsed?.name ?? parsed?.method;
+      if (typeof toolName === "string" && BUILTIN_MCP_TOOL_MAPPING[toolName]) {
+        const mapped = BUILTIN_MCP_TOOL_MAPPING[toolName];
+        return { method: mapped.method, path: mapped.path };
+      }
+    } catch {
+      for (const [toolKey, mapped] of Object.entries(BUILTIN_MCP_TOOL_MAPPING)) {
+        if (bodyRaw.includes(toolKey)) {
+          return { method: mapped.method, path: mapped.path };
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
 // ── OTLP parsing ────────────────────────────────────────────────────
 
 export function parseOtlpTrace(trace: OtlpTrace): ApiCall[] {
@@ -37,13 +79,14 @@ export function parseOtlpTrace(trace: OtlpTrace): ApiCall[] {
       for (const span of ss.spans) {
         if (span.kind !== SPAN_KIND_CLIENT) continue;
 
-        const method = getAttr(span.attributes, "http.request.method");
+        const rawMethod = getAttr(span.attributes, "http.request.method");
         const urlFull = getAttr(span.attributes, "url.full");
         const statusCode = getAttr(span.attributes, "http.response.status_code");
         const serverPort = getAttr(span.attributes, "server.port");
 
-        if (typeof method !== "string" || typeof urlFull !== "string") continue;
+        if (typeof rawMethod !== "string" || typeof urlFull !== "string") continue;
 
+        let method = rawMethod;
         let path: string;
         try {
           path = new URL(urlFull).pathname;
@@ -61,13 +104,22 @@ export function parseOtlpTrace(trace: OtlpTrace): ApiCall[] {
           ? PORT_SERVICE_MAP[port] ?? "unknown"
           : "unknown";
 
+        // Normalize raw HTTP MCP calls (POST /mcp on comm under MODALITY_MODE=strict)
+        if (service === "comm" && (path === "/mcp" || path.startsWith("/mcp/"))) {
+          const normalized = resolveMcpToolFromSpan(span);
+          if (normalized) {
+            method = normalized.method;
+            path = normalized.path;
+          }
+        }
+
         const startNano = BigInt(span.startTimeUnixNano);
         const endNano = BigInt(span.endTimeUnixNano);
         const timestamp = Number(startNano / 1_000_000n);
         const durationMs = Number((endNano - startNano) / 1_000_000n);
 
         calls.push({
-          method: method as string,
+          method,
           url: urlFull as string,
           path,
           service,
@@ -93,13 +145,22 @@ function parsePortFromUrl(url: string): number | undefined {
 
 // ── Pattern matching ────────────────────────────────────────────────
 
+function isSuccessStatus(statusCode: number): boolean {
+  return statusCode === 0 || (statusCode >= 200 && statusCode < 300);
+}
+
 function matchesPattern(
   call: ApiCall,
   pattern: TraceCheck["pattern"],
+  requireSuccess = true,
 ): boolean {
   if (pattern.method !== undefined && call.method !== pattern.method) return false;
   if (pattern.service !== undefined && call.service !== pattern.service) return false;
-  if (pattern.statusCode !== undefined && call.statusCode !== pattern.statusCode) return false;
+  if (pattern.statusCode !== undefined) {
+    if (call.statusCode !== pattern.statusCode) return false;
+  } else if (requireSuccess && !isSuccessStatus(call.statusCode)) {
+    return false;
+  }
   if (pattern.pathPattern !== undefined) {
     const re = new RegExp(pattern.pathPattern);
     if (!re.test(call.path)) return false;
@@ -128,7 +189,7 @@ export function evaluateTrace(
 }
 
 function evalPresence(check: TraceCheck, calls: ApiCall[]): TraceScore {
-  const found = calls.some((c) => matchesPattern(c, check.pattern));
+  const found = calls.some((c) => matchesPattern(c, check.pattern, true));
   return {
     name: check.name,
     passed: found,
@@ -138,7 +199,7 @@ function evalPresence(check: TraceCheck, calls: ApiCall[]): TraceScore {
 }
 
 function evalAbsence(check: TraceCheck, calls: ApiCall[]): TraceScore {
-  const found = calls.find((c) => matchesPattern(c, check.pattern));
+  const found = calls.find((c) => matchesPattern(c, check.pattern, false));
   return {
     name: check.name,
     passed: !found,
@@ -155,8 +216,10 @@ function evalSequence(check: TraceCheck, calls: ApiCall[]): TraceScore {
   }
 
   // Subsequence match: sequence elements must appear in order (not necessarily consecutive)
+  // and must have a 2xx (or unrecorded 0) status code.
   let seqIdx = 0;
   for (const call of calls) {
+    if (!isSuccessStatus(call.statusCode)) continue;
     const step = check.sequence[seqIdx];
     if (
       call.method === step.method &&
@@ -179,7 +242,7 @@ function evalSequence(check: TraceCheck, calls: ApiCall[]): TraceScore {
 }
 
 function evalCount(check: TraceCheck, calls: ApiCall[]): TraceScore {
-  const matching = calls.filter((c) => matchesPattern(c, check.pattern)).length;
+  const matching = calls.filter((c) => matchesPattern(c, check.pattern, true)).length;
   const range = check.countRange ?? { min: 0, max: Infinity };
   const passed = matching >= range.min && matching <= range.max;
   return {

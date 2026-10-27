@@ -78,8 +78,14 @@ function extractHttpFromResponse(attrs: OtlpAttribute[]): HttpMeta | undefined {
   return undefined;
 }
 
-const BUILTIN_MCP_TOOL_MAPPING: ToolMapping = {
+export const BUILTIN_MCP_TOOL_MAPPING: ToolMapping = {
   "comm:messages:send": {
+    method: "POST",
+    path: "/v1/messages/send",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
+  send_message: {
     method: "POST",
     path: "/v1/messages/send",
     service: "comm",
@@ -94,6 +100,36 @@ const BUILTIN_MCP_TOOL_MAPPING: ToolMapping = {
   "comm:messages:inbox": {
     method: "GET",
     path: "/v1/messages/inbox",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
+  get_inbox: {
+    method: "GET",
+    path: "/v1/messages/inbox",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
+  "comm:calls:read": {
+    method: "GET",
+    path: "/v1/calls/transcript",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
+  get_transcript: {
+    method: "GET",
+    path: "/v1/calls/transcript",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
+  "comm:webhooks:manage": {
+    method: "POST",
+    path: "/v1/webhooks",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
+  manage_webhook: {
+    method: "POST",
+    path: "/v1/webhooks",
     service: "comm",
     baseUrl: "http://localhost:3004",
   },
