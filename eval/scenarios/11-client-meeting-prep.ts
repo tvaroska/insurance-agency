@@ -1,4 +1,8 @@
 import type { ScenarioDefinition } from "../types";
+import {
+  BINARY_SCALE_STEPS,
+  FOUR_POINT_GROUNDEDNESS_STEPS,
+} from "../evaluators/rubric";
 
 const scenario: ScenarioDefinition = {
   id: "11",
@@ -323,6 +327,38 @@ const scenario: ScenarioDefinition = {
         },
       ],
       eoTraps: [],
+      rubricChecks: [
+        {
+          id: "chen_household_portfolio_synthesis",
+          name: "Chen Household Portfolio & Gap Synthesis",
+          weight: 1.0,
+          service: "ams",
+          path: "/tasks?related_client_id=CLI-001",
+          field: "description",
+          scaleType: "ordinal_4",
+          passingScore: 3,
+          question:
+            "Does the meeting prep task for Sarah Chen (CLI-001) synthesize the full HH-001 household portfolio (including spouse James Chen CLI-002, auto, homeowners, and umbrella coverage) rather than listing only Sarah's auto policy?",
+          scaleSteps: FOUR_POINT_GROUNDEDNESS_STEPS,
+          boundaryExamples: [
+            {
+              inputSnippet:
+                "Annual review for Chen household (HH-001): Sarah (CLI-001) auto + homeowners + umbrella, James (CLI-002) auto policy. Review umbrella limit alignment across both drivers.",
+              score: 4,
+              rationale:
+                "Covers both household members and all policy lines.",
+            },
+            {
+              inputSnippet: "Prep for Sarah Chen meeting.",
+              score: 1,
+              rationale: "Contains no household, spouse, or policy details.",
+            },
+          ],
+          requiredPatterns: [
+            "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
+          ],
+        },
+      ],
     },
 
     // ── Realistic: complex multi-profile with sensitive issues ─────
@@ -658,6 +694,64 @@ const scenario: ScenarioDefinition = {
               service: "ams",
             },
           },
+        },
+      ],
+      rubricChecks: [
+        {
+          id: "thompson_gap_and_risk_synthesis",
+          name: "Thompson Family Coverage Gap & Risk Synthesis",
+          weight: 0.6,
+          service: "ams",
+          path: "/tasks?related_client_id=CLI-004",
+          field: "description",
+          scaleType: "ordinal_4",
+          passingScore: 3,
+          question:
+            "Does the meeting prep task for David & Linda Thompson (HH-004) identify the key coverage gaps ($1M umbrella inadequacy for restaurant owner, BOP 2nd location/EPLI gap, and Linda CLI-005 missing homeowners/renters coverage)?",
+          scaleSteps: FOUR_POINT_GROUNDEDNESS_STEPS,
+          boundaryExamples: [
+            {
+              inputSnippet:
+                "HH-004 Meeting Prep: 1) David (CLI-004) $1M umbrella inadequate for expanding restaurant; 2) BOP needs 2nd location + EPLI; 3) Linda (CLI-005) has auto only (needs HO/renters); 4) CLM-2026-000011 has attorney involvement.",
+              score: 4,
+              rationale:
+                "Synthesizes all household coverage gaps and active claim/attorney risks.",
+            },
+            {
+              inputSnippet: "Discuss David's restaurant policy renewal.",
+              score: 1,
+              rationale: "Omits umbrella gap, EPLI, Linda's gap, and claim issues.",
+            },
+          ],
+          requiredPatterns: [
+            "(umbrella|BOP|EPLI|Linda|CLI-005|renters|homeowner|attorney|CLM-2026-000011|gap)",
+          ],
+        },
+        {
+          id: "thompson_attorney_claim_flagged",
+          name: "Attorney-Involved Fire Claim Flagged",
+          weight: 0.4,
+          service: "ams",
+          path: "/escalations?client_id=CLI-004",
+          field: "reason",
+          scaleType: "binary",
+          passingScore: 1,
+          question:
+            "Was an escalation logged for David Thompson (CLI-004) addressing attorney involvement or coverage adequacy on his commercial portfolio?",
+          scaleSteps: BINARY_SCALE_STEPS,
+          boundaryExamples: [
+            {
+              inputSnippet: "attorney_involvement",
+              score: 1,
+              rationale: "Escalates attorney involvement on CLM-2026-000011.",
+            },
+            {
+              inputSnippet: "general_inquiry",
+              score: 0,
+              rationale: "Fails to cite attorney involvement or coverage determination.",
+            },
+          ],
+          requiredPatterns: ["(attorney|coverage|CLM-2026-000011|principal|specialist)"],
         },
       ],
     },

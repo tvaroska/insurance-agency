@@ -5,6 +5,7 @@ import type {
   EoTrapResult,
   StateDiffSummary,
   EconomicsMetrics,
+  RubricEvaluationSummary,
 } from "./types";
 import { DEFAULT_WEIGHTS } from "./types";
 
@@ -22,6 +23,7 @@ export interface ReportInput {
   expectedRange: [number, number];
   stateDiff?: StateDiffSummary;
   economics?: EconomicsMetrics;
+  rubric?: RubricEvaluationSummary;
 }
 
 function weightedScore(checks: { passed: boolean; weight: number }[]): number {
@@ -84,6 +86,10 @@ export function generateReport(input: ReportInput): ScenarioReport {
       ...input.economics,
       paretoEfficiency,
     };
+  }
+
+  if (input.rubric !== undefined) {
+    report.rubric = input.rubric;
   }
 
   return report;
@@ -231,6 +237,29 @@ export function formatMarkdown(report: ScenarioReport): string {
     if (ec.modalityCounts) {
       lines.push(
         `| Modality Split (REST / MCP / UI) | ${ec.modalityCounts.rest} / ${ec.modalityCounts.mcp} / ${ec.modalityCounts.ui} |`,
+      );
+    }
+    lines.push("");
+  }
+
+  // Tier-2 Atomic Rubric & Rogan-Gladen Calibration
+  if (report.rubric && report.rubric.verdicts.length > 0) {
+    const rb = report.rubric;
+    const cal = rb.calibration;
+    lines.push(
+      `## Tier-2 Atomic Rubric: ${pct(rb.score)} (Rogan-Gladen Debiased: ${pct(rb.debiasedScore)})`,
+    );
+    lines.push("");
+    lines.push(`- **Judge Model:** \`${rb.judgeModel}\``);
+    lines.push(
+      `- **Rogan-Gladen 95% CI:** [${pct(cal.ci95Lower)}, ${pct(cal.ci95Upper)}] (TPR=${cal.tprSensitivity.toFixed(2)}, TNR=${cal.tnrSpecificity.toFixed(2)}, Youden's J=${cal.youdenJ.toFixed(2)})`,
+    );
+    lines.push("");
+    lines.push("| Criterion | Weight | Score | Result | Reasoning Trace |");
+    lines.push("|-----------|--------|-------|--------|-----------------|");
+    for (const v of rb.verdicts) {
+      lines.push(
+        `| ${v.name} (\`${v.criterionId}\`) | ${v.weight} | ${v.score.toFixed(2)} | ${icon(v.passed)} | ${v.reasoningTrace} |`,
       );
     }
     lines.push("");

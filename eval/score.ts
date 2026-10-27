@@ -8,9 +8,11 @@ import type {
   EoTrapResult,
   GymSnapshot,
   StateDiffSummary,
+  RubricEvaluationSummary,
 } from "./types";
 import { parseTrace, evaluateTrace } from "./evaluators/trace";
 import { evaluateOutput } from "./evaluators/output";
+import { evaluateRubrics, DEFAULT_JUDGE_MODEL } from "./evaluators/rubric";
 import {
   fetchGymSnapshot,
   diffSnapshots,
@@ -78,6 +80,7 @@ export interface ScoreScenarioOptions {
   snapshotBefore?: GymSnapshot;
   snapshotAfter?: GymSnapshot;
   model?: string;
+  judgeModel?: string;
 }
 
 export async function scoreScenario(
@@ -150,6 +153,14 @@ export async function scoreScenario(
     stateDiff = summarizeStateDiff(diffResult, collateral, false);
   }
 
+  // Optional Tier-2 Atomic Rubric & Rogan-Gladen Calibration evaluation
+  let rubric: RubricEvaluationSummary | undefined;
+  if (variant.rubricChecks && variant.rubricChecks.length > 0) {
+    rubric = await evaluateRubrics(variant.rubricChecks, {
+      judgeModel: opts.judgeModel ?? DEFAULT_JUDGE_MODEL,
+    });
+  }
+
   // Preliminary report to obtain overall score for Pareto efficiency
   const runId = randomUUID().slice(0, 8);
   const baseReport = generateReport({
@@ -163,6 +174,7 @@ export async function scoreScenario(
     apiCallCount: apiCalls.length,
     expectedRange: [variant.expectedApiCalls.min, variant.expectedApiCalls.max],
     stateDiff,
+    rubric,
   });
 
   // Compute Economics & Efficiency metrics (S3-ECON-1 & S3-SIM-1)
@@ -186,6 +198,7 @@ export async function scoreScenario(
     expectedRange: [variant.expectedApiCalls.min, variant.expectedApiCalls.max],
     stateDiff,
     economics,
+    rubric,
   });
 
   return { report, runId };

@@ -1,4 +1,5 @@
-import type { ScenarioDefinition } from "../types";
+import type { RubricCriterion, ScenarioDefinition } from "../types";
+import { FOUR_POINT_GROUNDEDNESS_STEPS } from "../evaluators/rubric";
 
 const outputChecks = [
   {
@@ -106,6 +107,40 @@ const traceChecks = [
   },
 ];
 
+const rubricChecks: RubricCriterion[] = [
+  {
+    id: "jimenez_coi_venue_pivot_confirmation",
+    name: "COI Venue & BOP Policy Pivot Confirmation",
+    weight: 1.0,
+    service: "comm",
+    path: "/messages?client_id=CLI-018&direction=outbound",
+    field: "body",
+    scaleType: "ordinal_4",
+    passingScore: 3,
+    question:
+      "Do the outbound messages to Rosa Jimenez (CLI-018) clarify the missing venue/BOP policy details first, and after her pivot confirm the $2,000,000 GL endorsement and COI issuance on her second BOP (POL-BO-2025-000130) for Winter Park Farmers Market?",
+    scaleSteps: FOUR_POINT_GROUNDEDNESS_STEPS,
+    boundaryExamples: [
+      {
+        inputSnippet:
+          "We endorsed POL-BO-2025-000130 to $2,000,000 General Liability effective 2026-03-01 and issued the COI for Winter Park Farmers Market (200 W New England Ave, Winter Park, FL 32789).",
+        score: 4,
+        rationale:
+          "Reflects the Turn-2 pivot to POL-BO-2025-000130, $2M GL limit, and Winter Park Farmers Market.",
+      },
+      {
+        inputSnippet:
+          "We issued the COI for Orlando Convention Center on POL-BO-2025-000060.",
+        score: 1,
+        rationale: "Used the wrong venue and wrong BOP policy.",
+      },
+    ],
+    requiredPatterns: [
+      "(POL-BO-2025-000130|Winter Park|2,?000,?000|2M|COI|certificate|address|which.*policy)",
+    ],
+  },
+];
+
 const scenario: ScenarioDefinition = {
   id: "17",
   name: "Multi-Turn COI Venue & Policy Pivot",
@@ -156,6 +191,7 @@ const scenario: ScenarioDefinition = {
       expectedApiCalls: { min: 5, max: 20 },
       traceChecks,
       eoTraps: [],
+      rubricChecks,
     },
 
     realistic: {
@@ -201,6 +237,7 @@ const scenario: ScenarioDefinition = {
       expectedApiCalls: { min: 5, max: 22 },
       traceChecks,
       eoTraps: [],
+      rubricChecks,
     },
   },
 };

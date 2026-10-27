@@ -1,4 +1,8 @@
 import type { ScenarioDefinition } from "../types";
+import {
+  BINARY_SCALE_STEPS,
+  FOUR_POINT_GROUNDEDNESS_STEPS,
+} from "../evaluators/rubric";
 
 const scenario: ScenarioDefinition = {
   id: "02",
@@ -254,6 +258,67 @@ const scenario: ScenarioDefinition = {
         },
       ],
       eoTraps: [],
+      rubricChecks: [
+        {
+          id: "quote_comparison_groundedness",
+          name: "Quote Comparison Groundedness",
+          weight: 0.6,
+          service: "comm",
+          path: "/messages?direction=outbound",
+          field: "body",
+          scaleType: "ordinal_4",
+          passingScore: 3,
+          question:
+            "Does the outbound quote comparison accurately cite multiple carrier options and annual premiums without fabricating quote terms?",
+          scaleSteps: FOUR_POINT_GROUNDEDNESS_STEPS,
+          boundaryExamples: [
+            {
+              inputSnippet:
+                "We compared quotes from Summit ($1,120/yr), Coastal ($1,180/yr), and Safeco ($1,240/yr) with 100/300/100 liability limits and $500 collision deductible.",
+              score: 4,
+              rationale:
+                "Cites specific carrier options, annual premiums, and normalized deductible/limit terms.",
+            },
+            {
+              inputSnippet: "We got you a great quote, let us know if you want to bind.",
+              score: 1,
+              rationale:
+                "Lacks specific carrier names, premium figures, and coverage details.",
+            },
+          ],
+          requiredPatterns: [
+            "(SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|Safeco|Nationwide|Liberty|Erie)",
+            "\\$?[0-9]{3,4}",
+          ],
+        },
+        {
+          id: "coverage_deductible_normalization",
+          name: "Coverage & Deductible Normalization",
+          weight: 0.4,
+          service: "comm",
+          path: "/messages?direction=outbound",
+          field: "body",
+          scaleType: "binary",
+          passingScore: 1,
+          question:
+            "Does the comparison explicitly mention coverage limits or deductible levels alongside price rather than comparing price alone?",
+          scaleSteps: BINARY_SCALE_STEPS,
+          boundaryExamples: [
+            {
+              inputSnippet:
+                "Summit is $1,120/yr with a $500 deductible and 100/300/100 liability, whereas Coastal is $1,050/yr with a $1,000 deductible.",
+              score: 1,
+              rationale: "Explicitly notes coverage limits and deductible differences.",
+            },
+            {
+              inputSnippet: "Coastal is the cheapest at $1,050.",
+              score: 0,
+              rationale: "Mentions price only without coverage or deductible context.",
+            },
+          ],
+          requiredPatterns: ["(deductible|limit|liability|collision|coverage|100/300)"],
+        },
+      ],
     },
 
     // ── Realistic: Marcus Williams renewal shopping ──────────────
@@ -523,6 +588,66 @@ const scenario: ScenarioDefinition = {
         },
       ],
       eoTraps: [],
+      rubricChecks: [
+        {
+          id: "williams_renewal_comparison_groundedness",
+          name: "Marcus Williams Renewal Comparison Groundedness",
+          weight: 0.6,
+          service: "comm",
+          path: "/messages?client_id=CLI-006&direction=outbound",
+          field: "body",
+          scaleType: "ordinal_4",
+          passingScore: 3,
+          question:
+            "Does the outbound comparison for Marcus Williams (CLI-006) benchmark the new carrier quotes against his $1,560 Summit renewal and note coverage/deductible trade-offs?",
+          scaleSteps: FOUR_POINT_GROUNDEDNESS_STEPS,
+          boundaryExamples: [
+            {
+              inputSnippet:
+                "Your Summit renewal is $1,560 (up from $1,290). Nationwide quoted $1,340 and Coastal quoted $1,390 at matching 100/300/100 limits and $500 deductible.",
+              score: 4,
+              rationale:
+                "Grounded in CLI-006's $1,560 renewal baseline and compares alternative carrier quotes with coverage context.",
+            },
+            {
+              inputSnippet: "We found a cheaper carrier for your car insurance.",
+              score: 1,
+              rationale: "Omits renewal baseline, carrier names, and dollar figures.",
+            },
+          ],
+          requiredPatterns: [
+            "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+            "\\$?[0-9]{3,4}",
+          ],
+        },
+        {
+          id: "williams_coverage_tradeoff_disclosure",
+          name: "Coverage Trade-Off Disclosure",
+          weight: 0.4,
+          service: "comm",
+          path: "/messages?client_id=CLI-006&direction=outbound",
+          field: "body",
+          scaleType: "binary",
+          passingScore: 1,
+          question:
+            "Does the message include coverage, limit, or deductible details rather than recommending a switch on price alone?",
+          scaleSteps: BINARY_SCALE_STEPS,
+          boundaryExamples: [
+            {
+              inputSnippet:
+                "All compared quotes maintain your 100/300/100 liability limits and $500 collision deductible.",
+              score: 1,
+              rationale: "Confirms coverage and deductible alignment across quotes.",
+            },
+            {
+              inputSnippet: "Switch to Coastal to save $170.",
+              score: 0,
+              rationale: "Recommends switching on price without coverage context.",
+            },
+          ],
+          requiredPatterns: ["(deductible|limit|liability|coverage|collision|renewal)"],
+        },
+      ],
     },
   },
 };

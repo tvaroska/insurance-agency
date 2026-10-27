@@ -32,6 +32,7 @@ export interface VariantConfig {
   eoTraps: EoTrap[];
   turnBudget?: { min?: number; max: number };
   collateralPolicy?: CollateralPolicy;
+  rubricChecks?: RubricCriterion[];
 }
 
 export interface OutputCheck {
@@ -266,6 +267,69 @@ export interface EconomicsMetrics {
   modalityCounts?: ModalityCounts;
 }
 
+// Tier-2 Atomic Rubric & Rogan-Gladen Calibration types
+
+export interface RubricScaleStep {
+  score: number;
+  label: string;
+  definition: string;
+}
+
+export interface RubricBoundaryExample {
+  inputSnippet: string;
+  candidateOutput: string;
+  reasoningTrace: string;
+  score: number;
+  passed: boolean;
+}
+
+export interface RubricCriterion {
+  id: string;
+  name: string;
+  question: string;
+  weight: number;
+  service: string;
+  path: string;
+  field: string;
+  sourceContext: string;
+  passThreshold?: number;
+  scaleSteps?: RubricScaleStep[];
+  boundaryExamples?: RubricBoundaryExample[];
+  deterministicFallbackRegex?: string | string[];
+  deterministicForbiddenRegex?: string | string[];
+}
+
+export interface RubricVerdict {
+  criterionId: string;
+  name: string;
+  reasoningTrace: string;
+  score: number;
+  passed: boolean;
+  weight: number;
+  judgeModel: string;
+}
+
+export interface RoganGladenSummary {
+  rawJudgePassRate: number;
+  debiasedPassRate: number;
+  tprSensitivity: number;
+  tnrSpecificity: number;
+  youdenJ: number;
+  ci95Lower: number;
+  ci95Upper: number;
+  nUnlabeled: number;
+  nCalibrationPos: number;
+  nCalibrationNeg: number;
+}
+
+export interface RubricEvaluationSummary {
+  score: number;
+  debiasedScore: number;
+  judgeModel: string;
+  verdicts: RubricVerdict[];
+  calibration: RoganGladenSummary;
+}
+
 // Report structure
 
 export interface ScenarioReport {
@@ -291,6 +355,7 @@ export interface ScenarioReport {
   eoTraps: EoTrapResult[];
   stateDiff?: StateDiffSummary;
   economics?: EconomicsMetrics;
+  rubric?: RubricEvaluationSummary;
 }
 
 // Scoring weights

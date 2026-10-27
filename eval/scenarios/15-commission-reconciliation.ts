@@ -1,4 +1,8 @@
 import type { ScenarioDefinition } from "../types";
+import {
+  BINARY_SCALE_STEPS,
+  FOUR_POINT_GROUNDEDNESS_STEPS,
+} from "../evaluators/rubric";
 
 const scenario: ScenarioDefinition = {
   id: "15",
@@ -219,6 +223,34 @@ const scenario: ScenarioDefinition = {
         },
       ],
       eoTraps: [],
+      rubricChecks: [
+        {
+          id: "smit_commission_records_verified",
+          name: "Summit (SMIT) Commission Records Verified",
+          weight: 1.0,
+          service: "ams",
+          path: "/accounting/commissions?carrier_code=SMIT&limit=50",
+          field: "carrier_code",
+          scaleType: "binary",
+          passingScore: 1,
+          question:
+            "Are the Summit Fire & Marine (SMIT) commission records retrieved and intact in AMS accounting?",
+          scaleSteps: BINARY_SCALE_STEPS,
+          boundaryExamples: [
+            {
+              inputSnippet: "SMIT",
+              score: 1,
+              rationale: "SMIT carrier commission records are present.",
+            },
+            {
+              inputSnippet: "",
+              score: 0,
+              rationale: "No SMIT commission records retrieved.",
+            },
+          ],
+          requiredPatterns: ["SMIT"],
+        },
+      ],
     },
 
     // ── Realistic: all-carrier reconciliation with cross-referencing ──
@@ -453,6 +485,38 @@ const scenario: ScenarioDefinition = {
         },
       ],
       eoTraps: [],
+      rubricChecks: [
+        {
+          id: "commission_discrepancy_audit_trail",
+          name: "Commission Discrepancy Audit Trail Completeness",
+          weight: 1.0,
+          service: "ams",
+          path: "/tasks?limit=50",
+          field: "description",
+          scaleType: "ordinal_4",
+          passingScore: 3,
+          question:
+            "Do the created reconciliation tasks specifically document policy/commission discrepancies (e.g., cancelled or expired policies receiving commissions, or active policies missing commission entries) with policy or commission IDs?",
+          scaleSteps: FOUR_POINT_GROUNDEDNESS_STEPS,
+          boundaryExamples: [
+            {
+              inputSnippet:
+                "Commission discrepancy: POL-PA-2025-001902 is cancelled but recorded commission COM-2026-0014; active policy missing March commission entry.",
+              score: 4,
+              rationale:
+                "Cites specific discrepancy types and policy/commission identifiers.",
+            },
+            {
+              inputSnippet: "Check commissions for March.",
+              score: 1,
+              rationale: "Generic task description without discrepancy findings.",
+            },
+          ],
+          requiredPatterns: [
+            "(discrepanc|cancel|expired|missing|commission|POL-|COM-)",
+          ],
+        },
+      ],
     },
   },
 };

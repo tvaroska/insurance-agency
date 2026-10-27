@@ -1,4 +1,8 @@
-import type { ScenarioDefinition } from "../types";
+import type { RubricCriterion, ScenarioDefinition } from "../types";
+import {
+  BINARY_SCALE_STEPS,
+  FOUR_POINT_GROUNDEDNESS_STEPS,
+} from "../evaluators/rubric";
 
 const outputChecks = [
   {
@@ -119,6 +123,39 @@ const traceChecks = [
   },
 ];
 
+const rubricChecks: RubricCriterion[] = [
+  {
+    id: "chen_multiturn_pivot_confirmation",
+    name: "Household Policy Swap & Phone Update Confirmation",
+    weight: 1.0,
+    service: "comm",
+    path: "/messages?direction=outbound",
+    field: "body",
+    scaleType: "ordinal_4",
+    passingScore: 3,
+    question:
+      "Do the outbound messages in this multi-turn conversation first clarify which Chen spouse policy/effective date applies, and after the client's pivot confirm the $1,000 collision deductible endorsement on James Chen's policy (POL-PA-2025-001848) and phone update (310-555-0199)?",
+    scaleSteps: FOUR_POINT_GROUNDEDNESS_STEPS,
+    boundaryExamples: [
+      {
+        inputSnippet:
+          "Per your reply, we left Sarah's policy untouched, updated James's policy POL-PA-2025-001848 to a $1,000 collision deductible effective 2026-03-01, and updated his phone to 310-555-0199.",
+        score: 4,
+        rationale:
+          "Explicitly reflects the Turn-2 pivot to POL-PA-2025-001848, effective date, and phone update.",
+      },
+      {
+        inputSnippet: "We updated Sarah's policy deductible to $1,000.",
+        score: 1,
+        rationale: "Endorsed the wrong spouse policy without honoring the Turn-2 pivot.",
+      },
+    ],
+    requiredPatterns: [
+      "(POL-PA-2025-001848|James|1,?000|310-555-0199|effective|confirm|which policy)",
+    ],
+  },
+];
+
 const scenario: ScenarioDefinition = {
   id: "16",
   name: "Multi-Turn Household Policy Swap",
@@ -169,6 +206,7 @@ const scenario: ScenarioDefinition = {
       expectedApiCalls: { min: 5, max: 18 },
       traceChecks,
       eoTraps: [],
+      rubricChecks,
     },
 
     realistic: {
@@ -214,6 +252,7 @@ const scenario: ScenarioDefinition = {
       expectedApiCalls: { min: 5, max: 20 },
       traceChecks,
       eoTraps: [],
+      rubricChecks,
     },
   },
 };
