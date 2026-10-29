@@ -24,10 +24,9 @@ cd services/<name> && bun test
 | File | Purpose |
 | :--- | :--- |
 | [`README.md`](README.md) | System overview, service ports, and domain model |
-| [`TODO.md`](TODO.md) | Sprint 0 (always active) + current sprint tasks |
+| [`docs/roadmap.md`](docs/roadmap.md) | Strategic priorities by feature area & live roadmap (an ephemeral root `TODO.md` can be created when an active sprint requires granular task tracking) |
 | [`landscape.md`](landscape.md) | Insurance brokerage & agency market landscape |
 | [`regulatory.md`](regulatory.md) | State & federal insurance regulatory compliance rules |
-| [`docs/roadmap.md`](docs/roadmap.md) | Strategic priorities by feature area |
 | [`docs/cujs.md`](docs/cujs.md) | Critical User Journeys |
 | [`docs/specs.md`](docs/specs.md) | Product specs and requirements |
 | [`docs/architecture.md`](docs/architecture.md) | System design and technical decisions |
