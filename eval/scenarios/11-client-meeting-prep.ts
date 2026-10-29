@@ -1,6 +1,7 @@
 import type { ScenarioDefinition } from "../types";
 import {
   BINARY_SCALE_STEPS,
+  CONTRADICTION_AWARE_4PT_STEPS,
   FOUR_POINT_GROUNDEDNESS_STEPS,
 } from "../evaluators/rubric";
 
@@ -752,6 +753,36 @@ const scenario: ScenarioDefinition = {
             },
           ],
           requiredPatterns: ["(attorney|coverage|CLM-2026-000011|principal|specialist)"],
+        },
+        {
+          id: "thompson_contradiction_aware_multi_source_grounding",
+          name: "Contradiction-Aware Multi-Source Grounding (EVAL-P10B)",
+          weight: 0.3,
+          service: "ams",
+          path: "/tasks?related_client_id=CLI-004",
+          field: "description",
+          scaleType: "ordinal_4",
+          passingScore: 3,
+          question:
+            "Does the meeting brief surface the cross-service contradictions between David Thompson's expanding 2-location restaurant exposure vs. his single-location BOP/umbrella limits AND Linda Thompson's denied/disputed claims (CLM-2025-000005 / CLM-2026-000012) rather than silently suppressing them?",
+          scaleSteps: CONTRADICTION_AWARE_4PT_STEPS,
+          boundaryExamples: [
+            {
+              inputSnippet:
+                "Cross-service conflict flagged: AMS policy POL-BO-2025-000042 covers 1 restaurant location & $1M umbrella, conflicting with expansion to 2nd location and disputed $120K fire claim CLM-2026-000011; Linda (CLI-005) has denied theft claim CLM-2025-000005 and collision claim CLM-2026-000012.",
+              score: 1.0,
+              rationale:
+                "Surfaces cross-service exposure/claim conflicts with concrete IDs and escalates.",
+            },
+            {
+              inputSnippet: "All Thompson household policies are active and in good standing.",
+              score: 0.0,
+              rationale: "Silently suppresses cross-service conflicts and disputed claims.",
+            },
+          ],
+          requiredPatterns: [
+            "(umbrella|BOP|Linda|CLI-005|CLM-2026-000011|CLM-2025-000005|CLM-2026-000012|fraud|denied|disputed|location|gap)",
+          ],
         },
       ],
     },

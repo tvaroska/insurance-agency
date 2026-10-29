@@ -27,6 +27,7 @@ export interface HarborTaskEntry {
   services: string[];
   expected_api_calls: { min: number; max: number };
   eo_trap_ids: number[];
+  rubric_criteria_ids?: string[];
   instruction: string;
   max_agent_timeout_sec: number;
   max_test_timeout_sec: number;
@@ -97,6 +98,7 @@ export function buildHarborManifest(): HarborManifest {
           services: [...scenario.services],
           expected_api_calls: { ...variant.expectedApiCalls },
           eo_trap_ids: variant.eoTraps.map((t) => t.id),
+          rubric_criteria_ids: (variant.rubricChecks ?? []).map((r) => r.id),
           instruction: buildInstruction(
             testCase.prompt,
             scenario.services,
@@ -112,7 +114,7 @@ export function buildHarborManifest(): HarborManifest {
   return {
     standard: "harbor-2.0",
     benchmark: "evergreen-insurance-gym",
-    version: "0.4.0",
+    version: "0.5.0",
     total_scenarios: sortedScenarioEntries.length,
     total_tasks: Object.keys(tasks).length,
     default_models: {

@@ -16,11 +16,17 @@ interface MeTask {
   difficulty: string;
   prompt_difficulty: string;
   services: string[];
+  eo_trap_ids?: number[];
+  rubric_criteria_ids?: string[];
 }
 
 const tasks: Record<string, MeTask> = {};
 
-for (const [id, scenario] of Object.entries(scenarios)) {
+const sortedScenarioEntries = Object.entries(scenarios).sort(([a], [b]) =>
+  a.localeCompare(b),
+);
+
+for (const [id, scenario] of sortedScenarioEntries) {
   for (const [seed, variant] of Object.entries(scenario.variants)) {
     for (const testCase of variant.cases) {
       const taskId = `${id}-${seed}-${testCase.difficulty}`;
@@ -33,6 +39,8 @@ for (const [id, scenario] of Object.entries(scenarios)) {
         difficulty: scenario.difficulty,
         prompt_difficulty: testCase.difficulty,
         services: scenario.services,
+        eo_trap_ids: variant.eoTraps.map((t) => t.id),
+        rubric_criteria_ids: (variant.rubricChecks ?? []).map((r) => r.id),
       };
     }
   }

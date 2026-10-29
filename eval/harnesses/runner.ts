@@ -17,12 +17,25 @@ import { join, resolve } from "path";
 import { scenarios } from "../scenarios/index";
 import type { PromptDifficulty } from "../types";
 import {
+  getReferencePlaybook,
+  runBaselineAgent,
+  type BaselineAgentOptions,
+  type BaselineAgentRunResult,
+} from "../agents/baseline-agent";
+import {
   buildLeaderboard,
   formatLeaderboardMarkdown,
   type ComparativeLeaderboard,
   type HarnessId,
   type HarnessRunInput,
 } from "./leaderboard";
+
+export {
+  getReferencePlaybook,
+  runBaselineAgent,
+  type BaselineAgentOptions,
+  type BaselineAgentRunResult,
+};
 
 export interface HarnessProfile {
   id: HarnessId;

@@ -277,10 +277,11 @@ export interface RubricScaleStep {
 
 export interface RubricBoundaryExample {
   inputSnippet: string;
-  candidateOutput: string;
-  reasoningTrace: string;
+  candidateOutput?: string;
+  reasoningTrace?: string;
+  rationale?: string;
   score: number;
-  passed: boolean;
+  passed?: boolean;
 }
 
 export interface RubricCriterion {
@@ -291,10 +292,14 @@ export interface RubricCriterion {
   service: string;
   path: string;
   field: string;
-  sourceContext: string;
+  sourceContext?: string;
+  scaleType?: "binary" | "ordinal_4";
+  passingScore?: number;
   passThreshold?: number;
   scaleSteps?: RubricScaleStep[];
   boundaryExamples?: RubricBoundaryExample[];
+  requiredPatterns?: string[];
+  forbiddenPatterns?: string[];
   deterministicFallbackRegex?: string | string[];
   deterministicForbiddenRegex?: string | string[];
 }
