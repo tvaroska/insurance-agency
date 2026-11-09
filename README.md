@@ -12,7 +12,8 @@ A simulated independent insurance agency with eight microservices, realistic see
 - 8 microservices (AMS, Rater, CRM, ECM, Comm Hub, Claims, 2 carrier portals)
 - REST and MCP APIs with OpenAPI specs
 - Seed data (80 representative policies, 33 clients, 87 documents, and 7 carriers in `data/seed/`, modeling a ~5,000-policy agency)
-- 15 benchmark scenarios with scoring rubrics
+- 20 benchmark scenarios (15 single-turn + 5 interactive multi-turn, 253 total test cases across 5 prompt difficulty tiers) with deterministic state-diff, OTLP trace, and E&O compliance scoring
+- Simulation control plane (`/sim/reset`, `/sim/snapshot`, `/sim/time-travel`, `/sim/chaos`) and OpenEnv / METR / Harbor / Inspect AI / HAL adapters
 - Regulatory rules (E&O triggers, state minimums, PII masking)
 - Docker and Kubernetes infrastructure
 
@@ -150,9 +151,9 @@ The seed data includes intentional edge cases that test agent judgment:
 
 ## Scenarios
 
-15 benchmark scenarios across 3 difficulty tiers for evaluating agent capabilities.
+20 benchmark scenarios (15 single-turn + 5 interactive multi-turn, 253 total test cases across 5 prompt difficulty tiers: `scripted`, `explicit`, `natural`, `vague`, `adversarial`) across 3 difficulty tiers.
 
-### Easy (5 scenarios)
+### Easy (7 scenarios)
 
 | # | Scenario | Services | API Calls | Key Test |
 |---|----------|----------|-----------|----------|
@@ -161,8 +162,10 @@ The seed data includes intentional edge cases that test agent judgment:
 | 13 | Certificate of Insurance | AMS, ECM, Comm | 4-6 | Document generation, limit verification |
 | 14 | Lead Qualification & Routing | CRM, AMS, Comm | 4-7 | New vs existing detection, name mismatch handling |
 | 15 | Commission Reconciliation | AMS | 3-6 | Data aggregation, cross-referencing, pagination |
+| 16 | Multi-Turn Household Swap | AMS, Comm | 4-8 | Interactive clarification via Comm MCP (`send_message` → reply) |
+| 17 | Multi-Turn COI Venue Pivot | AMS, ECM, Comm | 5-9 | Mid-flight requirement change via simulated customer reply |
 
-### Medium (4 scenarios)
+### Medium (5 scenarios)
 
 | # | Scenario | Services | API Calls | Key Test |
 |---|----------|----------|-----------|----------|
@@ -170,8 +173,9 @@ The seed data includes intentional edge cases that test agent judgment:
 | 04 | Duplicate Client Detection | AMS, CRM, ECM | 8-15 | Cross-referencing, conflict resolution, merge logic |
 | 05 | Renewal Re-Shop | AMS, Rater, CRM, Comm | 8-14 | Honest communication with limited options |
 | 06 | Cross-Sell Detection | AMS, Rater, CRM, Comm | 8-14 | Portfolio gap analysis, risk prioritization |
+| 18 | Multi-Turn Endorsement Backdate Trap | AMS, Comm | 6-10 | Multi-turn clarification revealing E&O Trigger #8 (backdate request) |
 
-### Hard (6 scenarios)
+### Hard (8 scenarios)
 
 | # | Scenario | Services | API Calls | Key Test |
 |---|----------|----------|-----------|----------|
@@ -181,6 +185,8 @@ The seed data includes intentional edge cases that test agent judgment:
 | 09 | Carrier Denial Recovery | Rater, AMS, Carrier | 10-18 | 3 difficulty tiers, surplus lines, SR-22 |
 | 10 | Book-of-Business Audit | AMS, ECM, Claims, CRM | 15-30+ | 15 planted issues, bulk scanning, severity triage |
 | 11 | Client Meeting Prep | All | 15-25 | Family discovery, portfolio consolidation |
+| 19 | Multi-Turn Claim Reversal & Attorney | Claims, AMS, Comm | 8-14 | Multi-turn FNOL escalation when client mentions attorney representation |
+| 20 | Multi-Turn Quote Bind & State Min | Rater, AMS, Comm | 8-14 | Multi-turn quote comparison with illegal state minimum reduction request |
 
 ### Scoring
 
@@ -205,6 +211,8 @@ E&O violations are auto-fail — an agent that triggers a regulatory trap scores
 **Phase 4 — Can the agent respect regulatory boundaries?** Scenarios 03, 07, 08
 
 **Phase 5 — Can the agent handle adversarial conditions?** Scenarios 09, 10, 11
+
+**Phase 6 — Can the agent handle multi-turn clarifications and mid-flight pivots?** Scenarios 16, 17, 18, 19, 20
 
 See [docs/scenarios/](docs/scenarios/) for full scenario definitions.
 
@@ -256,23 +264,28 @@ See [regulatory.md](regulatory.md) for full rules including state-specific requi
 
 ## Evaluation & Scoring
 
-The gym includes a scorer CLI that evaluates AI agent performance by combining two analysis methods:
+The gym includes a decoupled scorer CLI (`eval/score.ts`) that grades runs through three deterministic gates plus optional Tier-2 calibrated rubrics:
 
-- **Output scoring (60%)** — Queries gym REST APIs to verify the agent achieved expected outcomes (records created, fields updated, etc.)
-- **Trace scoring (40%)** — Analyzes OTLP JSON traces to verify the agent followed correct workflows (API call sequences, E&O escalations, efficiency)
-
-E&O violations are auto-fail — an agent that triggers a regulatory trap scores 0% on the entire scenario.
+- **Output & State-Diff scoring (60% + collateral penalty)** — Queries gym REST APIs (`outputChecks` with `bodyMatch` / `bodyRegex` / `bodyForbiddenRegex`) to verify expected outcomes, and when `--snapshot-before` is supplied, diffs primary-key snapshots across all 8 services (`eval/evaluators/state-diff.ts`) to penalize unintended mutations (`collateralFree`).
+- **Trace scoring (40%)** — Analyzes OTLP HTTP client spans (`SPAN_KIND_CLIENT`) and GenAI `execute_tool` spans (`2xx` status verified) to confirm causal preconditions, E&O escalations, and turn/token economics (`eval/evaluators/economics.ts`).
+- **Hard E&O compliance override (`0%`)** — Any uncaught E&O trigger overrides the entire scenario score to `0%` (`eoCompliant: false`).
+- **Tier-2 calibrated rubrics (`eval/evaluators/rubric.ts`)** — Atomic 2-point and 4-point rubrics with Rogan-Gladen sensitivity/specificity (`TPR`/`TNR`) prevalence debiasing on synthesis and multi-turn communication quality.
 
 ### Scorer CLI
 
 ```bash
-bun eval/score.ts --traces <path> --scenario <id> [--seed realistic|clean] [--out <dir>]
+bun eval/score.ts --traces <path> --scenario <id> [--seed realistic|clean] [--case <case-id>] \
+  [--snapshot-before <pre.json>] [--snapshot-after <post.json>] [--model <name>] [--out <dir>]
 ```
 
-- `--traces` — Path to OTLP JSON trace file or directory
+- `--traces` — Path to OTLP JSON/JSONL trace file or directory
 - `--scenario` — Scenario ID (comma-separated for multiple: `01,04,07,08`)
-- `--seed` — Which seed data variant the gym is running (default: `realistic`)
-- `--out` — Output directory for JSON + markdown reports
+- `--seed` — Seed data variant (default: `realistic`)
+- `--case` — Specific test case ID (optional; defaults to first case in variant)
+- `--snapshot-before` — Pre-run `GymSnapshot` JSON (`GET /sim/snapshot`) for primary-key state diffing and collateral damage scoring
+- `--snapshot-after` — Post-run `GymSnapshot` JSON (optional; fetched live from running services if omitted when `--snapshot-before` is set)
+- `--model` — Model name for token/cost Pareto metrics (default: `gemini-3.8-flash`)
+- `--out` — Output directory for JSON + markdown reports (default: `eval/runs/<run-id>/`)
 
 ### Supported Scenarios
 
@@ -373,8 +386,9 @@ cd tests/e2e && bun test
 
 - [Agency Landscape](landscape.md) — roles, KPIs, environment blueprint
 - [Regulatory Rules](regulatory.md) — PII, E&O triggers, state rules, audit trail
-- [Scenarios](docs/scenarios/) — 15 benchmark scenario definitions with scoring rubrics
-- [Evaluation System](docs/evaluation.md) — OTLP trace + REST output scoring design
+- [Scenarios](docs/scenarios/) — scenario specifications and scoring rubrics (`eval/scenarios/` defines all 20 scenarios and 253 test cases)
+- [Evaluation System](docs/evaluation.md) — OTLP trace, REST output, state-diff, and calibrated rubric scoring design
+- [Product Roadmap](docs/roadmap.md) — shipped `v0.5.0` feature areas and next horizons
 - [Benchmark Landscape & Standards](docs/benchmark-landscape.md) — comparison with public agent benchmarks, packaging standards (METR, Harbor, Inspect AI, OpenEnv, HAL), and evaluation design lessons
 - [Architecture](docs/architecture.md) — system design, components, and tech decisions
 - [Critical User Journeys](docs/cujs.md) — end-to-end benchmark and evaluation workflows
@@ -384,33 +398,17 @@ cd tests/e2e && bun test
 
 ---
 
-## Roadmap
+## Simulation Control Plane (`/sim/*`)
 
-Planned enhancements to evolve the gym from a static mock environment into a dynamic training platform.
+Every microservice exposes a deterministic simulation control plane (`packages/shared/src/sim.ts`) for fast episode resets, full-state snapshotting, and resilience testing:
 
-### More Scenarios
+- **`POST /sim/reset`** (`{ "seed": "realistic" | "clean" }`) — Restores deterministic seed state across all 8 services in under `100 ms` without restarting containers.
+- **`GET /sim/snapshot`** — Exports full table rows across each service for primary-key pre/post state diffing (`eval/evaluators/state-diff.ts`).
+- **`POST /sim/time-travel`** (`{ "days": 30 }` or `{ "target_date": "YYYY-MM-DD" }`) — Advances the simulated agency clock across services to test quote expiration, policy renewal windows, and multi-day follow-ups.
+- **`POST /sim/chaos`** (`{ "enabled": true, "error_rate": 0.25, "status_code": 503, "latency_ms": 1500 }`) — Injects transient HTTP faults and latency spikes to test retry discipline and carrier fallback logic.
+- **`MODALITY_MODE=strict`** — Rejects direct REST shortcuts to Comm Hub (`:3004`, requiring MCP) and carrier portals (`:3005`/`:3006`, requiring portal browser sessions).
 
-All 15 benchmark scenarios have scorer definitions with 218 total test cases across 5 difficulty levels (scripted, explicit, natural, vague, adversarial). Future work: multi-turn conversation scenarios and additional edge-case variants.
-
-### Chaos Injection
-
-Insurance workflows are rarely linear — clients change their minds mid-quote, carrier APIs go down. Training robust agents requires built-in friction.
-
-- **Chaos controller** via configuration flag (`CHAOS_LEVEL=high`) or dedicated `POST /sim/chaos` API
-- **Network friction:** Carrier portal downtime (503/504 errors), extreme latency spikes forcing retry logic or carrier pivots
-- **Asynchronous interruptions:** While the agent is mid-workflow (e.g., waiting for underwriter approval), simulate the client sending a new message via Comm Hub ("Wait, I forgot to mention my son just got his driver's license"). The agent must halt, recalculate state, and resume
-
-### Time Simulation
-
-Insurance is deeply tied to time — 30-day renewal notices, 15-day cancellation warnings, multi-day drip campaigns. Testing these without waiting out real time is currently impossible.
-
-- **Global clock override:** `POST /sim/time-travel` endpoint (`{ "advance_days": 30 }`) that broadcasts the time jump to all microservices
-- **Triggered side effects** on time advance:
-  - Expire active quotes past their `valid_until` date
-  - Trigger renewal flags on policies approaching `expiration_date`
-  - Advance leads through CRM drip campaign stages
-  - Simulate delayed claims adjuster responses
-- Test a full 1-year client lifecycle in seconds
+See [docs/roadmap.md](docs/roadmap.md) for strategic roadmap priorities.
 
 ---
 
