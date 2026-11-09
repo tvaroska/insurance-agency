@@ -16,6 +16,7 @@ Independent Property and Casualty (P&C) insurance brokerages cannot deploy stand
 - **Executive Narrative:** [`design/story.md`](design/story.md)
 - **2-Page Executive Brief:** [`EXECUTIVE-BRIEF.md`](EXECUTIVE-BRIEF.md)
 - **Self-Contained Executive HTML Scorecard:** [`docs/executive-scorecard.html`](docs/executive-scorecard.html)
+- **Single-Service Regenerative Blueprint (`services/claims` `:3007`):** [`prompts/REGENERATE.md`](prompts/REGENERATE.md)
 
 ---
 
@@ -239,7 +240,8 @@ bun eval/harnesses/runner.ts --mode=live
 - [`docs/architecture.md`](docs/architecture.md): System design, components, and technical decisions
 - [`docs/API.md`](docs/API.md): Full endpoint documentation for all 8 services
 - [`docs/data-models.md`](docs/data-models.md): Entity-relationship diagrams and 35-table schema details
-- [`specs/`](specs/): 8 OpenAPI 3.0 YAML specifications
+- [`specs/`](specs/): 8 OpenAPI 3.0 YAML wire specifications + [`specs/claims.behavior.yaml`](specs/claims.behavior.yaml) formal state-machine & Design-by-Contract behavioral specification
+- [`prompts/REGENERATE.md`](prompts/REGENERATE.md): Single-service regenerative blueprint (`Idea` to `OpenAPI + Formal Behavioral Contract` to copy-pasteable Claude Code & Antigravity prompts for `services/claims` on `:3007`)
 
 ---
 

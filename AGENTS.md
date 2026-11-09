@@ -40,6 +40,7 @@ bun test eval/__tests__/
 | [`docs/specs.md`](docs/specs.md) | Product specs and requirements |
 | [`docs/architecture.md`](docs/architecture.md) | System design and technical decisions |
 | [`docs/testing.md`](docs/testing.md) | Test strategy and conventions |
+| [`prompts/REGENERATE.md`](prompts/REGENERATE.md) | Single-service Phoenix regeneration blueprint (`services/claims` `:3007`) for Claude Code & Antigravity |
 | `docs/features/*.md` | Completed work history per feature area |
 
 Run `cd services/<name> && bun test` (or `proj-test insurance-agency`) before committing. Tests must pass before marking tasks complete.

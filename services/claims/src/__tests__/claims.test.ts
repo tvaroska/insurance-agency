@@ -4,8 +4,9 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../schema";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { mkdtempSync } from "fs";
-import { join } from "path";
+import { mkdtempSync, readFileSync } from "fs";
+import { join, resolve } from "path";
+import { parse as parseYaml } from "yaml";
 
 const tmpDir = mkdtempSync("/tmp/test-claims-");
 const dbPath = join(tmpDir, "test.db");
@@ -634,5 +635,201 @@ describe("POST /v1/claims - alias", () => {
       }),
     });
     expect(res.status).toBe(400);
+  });
+});
+
+// ── Formal Behavioral Contract (specs/claims.behavior.yaml) ──
+
+describe("Formal Behavioral Contract (specs/claims.behavior.yaml)", () => {
+  const specsDir = resolve(import.meta.dir, "../../../../specs");
+  const openapiDoc = parseYaml(
+    readFileSync(join(specsDir, "claims.yaml"), "utf-8"),
+  );
+  const behaviorDoc = parseYaml(
+    readFileSync(join(specsDir, "claims.behavior.yaml"), "utf-8"),
+  );
+
+  test("cross-references OpenAPI 3.0 wire contract and matches enums & operations", () => {
+    expect(behaviorDoc.service).toBe("claims");
+    expect(behaviorDoc.port).toBe(3007);
+    expect(behaviorDoc.openapi_contract).toBe("./claims.yaml");
+
+    const oaStatuses =
+      openapiDoc.components.schemas.ClaimUpdateRequest.properties.status.enum;
+    const oaTypes =
+      openapiDoc.components.schemas.FnolRequest.properties.claim_type.enum;
+    const oaDocTypes =
+      openapiDoc.components.schemas.DocumentUploadRequest.properties
+        .document_type.enum;
+    const oaSpecialties =
+      openapiDoc.components.schemas.Adjuster.properties.specialty.enum;
+
+    expect(behaviorDoc.enums.claim_statuses).toEqual(oaStatuses);
+    expect(behaviorDoc.enums.claim_types).toEqual(oaTypes);
+    expect(behaviorDoc.enums.document_types).toEqual(oaDocTypes);
+    expect(behaviorDoc.enums.adjuster_specialties).toEqual(oaSpecialties);
+  });
+
+  test("exhaustively enforces the 6x6 state-machine transition matrix (all 30 non-identity pairs)", async () => {
+    const statuses: string[] = behaviorDoc.enums.claim_statuses;
+    const transitions: Record<string, string[]> =
+      behaviorDoc.state_machines.claim_lifecycle.transitions;
+    const violation = behaviorDoc.state_machines.claim_lifecycle.violation_error;
+
+    let pairIndex = 0;
+    for (const fromState of statuses) {
+      const allowedTargets = transitions[fromState] ?? [];
+      for (const toState of statuses) {
+        if (fromState === toState) continue;
+        pairIndex += 1;
+        const claimId = `CLM-FSM-${ String(pairIndex).padStart(3, "0") }`;
+        testDb
+          .insert(schema.claims)
+          .values(
+            makeClaim({
+              claim_id: claimId,
+              status: fromState,
+              loss_date: "2026-01-10",
+            }),
+          )
+          .run();
+
+        const res = await app.request(`/v1/claims/${claimId}`, {
+          method: "PATCH",
+          headers: {
+            ...(await authHeader(["claims:write"])),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: toState }),
+        });
+
+        const timelineRes = await app.request(`/v1/claims/${claimId}/timeline`, {
+          headers: await authHeader(["claims:read"]),
+        });
+        const timelineBody = await timelineRes.json();
+
+        if (allowedTargets.includes(toState)) {
+          expect(res.status).toBe(200);
+          const updated = await res.json();
+          expect(updated.status).toBe(toState);
+          expect(timelineBody.data.length).toBe(1);
+          expect(timelineBody.data[0].event_type).toBe("status_change");
+          expect(timelineBody.data[0].old_value).toBe(fromState);
+          expect(timelineBody.data[0].new_value).toBe(toState);
+        } else {
+          expect(res.status).toBe(violation.http_status);
+          const errBody = await res.json();
+          expect(errBody.error_code).toBe(violation.error_code);
+          expect(errBody.details[0].field).toBe(violation.field);
+          expect(errBody.details[0].code).toBe(violation.code);
+          expect(timelineBody.data.length).toBe(0);
+        }
+      }
+    }
+    expect(pairIndex).toBe(30);
+  });
+
+  test("executes multi-step stateful workflow (full_claim_lifecycle_audit_trail) and verifies timeline postconditions", async () => {
+    const workflow = behaviorDoc.workflows.find(
+      (w: { id: string }) => w.id === "full_claim_lifecycle_audit_trail",
+    );
+    expect(workflow).toBeDefined();
+
+    // Step 1: create_fnol
+    const fnolRes = await app.request("/v1/claims/fnol", {
+      method: "POST",
+      headers: {
+        ...(await authHeader(["claims:write"])),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        policy_id: "POL-PA-2025-001847",
+        client_id: "CLI-001",
+        claim_type: "water",
+        loss_date: "2026-01-12",
+        loss_description: "Pipe burst in basement.",
+      }),
+    });
+    expect(fnolRes.status).toBe(workflow.steps[0].expect_status);
+    const created = await fnolRes.json();
+    const claimId = created.claim_id;
+    expect(created.status).toBe(workflow.steps[0].expect_claim_status);
+
+    // Step 2: assign_adjuster
+    const assignRes = await app.request(`/v1/claims/${claimId}/assign`, {
+      method: "POST",
+      headers: {
+        ...(await authHeader(["claims:assign"])),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ adjuster_id: "ADJ-001" }),
+    });
+    expect(assignRes.status).toBe(workflow.steps[1].expect_status);
+    expect((await assignRes.json()).status).toBe(
+      workflow.steps[1].expect_claim_status,
+    );
+
+    // Step 3: start_investigation
+    const invRes = await app.request(`/v1/claims/${claimId}`, {
+      method: "PATCH",
+      headers: {
+        ...(await authHeader(["claims:write"])),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(workflow.steps[2].input),
+    });
+    expect(invRes.status).toBe(workflow.steps[2].expect_status);
+    expect((await invRes.json()).status).toBe(
+      workflow.steps[2].expect_claim_status,
+    );
+
+    // Step 4: set_reserve
+    const resvRes = await app.request(`/v1/claims/${claimId}`, {
+      method: "PATCH",
+      headers: {
+        ...(await authHeader(["claims:write"])),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(workflow.steps[3].input),
+    });
+    expect(resvRes.status).toBe(workflow.steps[3].expect_status);
+    expect((await resvRes.json()).status).toBe(
+      workflow.steps[3].expect_claim_status,
+    );
+
+    // Step 5: upload_estimate
+    const docRes = await app.request(`/v1/claims/${claimId}/documents`, {
+      method: "POST",
+      headers: {
+        ...(await authHeader(["claims:documents"])),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(workflow.steps[4].input),
+    });
+    expect(docRes.status).toBe(workflow.steps[4].expect_status);
+
+    // Step 6: settle_claim
+    const settleRes = await app.request(`/v1/claims/${claimId}`, {
+      method: "PATCH",
+      headers: {
+        ...(await authHeader(["claims:write"])),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(workflow.steps[5].input),
+    });
+    expect(settleRes.status).toBe(workflow.steps[5].expect_status);
+    expect((await settleRes.json()).status).toBe(
+      workflow.steps[5].expect_claim_status,
+    );
+
+    // Verify full ordered audit trail against formal workflow specification
+    const tlRes = await app.request(`/v1/claims/${claimId}/timeline`, {
+      headers: await authHeader(["claims:read"]),
+    });
+    const tlBody = await tlRes.json();
+    const actualEventTypes = tlBody.data.map(
+      (e: { event_type: string }) => e.event_type,
+    );
+    expect(actualEventTypes).toEqual(workflow.steps[5].expect_timeline_events);
   });
 });

@@ -1,0 +1,328 @@
+# Formal Behavioral & Design-by-Contract Specification for Claims Service (:3007)
+# Pairs with ./claims.yaml (OpenAPI 3.0 syntactic wire contract) to define:
+#   1. Finite state machines & exhaustive transition matrices
+#   2. Operation input normalization, preconditions (requires), and postconditions (ensures)
+#   3. Mandatory audit trail side-effects (claim_timeline)
+#   4. Multi-step Arazzo-style stateful verification workflows
+version: "1.0.0"
+service: claims
+port: 3007
+openapi_contract: ./claims.yaml
+schema_contract: ../services/claims/src/schema.ts
+disposable_adapters:
+  - services/claims/src/routes/claims.ts
+  - services/claims/src/routes/adjusters.ts
+
+enums:
+  claim_types:
+    - auto_collision
+    - auto_comprehensive
+    - property_damage
+    - theft
+    - liability
+    - medical
+    - fire
+    - water
+    - weather
+  claim_statuses:
+    - reported
+    - assigned
+    - investigating
+    - reserved
+    - settled
+    - denied
+  document_types:
+    - police_report
+    - medical_records
+    - photos
+    - estimate
+    - correspondence
+    - other
+  adjuster_specialties:
+    - auto
+    - property
+    - liability
+    - general
+  timeline_event_types:
+    - status_change
+    - assignment
+    - note
+    - document_upload
+    - reserve_change
+    - payment
+
+state_machines:
+  claim_lifecycle:
+    entity: claims
+    field: status
+    initial: reported
+    terminal:
+      - settled
+      - denied
+    transitions:
+      reported:
+        - assigned
+        - denied
+      assigned:
+        - investigating
+        - denied
+      investigating:
+        - reserved
+        - denied
+      reserved:
+        - settled
+        - denied
+      settled: []
+      denied: []
+    violation_error:
+      http_status: 400
+      error_code: VALIDATION_ERROR
+      field: status
+      code: invalid_enum
+
+operations:
+  createClaimFnol:
+    methods: [POST]
+    paths:
+      - /v1/claims/fnol
+      - /v1/claims
+    scope: claims:write
+    input_aliases:
+      claim_type: [claim_type, loss_type]
+      loss_description: [loss_description, description]
+    requires:
+      - id: required_fields
+        fields: [policy_id, client_id, claim_type, loss_date, loss_description]
+        error: { http_status: 400, error_code: VALIDATION_ERROR, code: required }
+      - id: valid_claim_type
+        expr: "input.claim_type in enums.claim_types"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: claim_type, code: invalid_enum }
+      - id: valid_loss_date_format
+        expr: "matches(input.loss_date, '^\\d{4}-\\d{2}-\\d{2}$')"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: loss_date, code: invalid_format }
+      - id: loss_date_not_future
+        expr: "input.loss_date <= today_utc()"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: loss_date, code: out_of_range }
+      - id: loss_description_max_length
+        expr: "len(input.loss_description) <= 5000"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: loss_description, code: max_length }
+      - id: loss_location_max_length
+        expr: "input.loss_location == null or len(input.loss_location) <= 500"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: loss_location, code: max_length }
+    ensures:
+      http_status: 201
+      postconditions:
+        - "matches(result.claim_id, '^CLM-\\d{4}-\\d{6}$')"
+        - "result.status == 'reported'"
+      timeline_effects:
+        - event_type: status_change
+          old_value: null
+          new_value: reported
+
+  listClaims:
+    methods: [GET]
+    paths:
+      - /v1/claims
+    scope: claims:read
+    requires:
+      - id: valid_status_filter
+        expr: "query.status == null or query.status in enums.claim_statuses"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: status, code: invalid_enum }
+      - id: valid_claim_type_filter
+        expr: "query.claim_type == null or query.claim_type in enums.claim_types"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: claim_type, code: invalid_enum }
+    ensures:
+      http_status: 200
+      postconditions:
+        - "ordered_by(result.data, ['created_at DESC', 'claim_id DESC'])"
+        - "cursor_fields == ['created_at', 'claim_id']"
+
+  getClaimDetail:
+    methods: [GET]
+    paths:
+      - /v1/claims/{claim_id}
+    scope: claims:read
+    requires:
+      - id: claim_exists
+        expr: "exists(claims, path.claim_id)"
+        error: { http_status: 404, error_code: NOT_FOUND }
+    ensures:
+      http_status: 200
+      postconditions:
+        - "result.claim_id == path.claim_id"
+        - "result.adjuster == (result.adjuster_id != null ? adjusters[result.adjuster_id] : null)"
+        - "ordered_by(result.timeline, ['created_at ASC'])"
+        - "all(result.documents, d => d.claim_id == path.claim_id)"
+
+  assignAdjuster:
+    methods: [POST]
+    paths:
+      - /v1/claims/{claim_id}/assign
+    scope: claims:assign
+    requires:
+      - id: adjuster_id_required
+        fields: [adjuster_id]
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: adjuster_id, code: required }
+      - id: claim_exists
+        expr: "exists(claims, path.claim_id)"
+        error: { http_status: 404, error_code: NOT_FOUND }
+      - id: adjuster_exists
+        expr: "exists(adjusters, input.adjuster_id)"
+        error: { http_status: 404, error_code: NOT_FOUND }
+      - id: adjuster_is_active
+        expr: "adjusters[input.adjuster_id].active == 1"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: adjuster_id, code: invalid_enum }
+      - id: adjuster_has_capacity
+        expr: "count(claims where adjuster_id == input.adjuster_id and status not in ['settled', 'denied']) < adjusters[input.adjuster_id].max_open_claims"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: adjuster_id, code: out_of_range }
+    ensures:
+      http_status: 200
+      postconditions:
+        - "result.adjuster_id == input.adjuster_id"
+        - "prev.status == 'reported' implies result.status == 'assigned'"
+        - "prev.status != 'reported' implies result.status == prev.status"
+      timeline_effects:
+        - event_type: assignment
+          old_value_from: prev.adjuster_id
+          new_value_from: input.adjuster_id
+        - when: "prev.status == 'reported'"
+          event_type: status_change
+          old_value: reported
+          new_value: assigned
+
+  updateClaim:
+    methods: [PATCH]
+    paths:
+      - /v1/claims/{claim_id}
+    scope: claims:write
+    updatable_fields:
+      - status
+      - reserve_amount
+      - settlement_amount
+      - notes
+    requires:
+      - id: non_empty_patch
+        expr: "any_present(input, ['status', 'reserve_amount', 'settlement_amount', 'notes'])"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: body, code: required }
+      - id: claim_exists
+        expr: "exists(claims, path.claim_id)"
+        error: { http_status: 404, error_code: NOT_FOUND }
+      - id: valid_status_enum
+        expr: "input.status == null or input.status in enums.claim_statuses"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: status, code: invalid_enum }
+      - id: forward_only_status_transition
+        expr: "input.status == null or input.status == prev.status or input.status in state_machines.claim_lifecycle.transitions[prev.status]"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: status, code: invalid_enum }
+      - id: non_negative_reserve_amount
+        expr: "input.reserve_amount == null or input.reserve_amount >= 0"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: reserve_amount, code: out_of_range }
+      - id: non_negative_settlement_amount
+        expr: "input.settlement_amount == null or input.settlement_amount >= 0"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: settlement_amount, code: out_of_range }
+      - id: notes_max_length
+        expr: "input.notes == null or len(input.notes) <= 5000"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: notes, code: max_length }
+    ensures:
+      http_status: 200
+      timeline_effects:
+        - when: "input.status != null and input.status != prev.status"
+          event_type: status_change
+          old_value_from: prev.status
+          new_value_from: result.status
+        - when: "input.reserve_amount != undefined and input.reserve_amount != prev.reserve_amount"
+          event_type: reserve_change
+          old_value_from: prev.reserve_amount
+          new_value_from: result.reserve_amount
+        - when: "input.notes != undefined and input.notes != prev.notes"
+          event_type: note
+          description: "Notes updated."
+
+  getClaimTimeline:
+    methods: [GET]
+    paths:
+      - /v1/claims/{claim_id}/timeline
+    scope: claims:read
+    requires:
+      - id: claim_exists
+        expr: "exists(claims, path.claim_id)"
+        error: { http_status: 404, error_code: NOT_FOUND }
+    ensures:
+      http_status: 200
+      postconditions:
+        - "ordered_by(result.data, ['created_at ASC'])"
+
+  uploadClaimDocument:
+    methods: [POST]
+    paths:
+      - /v1/claims/{claim_id}/documents
+    scope: claims:documents
+    requires:
+      - id: required_fields
+        fields: [document_type, file_name, file_path]
+        error: { http_status: 400, error_code: VALIDATION_ERROR, code: required }
+      - id: valid_document_type
+        expr: "input.document_type in enums.document_types"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: document_type, code: invalid_enum }
+      - id: claim_exists
+        expr: "exists(claims, path.claim_id)"
+        error: { http_status: 404, error_code: NOT_FOUND }
+    ensures:
+      http_status: 201
+      postconditions:
+        - "matches(result.document_id, '^DOC-[a-f0-9]{8}$')"
+        - "result.claim_id == path.claim_id"
+      timeline_effects:
+        - event_type: document_upload
+          new_value_from: result.document_id
+
+  listAdjusters:
+    methods: [GET]
+    paths:
+      - /v1/adjusters
+    scope: claims:read
+    requires:
+      - id: valid_specialty_filter
+        expr: "query.specialty == null or query.specialty in enums.adjuster_specialties"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: specialty, code: invalid_enum }
+    ensures:
+      http_status: 200
+      postconditions:
+        - "all(result.data, a => typeof(a.open_claims_count) == 'number')"
+
+workflows:
+  - id: full_claim_lifecycle_audit_trail
+    description: End-to-end stateful journey from FNOL intake to settlement verifying every timeline side-effect
+    steps:
+      - step: create_fnol
+        operation: createClaimFnol
+        expect_status: 201
+        expect_claim_status: reported
+        expect_timeline_events: [status_change]
+      - step: assign_adjuster
+        operation: assignAdjuster
+        expect_status: 200
+        expect_claim_status: assigned
+        expect_timeline_events: [status_change, assignment, status_change]
+      - step: start_investigation
+        operation: updateClaim
+        input: { status: investigating }
+        expect_status: 200
+        expect_claim_status: investigating
+        expect_timeline_events: [status_change, assignment, status_change, status_change]
+      - step: set_reserve
+        operation: updateClaim
+        input: { status: reserved, reserve_amount: 12000 }
+        expect_status: 200
+        expect_claim_status: reserved
+        expect_timeline_events: [status_change, assignment, status_change, status_change, status_change, reserve_change]
+      - step: upload_estimate
+        operation: uploadClaimDocument
+        input: { document_type: estimate, file_name: estimate.pdf, file_path: /claims/estimate.pdf }
+        expect_status: 201
+        expect_timeline_events: [status_change, assignment, status_change, status_change, status_change, reserve_change, document_upload]
+      - step: settle_claim
+        operation: updateClaim
+        input: { status: settled, settlement_amount: 11500, notes: "Settled with insured." }
+        expect_status: 200
+        expect_claim_status: settled
+        expect_timeline_events: [status_change, assignment, status_change, status_change, status_change, reserve_change, document_upload, status_change, note]
