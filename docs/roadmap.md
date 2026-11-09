@@ -1,6 +1,6 @@
 # Evergreen Insurance Agency — Product Roadmap
 
-**Last Updated:** 2026-10-19
+**Last Updated:** 2026-11-09
 
 ## Strategic Overview
 
@@ -101,10 +101,18 @@ Goals:
 - Cost/latency Pareto scoring & multi-harness runner (`S3-ECON-1`, `S3-HARN-1`)
 - Native Inspect AI, OpenEnv / `verifiers` RL control plane, and HAL export (`S3-INTOP-2..4`)
 
-### v0.6.0 — Insurance Technology Executive Operations & Governance Showcase (current — Complete)
+### v0.6.0 — Insurance Technology Executive Operations & Governance Showcase (Complete)
 
 - 4-tab GM3 Light Executive Workbench mounted on AMS (`GET /` on `:3000`) + `bun run showcase` zero-Docker launcher
 - 1st-Line service-layer E&O and 10-state statutory minimum firewall (`packages/shared/src/compliance-firewall.ts`)
 - Real ACORD 25 Certificate of Insurance PDF generation (`services/ecm/src/templates/acord-25.ts`)
 - 20-scenario playable baseline trajectories (`eval/agents/baseline-agent.ts`) and 3-Stage Agent-to-Code evolution runner (`eval/evolution-showcase.ts`)
 - Self-contained GM3 Light Executive HTML Scorecard (`docs/executive-scorecard.html`) and Executive Story Spine (`design/story.md`, `EXECUTIVE-BRIEF.md`)
+
+### v0.7.0: Benchmark Framing & First Leaderboard (current)
+
+- Done: `README.md` reframed as an agent benchmark for small-business work outside coding (one worked task, the 20 workflows, scoring, harness adapters, comparison, limitations); the product narrative and modeled economics stay in `design/story.md` and `EXECUTIVE-BRIEF.md`
+- Done: benchmark card hero (`docs/assets/benchmark_card.svg`)
+- Done: statutory minimums match the law in force on the benchmark date: CA 30/60/15 (since 2025-01-01) and NC 50/100/50 (since 2025-07-01)
+- Next: first published leaderboard, each task run 5 times per model through the Inspect or Harbor adapter, reported per workflow (`pass@1`, `pass^5`, E&O violation rate, collateral damage rate, cost per task); models to be chosen
+- Next: replace the illustrative Stage 1 to 3 pass rates in `eval/evolution-showcase.ts` (hard-coded `pass1` constants; `passHatK` computes `(c/n)^k`) with measured repeated trials

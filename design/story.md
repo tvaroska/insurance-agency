@@ -1,5 +1,7 @@
 # Evergreen Insurance Partners: The Executive Story (`design/story.md`)
 
+![Evergreen product architecture](../docs/assets/architecture_card.svg)
+
 **Audience:** Insurance Technology Executives, Independent Agency Principals, COOs, and Chief Risk / E&O Officers  
 **Core Thesis:** Independent insurance agencies do not have a "chatbot problem"; they have a **servicing capacity and Errors & Omissions (E&O) governance bottleneck**. Evergreen proves how an 11-person independent brokerage scales from **$20.0M to $38.5M in written premium (+92.5%)**, growing revenue per employee from **$200,000 to $385,000**, by pairing multi-modal AI execution with a deterministic **Three Lines of Defense** governance architecture and **$0-token compiled workflows**.
 
@@ -22,7 +24,7 @@
 
 In a typical $20M premium agency (`$2.2M` commission revenue at an 11% blended rate, or **`$200,000` revenue per employee**):
 - **78% of CSR capacity** is consumed by repetitive cross-system servicing: issuing ACORD 25 COIs, re-keying commercial submissions into legacy carrier web portals, auditing commission statements, and re-shopping renewal rate spikes (`>20%`).
-- **Chat-only AI assistants fail the E&O test:** An unconstrained LLM that lowers a California auto policy to `10/20/5` (below the `15/30/5` statutory floor), backdates a collision deductible reduction prior to a parking-lot loss, or binds a `$34,800` commercial package without Principal sign-off exposes the agency to catastrophic Errors & Omissions liability.
+- **Chat-only AI assistants fail the E&O test:** An unconstrained LLM that lowers a California auto policy to `10/20/5` (below the `30/60/15` statutory floor), backdates a collision deductible reduction prior to a parking-lot loss, or binds a `$34,800` commercial package without Principal sign-off exposes the agency to catastrophic Errors & Omissions liability.
 
 ---
 

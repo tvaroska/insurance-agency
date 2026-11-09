@@ -95,7 +95,7 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
     expect(html).toContain("#20");
   });
 
-  test("README.md, EXECUTIVE-BRIEF.md, and design/story.md enforce showcase hygiene, canonical ports, and provenance", async () => {
+  test("README.md stays a benchmark README; EXECUTIVE-BRIEF.md and design/story.md keep hygiene, canonical ports, and provenance", async () => {
     const readme = await Bun.file(
       new URL("../../README.md", import.meta.url),
     ).text();
@@ -106,10 +106,14 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
       new URL("../../design/story.md", import.meta.url),
     ).text();
 
-    // 1. Clean H1 and fault-line table in README.md
-    expect(readme.startsWith("# Evergreen Insurance Partners: Governed AI Operations for Independent P&C Brokerages")).toBe(true);
-    expect(readme).toContain("### Why Default Agent Setups Fail in Regulated Insurance");
-    expect(readme).toContain("| Default Approach | What It Shows | What It Misses | How Evergreen Fixes It |");
+    // 1. README.md is framed as a benchmark for small-business work and carries no modeled economics
+    expect(readme.startsWith("# Evergreen: An Agent Benchmark for Small-Business Work, Not Code")).toBe(true);
+    for (const heading of ["## Results", "## How Scoring Works", "## How It Compares", "## Limitations"]) {
+      expect(readme).toContain(heading);
+    }
+    expect(readme).not.toContain("Governed AI Operations");
+    expect(readme).not.toContain("calculateAgencyRoi");
+    expect(readme).not.toContain("+92.5%");
 
     // 2. Canonical ports in README.md and design/story.md
     expect(readme).toContain("Summit Fire & Casualty Commercial Web Portal:          http://localhost:3005/");
@@ -132,10 +136,8 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
       expect(doc).not.toContain("GM3 Light");
       expect(doc).not.toContain("Tier-2 Reusable Showcase");
     }
-    for (const doc of [readme, brief]) {
-      expect(doc).toContain("Measured vs. Modeled Provenance:");
-      expect(doc).toContain("calculateAgencyRoi");
-    }
+    expect(brief).toContain("Measured vs. Modeled Provenance:");
+    expect(brief).toContain("calculateAgencyRoi");
 
     // 4. All 10 required domain acronyms expanded in README.md
     for (const acronym of [

@@ -26,7 +26,7 @@ bun test eval/__tests__/
 
 | File | Purpose |
 | :--- | :--- |
-| [`README.md`](README.md) | Executive showcase overview, Seven Promises (`I1`–`I7`), 5 Hero Journeys, and 20-scenario benchmark suite |
+| [`README.md`](README.md) | Benchmark overview: results status, one worked task, the 20 workflows, scoring, harness adapters, comparison, and limitations (no modeled economics) |
 | [`design/story.md`](design/story.md) | Executive narrative, 11-person agency capacity model, and Three Lines of Defense |
 | [`EXECUTIVE-BRIEF.md`](EXECUTIVE-BRIEF.md) | 2-page executive summary and KPI receipts |
 | [`docs/executive-scorecard.html`](docs/executive-scorecard.html) | Self-contained GM3 Light Executive HTML Scorecard |
