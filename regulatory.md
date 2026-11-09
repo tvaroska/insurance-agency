@@ -118,12 +118,20 @@ The following situations **require immediate escalation to a human**. The AI age
 
 ### State Minimum Auto Liability Limits (Quick Reference)
 
-| State | Bodily Injury (per person/per accident) | Property Damage |
-|---|---|---|
-| CA | $15,000 / $30,000 | $5,000 |
-| TX | $30,000 / $60,000 | $25,000 |
-| FL | $10,000 / $20,000 (BI required with PIP) | $10,000 |
-| NY | $25,000 / $50,000 | $10,000 |
+Minimums in force on the benchmark date (18 February 2026), enforced by [`packages/shared/src/compliance-firewall.ts`](packages/shared/src/compliance-firewall.ts):
+
+| State | Bodily Injury (per person/per accident) | Property Damage | Shorthand | Note |
+|---|---|---|---|---|
+| CA | $30,000 / $60,000 | $15,000 | 30/60/15 | Raised from 15/30/5 on 1 January 2025 (SB 1107) |
+| TX | $30,000 / $60,000 | $25,000 | 30/60/25 | |
+| FL | $10,000 / $20,000 (BI required with PIP) | $10,000 | 10/20/10 | |
+| NY | $25,000 / $50,000 | $10,000 | 25/50/10 | |
+| IL | $25,000 / $50,000 | $20,000 | 25/50/20 | |
+| PA | $15,000 / $30,000 | $5,000 | 15/30/5 | |
+| OH | $25,000 / $50,000 | $25,000 | 25/50/25 | |
+| GA | $25,000 / $50,000 | $25,000 | 25/50/25 | |
+| NC | $50,000 / $100,000 | $50,000 | 50/100/50 | Raised from 30/60/25 on 1 July 2025 |
+| MI | $50,000 / $100,000 | $10,000 | 50/100/10 | |
 
 ---
 

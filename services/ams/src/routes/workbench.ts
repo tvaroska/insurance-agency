@@ -238,7 +238,7 @@ export const HERO_JOURNEYS: HeroJourneySpec[] = [
         modality: "E&O Firewall",
         service: "ams",
         operation: "POST /v1/policies/POL-AU-2025-048/endorsements (CA 10/20/5 / TX 15/30/10)",
-        claim: "Blocked illegal below-minimum liability reduction (CA min 15/30/5, TX min 30/60/25).",
+        claim: "Blocked illegal below-minimum liability reduction (CA min 30/60/15, TX min 30/60/25).",
         dbEvidence: "HTTP 422 EO_COMPLIANCE_VIOLATION returned; 0 illegal rows written to ams.endorsements.",
       },
       {
@@ -364,7 +364,7 @@ async function ensureSampleEscalations() {
       policy_id: "POL-AU-2025-048",
       reason: "state_minimum_violation",
       summary:
-        "Insured requested reducing California/Texas personal auto liability below state statutory minimums (CA 15/30/5, TX 30/60/25). Blocked by 1st-line E&O firewall; queued for Principal review.",
+        "Insured requested reducing California/Texas personal auto liability below state statutory minimums (CA 30/60/15, TX 30/60/25). Blocked by 1st-line E&O firewall; queued for Principal review.",
       context: JSON.stringify({
         state: "TX",
         requested_limits: "15/30/10",
@@ -1359,7 +1359,7 @@ export function renderWorkbenchHtml(): string {
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
             <label style="font-size:12px; font-weight:600;">State
               <select id="fw-state" style="width:100%; padding:7px; margin-top:4px; border:1px solid var(--outline); border-radius:6px;">
-                <option value="CA">CA (Min 15/30/5)</option>
+                <option value="CA">CA (Min 30/60/15)</option>
                 <option value="TX">TX (Min 30/60/25)</option>
                 <option value="FL">FL (Min 10/20/10)</option>
                 <option value="NY">NY (Min 25/50/10)</option>
@@ -1367,7 +1367,7 @@ export function renderWorkbenchHtml(): string {
                 <option value="PA">PA (Min 15/30/5)</option>
                 <option value="OH">OH (Min 25/50/25)</option>
                 <option value="GA">GA (Min 25/50/25)</option>
-                <option value="NC">NC (Min 30/60/25)</option>
+                <option value="NC">NC (Min 50/100/50)</option>
                 <option value="MI">MI (Min 50/100/10)</option>
               </select>
             </label>
