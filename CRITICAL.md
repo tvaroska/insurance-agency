@@ -1,0 +1,11 @@
+# Critical Paths & Invariants (`CRITICAL.md`)
+
+Registry of load-bearing paths and invariants for `insurance-agency` (Evergreen Insurance API Gym). Any change touching a row below requires full unit + evaluation verification across all 8 microservices.
+
+| Path / Invariant | Why Irreversible / Critical | Pinning Test |
+| :--- | :--- | :--- |
+| [`specs/`](specs/) (`specs/*.yaml` — 8 OpenAPI 3.0 contracts) | Source-of-truth wire contracts for AMS (`:3000`), Rater (`:3001`), CRM (`:3002`), ECM (`:3003`), Comm Hub MCP (`:3004`), Summit Fire (`:3005`), Coastal Star (`:3006`), and Claims (`:3007`). Route, scope, or schema drift breaks external agent harnesses and trace operation mapping. | `services/*/src/__tests__/*.test.ts` · `eval/__tests__/trace-evaluator.test.ts` |
+| [`data/seed/`](data/seed/) & [`data/seed-clean/`](data/seed-clean/) (`SEED_MODE=realistic\|clean`) | Deterministic benchmark fixtures (80 policies, 33 clients, 87 documents, 12 claims, 30 communications, 7 carriers). `data/seed-clean/` must contain zero adversarial traps; `data/seed/` must preserve planted E&O and book-audit traps (`CLI-008`, `CLI-021`, `CLI-022`, `CLI-026`, `CLI-027`). | `services/*/src/__tests__/*.test.ts` · `eval/__tests__/integration.test.ts` |
+| [`eval/evaluators/rubric.ts`](eval/evaluators/rubric.ts) (`EVAL-P01..P10` compliance) | Implements the Central Evaluation Standard (`EVAL-P01`–`EVAL-P10`): atomic single-aspect criteria, binary/4-point ordinal scales (5-point scales prohibited), commit-first `reasoningTrace` before `score`/`passed`, XML input sanitization, `CONTRADICTION_AWARE_4PT_STEPS` (`EVAL-P10B`), and Rogan-Gladen debiasing (`theta_hat`). | `eval/__tests__/rubric-evaluator.test.ts` · `eval-audit` |
+| [`eval/score.ts`](eval/score.ts) & [`regulatory.md`](regulatory.md) (10 E&O Escalation Triggers) | Output (60%) + Trace (40%) weighted scorer and hard E&O auto-fail override (any uncaught regulatory trap caps scenario score at `0`). | `eval/__tests__/output-evaluator.test.ts` · `eval/__tests__/integration.test.ts` |
+| [`packages/shared/`](packages/shared/) (OAuth 2.0 scope guards & `/sim/*` control plane) | Shared JWT scope middleware (`403` on missing scope), snapshot/state-diffing (`/sim/snapshot`, `/sim/reset`), time-travel (`/sim/time-travel`), and chaos injection (`/sim/chaos`). | `packages/shared/src/__tests__/*.test.ts` |

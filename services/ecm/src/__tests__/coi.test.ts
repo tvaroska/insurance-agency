@@ -168,5 +168,32 @@ describe("POST /v1/documents/coi/generate - success", () => {
     const body = await res.json();
     expect(body.certificate_holder.name).toBe("Simple Corp");
     expect(body.description).toContain("Certificate of Insurance");
+    expect(body.file_size_bytes).toBeGreaterThan(500);
+  });
+
+  it("supports POST /v1/coi alias and serves real ACORD 25 PDF bytes at GET /v1/documents/coi/:id/pdf", async () => {
+    const writeHeaders = await authHeader(["ecm:documents:write", "ecm:documents:read"]);
+    const res = await app.request("/v1/coi", {
+      method: "POST",
+      headers: { ...writeHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        policy_id: "POL-001",
+        holder_name: "Metro Event Center LLC",
+        holder_address: "500 Convention Way, Austin, TX 78701",
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.file_size_bytes).toBeGreaterThan(500);
+
+    const pdfRes = await app.request(body.pdf_url, {
+      headers: writeHeaders,
+    });
+    expect(pdfRes.status).toBe(200);
+    expect(pdfRes.headers.get("Content-Type")).toBe("application/pdf");
+    const pdfBytes = new Uint8Array(await pdfRes.arrayBuffer());
+    expect(pdfBytes.length).toBe(body.file_size_bytes);
+    expect(new TextDecoder().decode(pdfBytes.slice(0, 5))).toBe("%PDF-");
   });
 });
+

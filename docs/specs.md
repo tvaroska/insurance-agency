@@ -97,8 +97,8 @@ Requirements and acceptance criteria organized by feature area.
 
 ### Requirements
 
-- Standardized runner scripts under `eval/harnesses/` to execute the 15 benchmark scenarios against multiple agent harnesses (Google ADK, Claude Code, OpenHands, LangGraph, Inspect AI / METR)
-- Automated gym reset (`docker compose down && up`) between scenario runs
+- Standardized runner scripts under `eval/harnesses/` to execute the 20 benchmark scenarios (253 task cases) against multiple agent harnesses (Google ADK, Claude Code, OpenHands, LangGraph, Inspect AI / METR) in both `--mode=precomputed` and `--mode=live`
+- Automated gym reset (`POST /sim/reset` or `docker compose down && up`) between scenario runs
 - Aggregator CLI that compiles per-scenario reports into a comparative matrix: Overall Score, E&O Compliance Rate, Modality Coverage, Mean API Calls, Mean Token Cost ($), and p50/p95 Latency
 
 ### Acceptance Criteria
@@ -110,7 +110,7 @@ Requirements and acceptance criteria organized by feature area.
 
 ### Requirements
 
-- Exporter script (`eval/harbor/export-harbor.ts`) generates Harbor-compatible task directories (`task.yaml`, `docker-compose.yaml` reference, and `tests/test_outputs.py`) for all 15 scenarios (203 task cases)
+- Exporter script (`eval/harbor/export-harbor.ts`) generates Harbor-compatible task directories (`task.yaml`, `docker-compose.yaml` reference, and `tests/test_outputs.py`) for all 20 scenarios (253 task cases)
 - Agent container in Harbor connects to the 8 gym microservices on the shared Docker Compose network, with `SEED_MODE` configured per variant
 - `tests/test_outputs.py` runs `bun eval/score.ts` against the agent's exported OTLP trace file and live service state, asserting overall score and E&O compliance
 - Compatible out-of-the-box with `harbor run` across built-in harnesses (Claude Code, OpenHands, Codex CLI, Goose, Aider)
@@ -120,6 +120,22 @@ Requirements and acceptance criteria organized by feature area.
 - [x] `bun eval/harbor/export-harbor.ts` generates valid Harbor task bundles
 - [x] `harbor run` boots the 8 services, runs an agent harness on a scenario, and executes `test_outputs.py` to record the score
 - [x] Documentation (`eval/harbor/README.md`) provides single-command examples for benchmarking Claude Code and OpenHands
+
+## Executive Operations & Governance Showcase (`v0.6.0`)
+
+### Requirements
+
+- 4-tab GM3 Light Executive Workbench mounted on AMS (`GET /` on `:3000`) with zero-Docker launcher (`bun run showcase`)
+- 1st-Line service-layer E&O and 10-state statutory minimum firewall (`packages/shared/src/compliance-firewall.ts`) returning HTTP `422`
+- Real multi-field ACORD 25 Certificate of Insurance PDF generation (`services/ecm/src/templates/acord-25.ts`)
+- 3-Stage Agent-to-Code evolution runner (`eval/evolution-showcase.ts`) comparing Stage 1 General Agent, Stage 2 Domain Skill, and Stage 3 `$0`-token compiled handlers (`privy:*`) with `FallbackToSkill` on mid-conversation pivots (`Scenarios 17–20`)
+- Self-contained GM3 Light Executive HTML Scorecard (`--html-out` / `docs/executive-scorecard.html`)
+
+### Acceptance Criteria
+
+- [x] `GET /` on AMS serves the 4-tab GM3 Light Executive Workbench and `/workbench/api/*` endpoints
+- [x] `bun eval/score.ts --html-out docs/executive-scorecard.html` generates the self-contained Executive HTML Scorecard
+- [x] All 20 scenarios pass reference trajectory execution across REST, MCP, and Carrier Portals
 
 ## Additional Benchmark & RL Standards (Backlog: `S3-INTOP-2..4`)
 

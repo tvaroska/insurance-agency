@@ -76,6 +76,10 @@ app.route(
 // ── OAuth token endpoint (no auth required) ─────────────────────────
 app.route("/", oauthTokenEndpoint());
 
+// ── Executive Operations & Governance Workbench (no auth required) ──
+import { workbenchRouter } from "./routes/workbench";
+app.route("/", workbenchRouter);
+
 // ── Authenticated routes ─────────────────────────────────────────────
 const api = new Hono<{ Variables: AppVariables }>();
 api.use("*", jwtAuth);

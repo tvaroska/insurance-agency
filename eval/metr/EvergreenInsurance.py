@@ -1,7 +1,7 @@
 """
 METR Task Standard wrapper for Evergreen Insurance API Gym.
 
-Exposes 15 benchmark scenarios (× seed variants × difficulty levels) as METR tasks.
+Exposes 20 benchmark scenarios (× seed variants × difficulty levels = 253 tasks) as METR tasks.
 Scoring delegates to the existing TypeScript scorer CLI.
 """
 

@@ -32,14 +32,14 @@ Each microservice runs as an independent Bun + Hono HTTP server with its own iso
 | **Claims** (`services/claims`) | 3007 | REST | First Notice of Loss (FNOL) intake, adjuster assignment, and claim timeline tracking. |
 
 ### 3. Evaluation & Scoring Engine (`eval/`)
-- **Responsibility:** Evaluates agent runs across 15 scenarios (218 cases across `scripted`, `explicit`, `natural`, `vague`, and `adversarial` prompt difficulty tiers) using a hybrid rubric:
+- **Responsibility:** Evaluates agent runs across 20 scenarios (253 cases across `scripted`, `explicit`, `natural`, `vague`, and `adversarial` prompt difficulty tiers) using a hybrid rubric:
   - **Output Evaluator (60% weight):** Queries live REST APIs (`eval/evaluators/output.ts`) to verify final system state (records created, status transitions, escalations filed).
   - **Trace Evaluator (40% weight):** Parses OTLP HTTP client spans (`eval/evaluators/trace.ts`) and GenAI semantic convention tool spans (`eval/evaluators/trace-genai.ts`) to verify workflow sequences, presence/absence constraints, and API call efficiency.
   - **E&O Trap Gate (Hard Override):** Any uncaught Errors & Omissions regulatory violation (missing escalation or missing client-specific escalation state) overrides the scenario score to `0%`.
 - **Location:** `eval/`
 
 ### 4. Benchmark Interoperability Adapters (`eval/metr/`, `eval/harbor/`)
-- **Responsibility:** Exposes the 15 scenarios and 203+ task variants in standard external benchmark formats, including the METR Task Standard (`eval/metr/EvergreenInsurance.py`) and Harbor / Terminal-Bench (`S2-INTOP-1`).
+- **Responsibility:** Exposes the 20 scenarios and 253 task variants in standard external benchmark formats, including the METR Task Standard (`eval/metr/EvergreenInsurance.py`), UK AISI Inspect AI (`eval/inspect/evergreen.py`), and Harbor / Terminal-Bench (`S2-INTOP-1`).
 
 ---
 

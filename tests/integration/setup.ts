@@ -487,7 +487,7 @@ export function seedRaterCarrier(overrides: Partial<typeof raterSchema.carriers.
   if (K8S_MODE) return { carrier_code: "TRAV", ...overrides };
   const carrier = {
     carrier_code: "TRAV",
-    carrier_name: "Travelers",
+    carrier_name: "Summit Fire & Casualty",
     states: JSON.stringify(["IL", "IN", "OH", "MI", "WI"]),
     policy_types: JSON.stringify(["personal_auto", "homeowners", "bop", "umbrella"]),
     risk_categories: JSON.stringify(["preferred", "standard"]),

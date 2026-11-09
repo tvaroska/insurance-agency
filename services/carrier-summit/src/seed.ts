@@ -53,12 +53,14 @@ async function loadJson<T>(filename: string): Promise<T> {
 }
 
 async function createTables() {
-  await prisma.$executeRawUnsafe(`
-    DROP TABLE IF EXISTS underwriting_conditions;
-    DROP TABLE IF EXISTS policy_documents;
-    DROP TABLE IF EXISTS policies;
-    DROP TABLE IF EXISTS quotes;
-  `);
+  for (const table of [
+    "underwriting_conditions",
+    "policy_documents",
+    "policies",
+    "quotes",
+  ]) {
+    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS ${table}`);
+  }
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS quotes (
     quote_id TEXT PRIMARY KEY,
     request_id TEXT NOT NULL,

@@ -52,12 +52,19 @@ export async function fetchClientPolicies(
 }
 
 export async function fetchAllClients(authToken: string): Promise<AmsClient[]> {
-  const res = await fetch(`${AMS_BASE_URL}/v1/clients?limit=100`, {
-    headers: { Authorization: authToken },
-  });
-  if (!res.ok) {
-    throw Object.assign(new Error(`AMS client list failed`), { status: res.status });
-  }
-  const body = await res.json();
-  return body.data;
+  const all: AmsClient[] = [];
+  let cursor: string | null = null;
+  do {
+    const qs = cursor ? `?limit=100&cursor=${encodeURIComponent(cursor)}` : "?limit=100";
+    const res = await fetch(`${AMS_BASE_URL}/v1/clients${qs}`, {
+      headers: { Authorization: authToken },
+    });
+    if (!res.ok) {
+      throw Object.assign(new Error(`AMS client list failed`), { status: res.status });
+    }
+    const body = await res.json();
+    all.push(...(body.data ?? []));
+    cursor = body.pagination?.has_more ? body.pagination.next_cursor : null;
+  } while (cursor);
+  return all;
 }

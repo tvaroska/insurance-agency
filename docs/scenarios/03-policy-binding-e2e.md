@@ -11,7 +11,7 @@ Take an accepted quote through the full binding workflow: create the policy in A
 ## Preconditions
 
 - Client CLI-003 (Maria Rodriguez) has an accepted quote in Rater
-- Quote QR-001 has 4 carrier quotes, all approved; Nationwide (NTNW) is lowest at $1,010/year
+- Quote QR-001 has 4 carrier quotes, all approved; National Shield (NTNW) is lowest at $1,010/year
 - ECM service can generate ACORD Form 90 (auto application)
 - Carrier portal (Coastal Star or Summit) has bind confirmation endpoint
 
@@ -19,7 +19,7 @@ Take an accepted quote through the full binding workflow: create the policy in A
 
 - **Client:** CLI-003 (Maria Rodriguez), Chicago, IL
 - **Quote Request:** QR-001 — personal auto, 4 quotes returned
-- **Selected Quote:** Nationwide at $1,010/year
+- **Selected Quote:** National Shield at $1,010/year
 - **Complication:** DOC-011 (signed application) is still PENDING_SIGNATURE — binding requires a signed application
 
 ## Required Steps

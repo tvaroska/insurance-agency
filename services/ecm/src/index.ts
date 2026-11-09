@@ -77,6 +77,7 @@ import { acordRouter } from "./routes/acord";
 import { coiRouter } from "./routes/coi";
 api.route("/documents/acord", acordRouter);
 api.route("/documents/coi", coiRouter);
+api.route("/coi", coiRouter);
 api.route("/documents", documentsRouter);
 api.route("/envelopes", envelopesRouter);
 api.route("/assets", assetsRouter);

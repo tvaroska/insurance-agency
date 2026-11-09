@@ -68,4 +68,29 @@ describe("Playable Reference Baseline Agent (eval/agents/baseline-agent.ts)", ()
     const playbook08 = getReferencePlaybook("08", "realistic", "strict");
     expect(playbook08.filter((s) => s.trafficType === "conflict_escalation")).toHaveLength(3);
   });
+
+  test("executes all 20 scenarios (01-20) and passes 100% of trace and privacy checks", async () => {
+    const mockFetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/oauth/token")) {
+        return new Response(JSON.stringify({ access_token: "test-jwt" }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ status: "ok", data: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    for (const [id, scen] of Object.entries(scenarios)) {
+      const variant = scen.variants.realistic ?? Object.values(scen.variants)[0];
+      const result = await runBaselineAgent({
+        scenarioId: id,
+        seed: "realistic",
+        modalityMode: "strict",
+        fetchImpl: mockFetch,
+      });
+      expect(result.privacyAudit.passed).toBe(true);
+      const parsedCalls = parseTrace(result.trace);
+      const traceScores = evaluateTrace(parsedCalls, variant.traceChecks);
+      expect(traceScores.every((c) => c.passed)).toBe(true);
+    }
+  });
 });
+

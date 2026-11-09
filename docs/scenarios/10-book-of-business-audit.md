@@ -27,7 +27,7 @@ The audit should discover at minimum these planted issues:
 | Below state minimum coverage | CLI-027 (Tanya Marsh) | TX auto: BI 15/30, PD 5K vs minimum 30/60/25 |
 | Below state minimum coverage | CLI-024 (Rachel Adams) | NY auto: BI 10/20, PD 5K vs minimum 25/50/10 + mandatory PIP $50K |
 | Lapsed policy — uninsured | CLI-033 (Andre Washington) | Policy expired 2025-12-15; driving uninsured |
-| Non-renewal — 3 days to lapse | CLI-032 (Patricia Kowalski) | Safeco non-renewed auto + HO; expires 2026-02-23 |
+| Non-renewal — 3 days to lapse | CLI-032 (Patricia Kowalski) | SafeHarbor non-renewed auto + HO; expires 2026-02-23 |
 | Unsigned UM election form | CLI-022 (Megan Sullivan) | FL requires signed UM form; DOC-066 pending since 2025-10-01 |
 
 ### High (Action within 1 week)

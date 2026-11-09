@@ -268,7 +268,16 @@ function mapClientRow(row: Client) {
   };
 }
 
-const POLICY_TYPES = ["personal_auto", "homeowners"] as const;
+const POLICY_TYPES = [
+  "personal_auto",
+  "homeowners",
+  "renters",
+  "umbrella",
+  "bop",
+  "workers_comp",
+  "general_liability",
+  "professional_liability",
+] as const;
 const POLICY_STATUSES = ["active", "pending", "expired", "cancelled", "non_renewed"] as const;
 
 clientsRouter.get("/:id/policies", requireScopes("ams:policies:read"), async (c) => {

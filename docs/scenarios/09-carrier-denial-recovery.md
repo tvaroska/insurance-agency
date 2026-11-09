@@ -21,13 +21,13 @@ Three difficulty tiers:
 ### Tier 1: Moderate — Tyler Morrison (2 accidents)
 - **Client:** CLI-019, age ~30, 2 at-fault accidents in 36 months
 - **Quote:** QR-002 — SMIT declined ("two at-fault accidents"), ERIE declined ("risk criteria")
-- **Available:** Coastal ($2,780), Liberty ($3,100), Safeco ($3,350)
+- **Available:** Coastal ($2,780), Liberty Crest ($3,100), SafeHarbor ($3,350)
 - **Recovery:** Standard market options exist but at high premiums
 
 ### Tier 2: Severe — Victor Marsh (DUI + violations)
 - **Client:** CLI-026, age 26, DUI (2025-06-01), reckless driving, speeding, at-fault accident
 - **Quote:** QR-014 — SMIT (underwriting hold), CSTL declined, ERIE declined
-- **Available:** Only Nationwide at $5,200/year
+- **Available:** Only National Shield at $5,200/year
 - **Recovery:** Extremely limited; only SR-22-capable carriers; may need non-standard/assigned risk
 - **Family complication:** Wife Tanya (CLI-027) has below-state-minimum coverage that needs fixing
 

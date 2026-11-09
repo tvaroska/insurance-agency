@@ -1,93 +1,126 @@
-# Evergreen Insurance — API Gym for AI Agents
+# Evergreen Insurance Partners: Governed AI Operations for Independent P&C Brokerages
 
-A simulated independent insurance agency with eight microservices, realistic seed data, and regulatory rules. **This is the gym, not the athlete** — bring your own agent.
+Independent Property and Casualty (P&C) insurance brokerages cannot deploy standard chat agents because a polite transcript can mask unbound endorsements, illegal state liability cuts, or unescalated legal demand letters that trigger catastrophic Errors and Omissions (E&O) liability. Evergreen Insurance Partners is a runnable 8-microservice brokerage platform and 20-scenario (253-task) verification suite that pairs multi-modal Customer Service Representative (CSR) automation across REST APIs, a Model Context Protocol (MCP) communications hub, and 2 legacy carrier web portals with an HTTP `422` statutory firewall, 35-table SQLite pre/post state diffing, and `$0`-token compiled workflows.
 
-**Audience:** Agent developers and researchers building AI agents that interact with insurance agency systems. This repo is the test environment your agent operates against — it defines the APIs, data, scenarios, and compliance rules. You are not expected to contribute to this repo; you're expected to build agents that can pass its benchmarks.
+![Evergreen Insurance Partners Architecture](docs/assets/architecture_card.svg)
 
-**Evergreen Insurance Partners** is a fictional mid-sized brokerage (~5,000 policies, $15M premium volume). This repo provides the complete environment — APIs, data, scenarios, and compliance rules — that AI agents operate against.
+### Why Default Agent Setups Fail in Regulated Insurance
 
-## Scope
+| Default Approach | What It Shows | What It Misses | How Evergreen Fixes It |
+| :--- | :--- | :--- | :--- |
+| **Transcript-only evaluation** | Polite HTTP `200` confirmation email or chat reply claiming the policy change succeeded. | Unbound endorsements, missing task records, or stray collateral edits across sibling policies (`0%` database verification). | **35-table pre/post SQLite state diffing** ([`eval/evaluators/state-diff.ts`](eval/evaluators/state-diff.ts)) snapshots all 8 services via `GET /sim/snapshot` and penalizes any missing or unauthorized row mutation. |
+| **Prompt-only E&O instructions** | System prompt rules telling the LLM not to violate state minimums or backdate coverage. | Prompt injection, multi-turn client pressure, or hallucinated limits that write illegal coverage directly into the Agency Management System (AMS). | **HTTP `422` service-layer statutory firewall** ([`packages/shared/src/compliance-firewall.ts`](packages/shared/src/compliance-firewall.ts)) blocks below-minimum auto liability across 10 US states, retroactive backdating, and `>$10,000` binds before any database write occurs. |
+| **API-only demos** | Clean JSON tool calls against a single mock REST endpoint. | Real brokerage workflows that span modern APIs, customer messaging, and browser-only legacy carrier portals without public APIs. | **Unified REST + MCP + 2 legacy carrier web portals** across 5 REST microservices, 1 MCP communications hub (`:3004`), and 2 session-guarded portals (*Summit Fire & Casualty* `:3005`, *Coastal Star Auto* `:3006` with Motor Vehicle Record (MVR) lookup). |
+| **Static chat-to-bash scripts** | Either paying full LLM token cost and latency on every routine request or running brittle scripts that break when a client changes requirements mid-thread. | Compounding unit economics for high-volume Certificate of Insurance (COI) and First Notice of Loss (FNOL) servicing with safe recovery on edge cases. | **3-stage Agent-to-Code compilation with automatic `FallbackToSkill`** ([`eval/evolution-showcase.ts`](eval/evolution-showcase.ts)) compiles routine workflows into `$0`-token deterministic TypeScript (`privy:*`) and falls back to the domain skill on mid-conversation client pivots. |
 
-**This repo contains:**
-- 8 microservices (AMS, Rater, CRM, ECM, Comm Hub, Claims, 2 carrier portals)
-- REST and MCP APIs with OpenAPI specs
-- Seed data (80 representative policies, 33 clients, 87 documents, and 7 carriers in `data/seed/`, modeling a ~5,000-policy agency)
-- 20 benchmark scenarios (15 single-turn + 5 interactive multi-turn, 253 total test cases across 5 prompt difficulty tiers) with deterministic state-diff, OTLP trace, and E&O compliance scoring
-- Simulation control plane (`/sim/reset`, `/sim/snapshot`, `/sim/time-travel`, `/sim/chaos`) and OpenEnv / METR / Harbor / Inspect AI / HAL adapters
-- Regulatory rules (E&O triggers, state minimums, PII masking)
-- Docker and Kubernetes infrastructure
-
-**Separate repos:**
-- Agent implementations (the code that calls these APIs)
-- Evaluation and scoring frameworks
+- **Executive Narrative:** [`design/story.md`](design/story.md)
+- **2-Page Executive Brief:** [`EXECUTIVE-BRIEF.md`](EXECUTIVE-BRIEF.md)
+- **Self-Contained Executive HTML Scorecard:** [`docs/executive-scorecard.html`](docs/executive-scorecard.html)
 
 ---
 
-## Quick Start
+## 1. 60-Second Executive Quickstart (`bun run showcase`)
 
 ```bash
+# 1. Verify all 8 microservices, seed scripts, and workbench assets (zero Docker required)
+bun run showcase:check
+
+# 2. Seed and launch all 8 services locally (:3000 to :3007) + open the Executive Workbench
+bun run showcase
+# Evergreen Executive Operations & Governance Workbench: http://localhost:3000/
+# Summit Fire & Casualty Commercial Web Portal:          http://localhost:3005/
+# Coastal Star Auto Personal Web Portal:                 http://localhost:3006/
+
+# 3. Or launch the full containerized topology via Docker Compose
 docker compose up --build
-```
 
-Verify all services are healthy:
-
-```bash
-for port in 3000 3001 3002 3003 3004 3005 3006 3007; do
-  curl -s http://localhost:$port/health && echo " :$port OK"
-done
-```
-
-Reset seed data:
-
-```bash
-# Per service
-cd services/ams && bun run seed
-
-# All services
-scripts/reset-all.sh
+# 4. Generate the self-contained Executive HTML Scorecard
+bun eval/score.ts --html-out docs/executive-scorecard.html
 ```
 
 ---
 
-## Services
+## 2. The Seven Executive Promises (`I1`–`I7`)
 
-| Service | Port | Interface | Description |
-|---------|------|-----------|-------------|
-| AMS | 3000 | REST | Clients, policies, endorsements, commissions, tasks |
-| Rater | 3001 | REST | Multi-carrier quoting, binding, carrier appetite |
-| CRM | 3002 | REST | Lead scoring, campaigns, retention risk |
-| ECM | 3003 | REST | Documents, compliance audit, e-signatures, ACORD PDFs |
-| Comm Hub | 3004 | MCP (stdio/SSE) | Inbox, messaging, call transcripts |
-| Summit Fire | 3005 | REST + React | Mock carrier portal |
-| Coastal Star | 3006 | REST + React | Mock carrier portal |
-| Claims | 3007 | REST | FNOL, adjuster assignment, timeline |
-
-### Interface Types
-
-The gym deliberately exposes three interface types to test agents across all interaction modalities:
-
-- **REST APIs** (AMS, Rater, CRM, ECM, Claims) — Standard HTTP/JSON. For tool-calling agents that invoke endpoints directly.
-- **MCP** (Comm Hub) — [Model Context Protocol](https://modelcontextprotocol.io/) over stdio/SSE. For agents with native MCP support, testing protocol-level tool discovery and invocation.
-- **Web UIs** (Summit Fire, Coastal Star carrier portals) — React frontals served alongside REST endpoints. For computer-use agents that navigate browser interfaces via screenshots, clicks, and form fills.
-
-An agent that can only call REST APIs will handle 5 of 8 services. Full benchmark coverage requires all three modalities.
+| ID | Executive Promise | Operational Proof in This Repository | Verified Receipt |
+| :--- | :--- | :--- | :--- |
+| **`I1`** | **Zero Silent E&O & Book-of-Business Drift** | Cross-system audit scans active policies, documents, claims, and commissions across all 8 services. | **15 / 15** seeded book anomalies caught (`Scenario 10` / Hero Journey `J1`) |
+| **`I2`** | **Instant Commercial Servicing (`$0`-Token COI)** | Verifies active Commercial GL limits & endorsements in AMS and renders a real multi-field **ACORD 25 PDF** (`%PDF-1.7`) in Enterprise Content Management (ECM). | [`services/ecm/src/templates/acord-25.ts`](services/ecm/src/templates/acord-25.ts) (`POST /v1/documents/coi/generate`) |
+| **`I3`** | **Unified Multi-Modal Carrier Execution** | Single workflow spans 5 REST carriers (*Hartland Commercial*, *Erie Basin Mutual*, *National Shield*, *SafeHarbor*, *Liberty Crest*), Comm MCP, and 2 legacy browser portals (*Summit Fire & Casualty*, *Coastal Star Auto*). | [`eval/agents/baseline-agent.ts`](eval/agents/baseline-agent.ts) (`Scenarios 01–20`) |
+| **`I4`** | **Claims Advocacy Without Liability Leakage** | Automates FNOL intake, coverage-period verification, and adjuster assignment while blocking coverage admissions and escalating attorney notices. | `privy:claims-intake` + `attorney_involvement` escalation rule |
+| **`I5`** | **Three Lines of Defense Governance** | **1st Line:** Service-layer HTTP `422` statutory firewall; **2nd Line:** Principal escalation queue; **3rd Line:** 35-table pre/post SQLite state diff. | [`packages/shared/src/compliance-firewall.ts`](packages/shared/src/compliance-firewall.ts) & [`eval/evaluators/state-diff.ts`](eval/evaluators/state-diff.ts) |
+| **`I6`** | **Compounding 3-Stage Agent-to-Code Economics** | Compiles routine servicing from Stage 1 General Agent (`$0.0029`) and Stage 2 Domain Skill (`$0.0012`) into **Stage 3 Deterministic Code (`$0.0000`, `0` tokens)** with automatic `FallbackToSkill` on mid-conversation client pivots. | [`eval/evolution-showcase.ts`](eval/evolution-showcase.ts) (`Scenarios 17–20`) |
+| **`I7`** | **+92.5% Agency Capacity Without Adding Headcount** | Frees 78% of routine CSR work so an 11-person agency scales from **`$20.0M to $38.5M` written premium** (**`$200K to $385K` revenue/employee**). | Interactive ROI Calculator on [`http://localhost:3000/`](services/ams/src/routes/workbench.ts) |
 
 ---
 
-## Authentication
+## 3. Five Runnable Executive Hero Journeys (`J1`–`J5`)
 
-OAuth 2.0 with scoped JWT tokens per service.
+Every Hero Journey can be executed with one click inside the **Evergreen Executive Operations & Governance Workbench** (`http://localhost:3000/`) or via [`eval/evolution-showcase.ts`](eval/evolution-showcase.ts):
 
-**Mock OAuth Server + JWT Bypass:**
-- **Primary:** Mock OAuth2 server (`POST /oauth/token`, client credentials grant)
-- **Pre-configured clients:** `agent-full` (all scopes), `agent-csr` (service subset), `agent-readonly` (read-only)
-- Tokens are signed JWTs with `exp`, `sub`, `scope` claims
-- **Bypass:** Self-signed JWT with `dev-secret` accepted by all services for quick testing
-- Scope enforcement is real — missing scopes return 403
+| Hero Journey | Executive Persona | Modalities Exercised | What the Agent Claims | 3rd-Line 35-Table SQLite State-Diff Receipt |
+| :--- | :--- | :--- | :--- | :--- |
+| **`J1`: 15-Anomaly Book-of-Business Audit** (`Scenario 10`) | Agency COO / Ops Director | `REST` + `MCP` | Scanned active book, flagged unsigned ACORD apps & below-minimum limits, queued retention outreach. | Verified active rows in `ams.policies`; inserted remediation tasks in `ams.tasks` & transcript in `comm.messages` (`0` unauthorized mutations). |
+| **`J2`: 60-Second ACORD 25 COI Issuance** (`Scenarios 13 & 17`) | Commercial Lines CSR | `REST` + `MCP` | Verified `$1M/$2M` GL limits & endorsements and issued official ACORD 25 PDF. | Inserted real PDF in `ecm.documents` (`file_size_bytes > 0`, `%PDF-1.7` header verified) + delivery in `comm.messages`. |
+| **`J3`: Multi-Modal Carrier Submission** (`Scenarios 09 & 14`) | Commercial Producer | `REST` + `Browser Portal` + `MCP` | Quoted across REST carriers + *Summit Fire & Casualty* (`:3005`) & *Coastal Star Auto* (`:3006`) web portals. | Inserted quotes in `rater.carrier_quotes` + submission in `carrier_summit.submissions` + Principal hold in `ams.escalations`. |
+| **`J4`: Severe Claims FNOL & Special Investigations Unit (SIU) Fraud Triage** (`Scenarios 07 & 19`) | Claims Advocate | `REST` + `MCP` | Verified policy period on loss date, filed FNOL claim on `:3007`, and escalated plaintiff counsel letter. | Inserted claim in `claims.claims` + audit note in `claims.claim_notes` + escalation in `ams.escalations`. |
+| **`J5`: Live 1st-Line E&O Trap Interception** (`Scenarios 08, 18 & 20`) | Chief Risk / E&O Officer | `REST` + `E&O Firewall` | Refused illegal CA `10/20/5` / TX `15/30/10` auto limit reduction and unapproved backdated endorsement. | AMS & Rater returned **HTTP `422 EO_COMPLIANCE_VIOLATION`**; `0` illegal rows written to `ams.endorsements`. |
 
-### Getting a Token
+---
 
-**Option A — OAuth2 client credentials:**
+## 4. 11-Person Agency Capacity & 3-Stage Agent-to-Code Economics
+
+> **Measured vs. Modeled Provenance:** All 8 microservices, 35 SQLite tables, 20 scenarios (253 tasks), the HTTP `422` statutory firewall across 10 US states, and `%PDF-1.7` ACORD 25 output are **measured in code** and verified by automated tests. The 11-person agency financials (`$20.0M` to `$38.5M` written premium and `$200,000` to `$385,000` revenue per employee) are **modeled projections** computed by `calculateAgencyRoi` ([`eval/evolution-showcase.ts`](eval/evolution-showcase.ts) / [`landscape.md`](landscape.md)).
+
+### 11-Staff Agency ROI Model (`calculateAgencyRoi` in [`eval/evolution-showcase.ts`](eval/evolution-showcase.ts))
+
+| Metric | Baseline 11-Person Agency | Governed AI-Enabled Agency | Executive Impact |
+| :--- | :---: | :---: | :--- |
+| **Staff Composition** | `11 FTE` (2 Principals, 3 Producers, 4 CSRs, 1 Claims, 1 Ops) | `11 FTE` (same team, zero headcount addition) | Producers & CSRs focus on advisory & retention |
+| **Written Premium Volume** | `$20,000,000` (`~5,000` policies) | **`$38,500,000`** (`~9,625` policies) | **`+92.5%` book capacity expansion** |
+| **Commission Revenue (11% Blend)** | `$2,200,000 / yr` | **`$4,235,000 / yr`** | **`+$2,035,000` net agency revenue capacity** |
+| **Revenue per Employee** | `$200,000 / FTE` | **`$385,000 / FTE`** | **`+$185,000 / FTE` (`+92.5%`)** |
+
+### 3-Stage Agent-to-Code Evolution (`Stage 1 to Stage 2 to Stage 3`)
+
+| Evolution Stage | Execution Architecture | Avg Tokens / Run | Est. Cost / Run | Avg Latency | `pass@1` | `pass^5` (5-Trial Reliability) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **Stage 1: General Agent** | Zero-shot tool discovery across 8 services | `6,500 tok` | `$0.0029` | `3,900 ms` | `85.0%` | `44.4%` |
+| **Stage 2: Domain Skill** | Insurance playbook + 10-state E&O rules + portal sequences | `2,700 tok` | `$0.0012` | `1,650 ms` | `97.0%` | `85.9%` |
+| **Stage 3: Compiled Code (`privy:*`)** | Deterministic TypeScript handlers (`privy:cert-issuer`, `privy:claims-intake`, `privy:renewal-monitor`, `privy:endorsement-guard`) + automatic `FallbackToSkill` on mid-conversation client pivots (`Scenarios 17–20`) | **`0 tok` (routine)** | **`$0.0000`** | **`180 ms`** | **`100.0%`** | **`100.0%`** |
+
+---
+
+## 5. Honest Real-vs-Simulated Transparency Table
+
+| Component | What Is Real & Executed in Code | What Is Simulated for Self-Contained Portability |
+| :--- | :--- | :--- |
+| **8 Microservices & 35 SQLite Tables** | Real Bun + Hono HTTP/MCP servers with Prisma 7 & SQLite/PostgreSQL persistence across all 8 services. | Carrier underwriting engines use deterministic actuarial rating formulas rather than external mainframe connections. |
+| **1st-Line Service-Layer E&O Firewall** | Real HTTP `422` statutory & binding-authority enforcement in [`packages/shared/src/compliance-firewall.ts`](packages/shared/src/compliance-firewall.ts) across 10 US states (`CA`, `TX`, `FL`, `NY`, `IL`, `PA`, `OH`, `GA`, `NC`, `MI`). | State rate filings are representative statutory floors rather than live SERFF feeds. |
+| **Real ACORD 25 COI PDF Rendering** | Real binary PDF generation (`%PDF-1.7`, `pdf-lib`) in [`services/ecm/src/templates/acord-25.ts`](services/ecm/src/templates/acord-25.ts) with policy numbers, insureds, and limits. | E-signature completion uses deterministic envelope state transitions. |
+| **Legacy Carrier Web Portals** | Real React SPAs + session-guarded portal APIs for *Summit Fire & Casualty* (`:3005`) and *Coastal Star Auto* (`:3006`) with `MODALITY_MODE=strict`. | All 7 carrier brands (*Summit Fire & Casualty*, *Coastal Star Auto*, *Hartland Commercial*, *Erie Basin Mutual*, *National Shield*, *SafeHarbor*, *Liberty Crest*) are fictional. |
+| **3rd-Line State-Diff & Trace Scorer** | Real primary-key pre/post snapshot diffing across all 35 tables (`eval/evaluators/state-diff.ts`), OTLP trace parsing, and Rogan-Gladen rubric calibration. | Multi-turn customer replies (`Scenarios 16–20`) use a deterministic state-machine simulator (`eval/simulator/`) for 100% reproducible grading. |
+
+---
+
+## 6. Architecture & 8-Microservice Topology
+
+| Service | Default / Showcase Port | Docker Port | Interface Modality | Description |
+| :--- | :---: | :---: | :--- | :--- |
+| **AMS** (`services/ams`) | `3000` | `3000` | **REST + Executive Workbench (`GET /`)** | Clients, households, policies, coverages, endorsements, commissions, tasks, Principal escalations, and the 4-Tab Executive Workbench |
+| **Rater** (`services/rater`) | `3001` | `3001` | **REST** | Comparative multi-carrier quoting, binding, carrier appetite (*Hartland Commercial*, *Erie Basin Mutual*, *National Shield*, *SafeHarbor*, *Liberty Crest*), and 1st-Line E&O Firewall |
+| **CRM** (`services/crm`) | `3002` | `3002` | **REST** | Lead scoring, cross-sell gap detection, retention campaigns |
+| **ECM** (`services/ecm`) | `3003` | `3003` | **REST** | Documents, compliance audit, e-signature envelopes, real **ACORD 25 PDF** rendering (`POST /v1/documents/coi/generate` & `POST /v1/coi`) |
+| **Comm Hub** (`services/comm`) | `3004` | `3004` | **MCP (`POST /mcp`, stdio/SSE) + REST** | Omnichannel inbox, outbound messaging (`send_message` / `comm_send_message`), call transcripts, webhooks, PII guard |
+| **Summit Fire & Casualty** (`services/carrier-summit`) | `3005` | `3005` | **Web Portal UI + Portal API** | Commercial lines carrier web portal with 4-step submission wizard |
+| **Coastal Star Auto** (`services/carrier-coastal`) | `3006` | `3006` | **Web Portal UI + Portal API** | Personal auto carrier web portal with MVR driver lookup |
+| **Claims** (`services/claims`) | `3007` | `3007` | **REST** | FNOL intake, adjuster assignment, loss reserves, SIU fraud flags |
+
+---
+
+## 7. Authentication & OAuth 2.0 Scopes
+
+All services enforce OAuth 2.0 Bearer JWTs with per-service scope validation:
 
 ```bash
 curl -X POST http://localhost:3000/oauth/token \
@@ -97,324 +130,116 @@ curl -X POST http://localhost:3000/oauth/token \
 # Returns: { "access_token": "eyJ...", "token_type": "bearer", "expires_in": 3600 }
 ```
 
-**Option B — Self-signed JWT (dev only):**
+| Service | Required OAuth 2.0 Scopes |
+| :--- | :--- |
+| **AMS** | `ams:clients:read`, `ams:clients:write`, `ams:policies:read`, `ams:policies:write`, `ams:policies:endorsements`, `ams:accounting:read`, `ams:tasks:read`, `ams:tasks:write`, `ams:escalations:read`, `ams:escalations:write` |
+| **Rater** | `rater:quotes:create`, `rater:quotes:read`, `rater:quotes:bind`, `rater:carriers:read` |
+| **Comm Hub** | `comm:messages:read`, `comm:messages:send`, `comm:calls:read`, `comm:webhooks:manage` |
+| **CRM** | `crm:leads:read`, `crm:leads:write`, `crm:campaigns:read`, `crm:campaigns:enroll`, `crm:analytics:read` |
+| **ECM** | `ecm:documents:read`, `ecm:documents:upload`, `ecm:envelopes:create`, `ecm:assets:read`, `ecm:acord:read`, `ecm:coi:generate` |
+| **Claims** | `claims:read`, `claims:write`, `claims:assign`, `claims:documents` |
+
+---
+
+## 8. 20-Scenario / 253-Task Stateful Benchmark Suite
+
+Evergreen includes **20 benchmark scenarios** (**15 single-turn** + **5 interactive multi-turn** scenarios, **253 total test cases** across 5 prompt framing tiers: `scripted`, `explicit`, `natural`, `vague`, `adversarial`):
+
+| # | Scenario | Difficulty | Cases | Services Exercised | Key Governance & Operational Test |
+| :-: | :--- | :---: | :---: | :--- | :--- |
+| **01** | New Client Intake | Easy | 15 | AMS, CRM, Comm | Multi-service record creation, duplicate checking |
+| **02** | Multi-Carrier Quote Comparison | Medium | 15 | Rater, AMS, Comm | Async polling, normalized carrier comparison |
+| **03** | Policy Binding End-to-End | Hard | 15 | Rater, AMS, ECM, Comm | 9-step bind workflow with unsigned document blocker |
+| **04** | Duplicate Client Detection | Medium | 15 | AMS, CRM, ECM | Cross-referencing, conflict resolution, safe client merge |
+| **05** | Renewal Re-Shop (`>20%` Spike) | Medium | 15 | AMS, Rater, CRM, Comm | Retention remarketing across carriers without cutting coverage |
+| **06** | Cross-Sell & Coverage Gap Detection | Medium | 15 | AMS, Rater, CRM, Comm | Household portfolio gap analysis & Umbrella eligibility |
+| **07** | FNOL Claim Filing | Hard | 15 | Claims, AMS, ECM, Comm | Coverage verification, FNOL intake, adjuster assignment, E&O routing |
+| **08** | E&O Trap Navigation | Hard | 23 | All Services | 5 mixed client requests containing 3 mandatory E&O traps |
+| **09** | Carrier Denial Recovery | Hard | 15 | Rater, AMS, Carrier | High-risk driver / surplus lines / SR-22 escalation |
+| **10** | Book-of-Business Audit | Hard | 15 | AMS, ECM, Claims, CRM | 15 planted compliance & revenue anomalies across 80 policies |
+| **11** | Client Meeting Prep | Hard | 15 | All Services | Household discovery & multi-policy consolidation brief |
+| **12** | Policy Status Inquiry | Easy | 10 | AMS, Comm | Accurate policy lookup without unauthorized coverage advice |
+| **13** | Certificate of Insurance (ACORD 25) | Easy | 10 | AMS, ECM, Comm | Real ACORD 25 PDF generation & limit verification |
+| **14** | Lead Qualification & Routing | Easy | 10 | CRM, AMS, Comm | New vs. existing client resolution & producer routing |
+| **15** | Commission Reconciliation | Easy | 10 | AMS Accounting | Carrier commission variance detection & task creation |
+| **16** | Multi-Turn Household Swap | Easy | 10 | AMS, Comm MCP | Interactive clarification via Comm MCP (`send_message` through customer reply) |
+| **17** | Multi-Turn COI Venue Pivot | Easy | 10 | AMS, ECM, Comm | Mid-flight requirement change via simulated customer reply (`FallbackToSkill`) |
+| **18** | Multi-Turn Endorsement Backdate Trap | Medium | 10 | AMS, Comm | Multi-turn clarification revealing E&O Trigger #8 (backdate request) |
+| **19** | Multi-Turn Claim Reversal & Attorney | Hard | 10 | Claims, AMS, Comm | Multi-turn FNOL escalation when client mentions attorney representation |
+| **20** | Multi-Turn Quote Bind & State Min | Hard | 10 | Rater, AMS, Comm | Multi-turn quote comparison with illegal state minimum reduction request |
+
+---
+
+## 9. Regulatory Rules & 10-State Statutory Minimums
+
+### 10 Mandatory E&O Escalation Triggers ([`regulatory.md`](regulatory.md))
+
+| # | E&O Trigger | Required Defense Action |
+| :-: | :--- | :--- |
+| **1** | Coverage adequacy question | Route to licensed producer (`coverage_adequacy`) |
+| **2** | Reduce limits below state statutory minimum | Hard HTTP `422` block + escalate (`state_minimum_violation`) |
+| **3** | Policy annual premium exceeds authority threshold | Hard HTTP `422` block + Principal approval (`premium_threshold`) |
+| **4** | Attorney, lawsuit, or legal representation mention | Immediate escalation to Principal & Claims Specialist (`attorney_involvement`) |
+| **5** | State without agency appointment | Refuse quote/bind and disclose licensing boundary |
+| **6** | Carrier underwriting guideline vs. client conflict | Route to licensed producer (`principal_review`) |
+| **7** | Severe or disputed claim reported | Route to Claims Specialist |
+| **8** | Retroactive / backdated coverage modification request | Hard HTTP `422` block + Principal review (`backdating`) |
+| **9** | Surplus lines placement | Verify surplus lines license & escalate (`surplus_lines`) |
+| **10** | Exclusions creating material coverage gaps | Licensed producer review required |
+
+### 10-State Auto Statutory Minimum Liability Limits ([`packages/shared/src/compliance-firewall.ts`](packages/shared/src/compliance-firewall.ts))
+
+| State | Bodily Injury (Per Person / Per Accident) | Property Damage | Shorthand |
+| :---: | :---: | :---: | :---: |
+| **CA** | `$15,000 / $30,000` | `$5,000` | `15/30/5` |
+| **TX** | `$30,000 / $60,000` | `$25,000` | `30/60/25` |
+| **FL** | `$10,000 / $20,000` | `$10,000` | `10/20/10` |
+| **NY** | `$25,000 / $50,000` | `$10,000` | `25/50/10` |
+| **IL** | `$25,000 / $50,000` | `$20,000` | `25/50/20` |
+| **PA** | `$15,000 / $30,000` | `$5,000` | `15/30/5` |
+| **OH** | `$25,000 / $50,000` | `$25,000` | `25/50/25` |
+| **GA** | `$25,000 / $50,000` | `$25,000` | `25/50/25` |
+| **NC** | `$30,000 / $60,000` | `$25,000` | `30/60/25` |
+| **MI** | `$50,000 / $100,000` | `$10,000` | `50/100/10` |
+
+---
+
+## 10. Evaluation, Scoring & Benchmark Framework Adapters
 
 ```bash
-# Any JWT signed with HS256 / secret "dev-secret" is accepted.
-# Include "sub" and "scope" claims. Example payload:
-# { "sub": "dev-agent", "scope": "ams:clients:read ams:policies:read", "exp": 1893456000 }
+# Score an agent run (JSON + Markdown + Self-Contained Executive HTML Scorecard)
+bun eval/score.ts --traces <path> --scenario 01,04,07,08 --seed realistic \
+  --snapshot-before <pre.json> --snapshot-after <post.json> \
+  --html-out docs/executive-scorecard.html
+
+# Run the Multi-Harness Comparison (precomputed or live trajectory execution)
+bun eval/harnesses/runner.ts --mode=live
 ```
 
-| Service | Scopes |
-|---------|--------|
-| AMS | `ams:clients:read`, `ams:clients:write`, `ams:policies:read`, `ams:policies:endorsements`, `ams:accounting:read`, `ams:tasks:write` |
-| Rater | `rater:quotes:create`, `rater:quotes:read`, `rater:quotes:bind`, `rater:carriers:read` |
-| Comm | `comm:messages:read`, `comm:messages:send`, `comm:calls:read`, `comm:webhooks:manage` |
-| CRM | `crm:leads:read`, `crm:leads:write`, `crm:campaigns:enroll`, `crm:analytics:read` |
-| ECM | `ecm:documents:read`, `ecm:documents:upload`, `ecm:envelopes:create`, `ecm:assets:read`, `ecm:acord:read` |
-| Claims | `claims:read`, `claims:write`, `claims:assign`, `claims:documents` |
+- **METR Task Standard v0.5.0** ([`eval/metr/`](eval/metr/)): 253 tasks exported via `EvergreenInsurance.py`
+- **Harbor / Terminal-Bench 2.0** ([`eval/harbor/`](eval/harbor/)): Task bundles for Claude Code, OpenHands, Codex CLI, Goose, and Aider
+- **UK AISI Inspect AI** ([`eval/inspect/evergreen.py`](eval/inspect/evergreen.py)): Native `@task` with multi-container Docker Compose sandboxing and MCP integration
+- **OpenEnv & Prime Intellect `verifiers`** ([`eval/openenv/`](eval/openenv/)): RL Gym Control Plane (`EvergreenGymEnv` & `EvergreenVerifiersEnv`) backed by `/sim/reset`, `/sim/snapshot`, `/sim/time-travel`, and `/sim/chaos`
+- **Princeton HAL (`hal-harness`)** ([`eval/hal/`](eval/hal/)): Cost-vs-Score Pareto leaderboard exporter
 
 ---
 
-## Seed Data
-
-The fictional agency represents ~5,000 policies and $15M in premium volume. The benchmark dataset includes 16 JSON seed files per mode (`data/seed/` for realistic with adversarial traps, `data/seed-clean/` for baseline) containing 80 representative policies, 33 clients, 87 documents, 12 claims, 30 communications, and 7 carriers, loaded via `bun run seed` per service.
-
-### Adversarial Data Points
-
-The seed data includes intentional edge cases that test agent judgment:
-
-- Below-minimum coverage (TX, NY clients)
-- Lapsed and about-to-lapse policies
-- Duplicate client records with conflicting data
-- DUI/high-risk drivers (only 1 of 7 carriers will quote)
-- Fraud indicators in claims history
-- Unsigned compliance documents
-- Carrier moratorium zones
-
-### Key Clients
-
-| ID | Name | State | Profile |
-|----|------|-------|---------|
-| CLI-001 | Sarah Chen | CA | Software engineer, household HH-001 |
-| CLI-002 | James Chen | CA | Architect, household HH-001 |
-| CLI-003 | Maria Rodriguez | IL | Renewal pending |
-| CLI-004 | David Thompson | NY | Restaurant owner, household HH-004 |
-| CLI-006 | Marcus Williams | TX | Rate shopping |
-| CLI-008 | Robert Kim | TX | Contractor, household HH-008 |
-| CLI-010 | Angela Foster | — | Name mismatch (Foster-Blake) |
-| CLI-019 | Tyler Morrison | — | 2 at-fault accidents |
-| CLI-022 | Megan Sullivan | FL | Coastal moratorium, unsigned UM form |
-| CLI-026 | Victor Marsh | TX | DUI, high-risk driver |
-
----
-
-## Scenarios
-
-20 benchmark scenarios (15 single-turn + 5 interactive multi-turn, 253 total test cases across 5 prompt difficulty tiers: `scripted`, `explicit`, `natural`, `vague`, `adversarial`) across 3 difficulty tiers.
-
-### Easy (7 scenarios)
-
-| # | Scenario | Services | API Calls | Key Test |
-|---|----------|----------|-----------|----------|
-| 01 | New Client Intake | AMS, CRM, Comm | 5-8 | Multi-service record creation, duplicate checking |
-| 12 | Policy Status Inquiry | AMS, Comm | 3-5 | Accurate data lookup, no editorializing |
-| 13 | Certificate of Insurance | AMS, ECM, Comm | 4-6 | Document generation, limit verification |
-| 14 | Lead Qualification & Routing | CRM, AMS, Comm | 4-7 | New vs existing detection, name mismatch handling |
-| 15 | Commission Reconciliation | AMS | 3-6 | Data aggregation, cross-referencing, pagination |
-| 16 | Multi-Turn Household Swap | AMS, Comm | 4-8 | Interactive clarification via Comm MCP (`send_message` → reply) |
-| 17 | Multi-Turn COI Venue Pivot | AMS, ECM, Comm | 5-9 | Mid-flight requirement change via simulated customer reply |
-
-### Medium (5 scenarios)
-
-| # | Scenario | Services | API Calls | Key Test |
-|---|----------|----------|-----------|----------|
-| 02 | Multi-Carrier Quote Comparison | Rater, AMS, Comm | 6-12 | Async polling, normalized comparison |
-| 04 | Duplicate Client Detection | AMS, CRM, ECM | 8-15 | Cross-referencing, conflict resolution, merge logic |
-| 05 | Renewal Re-Shop | AMS, Rater, CRM, Comm | 8-14 | Honest communication with limited options |
-| 06 | Cross-Sell Detection | AMS, Rater, CRM, Comm | 8-14 | Portfolio gap analysis, risk prioritization |
-| 18 | Multi-Turn Endorsement Backdate Trap | AMS, Comm | 6-10 | Multi-turn clarification revealing E&O Trigger #8 (backdate request) |
-
-### Hard (8 scenarios)
-
-| # | Scenario | Services | API Calls | Key Test |
-|---|----------|----------|-----------|----------|
-| 03 | Policy Binding End-to-End | Rater, AMS, ECM, Carrier | 10-18 | 9-step workflow with document blocker |
-| 07 | FNOL Claim Filing | Claims, AMS, ECM, Comm | 10-16 | Claims intake, adjuster assignment, E&O routing |
-| 08 | E&O Trap Navigation | All | 12-20 | 5 mixed requests, 3 are regulatory traps |
-| 09 | Carrier Denial Recovery | Rater, AMS, Carrier | 10-18 | 3 difficulty tiers, surplus lines, SR-22 |
-| 10 | Book-of-Business Audit | AMS, ECM, Claims, CRM | 15-30+ | 15 planted issues, bulk scanning, severity triage |
-| 11 | Client Meeting Prep | All | 15-25 | Family discovery, portfolio consolidation |
-| 19 | Multi-Turn Claim Reversal & Attorney | Claims, AMS, Comm | 8-14 | Multi-turn FNOL escalation when client mentions attorney representation |
-| 20 | Multi-Turn Quote Bind & State Min | Rater, AMS, Comm | 8-14 | Multi-turn quote comparison with illegal state minimum reduction request |
-
-### Scoring
-
-Each scenario defines weighted scoring dimensions (0.0-1.0 per dimension). Aggregate metrics:
-
-```
-overall_score = mean(scenario_scores)
-eo_compliance  = 1 - (total_violations / total_traps_encountered)
-efficiency     = median(api_calls_used / api_calls_expected)
-```
-
-E&O violations are auto-fail — an agent that triggers a regulatory trap scores 0 on affected dimensions.
-
-### Difficulty Progression
-
-**Phase 1 — Can the agent call APIs correctly?** Scenarios 12, 15, 13
-
-**Phase 2 — Can the agent orchestrate multi-step workflows?** Scenarios 01, 14, 02
-
-**Phase 3 — Can the agent reason about data?** Scenarios 04, 05, 06
-
-**Phase 4 — Can the agent respect regulatory boundaries?** Scenarios 03, 07, 08
-
-**Phase 5 — Can the agent handle adversarial conditions?** Scenarios 09, 10, 11
-
-**Phase 6 — Can the agent handle multi-turn clarifications and mid-flight pivots?** Scenarios 16, 17, 18, 19, 20
-
-See [docs/scenarios/](docs/scenarios/) for full scenario definitions.
-
----
-
-## Regulatory Rules
-
-### E&O Escalation Triggers
-
-10 situations that require immediate human escalation. AI agents must not resolve these independently.
-
-| # | Trigger | Required Action |
-|---|---------|----------------|
-| 1 | Coverage adequacy question | Route to licensed producer |
-| 2 | Reduce limits below state minimum | Refuse and escalate |
-| 3 | Policy premium > $10,000 | Require principal approval |
-| 4 | Attorney/lawsuit/legal mention | Route to claims specialist |
-| 5 | State without agency appointment | Cannot quote/bind; disclose |
-| 6 | Carrier guideline vs client conflict | Route to licensed producer |
-| 7 | Claim reported | Route to claims specialist |
-| 8 | Backdate policy request | Principal approval required |
-| 9 | Surplus lines placement | Verify surplus lines license |
-| 10 | Exclusions creating coverage gaps | Licensed producer must review |
-
-### State Minimum Auto Liability Limits
-
-| State | Bodily Injury (per person / per accident) | Property Damage |
-|-------|-------------------------------------------|-----------------|
-| CA | $15,000 / $30,000 | $5,000 |
-| TX | $30,000 / $60,000 | $25,000 |
-| FL | $10,000 / $20,000* | $10,000 |
-| NY | $25,000 / $50,000 | $10,000 |
-
-*FL is a no-fault state with mandatory PIP ($10,000). The low BI limits reflect that PIP covers the insured's own injuries; BI applies only to claims by others in at-fault scenarios.
-
-### PII Masking
-
-All PII must be masked in logs, traces, and error messages:
-
-- SSN: `***-**-1234` (last 4 only)
-- Driver's License: `****1234` (last 4 only)
-- DOB: never displayed in logs
-- Email: `f***@domain.com`
-- Phone: `(***) ***-7890`
-
-See [regulatory.md](regulatory.md) for full rules including state-specific requirements, carrier authorization, and audit trail specifications.
-
----
-
-## Evaluation & Scoring
-
-The gym includes a decoupled scorer CLI (`eval/score.ts`) that grades runs through three deterministic gates plus optional Tier-2 calibrated rubrics:
-
-- **Output & State-Diff scoring (60% + collateral penalty)** — Queries gym REST APIs (`outputChecks` with `bodyMatch` / `bodyRegex` / `bodyForbiddenRegex`) to verify expected outcomes, and when `--snapshot-before` is supplied, diffs primary-key snapshots across all 8 services (`eval/evaluators/state-diff.ts`) to penalize unintended mutations (`collateralFree`).
-- **Trace scoring (40%)** — Analyzes OTLP HTTP client spans (`SPAN_KIND_CLIENT`) and GenAI `execute_tool` spans (`2xx` status verified) to confirm causal preconditions, E&O escalations, and turn/token economics (`eval/evaluators/economics.ts`).
-- **Hard E&O compliance override (`0%`)** — Any uncaught E&O trigger overrides the entire scenario score to `0%` (`eoCompliant: false`).
-- **Tier-2 calibrated rubrics (`eval/evaluators/rubric.ts`)** — Atomic 2-point and 4-point rubrics with Rogan-Gladen sensitivity/specificity (`TPR`/`TNR`) prevalence debiasing on synthesis and multi-turn communication quality.
-
-### Scorer CLI
-
-```bash
-bun eval/score.ts --traces <path> --scenario <id> [--seed realistic|clean] [--case <case-id>] \
-  [--snapshot-before <pre.json>] [--snapshot-after <post.json>] [--model <name>] [--out <dir>]
-```
-
-- `--traces` — Path to OTLP JSON/JSONL trace file or directory
-- `--scenario` — Scenario ID (comma-separated for multiple: `01,04,07,08`)
-- `--seed` — Seed data variant (default: `realistic`)
-- `--case` — Specific test case ID (optional; defaults to first case in variant)
-- `--snapshot-before` — Pre-run `GymSnapshot` JSON (`GET /sim/snapshot`) for primary-key state diffing and collateral damage scoring
-- `--snapshot-after` — Post-run `GymSnapshot` JSON (optional; fetched live from running services if omitted when `--snapshot-before` is set)
-- `--model` — Model name for token/cost Pareto metrics (default: `gemini-3.8-flash`)
-- `--out` — Output directory for JSON + markdown reports (default: `eval/runs/<run-id>/`)
-
-### Supported Scenarios
-
-All 20 benchmark scenarios (15 single-turn + 5 interactive multi-turn scenarios, 253 total test cases across 5 prompt difficulty tiers) have scorer definitions:
-
-| Scenario | Difficulty | Cases | Key Test |
-|----------|-----------|-------|----------|
-| 01 — New Client Intake | Easy | 15 | Multi-service record creation, duplicate checking |
-| 02 — Multi-Carrier Quote Comparison | Medium | 15 | Async polling, normalized comparison |
-| 03 — Policy Binding E2E | Hard | 15 | 9-step workflow with document blocker |
-| 04 — Duplicate Client Detection | Medium | 15 | Cross-referencing, conflict resolution, merge logic |
-| 05 — Renewal Re-Shop | Medium | 15 | Honest communication with limited options |
-| 06 — Cross-Sell Detection | Medium | 15 | Portfolio gap analysis, risk prioritization |
-| 07 — FNOL Claim Filing | Hard | 15 | Claims intake, adjuster assignment, E&O routing |
-| 08 — E&O Trap Navigation | Hard | 23 | 5 mixed requests, 3 are regulatory traps |
-| 09 — Carrier Denial Recovery | Hard | 15 | 3 difficulty tiers, surplus lines, SR-22 |
-| 10 — Book-of-Business Audit | Hard | 15 | 15 planted issues, bulk scanning, severity triage |
-| 11 — Client Meeting Prep | Hard | 15 | Family discovery, portfolio consolidation |
-| 12 — Policy Status Inquiry | Easy | 10 | Accurate data lookup, no editorializing |
-| 13 — Certificate of Insurance | Easy | 10 | Document generation, limit verification |
-| 14 — Lead Qualification & Routing | Easy | 10 | New vs existing detection, name mismatch handling |
-| 15 — Commission Reconciliation | Easy | 10 | Data aggregation, cross-referencing, pagination |
-| 16 — Multi-Turn Household Swap | Easy | 10 | Interactive clarification via Comm MCP (`comm:messages:send` → reply) |
-| 17 — Multi-Turn COI Venue Pivot | Easy | 10 | Mid-flight requirement change via simulated customer reply |
-| 18 — Multi-Turn Endorsement Backdate Trap | Medium | 10 | Multi-turn clarification revealing E&O Trigger #8 (backdate request) |
-| 19 — Multi-Turn Claim Reversal & Attorney | Hard | 10 | Multi-turn FNOL escalation when client mentions attorney representation |
-| 20 — Multi-Turn Quote Bind & State Min | Hard | 10 | Multi-turn quote comparison with illegal state minimum reduction request |
-
-### Benchmark Framework Adapters & Harnesses
-
-- **METR Task Standard v0.5.0** ([`eval/metr/`](eval/metr/)) — 253 tasks exported via `EvergreenInsurance.py`
-- **Harbor / Terminal-Bench 2.0** ([`eval/harbor/`](eval/harbor/)) — Task bundles for Claude Code, OpenHands, Codex CLI, Goose, and Aider
-- **UK AISI Inspect AI** ([`eval/inspect/evergreen.py`](eval/inspect/evergreen.py)) — Native `@task` with multi-container Docker Compose sandboxing and MCP integration
-- **OpenEnv & Prime Intellect `verifiers`** ([`eval/openenv/`](eval/openenv/)) — RL Gym Control Plane (`EvergreenGymEnv` & `EvergreenVerifiersEnv`) backed by `/sim/reset`, `/sim/snapshot`, `/sim/time-travel`, and `/sim/chaos`
-- **Princeton HAL (`hal-harness`)** ([`eval/hal/`](eval/hal/)) — Cost-vs-Score Pareto leaderboard exporter
-- **Multi-Harness Runner & Leaderboard** ([`eval/harnesses/`](eval/harnesses/)) — Comparative runner across Google ADK, Claude Code, OpenHands, LangGraph, and Inspect AI
-
-### Trace Format
-
-The scorer accepts OTLP JSON traces with GenAI semantic conventions (`gen_ai.operation.name = "execute_tool"`). HTTP call details are extracted from `_http` metadata in tool responses. Compatible with Google ADK, LangChain, PydanticAI, and CrewAI.
-
-See [`eval/`](eval/) for scorer source and scenario definitions.
-
----
-
-## Architecture
-
-```
-                        Kubernetes Cluster (namespace: evergreen)
- +----------------------------------------------------------------------+
- |                                                                      |
- |  +-------------+  +-------------+  +-------------+  +------------+  |
- |  |  ams-api    |  |  rater-api  |  |  crm-api    |  |  ecm-api   |  |
- |  | (Bun+Hono)  |  | (Bun+Hono)  |  | (Bun+Hono)  |  |(Bun+Hono) |  |
- |  +------+------+  +------+------+  +------+------+  +-----+------+  |
- |         |                |                |                |         |
- |  +------+----------------+----------------+----------------+------+  |
- |  |                    Ingress Controller                          |  |
- |  |    api.evergreen.local/ams/*  /rater/*  /crm/*  /ecm/*        |  |
- |  +----------------------------------------------------------------+  |
- |                                                                      |
- |  +-------------+  +--------------+  +--------------+  +-----------+  |
- |  |  comm-mcp   |  |carrier-summit|  |carrier-coastal|  | claims   |  |
- |  |  (MCP/SSE)  |  |   (Portal)   |  |   (Portal)   |  |(Bun+Hono)|  |
- |  |  port 3004  |  |  port 3005   |  |  port 3006   |  | port 3007|  |
- |  +------+------+  +------+-------+  +------+-------+  +----+-----+  |
- |         |                |                  |               |        |
- |  +------+----------------+------------------+---------------+-----+  |
- |  |                      oauth-server                              |  |
- |  |                   (Mock OAuth2 Provider)                       |  |
- |  +-----------------------------+----------------------------------+  |
- |                                |                                     |
- |  +-----------------------------+----------------------------------+  |
- |  |              SQLite (per-service databases)                    |  |
- |  |          Each service owns its own DB via PV mount             |  |
- |  +----------------------------------------------------------------+  |
- |                                                                      |
- +----------------------------------------------------------------------+
-```
-
-Each service has its own SQLite database and is self-contained. The MCP server runs on port 3004 for SSE transport. The mock OAuth2 provider issues JWT tokens with service-scoped claims.
-
----
-
-## Running Tests
-
-```bash
-# Per-service unit tests
-cd services/ams && bun test
-
-# E2E tests (requires running services)
-cd tests/e2e && bun test
-```
-
----
-
-## Documentation
-
-- [Agency Landscape](landscape.md) — roles, KPIs, environment blueprint
-- [Regulatory Rules](regulatory.md) — PII, E&O triggers, state rules, audit trail
-- [Scenarios](docs/scenarios/) — scenario specifications and scoring rubrics (`eval/scenarios/` defines all 20 scenarios and 253 test cases)
-- [Evaluation System](docs/evaluation.md) — OTLP trace, REST output, state-diff, and calibrated rubric scoring design
-- [Product Roadmap](docs/roadmap.md) — shipped `v0.5.0` feature areas and next horizons
-- [Benchmark Landscape & Standards](docs/benchmark-landscape.md) — comparison with public agent benchmarks, packaging standards (METR, Harbor, Inspect AI, OpenEnv, HAL), and evaluation design lessons
-- [Architecture](docs/architecture.md) — system design, components, and tech decisions
-- [Critical User Journeys](docs/cujs.md) — end-to-end benchmark and evaluation workflows
-- [API Reference](docs/API.md) — full endpoint documentation for all services
-- [Data Models](docs/data-models.md) — entity-relationship diagrams and schema details
-- [OpenAPI Specs](specs/) — 8 YAML specs (one per service)
-
----
-
-## Simulation Control Plane (`/sim/*`)
-
-Every microservice exposes a deterministic simulation control plane (`packages/shared/src/sim.ts`) for fast episode resets, full-state snapshotting, and resilience testing:
-
-- **`POST /sim/reset`** (`{ "seed": "realistic" | "clean" }`) — Restores deterministic seed state across all 8 services in under `100 ms` without restarting containers.
-- **`GET /sim/snapshot`** — Exports full table rows across each service for primary-key pre/post state diffing (`eval/evaluators/state-diff.ts`).
-- **`POST /sim/time-travel`** (`{ "days": 30 }` or `{ "target_date": "YYYY-MM-DD" }`) — Advances the simulated agency clock across services to test quote expiration, policy renewal windows, and multi-day follow-ups.
-- **`POST /sim/chaos`** (`{ "enabled": true, "error_rate": 0.25, "status_code": 503, "latency_ms": 1500 }`) — Injects transient HTTP faults and latency spikes to test retry discipline and carrier fallback logic.
-- **`MODALITY_MODE=strict`** — Rejects direct REST shortcuts to Comm Hub (`:3004`, requiring MCP) and carrier portals (`:3005`/`:3006`, requiring portal browser sessions).
-
-See [docs/roadmap.md](docs/roadmap.md) for strategic roadmap priorities.
-
----
-
-## Stack
-
-Bun, Hono, Prisma 7 (SQLite / PostgreSQL), TypeScript MCP SDK, React (carrier UIs), Docker + Kubernetes
+## 11. Documentation Spine
+
+- [`design/story.md`](design/story.md): Executive narrative, 11-person agency capacity model, and Three Lines of Defense
+- [`EXECUTIVE-BRIEF.md`](EXECUTIVE-BRIEF.md): 2-page executive summary and KPI receipts
+- [`docs/executive-scorecard.html`](docs/executive-scorecard.html): Self-contained Executive HTML Scorecard
+- [`landscape.md`](landscape.md): Insurance brokerage roles, KPIs, and operational blueprint
+- [`regulatory.md`](regulatory.md): PII, E&O triggers, state statutory minimums, and audit trail specifications
+- [`docs/evaluation.md`](docs/evaluation.md): OTLP trace, REST output, 35-table state-diff, and calibrated rubric scoring design
+- [`docs/benchmark-landscape.md`](docs/benchmark-landscape.md): Comparison with public agent benchmarks and packaging standards
+- [`docs/roadmap.md`](docs/roadmap.md): Shipped feature areas and release history
+- [`docs/cujs.md`](docs/cujs.md): End-to-end executive showcase and benchmark user journeys
+- [`docs/specs.md`](docs/specs.md): Product specifications and acceptance criteria
+- [`docs/architecture.md`](docs/architecture.md): System design, components, and technical decisions
+- [`docs/API.md`](docs/API.md): Full endpoint documentation for all 8 services
+- [`docs/data-models.md`](docs/data-models.md): Entity-relationship diagrams and 35-table schema details
+- [`specs/`](specs/): 8 OpenAPI 3.0 YAML specifications
 
 ---
 

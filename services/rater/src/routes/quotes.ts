@@ -7,6 +7,8 @@ import {
   checkFormat,
   checkEnum,
   throwIfErrors,
+  validateBindingAuthority,
+  validateStateMinimums,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -317,31 +319,45 @@ quotesRouter.post(
     }
 
     // ── E&O Enforcement ──────────────────────────────────────────────
-    const eoRules: { rule: string; message: string }[] = [];
+    const eoRules: { rule: string; message: string; error_code?: string }[] = [];
 
-    // Check premium threshold
-    if (quote.premium_annual != null && quote.premium_annual > 10000) {
+    // Check premium threshold ($10,000 agency binding authority)
+    const authorityCheck = validateBindingAuthority(quote.premium_annual);
+    if (!authorityCheck.valid) {
       eoRules.push({
-        rule: "premium_threshold",
-        message: `Premium of $${quote.premium_annual.toFixed(2)} exceeds the $10,000 threshold requiring manager approval.`,
+        rule: authorityCheck.rule,
+        error_code: authorityCheck.errorCode,
+        message: authorityCheck.message,
       });
     }
 
-    // Check state minimum violations for auto policies
+    // Check 10-state statutory minimum violations for auto policies
     const quoteRequest = await prisma.quoteRequest.findUnique({
       where: { request_id: quote.request_id },
     });
 
     if (quoteRequest && quoteRequest.policy_type === "personal_auto") {
       const riskData = JSON.parse(quoteRequest.risk_data);
-      const coverages = riskData.requested_coverages ?? [];
-      const biCoverage = coverages.find(
-        (cov: any) => cov.coverage_type === "bodily_injury",
-      );
-      if (biCoverage && biCoverage.per_person_limit < 25000) {
+      const stateCode =
+        riskData.state ??
+        riskData.address?.state ??
+        riskData.garaging_state ??
+        body.state ??
+        null;
+      const coverages = [
+        ...(Array.isArray(riskData.requested_coverages)
+          ? riskData.requested_coverages
+          : []),
+        ...(Array.isArray(JSON.parse(quote.coverages || "[]"))
+          ? JSON.parse(quote.coverages || "[]")
+          : []),
+      ];
+      const stateMinCheck = validateStateMinimums(stateCode, coverages);
+      if (!stateMinCheck.valid) {
         eoRules.push({
-          rule: "state_minimum_violation",
-          message: "Bodily injury per-person limit is below the state minimum of $25,000.",
+          rule: stateMinCheck.rule,
+          error_code: stateMinCheck.errorCode,
+          message: stateMinCheck.message,
         });
       }
     }

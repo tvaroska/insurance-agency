@@ -430,7 +430,7 @@ Returns carrier responses for a previously submitted quote request.
     },
     {
       "carrier_code": "HRTF",
-      "carrier_name": "The Hartford",
+      "carrier_name": "Hartland Commercial",
       "quote_id": null,
       "status": "declined",
       "premium_annual": null,
@@ -1455,5 +1455,5 @@ Agent processes a new claim from FNOL through investigation and settlement.
 
 ## References
 
-- [Product Requirements Document](PRD.md)
+- [System Overview & Requirements](../README.md)
 - OpenAPI Specs: `specs/ams.yaml`, `specs/rater.yaml`, `specs/comm.yaml`, `specs/crm.yaml`, `specs/ecm.yaml`, `specs/claims.yaml`

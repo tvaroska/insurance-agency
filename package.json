@@ -3,7 +3,10 @@
   "private": true,
   "workspaces": ["packages/*", "services/*", "tests/*"],
   "scripts": {
-    "reset": "bash scripts/reset-all.sh"
+    "reset": "bash scripts/reset-all.sh",
+    "seed": "bash scripts/reset-all.sh",
+    "showcase": "bun run scripts/run-showcase.ts",
+    "showcase:check": "bun run scripts/run-showcase.ts --check"
   },
   "devDependencies": {
     "@types/bun": "^1.2.4",

@@ -1,6 +1,6 @@
 import { parseArgs } from "util";
 import { readdir, readFile, mkdir, writeFile } from "fs/promises";
-import { join, resolve } from "path";
+import { dirname, join, resolve } from "path";
 import { randomUUID } from "crypto";
 
 import type {
@@ -9,6 +9,7 @@ import type {
   GymSnapshot,
   StateDiffSummary,
   RubricEvaluationSummary,
+  ScenarioReport,
 } from "./types";
 import { parseTrace, evaluateTrace } from "./evaluators/trace";
 import { evaluateOutput } from "./evaluators/output";
@@ -21,7 +22,11 @@ import {
 } from "./evaluators/state-diff";
 import { extractEconomicsMetrics } from "./evaluators/economics";
 import { loadToolMapping } from "./tool-mapping";
-import { generateReport, formatMarkdown } from "./report";
+import {
+  generateReport,
+  formatMarkdown,
+  formatExecutiveScorecardHtml,
+} from "./report";
 import { scenarios } from "./scenarios/index";
 
 // ── Load traces & snapshots ─────────────────────────────────────────
@@ -214,6 +219,7 @@ if (import.meta.main) {
       seed: { type: "string", default: "realistic" },
       case: { type: "string" },
       out: { type: "string" },
+      "html-out": { type: "string" },
       "snapshot-before": { type: "string" },
       "snapshot-after": { type: "string" },
       model: { type: "string" },
@@ -222,8 +228,16 @@ if (import.meta.main) {
     strict: true,
   });
 
+  if (values["html-out"] && !values.traces) {
+    const htmlPath = resolve(values["html-out"]);
+    await mkdir(dirname(htmlPath), { recursive: true });
+    await writeFile(htmlPath, formatExecutiveScorecardHtml([]), "utf-8");
+    console.log(`Executive HTML Scorecard written to ${htmlPath}`);
+    process.exit(0);
+  }
+
   if (values.help || !values.traces || !values.scenario) {
-    console.log(`Usage: bun eval/score.ts --traces <path> --scenario <id> --seed <variant>
+    console.log(`Usage: bun eval/score.ts --traces <path> --scenario <id> --seed <variant> [--html-out <path>]
 
 Options:
   --traces           Path to OTLP JSON file or directory of .json files
@@ -234,6 +248,7 @@ Options:
   --snapshot-after   Optional path to post-run GymSnapshot JSON file (or fetched live if omitted when --snapshot-before is set)
   --model            Default model name for token pricing (default: gemini-3.8-flash)
   --out              Output directory (default: eval/runs/<run-id>/)
+  --html-out         Write self-contained GM3 Light Executive HTML Scorecard to <path>
   --help             Show this help`);
     process.exit(values.help ? 0 : 1);
   }
@@ -252,6 +267,8 @@ Options:
       : await fetchGymSnapshot();
   }
 
+  const collectedReports: ScenarioReport[] = [];
+
   for (const scenarioId of scenarioIds) {
     const { report, runId } = await scoreScenario(scenarioId, trace, {
       seed,
@@ -260,6 +277,7 @@ Options:
       snapshotAfter,
       model: values.model,
     });
+    collectedReports.push(report);
 
     // Write output
     const outDir = values.out
@@ -283,5 +301,16 @@ Options:
         `(trace ${(report.trace.score * 100).toFixed(1)}% / output ${(report.output.score * 100).toFixed(1)}%) ` +
         `E&O: ${eoStatus} | ${report.overall.apiCalls} API calls${costInfo} | ${outDir}`,
     );
+  }
+
+  if (values["html-out"]) {
+    const htmlPath = resolve(values["html-out"]);
+    await mkdir(dirname(htmlPath), { recursive: true });
+    await writeFile(
+      htmlPath,
+      formatExecutiveScorecardHtml(collectedReports),
+      "utf-8",
+    );
+    console.log(`Executive HTML Scorecard written to ${htmlPath}`);
   }
 }

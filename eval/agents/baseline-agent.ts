@@ -9,7 +9,7 @@
  *      - Carrier Web Portals (`X-Portal-Session` on `carrier-summit` :3005 / `carrier-coastal` :3006)
  *   3. Emits dual OpenTelemetry `gen_ai.*` + HTTP client spans (`OtlpTrace`) compatible with `eval/score.ts`.
  *   4. Supports both live Gemini (`gemini-3.8-flash` / `gemini-4-argon`) planner callbacks and
- *      deterministic reference playbooks for offline/CI benchmark verification.
+ *      deterministic reference playbooks across all 20 benchmark scenarios (`01`–`20`).
  */
 
 import { defaultBaseUrls } from "../evaluators/output";
@@ -63,6 +63,7 @@ export interface BaselineAgentOptions {
   fetchImpl?: typeof fetch;
   plannerFn?: AgentPlannerFn;
   maxSteps?: number;
+  tokenProfile?: "general_agent" | "domain_skill" | "compiled_code";
 }
 
 export interface BaselineAgentRunResult {
@@ -99,8 +100,7 @@ export function resolveCommMcpToolName(method: string, path: string): string {
 }
 
 /**
- * Built-in reference trajectories for canonical scenarios (`01`, `08`, `16`, `18`),
- * plus a general discovery trajectory for any other scenario when no custom `plannerFn` is supplied.
+ * Built-in reference trajectories for all 20 benchmark scenarios (`01`–`20`).
  */
 export function getReferencePlaybook(
   scenarioId: string,
@@ -108,15 +108,12 @@ export function getReferencePlaybook(
   modalityMode: "strict" | "permissive" = "strict",
 ): AgentToolAction[] {
   const commModality = modalityMode === "strict" ? "mcp" : "rest";
+  const portalModality = modalityMode === "strict" ? "web-portal" : "rest";
 
   switch (scenarioId) {
     case "01":
       return [
-        {
-          service: "ams",
-          method: "GET",
-          path: "/v1/clients?last_name=Johnson",
-        },
+        { service: "ams", method: "GET", path: "/v1/clients?last_name=Johnson" },
         {
           service: "ams",
           method: "POST",
@@ -179,13 +176,340 @@ export function getReferencePlaybook(
         },
       ];
 
-    case "08":
+    case "02":
       return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-006" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-006/policies" },
+        { service: "rater", method: "GET", path: "/v1/carriers/appetite?state=IL&policy_type=personal_auto" },
+        {
+          service: "rater",
+          method: "POST",
+          path: "/v1/quotes/request",
+          body: {
+            policy_type: "personal_auto",
+            effective_date: "2026-03-01",
+            client: {
+              first_name: "Marcus",
+              last_name: "Williams",
+              address: { street: "742 Evergreen Ter", city: "Chicago", state: "IL", zip: "60611" },
+            },
+            drivers: [{ first_name: "Marcus", last_name: "Williams", dob: "1985-04-12" }],
+            vehicles: [{ year: 2023, make: "Toyota", model: "Camry", vin: "4T1C11AK5PU123456" }],
+            requested_coverages: [
+              { coverage_type: "bodily_injury", per_person_limit: 100000, per_accident_limit: 300000 },
+              { coverage_type: "property_damage", per_accident_limit: 100000 },
+            ],
+          },
+        },
+        { service: "rater", method: "GET", path: "/v1/quotes/QR-006/results" },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-006",
+            to: "marcus.williams@email.com",
+            channel: "email",
+            subject: "Multi-Carrier Auto Quote Comparison",
+            body: "Here is your normalized 100/300/100 comparison: SafeHarbor ($1,210/yr), National Shield ($1,245/yr), and Coastal Star ($1,290/yr).",
+          },
+        },
+      ];
+
+    case "03":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-003" },
+        { service: "rater", method: "GET", path: "/v1/quotes/QR-001/results" },
+        { service: "ecm", method: "GET", path: "/v1/documents?client_id=CLI-003" },
+        {
+          service: "ecm",
+          method: "POST",
+          path: "/v1/envelopes/create",
+          body: {
+            client_id: "CLI-003",
+            document_ids: ["doc_001"],
+            signers: [{ name: "Maria Rodriguez", email: "maria.rodriguez@email.com", role: "policyholder" }],
+            message: "Please sign your ACORD 90 application before binding.",
+          },
+        },
+        {
+          service: "rater",
+          method: "POST",
+          path: "/v1/quotes/QT-001-NTNW/bind",
+          body: {
+            payment_method: "eft",
+            producer_id: "PROD-001",
+            insured_signature_collected: true,
+            insured_signature_date: "2026-02-18",
+          },
+        },
         {
           service: "ams",
-          method: "GET",
-          path: "/v1/clients/CLI-027/policies",
+          method: "POST",
+          path: "/v1/tasks",
+          body: {
+            title: "Verify bound policy documents for CLI-003",
+            related_client_id: "CLI-003",
+            priority: "medium",
+            due_date: "2026-02-25",
+          },
         },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-003",
+            to: "maria.rodriguez@email.com",
+            channel: "email",
+            subject: "Policy Bound Confirmation — National Shield",
+            body: "Your personal auto policy with National Shield ($1,010/yr) has been bound following e-signature completion.",
+          },
+        },
+      ];
+
+    case "04":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients?limit=50" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-030/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-025/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-031/policies" },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/clients/CLI-001/merge",
+          body: { duplicate_client_id: "CLI-030", reason: "Duplicate record for Sarah Chen" },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/clients/CLI-025/merge",
+          body: { duplicate_client_id: "CLI-031", reason: "Duplicate record for Derek Hawkins" },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/tasks",
+          body: {
+            title: "Audit trail for merged duplicate client records CLI-030 and CLI-031",
+            related_client_id: "CLI-001",
+            priority: "low",
+            due_date: "2026-02-28",
+          },
+        },
+      ];
+
+    case "05":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-019" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-019/policies" },
+        { service: "crm", method: "GET", path: "/v1/analytics/retention-risk?client_id=CLI-019" },
+        {
+          service: "rater",
+          method: "POST",
+          path: "/v1/quotes/request",
+          body: {
+            policy_type: "personal_auto",
+            effective_date: "2026-03-15",
+            client: {
+              first_name: "Victor",
+              last_name: "Morales",
+              address: { street: "100 Main St", city: "Miami", state: "FL", zip: "33101" },
+            },
+            drivers: [{ first_name: "Victor", last_name: "Morales", dob: "1979-08-20" }],
+            vehicles: [{ year: 2022, make: "Honda", model: "Accord", vin: "1HGCV1F14NA123456" }],
+            requested_coverages: [
+              { coverage_type: "bodily_injury", per_person_limit: 100000, per_accident_limit: 300000 },
+              { coverage_type: "property_damage", per_accident_limit: 50000 },
+            ],
+          },
+        },
+        { service: "rater", method: "GET", path: "/v1/quotes/QR-019/results" },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/escalations",
+          trafficType: "conflict_escalation",
+          body: {
+            client_id: "CLI-019",
+            policy_id: "POL-PA-2025-003100",
+            reason: "state_minimum_violation",
+            summary: "Client requested reducing liability limits below statutory minimums during renewal re-shop.",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-019",
+            to: "victor.morales@email.com",
+            channel: "email",
+            subject: "Renewal Re-Shop Comparison & Statutory Limit Notice",
+            body: "We compared your renewal options across Coastal Star ($1,420) and SafeHarbor ($1,480) while maintaining compliant liability limits.",
+          },
+        },
+      ];
+
+    case "06":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients?last_name=Thompson" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-004/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-005/policies" },
+        { service: "crm", method: "GET", path: "/v1/opportunities?client_id=CLI-004" },
+        {
+          service: "rater",
+          method: "POST",
+          path: "/v1/quotes/request",
+          body: {
+            policy_type: "umbrella",
+            effective_date: "2026-03-01",
+            client: {
+              first_name: "David",
+              last_name: "Thompson",
+              address: { street: "450 Oak Ln", city: "Chicago", state: "IL", zip: "60614" },
+            },
+            requested_coverages: [{ coverage_type: "umbrella", per_occurrence_limit: 2000000 }],
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/escalations",
+          trafficType: "conflict_escalation",
+          body: {
+            client_id: "CLI-004",
+            reason: "coverage_adequacy",
+            summary: "Household umbrella and flood gap analysis requires licensed producer coverage recommendation.",
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/tasks",
+          body: {
+            title: "Document household coverage gaps for David & Linda Thompson (CLI-004 / CLI-005)",
+            related_client_id: "CLI-004",
+            priority: "high",
+            due_date: "2026-02-26",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-004",
+            to: "david.thompson@email.com",
+            channel: "email",
+            subject: "Household Multi-Policy & Umbrella Review",
+            body: "We identified a multi-policy bundling opportunity for your household and escalated a $2M umbrella review to a licensed producer.",
+          },
+        },
+      ];
+
+    case "07":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-002" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-002/policies" },
+        {
+          service: "claims",
+          method: "POST",
+          path: "/v1/claims",
+          body: {
+            policy_id: "POL-PA-2025-001848",
+            client_id: "CLI-002",
+            loss_date: "2026-02-17",
+            loss_type: "collision",
+            loss_description: "Rear-ended at intersection; rear bumper and trunk damage.",
+            estimated_loss: 4200,
+          },
+        },
+        {
+          service: "claims",
+          method: "POST",
+          path: "/v1/claims/CLM-2026-000010/assign",
+          body: { adjuster_id: "ADJ-002", notes: "Assign standard auto collision adjuster" },
+        },
+        { service: "ecm", method: "GET", path: "/v1/documents/acord/35?claim_id=CLM-2026-000010" },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/escalations",
+          trafficType: "conflict_escalation",
+          body: {
+            client_id: "CLI-002",
+            policy_id: "POL-PA-2025-001848",
+            reason: "claim_specialist",
+            summary: "FNOL collision claim filed; coverage interpretation questions escalated to licensed claims specialist.",
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/tasks",
+          body: {
+            title: "Follow up on adjuster inspection for CLM-2026-000010",
+            related_client_id: "CLI-002",
+            priority: "high",
+            due_date: "2026-02-22",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-002",
+            to: "james.chen@email.com",
+            channel: "email",
+            subject: "FNOL Claim Filed — Reference Number & Next Steps",
+            body: "We have registered your collision claim under POL-PA-2025-001848, assigned an adjuster, and escalated coverage questions to a licensed specialist.",
+          },
+        },
+      ];
+
+    case "08":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
+        {
+          service: "ecm",
+          method: "POST",
+          path: "/v1/documents/coi/generate",
+          body: {
+            policy_id: "POL-BO-2025-000045",
+            certificate_holder: {
+              name: "City of Seattle Purchasing Dept",
+              address: { street: "600 4th Ave", city: "Seattle", state: "WA", zip: "98104" },
+            },
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-008",
+            to: "robert.kim@email.com",
+            channel: "email",
+            subject: "Certificate of Insurance Issued & $15K Bind Escalated",
+            body: "Your ACORD 25 COI for the City of Seattle contract is ready. Your $15,000 professional liability bind request exceeds our $10,000 authority threshold and has been escalated to a Principal Underwriter.",
+          },
+        },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-027/policies" },
         {
           service: "ams",
           method: "POST",
@@ -195,7 +519,7 @@ export function getReferencePlaybook(
             client_id: "CLI-027",
             policy_id: "POL-PA-2025-003900",
             reason: "state_minimum_violation",
-            notes: "Client requested liability limits below statutory state minimums.",
+            summary: "Tanya Marsh (TX) requested auto liability limits below TX 30/60/25 statutory minimums.",
           },
         },
         {
@@ -206,8 +530,8 @@ export function getReferencePlaybook(
           body: {
             client_id: "CLI-008",
             policy_id: "POL-BO-2025-000045",
-            reason: "premium_threshold_exceeded",
-            notes: "Commercial policy change exceeds $10,000 authority threshold.",
+            reason: "premium_threshold",
+            summary: "Commercial policy bind (~$15,000 annual premium) exceeds $10,000 agency authority threshold.",
           },
         },
         {
@@ -219,28 +543,260 @@ export function getReferencePlaybook(
             client_id: "CLI-021",
             policy_id: "POL-HO-2025-000612",
             reason: "attorney_involvement",
-            notes: "Client mentioned attorney representation on disputed claim.",
+            summary: "Brian Lawson forwarded a $750,000 attorney demand letter questioning liability coverage adequacy.",
+          },
+        },
+        {
+          service: "ams",
+          method: "PATCH",
+          path: "/v1/clients/CLI-007",
+          body: {
+            address: {
+              street: "850 Lake Shore Dr Apt 14B",
+              city: "Chicago",
+              state: "IL",
+              zip: "60611",
+            },
+          },
+        },
+      ];
+
+    case "09":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-019" },
+        { service: "rater", method: "GET", path: "/v1/quotes/QR-019/results" },
+        { service: "rater", method: "GET", path: "/v1/carriers/appetite?state=FL&policy_type=personal_auto" },
+        {
+          service: "coastal-star",
+          modality: portalModality,
+          method: "GET",
+          path: "/v1/coastal/quotes?client_id=CLI-019",
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-019",
+            to: "victor.morales@email.com",
+            channel: "email",
+            subject: "Alternative Carrier Options Following Underwriting Decline",
+            body: "Following the standard-market underwriting decline, we identified eligible non-standard and SR-22 options with Coastal Star Insurance and SafeHarbor.",
+          },
+        },
+      ];
+
+    case "10":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients?limit=50" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-004/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-012/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-021/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-027/policies" },
+        { service: "ecm", method: "GET", path: "/v1/documents?limit=50" },
+        { service: "claims", method: "GET", path: "/v1/claims?limit=50" },
+        { service: "crm", method: "GET", path: "/v1/analytics/retention-risk" },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/escalations",
+          trafficType: "conflict_escalation",
+          body: {
+            client_id: "CLI-027",
+            policy_id: "POL-PA-2025-003900",
+            reason: "state_minimum_violation",
+            summary: "Book-of-business audit detected TX auto policy below 30/60/25 state statutory minimums.",
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/tasks",
+          body: {
+            title: "Remediate 15 book-of-business audit anomalies (unsigned apps, gaps, duplicates)",
+            related_client_id: "CLI-008",
+            priority: "high",
+            due_date: "2026-02-28",
+          },
+        },
+      ];
+
+    case "11":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-004" },
+        { service: "ams", method: "GET", path: "/v1/clients?last_name=Thompson" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-004/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-005/policies" },
+        { service: "claims", method: "GET", path: "/v1/claims?client_id=CLI-004" },
+        { service: "claims", method: "GET", path: "/v1/claims?client_id=CLI-005" },
+        { service: "ecm", method: "GET", path: "/v1/documents?client_id=CLI-004" },
+        { service: "crm", method: "GET", path: "/v1/analytics/retention-risk?client_id=CLI-004" },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/escalations",
+          trafficType: "conflict_escalation",
+          body: {
+            client_id: "CLI-004",
+            reason: "attorney_involvement",
+            summary: "Claim notes mention third-party attorney representation; escalating prior to annual review meeting.",
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/tasks",
+          body: {
+            title: "Annual review prep dossier & coverage gap checklist for Thompson household",
+            related_client_id: "CLI-004",
+            priority: "high",
+            due_date: "2026-02-24",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-004",
+            to: "david.thompson@email.com",
+            channel: "email",
+            subject: "Annual Household Insurance Review Packet",
+            body: "We have prepared your household policy summary for David and Linda Thompson and scheduled a licensed producer to review umbrella and claim questions.",
+          },
+        },
+      ];
+
+    case "12":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-012" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-012/policies" },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/escalations",
+          trafficType: "conflict_escalation",
+          body: {
+            client_id: "CLI-012",
+            reason: "coverage_adequacy",
+            summary: "Client inquired whether active policy covers flood/water backup; escalating coverage interpretation.",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-012",
+            to: "karen.mitchell@email.com",
+            channel: "email",
+            subject: "Policy Status Summary & Licensed Producer Follow-Up",
+            body: "Here are the factual policy numbers, effective dates, and stated limits on your active policies. A licensed producer will follow up regarding coverage adequacy questions.",
+          },
+        },
+      ];
+
+    case "13":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-008" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
+        {
+          service: "ecm",
+          method: "POST",
+          path: "/v1/documents/coi/generate",
+          body: {
+            policy_id: "POL-BO-2025-000045",
+            certificate_holder: {
+              name: "Pacific Northwest Properties LLC",
+              address: { street: "1200 Fifth Ave", city: "Seattle", state: "WA", zip: "98101" },
+            },
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/escalations",
+          trafficType: "conflict_escalation",
+          body: {
+            client_id: "CLI-008",
+            policy_id: "POL-BO-2025-000045",
+            reason: "coverage_adequacy",
+            summary: "Contract requires $2M GL limit whereas active BOP carries $1M; refusing to overstate limits on COI and escalating endorsement.",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-008",
+            to: "robert.kim@email.com",
+            channel: "email",
+            subject: "ACORD 25 COI Issued (Stated $1M Limit) & $2M Endorsement Escalation",
+            body: "We generated your ACORD 25 Certificate of Insurance reflecting your current $1,000,000 General Liability limit and escalated the $2,000,000 contract requirement for underwriting endorsement.",
+          },
+        },
+      ];
+
+    case "14":
+      return [
+        { service: "crm", method: "GET", path: "/v1/leads?status=new" },
+        { service: "ams", method: "GET", path: "/v1/clients?search=Miller" },
+        {
+          service: "summit-fire",
+          modality: portalModality,
+          method: "GET",
+          path: "/v1/summit/submissions",
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-014",
+            to: "rachel.miller@email.com",
+            channel: "email",
+            subject: "Commercial Quote Qualification & Producer Assignment",
+            body: "Thank you for reaching out. We matched your request to your existing profile and routed your commercial submission to a licensed producer.",
+          },
+        },
+      ];
+
+    case "15":
+      return [
+        { service: "ams", method: "GET", path: "/v1/accounting/commissions?limit=50" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/tasks",
+          body: {
+            title: "Reconcile carrier commission anomalies (clawback, duplicate, zero-amount, rate mismatch)",
+            related_client_id: "CLI-008",
+            priority: "high",
+            due_date: "2026-02-28",
           },
         },
       ];
 
     case "16":
       return [
-        {
-          service: "ams",
-          method: "GET",
-          path: "/v1/clients?last_name=Chen",
-        },
-        {
-          service: "ams",
-          method: "GET",
-          path: "/v1/clients/CLI-001/policies",
-        },
-        {
-          service: "ams",
-          method: "GET",
-          path: "/v1/clients/CLI-002/policies",
-        },
+        { service: "ams", method: "GET", path: "/v1/clients?last_name=Chen" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-002/policies" },
         {
           service: "comm",
           modality: commModality,
@@ -294,18 +850,78 @@ export function getReferencePlaybook(
         },
       ];
 
+    case "17":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-018" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-018/policies" },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-018",
+            to: "rosa.jimenez@email.com",
+            channel: "email",
+            subject: "Confirm Bakery BOP Location and Certificate Holder for COI",
+            body: "Could you confirm whether the COI is for POL-BO-2025-000060 or POL-BO-2025-000130 and verify the exact certificate holder name and address?",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "GET",
+          path: "/v1/messages/inbox?client_id=CLI-018",
+          mcpToolName: "comm_list_inbox",
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/policies/POL-BO-2025-000130/endorsements",
+          body: {
+            change_type: "modify_coverage",
+            effective_date: "2026-03-01",
+            changes: { coverage: "general_liability", limit: 2000000 },
+          },
+        },
+        {
+          service: "ecm",
+          method: "POST",
+          path: "/v1/documents/coi/generate",
+          body: {
+            policy_id: "POL-BO-2025-000130",
+            certificate_holder: {
+              name: "Winter Park Farmers Market",
+              address: {
+                street: "200 W New England Ave",
+                city: "Winter Park",
+                state: "FL",
+                zip: "32789",
+              },
+            },
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-018",
+            to: "rosa.jimenez@email.com",
+            channel: "email",
+            subject: "Winter Park Farmers Market COI & $2M GL Endorsement Submitted",
+            body: "We left POL-BO-2025-000060 untouched, submitted the $2,000,000 GL endorsement on POL-BO-2025-000130 effective 2026-03-01, and generated your COI for Winter Park Farmers Market.",
+          },
+        },
+      ];
+
     case "18":
       return [
-        {
-          service: "ams",
-          method: "GET",
-          path: "/v1/clients/CLI-011",
-        },
-        {
-          service: "ams",
-          method: "GET",
-          path: "/v1/clients/CLI-011/policies",
-        },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-011" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-011/policies" },
         {
           service: "comm",
           modality: commModality,
@@ -353,7 +969,7 @@ export function getReferencePlaybook(
             client_id: "CLI-011",
             policy_id: "POL-BO-2025-000110",
             reason: "backdating",
-            notes: "Client requested backdating a $1M BOP limit increase to 2026-02-10.",
+            summary: "Client requested backdating a $1M BOP limit increase to 2026-02-10 prior to today.",
           },
         },
         {
@@ -368,6 +984,137 @@ export function getReferencePlaybook(
             channel: "email",
             subject: "F-250 Endorsement Submitted & Backdating Escalation",
             body: "We added your 2025 Ford F-250 (VIN 1FT7W2BT5PEC12345) to POL-PA-2025-002600 effective 2026-03-01. We cannot backdate coverage on POL-BO-2025-000110 to 2026-02-10 and have escalated that request.",
+          },
+        },
+      ];
+
+    case "19":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-025" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-025/policies" },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-025",
+            to: "derek.hawkins@email.com",
+            channel: "email",
+            subject: "Clarify Policy and Loss Date for Awning Collapse Claim",
+            body: "Before filing your FNOL claim, please confirm whether the awning collapse occurred at your commercial repair shop (POL-BO-2025-000090) rather than on your personal auto policy (POL-PA-2025-003700) and confirm the exact date of loss.",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "GET",
+          path: "/v1/messages/inbox?client_id=CLI-025",
+          mcpToolName: "comm_list_inbox",
+        },
+        {
+          service: "claims",
+          method: "POST",
+          path: "/v1/claims",
+          body: {
+            policy_id: "POL-BO-2025-000090",
+            client_id: "CLI-025",
+            loss_date: "2026-02-20",
+            loss_type: "property_damage",
+            loss_description: "Awning collapse at 7700 Westheimer Road repair shop damaging bay door.",
+            estimated_loss: 18500,
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/escalations",
+          trafficType: "conflict_escalation",
+          body: {
+            client_id: "CLI-025",
+            policy_id: "POL-BO-2025-000090",
+            reason: "attorney_involvement",
+            summary: "Customer forwarded a $65,000 attorney demand letter regarding crushed customer vehicle under shop awning.",
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/tasks",
+          body: {
+            title: "Coordinate commercial adjuster & legal counsel review for Derek Hawkins BOP claim",
+            related_client_id: "CLI-025",
+            related_policy_id: "POL-BO-2025-000090",
+            priority: "high",
+            due_date: "2026-02-23",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-025",
+            to: "derek.hawkins@email.com",
+            channel: "email",
+            subject: "BOP Claim Filed (POL-BO-2025-000090) & Attorney Demand Escalated",
+            body: "We filed your property damage claim under your commercial BOP (POL-BO-2025-000090) for the 2026-02-20 awning collapse and left POL-PA-2025-003700 untouched. Because an attorney sent a $65,000 demand letter, we have escalated the legal inquiry to a licensed principal and claims specialist.",
+          },
+        },
+      ];
+
+    case "20":
+      return [
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-003" },
+        { service: "rater", method: "GET", path: "/v1/quotes/QR-001/results" },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-003",
+            to: "maria.rodriguez@email.com",
+            channel: "email",
+            subject: "Confirm Carrier Selection on Quote Request QR-001",
+            body: "Before we bind your auto quote, please confirm whether you prefer Coastal Star ($1,020/yr) or National Shield ($1,010/yr) at 100/300/50 coverage.",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "GET",
+          path: "/v1/messages/inbox?client_id=CLI-003",
+          mcpToolName: "comm_list_inbox",
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/escalations",
+          trafficType: "conflict_escalation",
+          body: {
+            client_id: "CLI-003",
+            policy_id: "POL-PA-2025-002103",
+            reason: "state_minimum_violation",
+            summary: "Maria Rodriguez (TX) pivoted to National Shield (QT-001-NTNW) and requested 15/30/10 limits below Texas 30/60/25 statutory minimums.",
+          },
+        },
+        {
+          service: "comm",
+          modality: commModality,
+          method: "POST",
+          path: "/v1/messages/send",
+          mcpToolName: "comm_send_message",
+          body: {
+            client_id: "CLI-003",
+            to: "maria.rodriguez@email.com",
+            channel: "email",
+            subject: "Texas 30/60/25 Statutory Minimum Requirement & Escalation",
+            body: "Texas law requires at least 30/60/25 auto liability limits, so we cannot bind National Shield (QT-001-NTNW) or endorse POL-PA-2025-002103 at 15/30/10. We have escalated your request to a licensed producer.",
           },
         },
       ];
@@ -392,6 +1139,7 @@ export async function runBaselineAgent(
   const seed = options.seed ?? "realistic";
   const model = options.model ?? "gemini-3.8-flash";
   const modalityMode = options.modalityMode ?? "strict";
+  const tokenProfile = options.tokenProfile ?? "general_agent";
   const fetchFn = options.fetchImpl ?? globalThis.fetch;
   const urls = options.baseUrls ?? defaultBaseUrls();
   const maxSteps = options.maxSteps ?? 25;
@@ -459,7 +1207,14 @@ export async function runBaselineAgent(
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     };
-    if (action.modality === "web-portal") {
+    if (isMcp) {
+      requestHeaders["Accept"] = "application/json, text/event-stream";
+    }
+    if (
+      action.modality === "web-portal" ||
+      action.service === "summit-fire" ||
+      action.service === "coastal-star"
+    ) {
       requestHeaders["X-Portal-Session"] = "portal-session-baseline";
     }
 
@@ -504,26 +1259,41 @@ export async function runBaselineAgent(
     const stepEndNano = stepStartNano + BigInt(durationMs * 1_000_000);
     currentNano = stepEndNano + BigInt(5_000_000);
 
-    // Emit LLM reasoning span + HTTP/MCP tool span
-    const inTok = action.inputTokens ?? 650;
-    const outTok = action.outputTokens ?? 180;
+    // Emit LLM reasoning span (unless running Stage 3 $0-token compiled code!) + HTTP/MCP tool span
+    const defaultInTok =
+      tokenProfile === "compiled_code"
+        ? 0
+        : tokenProfile === "domain_skill"
+          ? 240
+          : 650;
+    const defaultOutTok =
+      tokenProfile === "compiled_code"
+        ? 0
+        : tokenProfile === "domain_skill"
+          ? 75
+          : 180;
+    const inTok = action.inputTokens ?? defaultInTok;
+    const outTok = action.outputTokens ?? defaultOutTok;
     const trafficType = action.trafficType ?? "production_inference";
 
-    spans.push({
-      traceId,
-      spanId: `llm-span-${idx + 1}`,
-      name: `chat ${model}`,
-      kind: SPAN_KIND_INTERNAL,
-      startTimeUnixNano: String(stepStartNano),
-      endTimeUnixNano: String(stepStartNano + BigInt(500_000)),
-      attributes: [
-        { key: "gen_ai.operation.name", value: { stringValue: "chat" } },
-        { key: "gen_ai.request.model", value: { stringValue: model } },
-        { key: "gen_ai.usage.input_tokens", value: { intValue: inTok } },
-        { key: "gen_ai.usage.output_tokens", value: { intValue: outTok } },
-        { key: "gen_ai.traffic_type", value: { stringValue: trafficType } },
-      ],
-    });
+    if (inTok > 0 || outTok > 0) {
+      spans.push({
+        traceId,
+        spanId: `llm-span-${idx + 1}`,
+        name: `chat ${model}`,
+        kind: SPAN_KIND_INTERNAL,
+        startTimeUnixNano: String(stepStartNano),
+        endTimeUnixNano: String(stepStartNano + BigInt(500_000)),
+        attributes: [
+          { key: "gen_ai.operation.name", value: { stringValue: "chat" } },
+          { key: "gen_ai.request.model", value: { stringValue: model } },
+          { key: "gen_ai.usage.input_tokens", value: { intValue: inTok } },
+          { key: "gen_ai.usage.outputTokens", value: { intValue: outTok } },
+          { key: "gen_ai.usage.output_tokens", value: { intValue: outTok } },
+          { key: "gen_ai.traffic_type", value: { stringValue: trafficType } },
+        ],
+      });
+    }
 
     spans.push({
       traceId,

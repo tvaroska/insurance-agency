@@ -31,7 +31,7 @@
   },
   {
     "carrier_code": "HRTF",
-    "carrier_name": "The Hartford",
+    "carrier_name": "Hartland Commercial",
     "states": ["IL", "IN", "OH", "PA", "NY", "CT", "FL", "TX"],
     "policy_types": ["bop", "workers_comp", "general_liability", "professional_liability", "homeowners"],
     "risk_categories": ["preferred", "standard"],
@@ -46,7 +46,7 @@
   },
   {
     "carrier_code": "ERIE",
-    "carrier_name": "Erie Insurance",
+    "carrier_name": "Erie Basin Mutual",
     "states": ["IL", "IN", "OH", "PA", "NY", "WI", "MD", "VA", "WV", "NC"],
     "policy_types": ["personal_auto", "homeowners", "umbrella", "workers_comp", "general_liability"],
     "risk_categories": ["preferred", "standard"],
@@ -61,7 +61,7 @@
   },
   {
     "carrier_code": "NTNW",
-    "carrier_name": "Nationwide",
+    "carrier_name": "National Shield",
     "states": ["IL", "IN", "OH", "PA", "NY", "FL", "TX", "CA", "GA", "NC"],
     "policy_types": ["personal_auto", "homeowners", "umbrella", "bop", "workers_comp", "general_liability"],
     "risk_categories": ["preferred", "standard"],
@@ -76,7 +76,7 @@
   },
   {
     "carrier_code": "SAFECO",
-    "carrier_name": "Safeco",
+    "carrier_name": "SafeHarbor",
     "states": ["IL", "IN", "OH", "PA", "NY", "FL", "TX", "CA", "WA", "OR"],
     "policy_types": ["personal_auto", "homeowners", "umbrella", "renters"],
     "risk_categories": ["preferred", "standard", "non_standard"],
@@ -91,7 +91,7 @@
   },
   {
     "carrier_code": "LIBT",
-    "carrier_name": "Liberty Mutual",
+    "carrier_name": "Liberty Crest",
     "states": ["IL", "IN", "OH", "PA", "NY", "FL", "TX", "CA", "MA", "NJ"],
     "policy_types": ["personal_auto", "homeowners", "umbrella", "renters"],
     "risk_categories": ["preferred", "standard"],

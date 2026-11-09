@@ -61,7 +61,7 @@ beforeAll(() => {
   // Seed carrier for BOP quotes
   seedRaterCarrier({
     carrier_code: "HART",
-    carrier_name: "Hartford",
+    carrier_name: "Hartland Commercial",
     states: JSON.stringify(["IL", "IN", "OH", "WI"]),
     policy_types: JSON.stringify(["bop", "general_liability", "workers_comp"]),
     risk_categories: JSON.stringify(["preferred", "standard"]),

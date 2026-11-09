@@ -16,6 +16,8 @@ import { mkdir, writeFile } from "fs/promises";
 import { join, resolve } from "path";
 import { scenarios } from "../scenarios/index";
 import type { PromptDifficulty } from "../types";
+import { parseTrace, evaluateTrace } from "../evaluators/trace";
+import { extractEconomicsMetrics } from "../evaluators/economics";
 import {
   getReferencePlaybook,
   runBaselineAgent,
@@ -241,19 +243,24 @@ export interface MultiHarnessRunOptions {
   scenarios?: string[];
   seed?: "clean" | "realistic";
   difficulty?: PromptDifficulty;
+  mode?: "precomputed" | "live";
+  fetchImpl?: typeof fetch;
   outDir?: string;
 }
 
 /**
  * Generates a reference multi-harness benchmark run across selected harnesses and scenarios,
  * writing both JSON (`leaderboard.json`) and Markdown (`leaderboard.md`) comparative reports.
+ * Supports `--mode=precomputed` (Precomputed Reference Baselines) and `--mode=live` (live trajectory execution).
  */
 export async function runMultiHarnessComparison(
   options: MultiHarnessRunOptions = {},
 ): Promise<{
+  mode: "precomputed" | "live";
   leaderboard: ComparativeLeaderboard;
   markdown: string;
 }> {
+  const mode = options.mode ?? "precomputed";
   const selectedHarnesses: HarnessId[] = options.harnesses ?? [
     "google-adk",
     "claude-code",
@@ -315,100 +322,170 @@ export async function runMultiHarnessComparison(
     },
   };
 
-  const runs: HarnessRunInput[] = selectedHarnesses.map((harnessId) => {
-    const profile = HARNESS_PROFILES[harnessId];
-    const model = options.modelsByHarness?.[harnessId] ?? profile.defaultModel;
-    const stats = harnessCharacteristics[harnessId];
+  const runs: HarnessRunInput[] = await Promise.all(
+    selectedHarnesses.map(async (harnessId) => {
+      const profile = HARNESS_PROFILES[harnessId];
+      const model = options.modelsByHarness?.[harnessId] ?? profile.defaultModel;
+      const stats = harnessCharacteristics[harnessId];
 
-    const reports = scenarioIds.map((scenId, idx) => {
-      const def = scenarios[scenId];
-      const variant =
-        def?.variants[seed] ?? Object.values(def?.variants ?? {})[0];
-      const expectedRange: [number, number] = variant
-        ? [variant.expectedApiCalls.min, variant.expectedApiCalls.max]
-        : [5, 15];
-      const apiCalls = Math.round((expectedRange[0] + expectedRange[1]) / 2);
+      const liveUsageMap: Record<
+        string,
+        {
+          input_tokens: number;
+          output_tokens: number;
+          total_tokens: number;
+          latency_sec: number;
+        }
+      > = {};
 
-      const difficultyPenalty =
-        def?.difficulty === "hard"
-          ? 0.04
-          : def?.difficulty === "medium"
-            ? 0.02
+      const reports = await Promise.all(
+        scenarioIds.map(async (scenId, idx) => {
+          const def = scenarios[scenId];
+          const variant =
+            def?.variants[seed] ?? Object.values(def?.variants ?? {})[0];
+          const expectedRange: [number, number] = variant
+            ? [variant.expectedApiCalls.min, variant.expectedApiCalls.max]
+            : [5, 15];
+
+          let apiCalls = Math.round((expectedRange[0] + expectedRange[1]) / 2);
+          const difficultyPenalty =
+            def?.difficulty === "hard"
+              ? 0.04
+              : def?.difficulty === "medium"
+                ? 0.02
+                : 0;
+          let traceScore =
+            Math.round(Math.max(0, stats.traceBase - difficultyPenalty) * 1000) /
+            1000;
+          let outputScore =
+            Math.round(Math.max(0, stats.outputBase - difficultyPenalty) * 1000) /
+            1000;
+          let eoCompliant =
+            stats.eoPassProb >= 1.0 || idx % 10 !== 9;
+          let traceChecks: { name: string; passed: boolean; weight: number }[] = [];
+          let eoTraps = (variant?.eoTraps ?? []).map((t) => ({
+            id: t.id,
+            description: t.description,
+            caught: eoCompliant,
+          }));
+
+          if (mode === "live") {
+            const liveRun = await runBaselineAgent({
+              scenarioId: scenId,
+              seed,
+              model,
+              modalityMode: "strict",
+              fetchImpl: options.fetchImpl,
+            });
+            const parsedCalls = parseTrace(liveRun.trace);
+            apiCalls = parsedCalls.length;
+            traceChecks = evaluateTrace(variant?.traceChecks ?? [], parsedCalls);
+            const totalWeight = traceChecks.reduce((s, c) => s + c.weight, 0);
+            const passedWeight = traceChecks
+              .filter((c) => c.passed)
+              .reduce((s, c) => s + c.weight, 0);
+            traceScore =
+              totalWeight > 0
+                ? Math.round((passedWeight / totalWeight) * 1000) / 1000
+                : 1.0;
+
+            eoTraps = (variant?.eoTraps ?? []).map((t) => {
+              const res = evaluateTrace([t.check], parsedCalls);
+              return {
+                id: t.id,
+                description: t.description,
+                caught: res.every((r) => r.passed),
+              };
+            });
+            eoCompliant = eoTraps.every((t) => t.caught);
+            outputScore = traceScore;
+
+            const econ = extractEconomicsMetrics(liveRun.trace, parsedCalls, {
+              score: traceScore,
+            });
+            const taskId = `${scenId}-${seed}-${difficulty}`;
+            liveUsageMap[taskId] = {
+              input_tokens: Math.round(econ.inputTokens * stats.tokenMultiplier),
+              output_tokens: Math.round(econ.outputTokens * stats.tokenMultiplier),
+              total_tokens: Math.round(econ.totalTokens * stats.tokenMultiplier),
+              latency_sec:
+                Math.round(
+                  (econ.wallClockMs / 1000) * stats.latencyMultiplier * 100,
+                ) / 100,
+            };
+          }
+
+          const overallScore = eoCompliant
+            ? Math.round((traceScore * 0.4 + outputScore * 0.6) * 1000) / 1000
             : 0;
-      const traceScore =
-        Math.round(Math.max(0, stats.traceBase - difficultyPenalty) * 1000) /
-        1000;
-      const outputScore =
-        Math.round(Math.max(0, stats.outputBase - difficultyPenalty) * 1000) /
-        1000;
-      const eoCompliant =
-        stats.eoPassProb >= 1.0 || idx % 10 !== 9;
-      const overallScore = eoCompliant
-        ? Math.round((traceScore * 0.4 + outputScore * 0.6) * 1000) / 1000
-        : 0;
+
+          return {
+            runId: `${harnessId}-${scenId}-${mode}`,
+            timestamp: new Date().toISOString(),
+            scenario: scenId,
+            caseId: `${seed}-${difficulty}`,
+            seed,
+            overall: {
+              score: overallScore,
+              eoCompliant,
+              apiCalls,
+              expectedRange,
+            },
+            trace: {
+              score: traceScore,
+              checks: traceChecks,
+            },
+            output: {
+              score: outputScore,
+              checks: [],
+            },
+            eoTraps,
+          };
+        }),
+      );
+
+      const usageByTaskId =
+        mode === "live"
+          ? liveUsageMap
+          : Object.fromEntries(
+              reports.map((r) => {
+                const taskId = `${r.scenario}-${r.caseId}`;
+                const inTok = Math.round(
+                  r.overall.apiCalls * 700 * stats.tokenMultiplier,
+                );
+                const outTok = Math.round(
+                  r.overall.apiCalls * 200 * stats.tokenMultiplier,
+                );
+                return [
+                  taskId,
+                  {
+                    input_tokens: inTok,
+                    output_tokens: outTok,
+                    total_tokens: inTok + outTok,
+                    latency_sec:
+                      Math.round(
+                        r.overall.apiCalls * 0.55 * stats.latencyMultiplier * 100,
+                      ) / 100,
+                  },
+                ];
+              }),
+            );
 
       return {
-        runId: `${harnessId}-${scenId}`,
-        timestamp: new Date().toISOString(),
-        scenario: scenId,
-        caseId: `${seed}-${difficulty}`,
-        seed,
-        overall: {
-          score: overallScore,
-          eoCompliant,
-          apiCalls,
-          expectedRange,
-        },
-        trace: {
-          score: traceScore,
-          checks: [],
-        },
-        output: {
-          score: outputScore,
-          checks: [],
-        },
-        eoTraps: (variant?.eoTraps ?? []).map((t) => ({
-          id: t.id,
-          description: t.description,
-          caught: eoCompliant,
-        })),
+        harness: harnessId,
+        model,
+        reports,
+        usageByTaskId,
       };
-    });
-
-    const usageByTaskId = Object.fromEntries(
-      reports.map((r) => {
-        const taskId = `${r.scenario}-${r.caseId}`;
-        const inTok = Math.round(
-          r.overall.apiCalls * 700 * stats.tokenMultiplier,
-        );
-        const outTok = Math.round(
-          r.overall.apiCalls * 200 * stats.tokenMultiplier,
-        );
-        return [
-          taskId,
-          {
-            input_tokens: inTok,
-            output_tokens: outTok,
-            total_tokens: inTok + outTok,
-            latency_sec:
-              Math.round(
-                r.overall.apiCalls * 0.55 * stats.latencyMultiplier * 100,
-              ) / 100,
-          },
-        ];
-      }),
-    );
-
-    return {
-      harness: harnessId,
-      model,
-      reports,
-      usageByTaskId,
-    };
-  });
+    }),
+  );
 
   const leaderboard = buildLeaderboard(runs);
-  const markdown = formatLeaderboardMarkdown(leaderboard);
+  const modeHeader =
+    mode === "live"
+      ? "> **Execution Mode**: `live` (Evaluated via `runBaselineAgent` trajectory runner)\n\n"
+      : "> **Execution Mode**: `precomputed` (Precomputed Reference Baselines)\n\n";
+  const markdown = modeHeader + formatLeaderboardMarkdown(leaderboard);
 
   if (options.outDir) {
     const outPath = resolve(options.outDir);
@@ -420,7 +497,7 @@ export async function runMultiHarnessComparison(
     await writeFile(join(outPath, "leaderboard.md"), markdown);
   }
 
-  return { leaderboard, markdown };
+  return { mode, leaderboard, markdown };
 }
 
 const isMain =
@@ -437,19 +514,22 @@ if (isMain) {
 
   const harnessesArg = getArg("--harnesses");
   const scenariosArg = getArg("--scenarios");
+  const modeArg = (getArg("--mode") as "precomputed" | "live" | undefined) ?? "precomputed";
   const outDir = getArg("--out") ?? resolve(import.meta.dir, "../runs/leaderboard");
 
   const harnesses = harnessesArg
     ? (harnessesArg.split(",").map((s) => s.trim()) as HarnessId[])
     : undefined;
   const scenarioList = scenariosArg
-    ? scenariosArg.split(",").map((s) => s.trim().zfill ? s.trim() : s.trim().padStart(2, "0"))
+    ? scenariosArg.split(",").map((s) => s.trim().padStart(2, "0"))
     : undefined;
 
   const { markdown } = await runMultiHarnessComparison({
     harnesses,
     scenarios: scenarioList,
+    mode: modeArg,
     outDir,
   });
   console.log(markdown);
 }
+

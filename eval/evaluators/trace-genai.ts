@@ -91,6 +91,12 @@ export const BUILTIN_MCP_TOOL_MAPPING: ToolMapping = {
     service: "comm",
     baseUrl: "http://localhost:3004",
   },
+  comm_send_message: {
+    method: "POST",
+    path: "/v1/messages/send",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
   "comm:messages:read": {
     method: "GET",
     path: "/v1/messages/inbox",
@@ -109,6 +115,12 @@ export const BUILTIN_MCP_TOOL_MAPPING: ToolMapping = {
     service: "comm",
     baseUrl: "http://localhost:3004",
   },
+  comm_list_inbox: {
+    method: "GET",
+    path: "/v1/messages/inbox",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
   "comm:calls:read": {
     method: "GET",
     path: "/v1/calls/transcript",
@@ -121,6 +133,12 @@ export const BUILTIN_MCP_TOOL_MAPPING: ToolMapping = {
     service: "comm",
     baseUrl: "http://localhost:3004",
   },
+  comm_get_transcript: {
+    method: "GET",
+    path: "/v1/calls/transcript",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
   "comm:webhooks:manage": {
     method: "POST",
     path: "/v1/webhooks",
@@ -128,6 +146,12 @@ export const BUILTIN_MCP_TOOL_MAPPING: ToolMapping = {
     baseUrl: "http://localhost:3004",
   },
   manage_webhook: {
+    method: "POST",
+    path: "/v1/webhooks",
+    service: "comm",
+    baseUrl: "http://localhost:3004",
+  },
+  comm_register_webhook: {
     method: "POST",
     path: "/v1/webhooks",
     service: "comm",

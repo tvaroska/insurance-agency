@@ -29,11 +29,9 @@ async function loadJson<T>(filename: string): Promise<T> {
 }
 
 async function createTables() {
-  await prisma.$executeRawUnsafe(`
-    DROP TABLE IF EXISTS webhook_deliveries;
-    DROP TABLE IF EXISTS webhooks;
-    DROP TABLE IF EXISTS messages;
-  `);
+  for (const table of ["webhook_deliveries", "webhooks", "messages"]) {
+    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS ${table}`);
+  }
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS messages (
     message_id TEXT PRIMARY KEY,
     client_id TEXT NOT NULL,

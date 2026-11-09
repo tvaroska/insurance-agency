@@ -1,4 +1,4 @@
-# Privy/gym — Roadmap
+# Evergreen Insurance Agency — Product Roadmap
 
 **Last Updated:** 2026-10-19
 
@@ -86,14 +86,14 @@ Goals:
 - METR TaskFamily wrapper (203 tasks)
 - Prisma Client across all 8 services + runtime container seeding
 
-### v0.4.0 — K8s, PostgreSQL, Harbor & Scorer Hardening (current)
+### v0.4.0 — K8s, PostgreSQL, Harbor & Scorer Hardening (Complete)
 
 - Sprint 0 review bug fixes (`S0-BUG-1..3`, `S0-DEBT-1..2`)
 - Harbor / Terminal-Bench task adapter (`S2-INTOP-1`)
 - Prisma test setup cleanup (`S2-TEST-1`)
 - CloudNativePG + K8s manifests & Docker Compose PG override (`S2-K8S-1..4`, `S2-COMPOSE-1`)
 
-### v0.5.0 — Small-Business Model & Harness Benchmark Suite
+### v0.5.0 — Small-Business Model & Harness Benchmark Suite (Complete)
 
 - Snapshot-based exact state diffing (`S3-DIFF-1`)
 - Strict modality enforcement (`S3-MOD-1`)
@@ -101,6 +101,10 @@ Goals:
 - Cost/latency Pareto scoring & multi-harness runner (`S3-ECON-1`, `S3-HARN-1`)
 - Native Inspect AI, OpenEnv / `verifiers` RL control plane, and HAL export (`S3-INTOP-2..4`)
 
----
+### v0.6.0 — Insurance Technology Executive Operations & Governance Showcase (current — Complete)
 
-**Updated by:** /wreplan command
+- 4-tab GM3 Light Executive Workbench mounted on AMS (`GET /` on `:3000`) + `bun run showcase` zero-Docker launcher
+- 1st-Line service-layer E&O and 10-state statutory minimum firewall (`packages/shared/src/compliance-firewall.ts`)
+- Real ACORD 25 Certificate of Insurance PDF generation (`services/ecm/src/templates/acord-25.ts`)
+- 20-scenario playable baseline trajectories (`eval/agents/baseline-agent.ts`) and 3-Stage Agent-to-Code evolution runner (`eval/evolution-showcase.ts`)
+- Self-contained GM3 Light Executive HTML Scorecard (`docs/executive-scorecard.html`) and Executive Story Spine (`design/story.md`, `EXECUTIVE-BRIEF.md`)

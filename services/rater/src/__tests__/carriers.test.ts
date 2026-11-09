@@ -32,7 +32,7 @@ beforeAll(() => {
     .values(
       makeCarrier({
         carrier_code: "ERIE",
-        carrier_name: "Erie Insurance",
+        carrier_name: "Erie Basin Mutual",
         states: JSON.stringify(["IL", "IN", "OH", "PA"]),
         policy_types: JSON.stringify(["personal_auto", "homeowners"]),
         risk_categories: JSON.stringify(["preferred", "standard"]),
@@ -45,7 +45,7 @@ beforeAll(() => {
     .values(
       makeCarrier({
         carrier_code: "NTNW",
-        carrier_name: "Nationwide",
+        carrier_name: "National Shield",
         states: JSON.stringify(["IL", "OH", "TX", "FL"]),
         policy_types: JSON.stringify(["personal_auto", "bop", "workers_comp"]),
         risk_categories: JSON.stringify(["standard", "non_standard"]),
@@ -279,7 +279,7 @@ describe("GET /v1/carriers/appetite - response shape", () => {
     const body = await res.json();
     const erie = body.data.find((c: any) => c.carrier_code === "ERIE");
     expect(erie).toBeDefined();
-    expect(erie.carrier_name).toBe("Erie Insurance");
+    expect(erie.carrier_name).toBe("Erie Basin Mutual");
     expect(erie.states).toContain("IL");
     expect(erie.states).toContain("PA");
     expect(erie.policy_types).toContain("personal_auto");

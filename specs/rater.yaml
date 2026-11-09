@@ -222,7 +222,7 @@ paths:
                     completed_at: "2026-03-10T14:33:47Z"
                     carriers:
                       - carrier_code: PROG
-                        carrier_name: Progressive
+                        carrier_name: Coastal Star Insurance
                         quote_id: qt_a1b2c3d4
                         status: quoted
                         premium_annual: 1842.00
@@ -245,7 +245,7 @@ paths:
                           comprehensive: 250
                         valid_until: "2026-04-10T23:59:59Z"
                       - carrier_code: TRAV
-                        carrier_name: Travelers
+                        carrier_name: Summit Fire & Casualty
                         quote_id: qt_e5f6g7h8
                         status: quoted
                         premium_annual: 2104.00
@@ -268,7 +268,7 @@ paths:
                           comprehensive: 250
                         valid_until: "2026-04-10T23:59:59Z"
                       - carrier_code: ERIE
-                        carrier_name: Erie Insurance
+                        carrier_name: Erie Basin Mutual
                         quote_id: qt_i9j0k1l2
                         status: quoted
                         premium_annual: 1576.00
@@ -291,7 +291,7 @@ paths:
                           comprehensive: 250
                         valid_until: "2026-04-10T23:59:59Z"
                       - carrier_code: HRTF
-                        carrier_name: The Hartford
+                        carrier_name: Hartland Commercial
                         quote_id: null
                         status: declined
                         premium_annual: null
@@ -346,8 +346,8 @@ paths:
             schema:
               $ref: '#/components/schemas/BindRequest'
             examples:
-              bind_progressive:
-                summary: Bind the Progressive quote
+              bind_coastal:
+                summary: Bind the Coastal Star Insurance quote
                 value:
                   quote_id: qt_a1b2c3d4
                   payment_method: eft
@@ -374,7 +374,7 @@ paths:
                     policy_id: POL-PROG-2026-0041827
                     quote_id: qt_a1b2c3d4
                     carrier_code: PROG
-                    carrier_name: Progressive
+                    carrier_name: Coastal Star Insurance
                     effective_date: "2026-04-01"
                     expiration_date: "2027-04-01"
                     premium_annual: 1842.00
@@ -577,7 +577,7 @@ paths:
                   value:
                     data:
                       - carrier_code: PROG
-                        carrier_name: Progressive
+                        carrier_name: Coastal Star Insurance
                         states:
                           - IL
                           - IN
@@ -597,7 +597,7 @@ paths:
                         max_vehicles: 8
                         accepts_sr22: true
                       - carrier_code: ERIE
-                        carrier_name: Erie Insurance
+                        carrier_name: Erie Basin Mutual
                         states:
                           - IL
                           - IN
@@ -616,7 +616,7 @@ paths:
                         max_vehicles: 6
                         accepts_sr22: false
                       - carrier_code: TRAV
-                        carrier_name: Travelers
+                        carrier_name: Summit Fire & Casualty
                         states:
                           - IL
                           - IN
@@ -1148,7 +1148,7 @@ components:
         carrier_name:
           type: string
           description: Human-readable carrier name.
-          example: Progressive
+          example: Coastal Star Insurance
         quote_id:
           type: string
           nullable: true
@@ -1268,7 +1268,7 @@ components:
           $ref: '#/components/schemas/CarrierCode'
         carrier_name:
           type: string
-          example: Progressive
+          example: Coastal Star Insurance
         effective_date:
           type: string
           format: date
@@ -1322,7 +1322,7 @@ components:
         carrier_name:
           type: string
           description: Human-readable carrier name.
-          example: Progressive
+          example: Coastal Star Insurance
         states:
           type: array
           description: US states where this carrier is licensed and actively writing.

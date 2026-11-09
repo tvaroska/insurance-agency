@@ -80,7 +80,7 @@ beforeAll(() => {
   // Seed carrier for re-quoting
   seedRaterCarrier({
     carrier_code: "PROG",
-    carrier_name: "Progressive",
+    carrier_name: "Coastal Star Insurance",
     states: JSON.stringify(["IL", "IN", "OH", "MI"]),
     policy_types: JSON.stringify(["personal_auto", "homeowners"]),
     risk_categories: JSON.stringify(["preferred", "standard", "non_standard"]),

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"
 
 # Reset all service databases by running seed scripts in dependency order.
 # Services with no cross-service dependencies run first.

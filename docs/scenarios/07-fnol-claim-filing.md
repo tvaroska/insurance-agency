@@ -27,7 +27,7 @@ Take a first notice of loss report, file the claim in the Claims service, attach
 
 - **Client:** CLI-018 (Ashley Morales)
 - **Incident:** Car accident, other driver at fault
-- **Policy:** Auto with Safeco
+- **Policy:** Auto with SafeHarbor
 - **Complications:** Needs to file with own carrier AND pursue subrogation against at-fault driver's insurer; possible injuries requiring PIP/medical payments
 
 ## Required Steps

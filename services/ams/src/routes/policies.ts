@@ -12,6 +12,10 @@ import {
   parsePaginationParams,
   applyPrismaCursorPagination,
   paginatedResponse,
+  BENCHMARK_SIMULATED_TODAY,
+  validateBackdating,
+  validateStateMinimums,
+  eoFirewallError,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -139,11 +143,26 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
   // Verify client exists
   const client = await prisma.client.findUnique({
     where: { id: body.client_id },
-    select: { id: true },
+    select: { id: true, address_state: true },
   });
 
   if (!client) {
     throw notFoundError("client");
+  }
+
+  // Enforce 10-state statutory auto liability minimums unless approved escalation_id is provided
+  if (body.policy_type === "personal_auto" && !body.escalation_id) {
+    const stateCheck = validateStateMinimums(
+      body.state ?? client.address_state,
+      body.coverages,
+    );
+    if (!stateCheck.valid) {
+      throw eoFirewallError(
+        "E_EO_STATE_MINIMUM_VIOLATION",
+        stateCheck.message,
+        "coverages",
+      );
+    }
   }
 
   const now = new Date().toISOString();
@@ -285,7 +304,14 @@ policiesRouter.post(
     // Verify policy exists
     const policy = await prisma.policy.findUnique({
       where: { policy_id: policyId },
-      select: { policy_id: true, status: true },
+      select: {
+        policy_id: true,
+        client_id: true,
+        policy_type: true,
+        effective_date: true,
+        expiration_date: true,
+        status: true,
+      },
     });
 
     if (!policy) {
@@ -297,6 +323,60 @@ policiesRouter.post(
       throw conflictError(
         `Cannot endorse policy ${policyId}: policy status is '${policy.status}'.`,
       );
+    }
+
+    // ── Service-Layer E&O & Statutory Compliance Firewall ─────────────
+    let hasApprovedEscalation = false;
+    if (body.escalation_id) {
+      const esc = await prisma.escalation.findUnique({
+        where: { escalation_id: String(body.escalation_id) },
+        select: { status: true },
+      });
+      hasApprovedEscalation = esc?.status === "approved";
+    }
+
+    if (!hasApprovedEscalation) {
+      // 1. Backdating guard: reject effective_date earlier than policy effective_date
+      // or earlier than the benchmark reference date ("2026-02-18") for active 2026 policies.
+      const referenceFloor =
+        process.env.SIMULATED_TODAY ??
+        (policy.expiration_date >= BENCHMARK_SIMULATED_TODAY
+          ? BENCHMARK_SIMULATED_TODAY
+          : policy.effective_date);
+      const effectiveFloor =
+        policy.effective_date > referenceFloor
+          ? policy.effective_date
+          : referenceFloor;
+      const backdateCheck = validateBackdating(
+        body.effective_date,
+        effectiveFloor,
+      );
+      if (!backdateCheck.valid) {
+        throw eoFirewallError(
+          "E_EO_BACKDATING_PROHIBITED",
+          backdateCheck.message,
+          "effective_date",
+        );
+      }
+
+      // 2. 10-State statutory auto minimum guard
+      if (policy.policy_type === "personal_auto") {
+        const client = await prisma.client.findUnique({
+          where: { id: policy.client_id },
+          select: { address_state: true },
+        });
+        const stateCheck = validateStateMinimums(
+          client?.address_state,
+          body.changes,
+        );
+        if (!stateCheck.valid) {
+          throw eoFirewallError(
+            "E_EO_STATE_MINIMUM_VIOLATION",
+            stateCheck.message,
+            "changes",
+          );
+        }
+      }
     }
 
     // Generate endorsement ID

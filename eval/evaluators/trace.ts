@@ -155,7 +155,13 @@ function matchesPattern(
   requireSuccess = true,
 ): boolean {
   if (pattern.method !== undefined && call.method !== pattern.method) return false;
-  if (pattern.service !== undefined && call.service !== pattern.service) return false;
+  if (pattern.service !== undefined) {
+    if (pattern.service.includes("|") || pattern.service.includes("(")) {
+      if (!new RegExp(`^${pattern.service}$`).test(call.service)) return false;
+    } else if (call.service !== pattern.service) {
+      return false;
+    }
+  }
   if (pattern.statusCode !== undefined) {
     if (call.statusCode !== pattern.statusCode) return false;
   } else if (requireSuccess && !isSuccessStatus(call.statusCode)) {
@@ -171,9 +177,14 @@ function matchesPattern(
 // ── Trace evaluator ─────────────────────────────────────────────────
 
 export function evaluateTrace(
-  checks: TraceCheck[],
-  apiCalls: ApiCall[],
+  arg1: TraceCheck[] | ApiCall[],
+  arg2: ApiCall[] | TraceCheck[],
 ): TraceScore[] {
+  const firstIsApiCalls =
+    arg1.length > 0 && "method" in arg1[0] && "url" in arg1[0] && !("type" in arg1[0]);
+  const checks = (firstIsApiCalls ? arg2 : arg1) as TraceCheck[];
+  const apiCalls = (firstIsApiCalls ? arg1 : arg2) as ApiCall[];
+
   return checks.map((check) => {
     switch (check.type) {
       case "presence":

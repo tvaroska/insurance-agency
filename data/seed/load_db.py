@@ -66,7 +66,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS policies (
             policy_id           TEXT PRIMARY KEY,
             client_id           TEXT NOT NULL REFERENCES clients(id),
-            carrier_code        TEXT NOT NULL CHECK(carrier_code IN ('TRAV','PROG','HRTF','ERIE','NTNW','SAFECO','LIBT')),
+            carrier_code        TEXT NOT NULL CHECK(carrier_code IN ('SMIT','CSTL','HRTF','ERIE','NTNW','SAFECO','LIBT')),
             policy_type         TEXT NOT NULL CHECK(policy_type IN (
                 'personal_auto','homeowners','renters','umbrella',
                 'bop','workers_comp','general_liability','professional_liability'

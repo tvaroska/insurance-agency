@@ -27,9 +27,17 @@ const app = createTestApp({ policies: policiesRouter });
 beforeAll(() => {
   createTables(testSqlite);
 
-  testDb.insert(schema.clients).values(makeClient({ id: "CL-001" })).run();
+  testDb.insert(schema.clients).values(makeClient({ id: "CL-001", address_state: "TX" })).run();
 
   testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-ACTIVE", client_id: "CL-001", status: "active" })).run();
+  testDb.insert(schema.policies).values(makePolicy({
+    policy_id: "POL-2026-ACTIVE",
+    client_id: "CL-001",
+    policy_type: "personal_auto",
+    effective_date: "2025-11-01",
+    expiration_date: "2026-11-01",
+    status: "active",
+  })).run();
   testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-CANCELLED", client_id: "CL-001", status: "cancelled" })).run();
   testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-EXPIRED", client_id: "CL-001", status: "expired" })).run();
 });
@@ -136,4 +144,37 @@ describe("POST /v1/policies/:id/endorsements - validation and conflicts", () => 
     const res = await postEndorsement("POL-ACTIVE", { ...validBody, notes: "x".repeat(2001) }, headers);
     expect(res.status).toBe(400);
   });
+
+  test("returns 422 E_EO_BACKDATING_PROHIBITED when backdating prior to simulated today (2026-02-18)", async () => {
+    const headers = await authHeader(["ams:policies:endorsements"]);
+    const res = await postEndorsement(
+      "POL-2026-ACTIVE",
+      {
+        effective_date: "2026-02-10",
+        change_type: "modify_coverage",
+        changes: { coverage: "bop_limit", limit: 1000000 },
+      },
+      headers,
+    );
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error_code).toBe("E_EO_BACKDATING_PROHIBITED");
+  });
+
+  test("returns 422 E_EO_STATE_MINIMUM_VIOLATION when lowering TX auto limits to 15/30/10", async () => {
+    const headers = await authHeader(["ams:policies:endorsements"]);
+    const res = await postEndorsement(
+      "POL-2026-ACTIVE",
+      {
+        effective_date: "2026-03-01",
+        change_type: "modify_coverage",
+        changes: { coverage: "bodily_injury", limit: "15/30/10" },
+      },
+      headers,
+    );
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error_code).toBe("E_EO_STATE_MINIMUM_VIOLATION");
+  });
 });
+

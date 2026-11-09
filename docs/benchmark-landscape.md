@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-10-22
 
-> **Canonical Cross-Project Playbook:** General enterprise agent benchmark methodology (40% OTLP Trace + 60% State Mutation scoring, the 5 structural benchmark lessons, public benchmark comparisons, and the 5 packaging standards: METR, Harbor, Inspect AI, OpenEnv, and Princeton HAL) has been consolidated into [`~/projects/agent-evals/docs/playbooks/agent-benchmarks-and-harnesses.md`](file:///usr/local/google/home/tvaroska/projects/agent-evals/docs/playbooks/agent-benchmarks-and-harnesses.md). This document tracks Evergreen Insurance API Gym's specific positioning, Sprint backlog mappings (`S2-*`, `S3-*`), and scenario-level audit fixes (`S0-BUG-*`).
+> **Canonical Cross-Project Playbook:** General enterprise agent benchmark methodology (40% OTLP Trace + 60% State Mutation scoring, the 5 structural benchmark lessons, public benchmark comparisons, and the 5 packaging standards: METR, Harbor, Inspect AI, OpenEnv, and Princeton HAL) has been consolidated into `agent-evals/docs/playbooks/agent-benchmarks-and-harnesses.md`. This document tracks Evergreen Insurance API Gym's specific positioning, Sprint backlog mappings (`S2-*`, `S3-*`), and scenario-level audit fixes (`S0-BUG-*`).
 
 This document captures the research, architectural review findings, competitive benchmark analysis, and interoperability standards survey for evolving **Evergreen Insurance API Gym** into a reference benchmark for evaluating both **foundation models** and **agent harnesses** on realistic small-business operations.
 

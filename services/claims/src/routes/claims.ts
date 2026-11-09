@@ -65,11 +65,18 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 
 async function generateClaimId(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.claim.count({
-    where: { claim_id: { startsWith: `CLM-${year}-` } },
+  const prefix = `CLM-${year}-`;
+  const latest = await prisma.claim.findFirst({
+    where: { claim_id: { startsWith: prefix } },
+    orderBy: { claim_id: "desc" },
+    select: { claim_id: true },
   });
-  const seq = count + 1;
-  return `CLM-${year}-${String(seq).padStart(6, "0")}`;
+  const lastSeq = latest ? parseInt(latest.claim_id.slice(prefix.length), 10) || 0 : 0;
+  const count = await prisma.claim.count({
+    where: { claim_id: { startsWith: prefix } },
+  });
+  const seq = Math.max(lastSeq, count) + 1;
+  return `${prefix}${String(seq).padStart(6, "0")}`;
 }
 
 // ── Helper: add timeline event ──

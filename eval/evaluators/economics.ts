@@ -208,7 +208,8 @@ function isToolExecutionSpan(span: OtlpSpan): boolean {
   const opName = getStringAttr(span.attributes, "gen_ai.operation.name");
   return (
     opName === "execute_tool" ||
-    getStringAttr(span.attributes, "gen_ai.tool.name") !== undefined
+    getStringAttr(span.attributes, "gen_ai.tool.name") !== undefined ||
+    getStringAttr(span.attributes, "mcp.tool.name") !== undefined
   );
 }
 
@@ -224,6 +225,7 @@ function isOutboundCommToolSpan(span: OtlpSpan): boolean {
     toolName === "comm_sendmessage" ||
     toolName === "comm_send_message" ||
     toolName === "messages_send" ||
+    toolName === "send_message" ||
     toolName === "sendmessage"
   );
 }
@@ -232,6 +234,8 @@ function isOutboundCommToolSpan(span: OtlpSpan): boolean {
 
 export interface EconomicsOptions {
   score?: number;
+  rawScore?: number;
+  expectedRange?: [number, number];
   defaultModel?: string;
   pricingTable?: Record<string, ModelPricing>;
   maxTurns?: number;
@@ -257,7 +261,7 @@ export function extractEconomicsMetrics(
 
   const pricingTable = options.pricingTable ?? MODEL_PRICING_PER_1M;
   const defaultModel = options.defaultModel ?? "gemini-3.8-flash";
-  const score = options.score ?? 1.0;
+  const score = options.score ?? options.rawScore ?? 1.0;
   const maxTurns = options.maxTurns ?? 5;
   const minTurns = options.minTurns ?? 0;
 
@@ -398,7 +402,7 @@ export function extractEconomicsMetrics(
     }
 
     // Modality classification
-    if (call.path.startsWith("/mcp")) {
+    if (call.path.startsWith("/mcp") || call.url.endsWith("/mcp") || call.url.includes("/mcp/")) {
       mcpHttpCount++;
     } else if (
       (call.service === "summit-fire" || call.service === "coastal-star") &&
@@ -457,3 +461,6 @@ export function extractEconomicsMetrics(
     modalityCounts,
   };
 }
+
+export const evaluateEconomics = extractEconomicsMetrics;
+

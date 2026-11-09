@@ -46,7 +46,7 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: { data: [{ direction: "outbound" }] },
                 bodyRegex: {
                   body: [
-                    "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|Safeco|Nationwide|Liberty|Erie)",
+                    "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
                     "\\$?[0-9]{3,4}",
                   ],
                 },
@@ -84,7 +84,7 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: { data: [{ direction: "outbound" }] },
                 bodyRegex: {
                   body: [
-                    "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|Safeco|Nationwide|Liberty|Erie)",
+                    "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
                     "\\$?[0-9]{3,4}",
                   ],
                 },
@@ -122,7 +122,7 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: { data: [{ direction: "outbound" }] },
                 bodyRegex: {
                   body: [
-                    "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|Safeco|Nationwide|Liberty|Erie)",
+                    "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
                     "\\$?[0-9]{3,4}",
                   ],
                 },
@@ -160,7 +160,7 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: { data: [{ direction: "outbound" }] },
                 bodyRegex: {
                   body: [
-                    "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|Safeco|Nationwide|Liberty|Erie)",
+                    "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
                     "\\$?[0-9]{3,4}",
                   ],
                 },
@@ -198,7 +198,7 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: { data: [{ direction: "outbound" }] },
                 bodyRegex: {
                   body: [
-                    "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|Safeco|Nationwide|Liberty|Erie)",
+                    "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
                     "\\$?[0-9]{3,4}",
                   ],
                 },
@@ -274,7 +274,7 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet:
-                "We compared quotes from Summit ($1,120/yr), Coastal ($1,180/yr), and Safeco ($1,240/yr) with 100/300/100 liability limits and $500 collision deductible.",
+                "We compared quotes from Summit ($1,120/yr), Coastal ($1,180/yr), and SafeHarbor ($1,240/yr) with 100/300/100 liability limits and $500 collision deductible.",
               score: 4,
               rationale:
                 "Cites specific carrier options, annual premiums, and normalized deductible/limit terms.",
@@ -287,7 +287,7 @@ const scenario: ScenarioDefinition = {
             },
           ],
           requiredPatterns: [
-            "(SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|Safeco|Nationwide|Liberty|Erie)",
+            "(SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
             "\\$?[0-9]{3,4}",
           ],
         },
@@ -356,7 +356,7 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: { data: [{ client_id: "CLI-006", direction: "outbound" }] },
                 bodyRegex: {
                   body: [
-                    "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+                    "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Hartland|Safeco|Nationwide|Liberty)",
                     "\\$?[0-9]{3,4}",
                   ],
                 },
@@ -394,7 +394,7 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: { data: [{ client_id: "CLI-006", direction: "outbound" }] },
                 bodyRegex: {
                   body: [
-                    "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+                    "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Hartland|Safeco|Nationwide|Liberty)",
                     "\\$?[0-9]{3,4}",
                   ],
                 },
@@ -432,7 +432,7 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: { data: [{ client_id: "CLI-006", direction: "outbound" }] },
                 bodyRegex: {
                   body: [
-                    "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+                    "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Hartland|Safeco|Nationwide|Liberty)",
                     "\\$?[0-9]{3,4}",
                   ],
                 },
@@ -470,7 +470,7 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: { data: [{ client_id: "CLI-006", direction: "outbound" }] },
                 bodyRegex: {
                   body: [
-                    "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+                    "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Hartland|Safeco|Nationwide|Liberty)",
                     "\\$?[0-9]{3,4}",
                   ],
                 },
@@ -508,7 +508,7 @@ const scenario: ScenarioDefinition = {
                 bodyMatch: { data: [{ client_id: "CLI-006", direction: "outbound" }] },
                 bodyRegex: {
                   body: [
-                    "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+                    "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Hartland|Safeco|Nationwide|Liberty)",
                     "\\$?[0-9]{3,4}",
                   ],
                 },
@@ -604,7 +604,7 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet:
-                "Your Summit renewal is $1,560 (up from $1,290). Nationwide quoted $1,340 and Coastal quoted $1,390 at matching 100/300/100 limits and $500 deductible.",
+                "Your Summit renewal is $1,560 (up from $1,290). National Shield quoted $1,340 and Coastal quoted $1,390 at matching 100/300/100 limits and $500 deductible.",
               score: 4,
               rationale:
                 "Grounded in CLI-006's $1,560 renewal baseline and compares alternative carrier quotes with coverage context.",
@@ -616,7 +616,7 @@ const scenario: ScenarioDefinition = {
             },
           ],
           requiredPatterns: [
-            "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|Safeco|Nationwide|Liberty)",
+            "(1,?560|1,?290|SMIT|CSTL|SAFECO|NTNW|LIBT|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Hartland|Safeco|Nationwide|Liberty)",
             "\\$?[0-9]{3,4}",
           ],
         },

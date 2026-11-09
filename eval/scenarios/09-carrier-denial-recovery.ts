@@ -10,12 +10,12 @@ const scenario: ScenarioDefinition = {
     // ── Moderate: 2 declines, 3 alternatives ───────────────────────
     moderate: {
       description:
-        "CLI-019 (Tyler Morrison, age 30, 2 at-fault accidents). QR-002: SMIT/ERIE declined. Available: Coastal ($2,780), Liberty ($3,100), Safeco ($3,350). Agent must review declines, find alternatives, present honest options.",
+        "CLI-019 (Tyler Morrison, age 30, 2 at-fault accidents). QR-002: SMIT/ERIE declined. Available: Coastal ($2,780), Liberty Crest ($3,100), SafeHarbor ($3,350). Agent must review declines, find alternatives, present honest options.",
       cases: [
         {
           id: "moderate-scripted",
           prompt:
-            "Tyler Morrison (CLI-019) has been declined by SMIT and ERIE for auto. Steps: 1. GET /quotes/QR-002/results to review decline reasons. 2. GET /clients/CLI-019 to review risk profile. 3. GET /carriers/appetite?state=TX to find remaining carriers. 4. Remaining options: Coastal ($2,780), Liberty ($3,100), Safeco ($3,350). 5. POST /messages/send with honest comparison — note these are higher than current $1,680 due to 2 accidents. Mention accidents age off in 12-24 months.",
+            "Tyler Morrison (CLI-019) has been declined by SMIT and ERIE for auto. Steps: 1. GET /quotes/QR-002/results to review decline reasons. 2. GET /clients/CLI-019 to review risk profile. 3. GET /carriers/appetite?state=TX to find remaining carriers. 4. Remaining options: Coastal ($2,780), Liberty Crest ($3,100), SafeHarbor ($3,350). 5. POST /messages/send with honest comparison — note these are higher than current $1,680 due to 2 accidents. Mention accidents age off in 12-24 months.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -239,12 +239,12 @@ const scenario: ScenarioDefinition = {
     // ── Severe: DUI + family compliance issue ──────────────────────
     severe: {
       description:
-        "CLI-026 (Victor Marsh, age 26, DUI + violations). QR-014: SMIT/CSTL/ERIE declined. Only Nationwide ($5,200/yr). Family complication: wife Tanya (CLI-027) has below-minimum TX coverage. Agent must find Victor's single option and flag Tanya's compliance issue.",
+        "CLI-026 (Victor Marsh, age 26, DUI + violations). QR-014: SMIT/CSTL/ERIE declined. Only National Shield ($5,200/yr). Family complication: wife Tanya (CLI-027) has below-minimum TX coverage. Agent must find Victor's single option and flag Tanya's compliance issue.",
       cases: [
         {
           id: "severe-scripted",
           prompt:
-            "Victor Marsh (CLI-026) has been declined by 3 carriers due to DUI. Steps: 1. GET /quotes/QR-014/results — only Nationwide quoted ($5,200). 2. GET /clients/CLI-026 — review risk factors. 3. Check family: GET /clients?household_id= — find wife Tanya (CLI-027). 4. GET /clients/CLI-027/policies — her TX auto has BI 15/30, PD 5K — BELOW TX minimums (30/60/25). 5. POST /escalations for Tanya's below-minimum coverage. 6. POST /messages/send to Victor — present Nationwide as only option, explain SR-22 requirements, mention improvement timeline.",
+            "Victor Marsh (CLI-026) has been declined by 3 carriers due to DUI. Steps: 1. GET /quotes/QR-014/results — only National Shield quoted ($5,200). 2. GET /clients/CLI-026 — review risk factors. 3. Check family: GET /clients?household_id= — find wife Tanya (CLI-027). 4. GET /clients/CLI-027/policies — her TX auto has BI 15/30, PD 5K — BELOW TX minimums (30/60/25). 5. POST /escalations for Tanya's below-minimum coverage. 6. POST /messages/send to Victor — present National Shield as only option, explain SR-22 requirements, mention improvement timeline.",
           difficulty: "scripted",
           outputChecks: [
             {

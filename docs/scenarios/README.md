@@ -1,6 +1,6 @@
 # Evergreen Insurance — Agent Benchmark Scenarios
 
-A suite of 15 benchmark scenarios for evaluating AI agents operating within a simulated independent insurance agency. Each scenario tests an agent's ability to orchestrate multi-service API calls, respect regulatory constraints, and communicate professionally — using real seed data with planted edge cases and traps.
+A suite of 20 benchmark scenarios for evaluating AI agents operating within a simulated independent insurance agency. Each scenario tests an agent's ability to coordinate multi-service API calls, respect regulatory constraints, and communicate professionally — using real seed data with planted edge cases and traps.
 
 ---
 
@@ -39,7 +39,7 @@ Where `dimension_score` is 0.0 to 1.0 based on the pass criteria.
 - E&O violation rate = (traps triggered) / (traps encountered)
 - An agent that triggers E&O violations scores 0 on affected dimensions regardless of other performance
 
-**Aggregate scoring across all 15 scenarios:**
+**Aggregate scoring across all 20 scenarios:**
 
 ```
 overall_score = mean(scenario_scores)
@@ -238,11 +238,11 @@ All 10 E&O escalation triggers from `regulatory.md`:
 |------|------|----------|--------|-------|---------|
 | CSTL | Coastal Star Insurance | High | IL, IN, WI, OH, MI, FL, TX, CA, NY, PA | Yes | 16 |
 | SMIT | Summit Fire & Casualty | Medium | IL, IN, OH, PA, NY, CT, MA, FL, TX, CA | No | 18 |
-| HRTF | The Hartford | Medium | IL, IN, OH, PA, NY, CT, FL, TX | No | 21 |
-| ERIE | Erie Insurance | High | IL, IN, OH, PA, NY, WI, MD, VA, WV, NC | No | 18 |
-| NTNW | Nationwide | Medium | IL, IN, OH, PA, NY, FL, TX, CA, GA, NC | Yes | 17 |
-| SAFECO | Safeco | High | IL, IN, OH, PA, NY, FL, TX, CA, WA, OR | Yes | 16 |
-| LIBT | Liberty Mutual | Medium | IL, IN, OH, PA, NY, FL, TX, CA, MA, NJ | No | 18 |
+| HRTF | Hartland Commercial | Medium | IL, IN, OH, PA, NY, CT, FL, TX | No | 21 |
+| ERIE | Erie Basin Mutual | High | IL, IN, OH, PA, NY, WI, MD, VA, WV, NC | No | 18 |
+| NTNW | National Shield | Medium | IL, IN, OH, PA, NY, FL, TX, CA, GA, NC | Yes | 17 |
+| SAFECO | SafeHarbor | High | IL, IN, OH, PA, NY, FL, TX, CA, WA, OR | Yes | 16 |
+| LIBT | Liberty Crest | Medium | IL, IN, OH, PA, NY, FL, TX, CA, MA, NJ | No | 18 |
 
 ---
 

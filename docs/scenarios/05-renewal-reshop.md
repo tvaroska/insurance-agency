@@ -18,7 +18,7 @@ For a policy approaching renewal with a significant premium increase, re-quote a
 
 - **Client:** CLI-019 (Tyler Morrison), personal auto
 - **Premium increase:** $1,680 to $2,850 (+69%) due to 2 at-fault accidents within 36 months
-- **Existing quote request:** QR-002 — SMIT and ERIE both declined; Coastal ($2,780), Liberty ($3,100), Safeco ($3,350) quoted
+- **Existing quote request:** QR-002 — SMIT and ERIE both declined; Coastal ($2,780), Liberty Crest ($3,100), SafeHarbor ($3,350) quoted
 - **Complication:** Client's driving record severely limits options; all available quotes are expensive
 - **Retention risk:** High — client explicitly asked about switching
 

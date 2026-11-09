@@ -90,7 +90,10 @@ export function createTestApp(routers: {
   const api = new Hono<{ Variables: AppVariables }>();
   api.use("*", jwtAuth);
   if (routers.acord) api.route("/documents/acord", routers.acord);
-  if (routers.coi) api.route("/documents/coi", routers.coi);
+  if (routers.coi) {
+    api.route("/documents/coi", routers.coi);
+    api.route("/coi", routers.coi);
+  }
   if (routers.documents) api.route("/documents", routers.documents);
   if (routers.envelopes) api.route("/envelopes", routers.envelopes);
   if (routers.assets) api.route("/assets", routers.assets);

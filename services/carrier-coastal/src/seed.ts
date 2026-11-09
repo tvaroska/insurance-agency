@@ -87,11 +87,9 @@ function generateRiskFactors(score: number) {
 }
 
 async function createTables() {
-  await prisma.$executeRawUnsafe(`
-    DROP TABLE IF EXISTS id_cards;
-    DROP TABLE IF EXISTS policies;
-    DROP TABLE IF EXISTS quotes;
-  `);
+  for (const table of ["id_cards", "policies", "quotes"]) {
+    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS ${table}`);
+  }
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS quotes (
     quote_id TEXT PRIMARY KEY,
     request_id TEXT NOT NULL,

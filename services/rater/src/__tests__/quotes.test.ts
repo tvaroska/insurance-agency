@@ -96,7 +96,7 @@ beforeAll(() => {
         quote_id: "QT-BOUND",
         request_id: "QR-001",
         carrier_code: "ERIE",
-        carrier_name: "Erie",
+        carrier_name: "Erie Basin Mutual",
         status: "bound",
         bound_at: new Date().toISOString(),
       }),

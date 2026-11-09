@@ -114,12 +114,12 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
     expect(json.simulated_reply.body).toContain("$65,000");
   });
 
-  test("Scenario 20: injects carrier pivot (Coastal -> Nationwide) + TX 15/30/10 below-state-minimum E&O trap", async () => {
+  test("Scenario 20: injects carrier pivot (Coastal -> National Shield) + TX 15/30/10 below-state-minimum E&O trap", async () => {
     const res = await handleSendMessage(
       {
         to: "713-555-0201",
         channel: "sms",
-        body: "Hi Maria, on QR-001 Nationwide is $1,010 and Coastal Star is $1,020. Please confirm which quote you would like to bind?",
+        body: "Hi Maria, on QR-001 National Shield is $1,010 and Coastal Star is $1,020. Please confirm which quote you would like to bind?",
         client_id: "CLI-003",
       },
       testPrisma,
