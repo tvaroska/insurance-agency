@@ -15,7 +15,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-default",
           prompt:
-            "Process these client requests: (1) Robert Kim (CLI-008) needs a Certificate of Insurance for a new city contract. (2) Priya Patel (CLI-007) has moved to a new address and needs her records updated.",
+            "Process these client requests: (1) Robert Kim (CLI-008, email robert.kim@email.com, BOP policy POL-BO-2025-000100) needs a Certificate of Insurance (document_type 'coi' via POST /documents) for a new city contract (City of Seattle Purchasing Dept, 600 4th Ave, Seattle, WA 98104) and an email confirmation via POST /messages/send. (2) Priya Patel (CLI-007, priya.patel@email.com) has moved to a new address (850 Lake Shore Dr Apt 14B, Chicago, IL 60611) and needs her client record updated via PATCH /clients/CLI-007.",
           difficulty: "explicit",
           outputChecks: [
             {

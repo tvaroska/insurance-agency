@@ -35,6 +35,80 @@ security:
   - oauth2: []
 
 paths:
+  /quotes:
+    get:
+      operationId: listQuotes
+      summary: List quotes
+      description: |
+        Returns a list of quote requests and their associated carrier quotes.
+        Results can be filtered by `client_id`, `policy_type`, `status`, and
+        `carrier_code`.
+      tags:
+        - Quotes
+      security:
+        - oauth2:
+            - rater:quotes:read
+      parameters:
+        - name: client_id
+          in: query
+          required: false
+          description: Filter quote requests by client identifier.
+          schema:
+            type: string
+        - name: policy_type
+          in: query
+          required: false
+          description: Filter quote requests by policy type.
+          schema:
+            $ref: '#/components/schemas/PolicyType'
+        - name: status
+          in: query
+          required: false
+          description: Filter quote requests by aggregate status.
+          schema:
+            $ref: '#/components/schemas/QuoteStatus'
+        - name: carrier_code
+          in: query
+          required: false
+          description: Filter carrier quotes by carrier code.
+          schema:
+            $ref: '#/components/schemas/CarrierCode'
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of quote requests to return (1-100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque pagination cursor.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quote requests retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuoteResults'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /quotes/request:
     post:
       operationId: submitQuoteRequest
@@ -483,9 +557,9 @@ paths:
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
-          $ref: '#/components/responses/Unauthorized'
+          $ref: '#/components/responses/AuthError'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          $ref: '#/components/responses/ForbiddenError'
         '500':
           $ref: '#/components/responses/InternalError'
 

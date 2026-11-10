@@ -78,14 +78,14 @@ def test_one_tool_per_operation_named_by_operation_id():
     tools = build_rest_tools(FakeServices().client())
     expected = [op_id for service in REST_SERVICES for op_id in spec_operation_ids(service)]
 
-    assert len(tools) == 48
+    assert len(tools) == len(expected) == 50
     assert sorted(tool.name for tool in tools) == sorted(expected)
-    assert len({tool.name for tool in tools}) == 48
+    assert len({tool.name for tool in tools}) == len(expected)
     assert Counter(op.service for op in load_operations()) == {
         "ams": 18,
-        "rater": 5,
+        "rater": 6,
         "crm": 9,
-        "ecm": 7,
+        "ecm": 8,
         "claims": 9,
     }
 
@@ -93,10 +93,11 @@ def test_one_tool_per_operation_named_by_operation_id():
 def test_tools_only_reach_the_five_rest_services():
     # Names alone cannot show this: carrier-coastal.yaml also has a bindQuote.
     services = FakeServices()
-    for tool, op in zip(build_rest_tools(services.client()), load_operations()):
+    ops = load_operations()
+    for tool, op in zip(build_rest_tools(services.client()), ops):
         call(tool, {name: "x" for name in op.path_params})
 
-    assert len(services.api_requests()) == 48
+    assert len(services.api_requests()) == len(ops) == 50
     assert {r.url.host for r in services.api_requests()} == {
         "ams.test",
         "rater.test",

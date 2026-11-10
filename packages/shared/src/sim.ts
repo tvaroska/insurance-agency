@@ -181,6 +181,13 @@ function isActivePortalSession(token: string | undefined): boolean {
 }
 
 /**
+ * Clears all issued portal session tokens (e.g., on `/sim/reset`).
+ */
+export function resetPortalSessions(): void {
+  issuedPortalSessions.clear();
+}
+
+/**
  * Middleware enforcing strict modality access (`MODALITY_MODE=strict`).
  * - Always allows requests with header `X-Eval-Scorer: true`.
  * - For `mcp`: blocks direct `/v1/*` REST bypass calls with 403 `MODALITY_VIOLATION`.
@@ -318,6 +325,7 @@ export function createSimRouter(options: SimRouterOptions) {
     const seedMode = body.seed_mode || process.env.SEED_MODE || "realistic";
     resetChaosConfig();
     resetSimulatedClock();
+    issuedPortalSessions.clear();
 
     if (options.onReset) {
       await options.onReset(seedMode);

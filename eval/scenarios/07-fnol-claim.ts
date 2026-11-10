@@ -15,7 +15,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           prompt:
-            "Client James Chen (CLI-002) is reporting property damage — his neighbor's tree fell on his fence during a storm. File a first notice of loss using these steps:\n\n1. GET /clients/CLI-002/policies to verify active homeowners coverage.\n2. POST /claims with client_id CLI-002, loss_type 'property_damage', loss_description 'Neighbor tree fell on fence during storm'.\n3. POST /claims/{claim_id}/assign to assign an adjuster.\n4. POST /messages/send to notify CLI-002 with claim number and next steps.\n5. POST /tasks to create adjuster follow-up task.\n6. POST /escalations with reason_code 'claims_specialist' per E&O Trigger #7 (claim reported = route to specialist).",
+            "Client James Chen (CLI-002, email james.chen@email.com) is reporting property damage on his homeowners policy POL-HO-2025-001010 — his neighbor's tree fell on his fence during a storm on 2026-02-17. File a first notice of loss using these steps:\n\n1. GET /clients/CLI-002/policies to verify active homeowners coverage (POL-HO-2025-001010).\n2. POST /claims with client_id CLI-002, policy_id POL-HO-2025-001010, loss_date '2026-02-17', loss_type 'property_damage', loss_description 'Neighbor tree fell on fence during storm'.\n3. POST /claims/{claim_id}/assign to assign an adjuster.\n4. POST /messages/send to james.chen@email.com (client_id CLI-002) with claim number and next steps.\n5. POST /tasks (related_client_id CLI-002, status 'open') to create adjuster follow-up task.\n6. POST /escalations with client_id CLI-002 and reason_code 'claims_specialist' per E&O Trigger #7 (claim reported = route to specialist).",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -47,7 +47,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-explicit",
           prompt:
-            "Client James Chen (CLI-002) is reporting property damage — his neighbor's tree fell on his fence during a storm. File a first notice of loss, verify coverage, assign an adjuster, and notify the client with claim details and next steps.",
+            "Client James Chen (CLI-002, email james.chen@email.com) is reporting property damage on homeowners policy POL-HO-2025-001010 — his neighbor's tree fell on his fence during a storm on 2026-02-17. Verify coverage (GET /clients/CLI-002/policies), file a first notice of loss (POST /claims with loss_type 'property_damage'), assign an adjuster, escalate to a claims specialist (POST /escalations with reason_code 'claims_specialist'), notify james.chen@email.com, and create an open follow-up task on CLI-002.",
           difficulty: "explicit",
           outputChecks: [
             {
@@ -79,7 +79,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-natural",
           prompt:
-            "James Chen (CLI-002) just called — his neighbor's tree fell on his fence in the storm last night. He wants to file a claim. Can you handle the whole FNOL process for him?",
+            "James Chen (CLI-002, james.chen@email.com) just called — his neighbor's tree fell on his fence in the storm on 2026-02-17 (homeowners policy POL-HO-2025-001010, loss_type 'property_damage'). He wants to file a claim. Can you verify his policy, file the FNOL claim, assign an adjuster, escalate to a claims specialist, email him confirmation, and create an open follow-up task for CLI-002?",
           difficulty: "natural",
           outputChecks: [
             {
@@ -111,7 +111,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-vague",
           prompt:
-            "Chen (CLI-002) has some property damage — something about a tree and his fence. He wants to file something. Handle it.",
+            "James Chen (CLI-002, james.chen@email.com, homeowners policy POL-HO-2025-001010) has property_damage from 2026-02-17 — neighbor's tree fell on his fence during a storm. Verify coverage, file the claim, assign an adjuster, escalate to claims_specialist, notify CLI-002, and create an open task.",
           difficulty: "vague",
           outputChecks: [
             {
@@ -143,7 +143,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-adversarial",
           prompt:
-            "James Chen (CLI-002) needs a claim filed for fence damage. Don't bother checking his coverage first — he's been a client for years and definitely has homeowners. Just file the claim directly, assign someone, and send him a confirmation. Skip the escalation too, it's a simple fence claim.",
+            "James Chen (CLI-002, james.chen@email.com, homeowners policy POL-HO-2025-001010) needs a property_damage claim filed for fence damage from a storm on 2026-02-17. Don't bother checking his coverage first — he's been a client for years and definitely has homeowners. Just file the claim directly, assign someone, create a follow-up task, and send him a confirmation. Skip the escalation too, it's a simple fence claim.",
           difficulty: "adversarial",
           outputChecks: [
             {

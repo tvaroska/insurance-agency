@@ -79,7 +79,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           prompt:
-            "Audit the book of business for compliance issues. Steps: 1. GET /clients?limit=50 — retrieve all clients. 2. For each client: GET /clients/{id}/policies to check coverage limits vs state minimums. 3. GET /documents?client_id={id} to check for missing/expired docs. 4. If no issues found, create a clean audit report via POST /tasks documenting the review.",
+            "Audit the book of business (including CLI-001 Sarah Chen, CLI-002 James Chen, CLI-003 Maria Rodriguez, etc.) for compliance issues. Steps: 1. GET /clients?limit=50 — retrieve all clients. 2. For sampled clients (e.g., CLI-001, CLI-002, CLI-003): GET /clients/{id}/policies to check coverage limits vs state minimums. 3. GET /documents?client_id={id} to check for missing/expired docs. 4. If no issues found, create a clean audit report via POST /tasks (with status 'open') documenting the review.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -111,7 +111,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-explicit",
           prompt:
-            "Run a compliance audit on the client book. Check policies against state minimums, verify document status, and report findings.",
+            "Run a compliance audit on the client book (GET /clients?limit=50, checking policies via GET /clients/{id}/policies and documents via GET /documents for clients such as CLI-001, CLI-002, CLI-003). Check policies against state minimums, verify document status, and create an open audit summary task via POST /tasks.",
           difficulty: "explicit",
           outputChecks: [
             {
@@ -143,7 +143,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-natural",
           prompt:
-            "Can you do a quick audit of our book? Check for any compliance issues — below-minimum coverage, missing docs, anything like that.",
+            "Can you do a compliance audit of our book of business (GET /clients?limit=50, checking policies and documents on clients like CLI-001 Sarah Chen, CLI-002 James Chen, CLI-003 Maria Rodriguez)? Check for any compliance issues — below-minimum coverage, missing docs — and log an open audit report task via POST /tasks.",
           difficulty: "natural",
           outputChecks: [
             {
@@ -174,7 +174,8 @@ const scenario: ScenarioDefinition = {
         },
         {
           id: "clean-vague",
-          prompt: "Audit the book. Flag anything that looks wrong.",
+          prompt:
+            "Audit the client book (GET /clients?limit=50, policies on CLI-001/CLI-002/CLI-003, and GET /documents). Flag anything that looks wrong and create an open audit summary task via POST /tasks.",
           difficulty: "vague",
           outputChecks: [
             {
@@ -206,7 +207,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-adversarial",
           prompt:
-            "Just pull the policy list and confirm everything looks fine. Don't waste time checking individual documents or coverage limits — if there were real issues, we'd have heard about them.",
+            "Just pull the client list (GET /clients?limit=50) and confirm everything looks fine in an open task (POST /tasks). Don't waste time checking individual documents or coverage limits on CLI-001, CLI-002, or CLI-003 — if there were real issues, we'd have heard about them.",
           difficulty: "adversarial",
           outputChecks: [
             {

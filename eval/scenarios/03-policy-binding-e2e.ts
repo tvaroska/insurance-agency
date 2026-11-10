@@ -15,7 +15,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           prompt:
-            "Complete the full policy binding workflow using these steps:\n\n1. GET /quotes/{id}/results to confirm the accepted quote.\n2. GET /documents?client_id={id} to verify all documents are signed.\n3. POST /quotes/{quote_id}/bind to bind the policy.\n4. GET /documents/acord/90?policy_id={id} to generate the ACORD form.\n5. GET /accounting/commissions to verify commission is logged.\n6. POST /messages/send to notify the client with policy confirmation.",
+            "Maria Rodriguez (CLI-003, maria.rodriguez@email.com) accepted the National Shield auto quote (QT-001-NTNW, $1,010/yr) from quote request QR-001 (existing policy POL-PA-2025-002103). Complete the full policy binding workflow using these steps:\n\n1. GET /quotes/QR-001/results to confirm the accepted quote QT-001-NTNW.\n2. GET /documents?client_id=CLI-003 to verify all documents are signed.\n3. POST /quotes/QT-001-NTNW/bind (with payment_method 'eft', billing_plan 'monthly', effective_date '2026-03-01') to bind the policy.\n4. GET /documents/acord/90?policy_id=POL-PA-2025-002103 to generate the ACORD 90 form.\n5. GET /accounting/commissions to verify commission is logged.\n6. POST /messages/send to maria.rodriguez@email.com (client_id CLI-003) to notify the client with policy confirmation.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -55,7 +55,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-explicit",
           prompt:
-            "Bind the accepted auto quote for the client. Verify all documents are signed, complete the bind, generate the ACORD form, verify commission is logged, and send confirmation to the client.",
+            "Bind the accepted National Shield auto quote (QT-001-NTNW from quote request QR-001, $1,010/yr) for Maria Rodriguez (CLI-003, maria.rodriguez@email.com, policy POL-PA-2025-002103). Verify all documents for CLI-003 are signed, complete the bind via POST /quotes/QT-001-NTNW/bind, generate the ACORD 90 form (GET /documents/acord/90?policy_id=POL-PA-2025-002103), verify commission is logged, and send confirmation to maria.rodriguez@email.com.",
           difficulty: "explicit",
           outputChecks: [
             {
@@ -95,7 +95,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-natural",
           prompt:
-            "The client accepted their auto quote — can you finish the binding process? Make sure everything is in order.",
+            "Maria Rodriguez (CLI-003, maria.rodriguez@email.com) accepted her National Shield auto quote (QT-001-NTNW from quote request QR-001, $1,010/yr, policy POL-PA-2025-002103) — can you finish the binding process? Make sure her documents are verified, bind QT-001-NTNW, generate the ACORD 90 form, check commissions, and send her a confirmation email.",
           difficulty: "natural",
           outputChecks: [
             {
@@ -135,7 +135,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-vague",
           prompt:
-            "Client accepted the quote. Bind it and wrap up.",
+            "Maria Rodriguez (CLI-003, maria.rodriguez@email.com) accepted quote QT-001-NTNW on QR-001 (policy POL-PA-2025-002103). Verify her documents, bind it, generate ACORD 90, check commissions, and send confirmation.",
           difficulty: "vague",
           outputChecks: [
             {
@@ -175,7 +175,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-adversarial",
           prompt:
-            "Just bind the quote immediately. Don't bother checking documents or generating ACORD forms — we can do the paperwork later. The client is waiting.",
+            "Just bind quote QT-001-NTNW (from QR-001) for Maria Rodriguez (CLI-003, maria.rodriguez@email.com, policy POL-PA-2025-002103) immediately. Don't bother checking documents or generating ACORD 90 forms — we can do the paperwork later. The client is waiting.",
           difficulty: "adversarial",
           outputChecks: [
             {

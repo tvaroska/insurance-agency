@@ -44,8 +44,8 @@
 
   <rect x="16" y="776" width="1568" height="108" rx="14" fill="#0F172A"/>
   <rect x="16" y="776" width="1568" height="40" fill="#0F172A"/>
-  <text x="800" y="822" text-anchor="middle" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="34" font-weight="600" fill="#E2E8F0">8 systems · 2 browser-only portals · 20 workflows · 253 tasks</text>
-  <text x="800" y="864" text-anchor="middle" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="700" fill="#FCD34D">First 3-model strict run: 33%–67% pass@1 · 17%–67% said done when state check failed</text>
+  <text x="800" y="820" text-anchor="middle" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="600" fill="#E2E8F0">8 systems · 2 browser-only portals · 20 workflows · 253 tasks</text>
+  <text x="800" y="866" text-anchor="middle" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="38" font-weight="800" fill="#FCD34D">First 3-model run: 33%–67% pass@1 · 17%–67% said "done" when state check failed</text>
 
   <rect x="16" y="16" width="1568" height="868" rx="14" fill="none" stroke="#0F172A" stroke-width="2.5"/>
 </svg>

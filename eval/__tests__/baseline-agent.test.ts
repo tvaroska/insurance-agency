@@ -109,7 +109,7 @@ describe("Playable Reference Baseline Agent (eval/agents/baseline-agent.ts)", ()
     }
   });
 
-  test("executes all 20 scenarios (01-20) and passes 100% of trace and privacy checks", async () => {
+  test("executes all 20 scenarios (01-20) across all variants and passes 100% of trace and privacy checks", async () => {
     const mockFetch = (async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/oauth/token")) {
@@ -119,17 +119,24 @@ describe("Playable Reference Baseline Agent (eval/agents/baseline-agent.ts)", ()
     }) as unknown as typeof fetch;
 
     for (const [id, scen] of Object.entries(scenarios)) {
-      const variant = scen.variants.realistic ?? Object.values(scen.variants)[0];
-      const result = await runBaselineAgent({
-        scenarioId: id,
-        seed: "realistic",
-        modalityMode: "strict",
-        fetchImpl: mockFetch,
-      });
-      expect(result.privacyAudit.passed).toBe(true);
-      const parsedCalls = parseTrace(result.trace);
-      const traceScores = evaluateTrace(parsedCalls, variant.traceChecks);
-      expect(traceScores.every((c) => c.passed)).toBe(true);
+      for (const [variantKey, variant] of Object.entries(scen.variants)) {
+        const result = await runBaselineAgent({
+          scenarioId: id,
+          seed: variantKey,
+          modalityMode: "strict",
+          fetchImpl: mockFetch,
+        });
+        expect(result.privacyAudit.passed).toBe(true);
+        const parsedCalls = parseTrace(result.trace);
+        const traceScores = evaluateTrace(parsedCalls, variant.traceChecks);
+        const failed = traceScores.filter((c) => !c.passed);
+        if (failed.length > 0) {
+          throw new Error(
+            `Scenario ${id} (${variantKey}) failed traceChecks: ${failed.map((f) => `${f.name}: ${f.detail}`).join("; ")}`,
+          );
+        }
+        expect(traceScores.every((c) => c.passed)).toBe(true);
+      }
     }
   });
 });

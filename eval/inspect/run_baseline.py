@@ -31,7 +31,11 @@ from summarize_inspect import (
 
 INSPECT_DIR = Path(__file__).resolve().parent
 GYM_ROOT = INSPECT_DIR.parent.parent
-DEFAULT_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "coding007")
+DEFAULT_PROJECT = (
+    os.environ.get("GOOGLE_CLOUD_PROJECT")
+    or os.environ.get("CLOUD_ML_PROJECT_ID")
+    or subprocess.check_output(["gcloud", "config", "get-value", "project"], text=True).strip()
+)
 DEFAULT_REGION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
 
 WORKHORSE_MODELS: list[tuple[str, str]] = [

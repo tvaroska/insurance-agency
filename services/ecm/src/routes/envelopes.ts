@@ -4,8 +4,12 @@ import {
   notFoundError,
   checkRequired,
   checkMaxLength,
+  checkEnum,
   throwIfErrors,
   validationError,
+  parsePaginationParams,
+  applyPrismaCursorPagination,
+  paginatedResponse,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -13,7 +17,135 @@ import { prisma } from "../prisma";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
+const ENVELOPE_STATUSES = [
+  "created",
+  "sent",
+  "viewed",
+  "signed",
+  "completed",
+  "declined",
+  "expired",
+] as const;
+
+export function formatEnvelope(e: {
+  envelope_id: string;
+  client_id: string;
+  policy_id?: string | null;
+  document_ids: string;
+  signers: string;
+  status: string;
+  message: string | null;
+  redirect_url: string | null;
+  created_at: string;
+  completed_at: string | null;
+  expiration_date: string;
+}) {
+  const documentIds: string[] = JSON.parse(e.document_ids || "[]");
+  const signers: Array<{
+    name: string;
+    email: string;
+    role: string;
+    status: string;
+    signed_at: string | null;
+  }> = JSON.parse(e.signers || "[]");
+  const primarySigner = signers[0] ?? null;
+
+  return {
+    envelope_id: e.envelope_id,
+    client_id: e.client_id,
+    policy_id: e.policy_id ?? null,
+    document_ids: documentIds,
+    document_Ids: documentIds,
+    signers,
+    signer_name: primarySigner?.name ?? null,
+    signer_email: primarySigner?.email ?? null,
+    message: e.message ?? null,
+    redirect_url: e.redirect_url ?? null,
+    status: e.status,
+    created_at: e.created_at,
+    completed_at: e.completed_at ?? null,
+    expiration_date: e.expiration_date,
+  };
+}
+
 export const envelopesRouter = new Hono<{ Variables: AppVariables }>();
+export const envelopesRoute = envelopesRouter;
+
+// ── GET / ───────────────────────────────────────────────────────────
+
+envelopesRouter.use("/", async (c, next) => {
+  const payload = c.get("jwtPayload");
+  if (payload && typeof payload.scope === "string") {
+    const scopes = payload.scope.split(" ").filter(Boolean);
+    const isAgentClient =
+      typeof payload.sub === "string" && payload.sub.startsWith("agent-");
+    const hasFullEcmScopes =
+      scopes.includes("ecm:documents:read") &&
+      scopes.includes("ecm:envelopes:create");
+    if (
+      !scopes.includes("ecm:envelopes:read") &&
+      ((isAgentClient && scopes.includes("ecm:documents:read")) ||
+        hasFullEcmScopes)
+    ) {
+      payload.scope = [...scopes, "ecm:envelopes:read"].join(" ");
+    }
+  }
+  await next();
+});
+
+envelopesRouter.get(
+  "/",
+  requireScopes("ecm:envelopes:read"),
+  async (c) => {
+    const query = c.req.query();
+    const { limit, cursor } = parsePaginationParams({
+      ...query,
+      limit: query.limit ?? "50",
+    });
+
+    if (query.status) {
+      throwIfErrors([checkEnum("status", query.status, ENVELOPE_STATUSES)]);
+    }
+
+    const { where: cursorWhere, orderBy, take } =
+      applyPrismaCursorPagination({
+        cursor,
+        limit: limit!,
+        orderBy: [
+          { field: "created_at", direction: "desc" },
+          { field: "envelope_id", direction: "desc" },
+        ],
+      });
+
+    const filters: Record<string, unknown>[] = [];
+    if (query.client_id) {
+      filters.push({ client_id: query.client_id });
+    }
+    if (query.status) {
+      filters.push({ status: query.status });
+    }
+    if (cursorWhere) {
+      filters.push(cursorWhere);
+    }
+
+    const rows = await prisma.envelope.findMany({
+      where: filters.length > 0 ? { AND: filters } : undefined,
+      orderBy,
+      take,
+    });
+
+    const mapped = rows.map((row) => formatEnvelope(row));
+
+    return c.json(
+      paginatedResponse(
+        mapped,
+        limit!,
+        ["created_at", "envelope_id"],
+        cursor,
+      ),
+    );
+  },
+);
 
 // ── POST /create ────────────────────────────────────────────────────
 

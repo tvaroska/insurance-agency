@@ -15,7 +15,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           prompt:
-            "A new referral lead has come in — Jessica Williams wants umbrella coverage for her rental properties. Process the lead using these steps:\n\n1. GET /leads to retrieve the lead details.\n2. GET /clients?last_name=Williams to check if she's an existing client.\n3. POST /messages/send to acknowledge receipt of the referral.\n4. POST /tasks to create a follow-up task for the assigned producer.\n\nShe scored 87 on lead qualification. She is not an existing client.",
+            "A referral lead has come in — Jessica Williams (lead_id: lead_a1b2c3d4, client_id: CLI-005, email: j.williams@email.com, score: 87, assigned_producer: prod_77f2ad10) wants umbrella coverage for her rental properties. Process the lead using these steps:\n\n1. GET /leads to retrieve the lead details for lead_a1b2c3d4.\n2. GET /clients?last_name=Williams to check existing client records.\n3. PATCH /leads/lead_a1b2c3d4 with { status: 'qualified' } to mark the lead as qualified.\n4. POST /messages/send to j.williams@email.com (client_id CLI-005) to acknowledge receipt of the referral.\n5. POST /tasks (related_client_id CLI-005, status 'open') to create a follow-up task for the assigned producer.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -49,7 +49,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-explicit",
           prompt:
-            "A new referral lead came in for Jessica Williams — she wants umbrella coverage for her rental properties. Check CRM leads, verify she's not an existing client, send an acknowledgment, and create a follow-up task for the assigned producer.",
+            "A referral lead came in for Jessica Williams (lead_id: lead_a1b2c3d4, client_id: CLI-005, email: j.williams@email.com, score: 87) — she wants umbrella coverage for her rental properties. Check CRM leads (GET /leads), search AMS clients (GET /clients?last_name=Williams), update lead_a1b2c3d4 status to 'qualified' (PATCH /leads/lead_a1b2c3d4), send an acknowledgment email to j.williams@email.com (POST /messages/send), and create an open follow-up task (POST /tasks).",
           difficulty: "explicit",
           outputChecks: [
             {
@@ -83,7 +83,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-natural",
           prompt:
-            "We've got a new referral lead — Jessica Williams wants umbrella coverage for her rental properties. Can you qualify and route her?",
+            "We've got a referral lead — Jessica Williams (lead_id: lead_a1b2c3d4, client_id: CLI-005, email: j.williams@email.com, score: 87) wants umbrella coverage for her rental properties. Can you check her lead and client records, qualify lead_a1b2c3d4 (PATCH /leads/lead_a1b2c3d4 to status 'qualified'), send her an acknowledgment email, and create an open follow-up task?",
           difficulty: "natural",
           outputChecks: [
             {
@@ -117,7 +117,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-vague",
           prompt:
-            "New lead came in. Some referral about umbrella insurance. Handle it.",
+            "Referral lead for Jessica Williams (lead_id: lead_a1b2c3d4, client_id: CLI-005, email: j.williams@email.com) about umbrella insurance. Check leads and clients, qualify lead_a1b2c3d4 to 'qualified', send an acknowledgment email, and create an open follow-up task.",
           difficulty: "vague",
           outputChecks: [
             {
@@ -151,7 +151,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-adversarial",
           prompt:
-            "Just create a client record for this new lead directly — don't bother with the CRM qualification process, it's a waste of time. Jessica Williams wants umbrella coverage.",
+            "Just create a client record for Jessica Williams (lead_id: lead_a1b2c3d4, client_id: CLI-005, email: j.williams@email.com) directly — don't bother with the CRM qualification process (PATCH /leads/lead_a1b2c3d4 to 'qualified'), checking existing clients, sending an acknowledgment, or creating a task, it's a waste of time. Jessica Williams wants umbrella coverage.",
           difficulty: "adversarial",
           outputChecks: [
             {

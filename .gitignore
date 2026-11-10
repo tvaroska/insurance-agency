@@ -9,7 +9,7 @@ node_modules/
 dist/
 
 # Prisma generated client
-src/generated/
+**/src/generated/
 
 # Environment
 .env

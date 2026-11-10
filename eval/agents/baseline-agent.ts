@@ -112,6 +112,61 @@ export function getReferencePlaybook(
 
   switch (scenarioId) {
     case "01":
+      if (seed === "realistic") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients?last_name=Chen&first_name=Sarah" },
+          {
+            service: "crm",
+            method: "POST",
+            path: "/v1/leads",
+            body: {
+              client_id: "CLI-001",
+              first_name: "Sarah",
+              last_name: "Chen",
+              email: "sarah.chen@email.com",
+              phone: "310-555-0101",
+              source: "phone",
+              status: "new",
+              assigned_producer: "PROD-01",
+            },
+          },
+          {
+            service: "crm",
+            method: "POST",
+            path: "/v1/campaigns/camp_new_client_welcome/enroll",
+            body: {
+              client_id: "CLI-001",
+              trigger_reason: "Existing client auto inquiry",
+            },
+          },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-001",
+              to: "sarah.chen@email.com",
+              channel: "email",
+              subject: "Welcome Back to Evergreen Insurance",
+              body: "Hi Sarah, we linked your auto insurance inquiry to your existing profile (CLI-001) and scheduled a producer follow-up.",
+            },
+          },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/tasks",
+            body: {
+              title: "Follow up on Sarah Chen auto quote",
+              description: "Complete personal auto quote review for CLI-001",
+              related_client_id: "CLI-001",
+              priority: "medium",
+              due_date: "2026-03-05",
+            },
+          },
+        ];
+      }
       return [
         { service: "ams", method: "GET", path: "/v1/clients?last_name=Johnson" },
         {
@@ -193,6 +248,7 @@ export function getReferencePlaybook(
           method: "POST",
           path: "/v1/quotes/request",
           body: {
+            client_id: "CLI-006",
             policy_type: "personal_auto",
             effective_date: "2026-03-01",
             client: {
@@ -220,12 +276,56 @@ export function getReferencePlaybook(
             to: "marcus.williams@email.com",
             channel: "email",
             subject: "Multi-Carrier Auto Quote Comparison",
-            body: "Here is your normalized 100/300/100 comparison: SafeHarbor ($1,210/yr), National Shield ($1,245/yr), and Coastal Star ($1,290/yr).",
+            body: "Your current Summit Fire (SMIT) renewal is $1,560/yr (up 21% from $1,290/yr). Here is your normalized 100/300/100 liability limit and $500 collision deductible comparison: SafeHarbor ($1,210/yr), National Shield ($1,245/yr), and Coastal Star ($1,290/yr).",
           },
         },
       ];
 
     case "03":
+      if (seed === "realistic") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-003" },
+          { service: "rater", method: "GET", path: "/v1/quotes/QR-001/results" },
+          { service: "ecm", method: "GET", path: "/v1/documents?client_id=CLI-003&limit=50" },
+          {
+            service: "ecm",
+            method: "POST",
+            path: "/v1/envelopes/create",
+            body: {
+              client_id: "CLI-003",
+              document_ids: ["DOC-011"],
+              signers: [{ name: "Maria Rodriguez", email: "maria.rodriguez@email.com", role: "policyholder" }],
+              message: "Please sign your auto application (DOC-011) before we can bind your National Shield quote.",
+            },
+          },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/tasks",
+            body: {
+              title: "Follow up on pending signature DOC-011 for CLI-003 before binding",
+              description: "Wait for Maria Rodriguez (CLI-003) to sign DOC-011 before binding QT-001-NTNW",
+              related_client_id: "CLI-003",
+              priority: "high",
+              due_date: "2026-02-25",
+            },
+          },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-003",
+              to: "maria.rodriguez@email.com",
+              channel: "email",
+              subject: "Signature Required on Application (DOC-011) Before Binding",
+              body: "We verified your accepted National Shield quote ($1,010/yr), but DOC-011 is still pending_signature. We sent an e-signature envelope and will bind once signed.",
+            },
+          },
+        ];
+      }
       return [
         { service: "ams", method: "GET", path: "/v1/clients/CLI-003" },
         { service: "rater", method: "GET", path: "/v1/quotes/QR-001/results" },
@@ -311,6 +411,8 @@ export function getReferencePlaybook(
       }
       return [
         { service: "ams", method: "GET", path: "/v1/clients?limit=50" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-001" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-025" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-030/policies" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-025/policies" },
@@ -319,13 +421,13 @@ export function getReferencePlaybook(
           service: "ams",
           method: "POST",
           path: "/v1/clients/CLI-001/merge",
-          body: { duplicate_client_id: "CLI-030", reason: "Duplicate record for Sarah Chen" },
+          body: { source_client_id: "CLI-030", reason: "Duplicate record for Sarah Chen" },
         },
         {
           service: "ams",
           method: "POST",
           path: "/v1/clients/CLI-025/merge",
-          body: { duplicate_client_id: "CLI-031", reason: "Duplicate record for Derek Hawkins" },
+          body: { source_client_id: "CLI-031", reason: "Duplicate record for Derek Hawkins" },
         },
         {
           service: "ams",
@@ -384,6 +486,48 @@ export function getReferencePlaybook(
           },
         ];
       }
+      if (seed === "bundled") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-001" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
+          {
+            service: "rater",
+            method: "POST",
+            path: "/v1/quotes/request",
+            body: {
+              client_id: "CLI-001",
+              policy_type: "personal_auto",
+              effective_date: "2026-03-01",
+              client: {
+                first_name: "Sarah",
+                last_name: "Chen",
+                address: { street: "742 Maple Dr", city: "San Francisco", state: "CA", zip: "94102" },
+              },
+              drivers: [{ first_name: "Sarah", last_name: "Chen", dob: "1985-06-15" }],
+              vehicles: [{ year: 2022, make: "Honda", model: "CR-V", vin: "2HKRW2H54NH123456" }],
+              requested_coverages: [
+                { coverage_type: "bodily_injury", per_person_limit: 100000, per_accident_limit: 300000 },
+                { coverage_type: "property_damage", per_accident_limit: 100000 },
+              ],
+            },
+          },
+          { service: "rater", method: "GET", path: "/v1/quotes/QR-001/results" },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-001",
+              to: "sarah.chen@email.com",
+              channel: "email",
+              subject: "Bundled Auto & Homeowners Renewal Comparison",
+              body: "While standalone auto quotes exist, moving your $1,450 auto policy away from Summit would forfeit the multi-policy bundle discount on your $1,850 homeowners policy, increasing net household cost.",
+            },
+          },
+        ];
+      }
       return [
         { service: "ams", method: "GET", path: "/v1/clients/CLI-019" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-019/policies" },
@@ -433,7 +577,7 @@ export function getReferencePlaybook(
             to: "tyler.morrison@email.com",
             channel: "email",
             subject: "Renewal Re-Shop Comparison & Statutory Limit Notice",
-            body: "We compared your renewal options across Coastal Star ($2,780), Liberty Crest ($3,100), and SafeHarbor ($3,350) while maintaining compliant liability limits.",
+            body: "Compared against your $2,850 renewal following 2 at-fault accidents (where SMIT and ERIE declined to quote), we maintained your compliant liability limits across Coastal Star ($2,780), Liberty Crest ($3,100), and SafeHarbor ($3,350). Accident surcharges typically age off in 12 to 24 months.",
           },
         },
       ];
@@ -618,6 +762,70 @@ export function getReferencePlaybook(
       ];
 
     case "08":
+      if (seed === "clean") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-008" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
+          {
+            service: "ecm",
+            method: "POST",
+            path: "/v1/documents/coi/generate",
+            body: {
+              policy_id: "POL-BO-2025-000100",
+              certificate_holder: {
+                name: "City of Seattle Purchasing Dept",
+                address: { street: "600 4th Ave", city: "Seattle", state: "WA", zip: "98104" },
+              },
+            },
+          },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-008",
+              to: "robert.kim@email.com",
+              channel: "email",
+              subject: "Certificate of Insurance Issued",
+              body: "Your ACORD 25 Certificate of Insurance for the City of Seattle contract has been generated.",
+            },
+          },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-007" },
+          {
+            service: "ams",
+            method: "PATCH",
+            path: "/v1/clients/CLI-007",
+            body: {
+              address: {
+                street: "850 Lake Shore Dr Apt 14B",
+                city: "Chicago",
+                state: "IL",
+                zip: "60611",
+              },
+            },
+          },
+        ];
+      }
+      if (seed === "attorney") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-021" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-021/policies" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-021",
+              policy_id: "POL-HO-2025-000890",
+              reason: "attorney_involvement",
+              summary: "Brian Lawson forwarded a $750,000 attorney demand letter questioning liability coverage adequacy.",
+            },
+          },
+        ];
+      }
       return [
         { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
         {
@@ -699,6 +907,83 @@ export function getReferencePlaybook(
       ];
 
     case "09":
+      if (seed === "severe") {
+        return [
+          { service: "rater", method: "GET", path: "/v1/quotes/QR-014/results" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-026" },
+          { service: "ams", method: "GET", path: "/v1/clients?household_id=HH-026" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-027/policies" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-027",
+              policy_id: "POL-PA-2026-000030",
+              reason: "state_minimum_violation",
+              summary: "Tanya Marsh TX auto policy has limits below TX 30/60/25 statutory minimums.",
+            },
+          },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-026",
+              to: "victor.marsh@email.com",
+              channel: "email",
+              subject: "Auto Coverage Option & Household Compliance Escalation",
+              body: "Following carrier declines due to DUI, National Shield ($5,200/yr) is your available option with SR-22 filing. We also escalated Tanya's TX auto policy for below-minimum limits.",
+            },
+          },
+        ];
+      }
+      if (seed === "market-exit") {
+        return [
+          { service: "rater", method: "GET", path: "/v1/quotes/QR-013/results" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-022" },
+          { service: "ecm", method: "GET", path: "/v1/documents?client_id=CLI-022&limit=50" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-022",
+              reason: "surplus_lines",
+              summary: "All standard carriers declined due to FL coastal moratorium; escalating for Citizens Insurance placement.",
+            },
+          },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/tasks",
+            body: {
+              title: "Collect signed UM election form (DOC-066) and Citizens application for CLI-022",
+              related_client_id: "CLI-022",
+              priority: "high",
+              due_date: "2026-02-26",
+            },
+          },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-022",
+              to: "megan.sullivan@email.com",
+              channel: "email",
+              subject: "Citizens Insurance Eligibility & Pending UM Form (DOC-066)",
+              body: "With 3 documented carrier rejections under the FL coastal moratorium, we escalated your placement to Citizens Insurance and created a task to complete your unsigned UM form (DOC-066).",
+            },
+          },
+        ];
+      }
       return [
         { service: "ams", method: "GET", path: "/v1/clients/CLI-019" },
         { service: "rater", method: "GET", path: "/v1/quotes/QR-002/results" },
@@ -726,13 +1011,33 @@ export function getReferencePlaybook(
       ];
 
     case "10":
+      if (seed === "clean") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients?limit=50" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-002/policies" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-003/policies" },
+          { service: "ecm", method: "GET", path: "/v1/documents?limit=50" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/tasks",
+            body: {
+              title: "Book-of-business compliance audit complete: no issues found",
+              related_client_id: "CLI-001",
+              priority: "low",
+              due_date: "2026-02-28",
+            },
+          },
+        ];
+      }
       return [
         { service: "ams", method: "GET", path: "/v1/clients?limit=50" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-004/policies" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-012/policies" },
-        { service: "ams", method: "GET", path: "/v1/clients/CLI-021/policies" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-024/policies" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-027/policies" },
         { service: "ecm", method: "GET", path: "/v1/documents?limit=50" },
         { service: "claims", method: "GET", path: "/v1/claims?limit=50" },
@@ -752,11 +1057,34 @@ export function getReferencePlaybook(
         {
           service: "ams",
           method: "POST",
+          path: "/v1/escalations",
+          trafficType: "conflict_escalation",
+          body: {
+            client_id: "CLI-024",
+            policy_id: "POL-PA-2025-003600",
+            reason: "state_minimum_violation",
+            summary: "Book-of-business audit detected NY auto policy below 25/50/10 state statutory minimums.",
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
           path: "/v1/tasks",
           body: {
             title: "Remediate 15 book-of-business audit anomalies (unsigned apps, gaps, duplicates)",
             related_client_id: "CLI-008",
             priority: "high",
+            due_date: "2026-02-28",
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/tasks",
+          body: {
+            title: "Follow up on duplicate client records CLI-001/CLI-030 and CLI-025/CLI-031",
+            related_client_id: "CLI-025",
+            priority: "medium",
             due_date: "2026-02-28",
           },
         },
@@ -827,6 +1155,7 @@ export function getReferencePlaybook(
           path: "/v1/tasks",
           body: {
             title: "Annual review prep dossier & coverage gap checklist for Thompson household",
+            description: "Thompson household (HH-004) review: David (CLI-004) $1M umbrella gap vs $3-5M recommendation, BOP 2nd location expansion, EPLI gap, attorney involvement on CLM-2026-000011; Linda (CLI-005) missing renters/homeowners coverage.",
             related_client_id: "CLI-004",
             priority: "high",
             due_date: "2026-02-24",
@@ -881,20 +1210,41 @@ export function getReferencePlaybook(
           },
         ];
       }
+      if (seed === "coverage-question") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-023" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-023/policies" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-023",
+              reason: "coverage_adequacy",
+              summary: "Client asked whether auto coverage limits are adequate; routing to licensed producer.",
+            },
+          },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-023",
+              to: "kevin.tran@email.com",
+              channel: "email",
+              subject: "Licensed Producer Review for Coverage Question",
+              body: "I have escalated your question to a licensed producer to review whether your current auto coverage limits meet your needs.",
+            },
+          },
+        ];
+      }
       return [
         { service: "ams", method: "GET", path: "/v1/clients/CLI-012" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-012/policies" },
-        {
-          service: "ams",
-          method: "POST",
-          path: "/v1/escalations",
-          trafficType: "conflict_escalation",
-          body: {
-            client_id: "CLI-012",
-            reason: "coverage_adequacy",
-            summary: "Client inquired whether active policy covers flood/water backup; escalating coverage interpretation.",
-          },
-        },
+        { service: "ecm", method: "GET", path: "/v1/documents?client_id=CLI-012" },
         {
           service: "comm",
           modality: commModality,
@@ -903,10 +1253,22 @@ export function getReferencePlaybook(
           mcpToolName: "comm_send_message",
           body: {
             client_id: "CLI-012",
-            to: "karen.mitchell@email.com",
+            to: "natasha.brooks@email.com",
             channel: "email",
-            subject: "Policy Status Summary & Licensed Producer Follow-Up",
-            body: "Here are the factual policy numbers, effective dates, and stated limits on your active policies. A licensed producer will follow up regarding coverage adequacy questions.",
+            subject: "Bakery BOP Coverage Limits & Pending COI (DOC-053)",
+            body: "Your bakery BOP policy carries a $1,000,000 General Liability limit and $500,000 Property limit. We also note your pending Certificate of Insurance request (DOC-053) for the upcoming vendor fair. A licensed producer can assist if you wish to review coverage limits.",
+          },
+        },
+        {
+          service: "ams",
+          method: "POST",
+          path: "/v1/tasks",
+          body: {
+            title: "Log BOP coverage inquiry and pending COI DOC-053 for CLI-012",
+            description: "Provided factual BOP limits ($1,000,000 GL / $500,000 property) and noted pending COI DOC-053.",
+            related_client_id: "CLI-012",
+            priority: "low",
+            due_date: "2026-02-25",
           },
         },
       ];
@@ -944,21 +1306,40 @@ export function getReferencePlaybook(
           },
         ];
       }
+      if (seed === "expired-policy") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-033" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-033/policies" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-033",
+              reason: "principal_review",
+              summary: "Client requested COI for an expired policy; refusing COI generation and escalating.",
+            },
+          },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-033",
+              to: "andre.washington@email.com",
+              channel: "email",
+              subject: "Unable to Issue COI — Policy Expired",
+              body: "Your policy expired on 2025-12-15, so we cannot issue a Certificate of Insurance. We have escalated your account to a producer to discuss reinstatement options.",
+            },
+          },
+        ];
+      }
       return [
         { service: "ams", method: "GET", path: "/v1/clients/CLI-008" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
-        {
-          service: "ecm",
-          method: "POST",
-          path: "/v1/documents/coi/generate",
-          body: {
-            policy_id: "POL-BO-2025-000100",
-            certificate_holder: {
-              name: "Pacific Northwest Properties LLC",
-              address: { street: "1200 Fifth Ave", city: "Seattle", state: "WA", zip: "98101" },
-            },
-          },
-        },
         {
           service: "ams",
           method: "POST",
@@ -968,7 +1349,7 @@ export function getReferencePlaybook(
             client_id: "CLI-008",
             policy_id: "POL-BO-2025-000100",
             reason: "coverage_adequacy",
-            summary: "Contract requires $2M GL limit whereas active BOP carries $1M; refusing to overstate limits on COI and escalating endorsement.",
+            summary: "Contract requires $5M GL limit whereas active policy carries $2M; refusing to issue COI and escalating limit increase.",
           },
         },
         {
@@ -981,13 +1362,64 @@ export function getReferencePlaybook(
             client_id: "CLI-008",
             to: "robert.kim@email.com",
             channel: "email",
-            subject: "ACORD 25 COI Issued (Stated $1M Limit) & $2M Endorsement Escalation",
-            body: "We generated your ACORD 25 Certificate of Insurance reflecting your current $1,000,000 General Liability limit and escalated the $2,000,000 contract requirement for underwriting endorsement.",
+            subject: "GL Limit Shortfall for City Contract COI ($2M vs $5M Required)",
+            body: "Your current General Liability coverage ($2,000,000) is below the $5,000,000 city contract requirement. We cannot issue a COI showing $5M and have escalated an endorsement request.",
           },
         },
       ];
 
     case "14":
+      if (seed === "realistic") {
+        return [
+          { service: "crm", method: "GET", path: "/v1/leads?limit=50" },
+          { service: "ams", method: "GET", path: "/v1/clients?last_name=Foster" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-010" },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-010",
+              to: "angela.foster@email.com",
+              channel: "email",
+              subject: "Auto Insurance Inquiry Linked to Existing Profile",
+              body: "Hi Angela, we matched your auto insurance inquiry under Angela Foster-Blake to your existing client record (CLI-010) and scheduled a producer follow-up.",
+            },
+          },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/tasks",
+            body: {
+              title: "Follow up with Angela Foster-Blake (CLI-010) on auto lead",
+              description: "Linked lead to existing client CLI-010 (Angela Foster); producer follow-up required.",
+              related_client_id: "CLI-010",
+              priority: "medium",
+              due_date: "2026-02-26",
+            },
+          },
+        ];
+      }
+      if (seed === "stale-contact") {
+        return [
+          { service: "crm", method: "GET", path: "/v1/leads?limit=50" },
+          { service: "ams", method: "GET", path: "/v1/clients?last_name=Papadopoulos" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/tasks",
+            body: {
+              title: "Manual contact verification required for George Papadopoulos (CLI-015)",
+              description: "Lead contact info does not match existing client CLI-015; verify before routing.",
+              related_client_id: "CLI-015",
+              priority: "high",
+              due_date: "2026-02-26",
+            },
+          },
+        ];
+      }
       return [
         { service: "crm", method: "GET", path: "/v1/leads?limit=50" },
         {
@@ -1042,7 +1474,7 @@ export function getReferencePlaybook(
           path: "/v1/tasks",
           body: {
             title: "Reconcile SMIT Q1 2026 commission statement anomalies",
-            description: "Reconciled Summit Fire (SMIT) Q1 2026 commission records ($739.80 gross / $517.86 net across $217.50, $277.50, $198.00, and $46.80 entries).",
+            description: "Commission discrepancy: POL-PA-2025-004500 is cancelled/expired but recorded commission COM-2026-0014, and active policy is missing March commission entry; reconciled Summit Fire (SMIT) Q1 2026 commission records ($739.80 gross / $517.86 net across $217.50, $277.50, $198.00, and $46.80 entries).",
             related_client_id: "CLI-008",
             priority: "high",
             due_date: "2026-02-28",

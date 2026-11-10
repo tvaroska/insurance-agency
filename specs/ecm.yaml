@@ -61,6 +61,7 @@ components:
             ecm:documents:read: Read documents and audit records
             ecm:documents:write: Create and generate documents
             ecm:documents:upload: Upload new documents
+            ecm:envelopes:read: Read signature envelopes
             ecm:envelopes:create: Create signature envelopes
             ecm:assets:read: Read marketing assets
             ecm:acord:read: Generate ACORD-style PDF forms
@@ -1102,6 +1103,71 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # -----------------------------------------------------------------------
+  # GET /envelopes
+  # -----------------------------------------------------------------------
+  /envelopes:
+    get:
+      operationId: listEnvelopes
+      summary: List signature envelopes
+      description: |
+        Retrieve a paginated list of signature envelopes across clients.
+        Supports filtering by `client_id` and `status`. Results are sorted by
+        `created_at` descending.
+      tags:
+        - Envelopes
+      security:
+        - oauth2:
+            - ecm:envelopes:read
+      parameters:
+        - name: client_id
+          in: query
+          required: false
+          description: Filter envelopes by client identifier.
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          description: Filter envelopes by lifecycle status.
+          schema:
+            $ref: "#/components/schemas/EnvelopeStatus"
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of envelopes to return (1-100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - $ref: "#/components/parameters/CursorQuery"
+      responses:
+        "200":
+          description: Envelopes retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Envelope"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
 

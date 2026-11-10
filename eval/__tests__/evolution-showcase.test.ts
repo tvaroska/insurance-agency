@@ -29,15 +29,29 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
     expect(summary.stages.stage1GeneralAgent.avgTokens).toBe(6500);
     expect(summary.stages.stage1GeneralAgent.cpvoUsd).toBe(0.0029);
     expect(summary.stages.stage1GeneralAgent.avgLatencyMs).toBe(3900);
-    expect(summary.stages.stage1GeneralAgent.pass1).toBe(0.85);
+    expect(summary.stages.stage1GeneralAgent.pass1).toBe(0.667);
+    expect(summary.stages.stage1GeneralAgent.meanScore).toBe(0.68);
+    expect(summary.stages.stage1GeneralAgent.provenance).toBe(
+      "measured_v0.7_baseline",
+    );
+    expect(summary.stages.stage1GeneralAgent.falseCompletionRateRange).toBe(
+      "16.7%–66.7%",
+    );
+    expect(summary.stages.stage1GeneralAgent.measuredModels).toHaveLength(3);
     expect(summary.stages.stage2DomainSkill.avgTokens).toBe(2700);
     expect(summary.stages.stage2DomainSkill.cpvoUsd).toBe(0.0012);
     expect(summary.stages.stage2DomainSkill.avgLatencyMs).toBe(1650);
     expect(summary.stages.stage2DomainSkill.pass1).toBe(0.97);
+    expect(summary.stages.stage2DomainSkill.provenance).toBe(
+      "projected_skill_target",
+    );
     expect(summary.stages.stage3CompiledCode.routineTokens).toBe(0);
     expect(summary.stages.stage3CompiledCode.routineCpvoUsd).toBe(0);
     expect(summary.stages.stage3CompiledCode.avgLatencyMs).toBe(180);
     expect(summary.stages.stage3CompiledCode.pass1).toBe(1.0);
+    expect(summary.stages.stage3CompiledCode.provenance).toBe(
+      "measured_reference_verifier_with_projected_fallback",
+    );
     expect(summary.stages.stage3CompiledCode.fallbackRatePct).toBe(22.0);
 
     for (const wf of summary.workflows) {

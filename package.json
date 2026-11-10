@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": ["packages/*", "services/*", "tests/*"],
   "scripts": {
+    "db:generate": "for s in services/*; do (cd \"$s\" && bunx prisma generate); done",
     "reset": "bash scripts/reset-all.sh",
     "seed": "bash scripts/reset-all.sh",
     "showcase": "bun run scripts/run-showcase.ts",

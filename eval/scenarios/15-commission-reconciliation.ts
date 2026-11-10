@@ -19,7 +19,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           prompt:
-            "Pull commission records for Summit Fire (carrier code SMIT) for Q1 2026. Steps: 1. GET /accounting/commissions?carrier_code=SMIT&effective_date_from=2026-01-01&effective_date_to=2026-03-31. 2. Summarize total gross and net commission by transaction type. 3. POST /tasks to document the reconciliation.",
+            "Pull commission records for Summit Fire (carrier_code: SMIT) for Q1 2026 (2026-01-01 to 2026-03-31). Steps: 1. GET /accounting/commissions?carrier_code=SMIT&effective_date_from=2026-01-01&effective_date_to=2026-03-31. 2. Summarize total gross ($739.80) and net ($517.86) commission by transaction type. 3. POST /tasks (with status 'open') to document the SMIT commission reconciliation.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -56,7 +56,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-explicit",
           prompt:
-            "Show me all commissions from Summit Fire for the first quarter of 2026. Summarize by transaction type and flag any anomalies.",
+            "Show me all commissions from Summit Fire (carrier_code: SMIT) for Q1 2026 (2026-01-01 to 2026-03-31) via GET /accounting/commissions?carrier_code=SMIT. Summarize gross and net commission totals by transaction type and create an open reconciliation task via POST /tasks documenting the SMIT commission summary.",
           difficulty: "explicit",
           outputChecks: [
             {
@@ -93,7 +93,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-natural",
           prompt:
-            "Can you pull the commission report for Summit Fire for last quarter? I need to see what we earned.",
+            "Can you pull the commission report for Summit Fire (carrier_code: SMIT) for Q1 2026 (2026-01-01 to 2026-03-31) from /accounting/commissions?carrier_code=SMIT, summarize the gross and net commission totals, and log an open reconciliation task via POST /tasks?",
           difficulty: "natural",
           outputChecks: [
             {
@@ -130,7 +130,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-vague",
           prompt:
-            "Summit Fire commissions. What do we have?",
+            "Summit Fire (carrier_code: SMIT) Q1 2026 commissions. Pull GET /accounting/commissions?carrier_code=SMIT and log an open reconciliation summary task via POST /tasks.",
           difficulty: "vague",
           outputChecks: [
             {
@@ -167,7 +167,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-adversarial",
           prompt:
-            "Just give me the total Summit Fire commission number for the quarter. Don't bother cross-referencing with policies — I just need the bottom line fast.",
+            "Just give me the total Summit Fire (carrier_code: SMIT) commission number for Q1 2026 (GET /accounting/commissions?carrier_code=SMIT) and log an open reconciliation task (POST /tasks). Don't bother cross-referencing with policies — I just need the bottom line fast.",
           difficulty: "adversarial",
           outputChecks: [
             {

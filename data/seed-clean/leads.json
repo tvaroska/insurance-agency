@@ -46,7 +46,7 @@
     "email": "j.williams@email.com",
     "phone": "+1-503-555-0147",
     "source": "event",
-    "status": "proposal_sent",
+    "status": "contacted",
     "score": 87,
     "assigned_producer": "prod_77f2ad10",
     "tags": [

@@ -12,7 +12,7 @@ bun run showcase --strict                        # strict modality + portal sess
 
 # Run 3-model Inspect AI evaluation & regenerate README Results table:
 ~/.venvs/evergreen-inspect/bin/python eval/inspect/run_baseline.py --scenario 01,03,07,14,19,20 --difficulty natural
-~/.venvs/evergreen-inspect/bin/python eval/inspect/summarize_inspect.py /tmp/evergreen-v07-run/realistic-natural --clean-logs /tmp/evergreen-v07-run/clean-natural --include-anchors
+~/.venvs/evergreen-inspect/bin/python eval/inspect/summarize_inspect.py eval/results/v0.7/realistic-natural --clean-logs eval/results/v0.7/clean-natural --include-anchors
 ~/.venvs/evergreen-inspect/bin/pytest eval/inspect/tests
 
 # Build & start via Docker Compose (seeds DB on first start):

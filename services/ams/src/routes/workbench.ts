@@ -314,13 +314,13 @@ export const SEVEN_EXECUTIVE_PROMISES = [
     id: "I6",
     title: "Three Lines of Defense Governance",
     metric: "HTTP 422 Hard E&O Firewall",
-    detail: "1st Line: 10-state statutory + backdating + $10K cap firewall; 2nd Line: Principal queue; 3rd Line: 35-table state diff.",
+    detail: "1st Line: 10-state statutory + backdating + $10K cap firewall; 2nd Line: Principal queue; 3rd Line: 32-table state diff.",
   },
   {
     id: "I7",
-    title: "35-Table State-Diff Verification & 3-Stage Agent-to-Code Economics",
+    title: "32-Table State-Diff Verification & 3-Stage Agent-to-Code Economics",
     metric: "-100% Routine Token Cost",
-    detail: "Verifies real SQLite mutations (catching transcript-only hallucinations) and compiles routine runs into $0-token code.",
+    detail: "Verifies real SQLite mutations across all 8 services (catching transcript-only hallucinations) and compiles routine runs into $0-token code.",
   },
 ];
 
@@ -463,7 +463,7 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
     },
     stateSnapshotSummary: {
       totalServices: 8,
-      totalSqliteTables: 35,
+      totalSqliteTables: 32,
       amsLiveCounts: {
         clients: clientsCount,
         policies: policiesCount,
@@ -488,37 +488,66 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
     })),
     evolutionStages: [
       {
-        stage: "Stage 1: General Agent",
-        label: "Zero-Shot Tool Discovery",
+        stage: "Stage 1: Zero-Shot General Agent",
+        label: "Measured v0.7 Baseline (Strict 3-Modality)",
+        provenance: "measured_v0.7_baseline",
         avgTokensPerRun: 6500,
-        avgCostUsd: 0.0029,
+        avgCostUsd: 0.068,
         avgLatencyMs: 3900,
-        pass1: 0.85,
-        pass5: 0.44,
+        pass1: 0.667,
+        meanScore: 0.68,
+        pass5: null,
+        falseCompletionRateRange: "16.7%–66.7%",
+        measuredModels: [
+          {
+            model: "gemini-3.8-flash",
+            pass1: 0.667,
+            meanScore: 0.68,
+            falseCompletionRate: 0.167,
+            costPerTaskUsd: 0.068,
+          },
+          {
+            model: "claude-sonnet-5-5",
+            pass1: 0.5,
+            meanScore: 0.62,
+            falseCompletionRate: 0.5,
+            costPerTaskUsd: 0.079,
+          },
+          {
+            model: "DeepSeek-V4.1-Flash",
+            pass1: 0.333,
+            meanScore: 0.53,
+            falseCompletionRate: 0.667,
+            costPerTaskUsd: 0.01,
+          },
+        ],
         description:
-          "Discovers schemas dynamically across 8 services; high token usage and multi-trial variance.",
+          'Measured v0.7 zero-shot baseline across 6 strict workflows: gemini-3.8-flash 66.7% pass@1 (0.68 mean), claude-sonnet-5-5 50.0% pass@1 (0.62 mean), DeepSeek-V4.1-Flash 33.3% pass@1 (0.53 mean), and 16.7%–66.7% false-completion rate where the agent said "done" while state checks failed.',
       },
       {
-        stage: "Stage 2: Domain Skill",
-        label: "Insurance Playbook & E&O Guardrails",
+        stage: "Stage 2: Domain Skill + Guardrails",
+        label: "Projected Skill Target (Insurance Playbook & E&O Guardrails)",
+        provenance: "projected_skill_target",
         avgTokensPerRun: 2700,
         avgCostUsd: 0.0012,
         avgLatencyMs: 1650,
         pass1: 0.97,
         pass5: 0.86,
         description:
-          "Injects carrier appetite rules, 10-state statutory tables, and portal sequences; 58% token reduction.",
+          "Projected Stage 2 skill target: injects carrier appetite rules, 10-state statutory tables, and portal sequences; 58% token reduction (distinguished from measured v0.7 zero-shot baseline).",
       },
       {
-        stage: "Stage 3: Compiled Code",
-        label: "$0-Token Deterministic TypeScript (privy:*)+FallbackToSkill",
+        stage: "Stage 3: $0-Token Compiled Deterministic Code",
+        label:
+          "Measured 100.0% Scripted Reference Verifier (20/20 Workflows) + Projected FallbackToSkill",
+        provenance: "measured_reference_verifier_with_projected_fallback",
         avgTokensPerRun: 0,
         avgCostUsd: 0.0,
         avgLatencyMs: 180,
         pass1: 1.0,
         pass5: 1.0,
         description:
-          "Compiles routine COI, FNOL, renewal audit, and endorsement checks into zero-token code; seamlessly falls back to Stage 2 Skill on mid-conversation client pivots (Scenarios 17–20).",
+          "Measured 100.0% scripted reference verifier (baseline-agent.ts) across all 20 workflows for routine COI, FNOL, renewal audit, and endorsement checks at $0 token cost; projected FallbackToSkill on mid-conversation client pivots (Scenarios 17–20).",
       },
     ],
   });
@@ -560,7 +589,7 @@ workbenchRouter.post("/workbench/api/run-journey", async (c) => {
         wallClockMs: 2850,
       },
       stateDiffReceipt: {
-        tablesAudited: 35,
+        tablesAudited: 32,
         amsTasksBefore: beforeTasks,
         amsTasksAfter: beforeTasks,
         amsEscalationsBefore: beforeEscalations,
@@ -611,7 +640,7 @@ workbenchRouter.post("/workbench/api/run-journey", async (c) => {
       wallClockMs: 142,
     },
     stateDiffReceipt: {
-      tablesAudited: 35,
+      tablesAudited: 32,
       amsTasksBefore: beforeTasks,
       amsTasksAfter: afterTasks,
       amsEscalationsBefore: beforeEscalations,
@@ -1428,8 +1457,8 @@ export function renderWorkbenchHtml(): string {
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">3-Stage Agent-to-Code Evolution (Compounding Servicing Economics)</h2>
-            <p class="card-subtitle">Demonstrates how Evergreen turns expensive exploratory LLM trajectories into $0-token deterministic TypeScript handlers with automatic Stage-2 Skill fallback on client pivots.</p>
+            <h2 class="card-title">3-Stage Agent-to-Code Evolution (Measured v0.7 Baseline vs. Projected Skill Target &amp; Reference Anchor)</h2>
+            <p class="card-subtitle">Separates measured v0.7 zero-shot results and the 100.0% 20-workflow scripted reference verifier from projected Stage-2 Skill targets.</p>
           </div>
           <span class="chip chip-pass">Stage 3: $0.0000 / Routine Run</span>
         </div>
@@ -1437,41 +1466,41 @@ export function renderWorkbenchHtml(): string {
           <thead>
             <tr>
               <th>Evolution Stage</th>
-              <th>Execution Architecture</th>
+              <th>Execution Architecture &amp; Provenance</th>
               <th>Avg LLM Tokens</th>
               <th>Est. Cost / Run</th>
               <th>Avg Latency</th>
-              <th>pass@1</th>
-              <th>pass^5 (5-Trial Reliability)</th>
+              <th>pass@1 / Mean</th>
+              <th>pass^5 / False-Done</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>Stage 1: General Agent</strong></td>
-              <td>Zero-shot tool discovery across 8 services</td>
+              <td><strong>Stage 1: Zero-Shot General Agent</strong><br/><span class="chip chip-warn">Measured v0.7</span></td>
+              <td>Zero-shot tool discovery across 8 services (<code>gemini-3.8-flash</code> 66.7% pass@1 / 0.68 mean, <code>claude-sonnet-5-5</code> 50.0% / 0.62 mean, <code>DeepSeek-V4.1-Flash</code> 33.3% / 0.53 mean)</td>
               <td class="mono">6,500 tok</td>
-              <td class="mono">$0.0029</td>
+              <td class="mono">$0.010–$0.079</td>
               <td class="mono">3,900 ms</td>
-              <td class="mono">85.0%</td>
-              <td><span class="chip chip-warn">44.4%</span></td>
+              <td class="mono">33.3%–66.7%<br/>(0.53–0.68 mean)</td>
+              <td><span class="chip chip-block">16.7%–66.7% said "done" when state check failed</span></td>
             </tr>
             <tr>
-              <td><strong>Stage 2: Domain Skill</strong></td>
-              <td>Insurance playbook + 10-state E&amp;O rules + portal sequences</td>
+              <td><strong>Stage 2: Domain Skill + Guardrails</strong><br/><span class="chip chip-info">Projected Target</span></td>
+              <td>Projected target with insurance playbook + 10-state E&amp;O rules + portal sequences (<code>skills/insurance-servicing/</code>)</td>
               <td class="mono">2,700 tok</td>
               <td class="mono">$0.0012</td>
               <td class="mono">1,650 ms</td>
-              <td class="mono">97.0%</td>
-              <td><span class="chip chip-info">85.9%</span></td>
+              <td class="mono">97.0% (proj.)</td>
+              <td><span class="chip chip-info">85.9% (proj. pass^5)</span></td>
             </tr>
             <tr>
-              <td><strong>Stage 3: Compiled Code (<code>privy:*</code>)</strong></td>
-              <td>Deterministic TypeScript handlers + <code>FallbackToSkill</code> on pivots (Scenarios 17–20)</td>
+              <td><strong>Stage 3: $0-Token Compiled Deterministic Code (<code>privy:*</code>)</strong><br/><span class="chip chip-pass">Measured 20/20 Anchor</span></td>
+              <td>Measured 100.0% scripted reference verifier (<code>baseline-agent.ts</code>) across all 20 workflows + projected <code>FallbackToSkill</code> on pivots (Scenarios 17–20)</td>
               <td class="mono">0 tok (routine)</td>
               <td class="mono">$0.0000</td>
               <td class="mono">180 ms</td>
-              <td class="mono">100.0%</td>
-              <td><span class="chip chip-pass">100.0%</span></td>
+              <td class="mono">100.0% (20/20)</td>
+              <td><span class="chip chip-pass">100.0% (reference verifier)</span></td>
             </tr>
           </tbody>
         </table>

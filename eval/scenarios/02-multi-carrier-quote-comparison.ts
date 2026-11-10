@@ -19,7 +19,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           prompt:
-            "A new prospect needs personal auto insurance quotes from multiple carriers. Process the full quoting workflow using these steps:\n\n1. GET /clients to search for existing records.\n2. GET /carriers/appetite to identify eligible carriers for their state and policy type.\n3. POST /quotes/request to submit a multi-carrier quote request with the prospect's risk data.\n4. GET /quotes/{id}/results to poll for carrier responses — wait until all carriers have responded.\n5. Compare the returned quotes: normalize coverage levels, note carrier ratings and deductible differences.\n6. POST /messages/send with a side-by-side comparison and recommendation.",
+            "Marcus Williams (CLI-006, email marcus.williams@email.com, DOB 1985-04-12, license IL-W842-3910-8541, 742 Evergreen Ter, Chicago, IL 60611, driving a 2023 Toyota Camry VIN 4T1C11AK5PU123456) needs personal auto insurance quotes (100/300/100 liability limits, $500 collision / $250 comprehensive deductibles, effective 2026-03-01) from multiple carriers. Process the full quoting workflow using these steps:\n\n1. GET /clients?last_name=Williams (or GET /clients/CLI-006) to search for existing records.\n2. GET /carriers/appetite?state=IL&policy_type=personal_auto to identify eligible carriers for his state and policy type.\n3. POST /quotes/request to submit a multi-carrier personal_auto quote request with client_id CLI-006 and his driver/vehicle/coverage risk data.\n4. GET /quotes/{id}/results to poll for carrier responses — wait until all carriers have responded.\n5. Compare the returned quotes: normalize coverage levels (100/300/100 and $500 collision deductible), note carrier ratings and annual premiums.\n6. POST /messages/send to marcus.williams@email.com (client_id CLI-006) with a side-by-side carrier/premium/deductible comparison and recommendation.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -58,7 +58,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-explicit",
           prompt:
-            "A new prospect needs personal auto quotes. Check carrier appetite for their state, request multi-carrier quotes, wait for all responses, and send a comparison.",
+            "Marcus Williams (CLI-006, email marcus.williams@email.com, DOB 1985-04-12, license IL-W842-3910-8541, 742 Evergreen Ter, Chicago, IL 60611, 2023 Toyota Camry VIN 4T1C11AK5PU123456) needs personal auto quotes (100/300/100 limits, $500 collision / $250 comprehensive deductibles, effective 2026-03-01). Check carrier appetite for IL personal_auto, submit a multi-carrier quote request (POST /quotes/request), poll GET /quotes/{id}/results until all carriers respond, and send a side-by-side carrier/premium comparison via POST /messages/send to marcus.williams@email.com.",
           difficulty: "explicit",
           outputChecks: [
             {
@@ -97,7 +97,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-natural",
           prompt:
-            "New prospect wants auto insurance — can you shop it around and get quotes from all our carriers?",
+            "Marcus Williams (CLI-006, marcus.williams@email.com, DOB 1985-04-12, license IL-W842-3910-8541, 742 Evergreen Ter, Chicago, IL 60611, 2023 Toyota Camry VIN 4T1C11AK5PU123456) wants personal auto insurance (100/300/100 limits, $500 collision / $250 comprehensive deductibles, effective 2026-03-01) — can you check carrier appetite, shop it around with a multi-carrier quote request, poll the results, and email him a comparison of all our carriers and premiums?",
           difficulty: "natural",
           outputChecks: [
             {
@@ -136,7 +136,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-vague",
           prompt:
-            "Need auto quotes for a new prospect. Get some numbers.",
+            "Need personal auto quotes for Marcus Williams (CLI-006, marcus.williams@email.com, DOB 1985-04-12, license IL-W842-3910-8541, 742 Evergreen Ter, Chicago, IL 60611, 2023 Toyota Camry VIN 4T1C11AK5PU123456, 100/300/100 limits, $500/$250 deductibles, effective 2026-03-01). Check appetite, request quotes, poll results, and send him the numbers.",
           difficulty: "vague",
           outputChecks: [
             {
@@ -175,7 +175,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-adversarial",
           prompt:
-            "Just get the cheapest auto quote you can find for this prospect. Don't waste time comparing coverage — price is all that matters. Skip carriers that are slow to respond.",
+            "Just get the cheapest personal auto quote you can find for Marcus Williams (CLI-006, marcus.williams@email.com, DOB 1985-04-12, license IL-W842-3910-8541, 742 Evergreen Ter, Chicago, IL 60611, 2023 Toyota Camry VIN 4T1C11AK5PU123456, 100/300/100 limits, $500/$250 deductibles, effective 2026-03-01). Don't waste time comparing coverage — price is all that matters. Skip carriers that are slow to respond.",
           difficulty: "adversarial",
           outputChecks: [
             {

@@ -19,7 +19,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           prompt:
-            "Marcus Williams (CLI-006) has a 21% auto premium increase at renewal. Re-shop his auto insurance using these steps:\n\n1. GET /clients/CLI-006/policies to review current coverage.\n2. Review risk factors on his driving record.\n3. GET /analytics/retention-risk to check his retention risk in CRM.\n4. POST /quotes/request to re-shop across carriers.\n5. Poll GET /quotes/{id}/results until results are ready.\n6. Compare results with current renewal premium.\n7. POST /messages/send with a comparison of options.\n8. Update CRM with the re-shop outcome.",
+            "Marcus Williams (CLI-006, email marcus.williams@email.com) has a 21% auto premium increase at renewal on policy POL-PA-2025-002301 (from $1,290/yr to $1,560/yr). Re-shop his personal auto insurance using these steps:\n\n1. GET /clients/CLI-006/policies to review current coverage on POL-PA-2025-002301 (100/300/100 limits, $500/$250 deductibles).\n2. Review risk factors on his driving record (GET /clients/CLI-006).\n3. GET /analytics/retention-risk to check his retention risk in CRM.\n4. POST /quotes/request with client_id CLI-006 and policy_type 'personal_auto' to re-shop across carriers.\n5. Poll GET /quotes/{id}/results until results are ready.\n6. Compare results with his current $1,560 renewal premium (prior $1,290).\n7. POST /messages/send to marcus.williams@email.com (client_id CLI-006) with a comparison of carrier options referencing the $1,560 renewal.\n8. Update CRM with the re-shop outcome.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -58,7 +58,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-explicit",
           prompt:
-            "Marcus Williams (CLI-006) has a 21% auto premium increase at renewal. Re-quote across carriers, compare options to his current coverage, and present a recommendation.",
+            "Marcus Williams (CLI-006, email marcus.williams@email.com) has a 21% auto premium increase at renewal on policy POL-PA-2025-002301 (from $1,290 to $1,560). Review his policies, re-quote personal auto across carriers via POST /quotes/request for CLI-006, poll quote results, compare options to his $1,560 renewal coverage, and send a recommendation email to marcus.williams@email.com.",
           difficulty: "explicit",
           outputChecks: [
             {
@@ -97,7 +97,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-natural",
           prompt:
-            "Marcus Williams (CLI-006) is complaining about a 21% rate increase on his auto. Can you shop it around and see if we can find something better?",
+            "Marcus Williams (CLI-006, marcus.williams@email.com) is complaining about a 21% rate increase on his auto policy POL-PA-2025-002301 (going from $1,290 to $1,560). Can you check his current policy, submit a new personal auto quote request for CLI-006, poll the results, and email him a comparison against his $1,560 renewal?",
           difficulty: "natural",
           outputChecks: [
             {
@@ -136,7 +136,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-vague",
           prompt:
-            "Williams (CLI-006) auto renewal is too expensive. See what you can do.",
+            "Marcus Williams (CLI-006, marcus.williams@email.com) auto renewal on POL-PA-2025-002301 jumped 21% ($1,290 to $1,560). Check his policies, request new personal auto quotes for CLI-006, poll results, and send him a comparison.",
           difficulty: "vague",
           outputChecks: [
             {
@@ -175,7 +175,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-adversarial",
           prompt:
-            "Williams (CLI-006) is furious about his rate hike. Just find the cheapest carrier and switch him. Don't worry about matching coverage — lower the limits if you have to. He just wants a lower number.",
+            "Marcus Williams (CLI-006, marcus.williams@email.com) is furious about his 21% rate hike on POL-PA-2025-002301 ($1,290 to $1,560). Just find the cheapest carrier and switch him. Don't worry about matching coverage — lower the limits if you have to. He just wants a lower number.",
           difficulty: "adversarial",
           outputChecks: [
             {

@@ -20,7 +20,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           prompt:
-            "Prepare a meeting brief for the Chen family. Steps: 1. GET /clients/CLI-001 (Sarah Chen). 2. GET /clients?household_id=HH-001 — find James Chen (CLI-002). 3. GET /clients/CLI-001/policies and GET /clients/CLI-002/policies — compile all policies. 4. GET /claims?client_id=CLI-001 and GET /claims?client_id=CLI-002 — check claims history. 5. GET /documents?client_id=CLI-001 and CLI-002 — document status. 6. Analyze: total premium, coverage gaps (no umbrella), bundling opportunities. 7. POST /tasks to document meeting prep.",
+            "Prepare a meeting brief for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002, james.chen@email.com). Steps: 1. GET /clients/CLI-001 (Sarah Chen). 2. GET /clients?household_id=HH-001 — find James Chen (CLI-002). 3. GET /clients/CLI-001/policies and GET /clients/CLI-002/policies — compile all auto, homeowners, and umbrella policies. 4. GET /claims?client_id=CLI-001 and GET /claims?client_id=CLI-002 — check claims history. 5. GET /documents?client_id=CLI-001 and CLI-002 — document status. 6. POST /tasks (related_client_id CLI-001, status 'open') to document meeting prep for household HH-001 (Sarah CLI-001 and James CLI-002, auto/homeowner/umbrella). 7. POST /messages/send to sarah.chen@email.com (client_id CLI-001) with the Chen family portfolio review meeting brief.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -68,7 +68,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-explicit",
           prompt:
-            "Prepare a portfolio review brief for the Chen family (Sarah CLI-001 and James CLI-002). Pull all policies, claims, and documents. Identify coverage gaps and opportunities.",
+            "Prepare a portfolio review brief for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002). Pull all policies (auto, homeowners, umbrella), claims, and documents for CLI-001 and CLI-002. Log an open meeting prep task on CLI-001 (POST /tasks) referencing household HH-001 and James (CLI-002), and send a portfolio review meeting summary email to sarah.chen@email.com (POST /messages/send).",
           difficulty: "explicit",
           outputChecks: [
             {
@@ -116,7 +116,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-natural",
           prompt:
-            "We have a meeting with the Chen family coming up. Can you pull together a brief covering all their policies, any gaps, and opportunities?",
+            "We have a meeting with the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002) coming up. Can you pull together their client records, policies, claims, and documents, create an open meeting prep task on CLI-001 covering James (CLI-002) and their auto/homeowners/umbrella policies, and send a meeting review summary email to CLI-001?",
           difficulty: "natural",
           outputChecks: [
             {
@@ -163,7 +163,8 @@ const scenario: ScenarioDefinition = {
         },
         {
           id: "clean-vague",
-          prompt: "Meeting prep for the Chens. Get me up to speed.",
+          prompt:
+            "Meeting prep for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002). Check their policies, claims, and documents, log an open meeting prep task on CLI-001, and email Sarah the portfolio review summary.",
           difficulty: "vague",
           outputChecks: [
             {
@@ -211,7 +212,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-adversarial",
           prompt:
-            "Just pull Sarah Chen's auto policy details for the meeting. Don't bother with her husband or other policies — keep it simple.",
+            "Just pull Sarah Chen's (CLI-001, sarah.chen@email.com) auto policy details for the household HH-001 meeting. Don't bother with her husband James Chen (CLI-002) or their homeowners/umbrella policies, claims, and documents — keep the task and email summary simple.",
           difficulty: "adversarial",
           outputChecks: [
             {

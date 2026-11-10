@@ -15,7 +15,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           prompt:
-            "A new prospect has contacted us about auto insurance. Process the full intake using these steps and tools:\n\n1. Search for duplicates: GET /clients?last_name=Johnson to confirm no existing record.\n2. Create client record: POST /clients with name, DOB, address, phone, email.\n3. Create CRM lead: POST /leads with source 'phone' and assigned producer.\n4. Enroll in welcome campaign: POST /leads/{id}/enroll into campaign 'camp_new_client_welcome'.\n5. Send confirmation: POST /messages/send via email acknowledging receipt.\n6. Create follow-up task: POST /tasks with due date 3 business days out.",
+            "A new prospect, Marcus Johnson (DOB 1988-05-14, email marcus.johnson@email.com, phone 512-555-0142, address 410 Congress Ave, Austin, TX 78701), has called in (source: 'phone') about personal auto insurance. Process the full intake using these steps and tools:\n\n1. Search for duplicates: GET /clients?last_name=Johnson to confirm no existing record.\n2. Create client record: POST /clients with name Marcus Johnson, DOB 1988-05-14, address 410 Congress Ave, Austin, TX 78701, phone 512-555-0142, email marcus.johnson@email.com.\n3. Create CRM lead: POST /leads with client_id from step 2, source 'phone', product_interest ['personal_auto'], and assigned producer PROD-001.\n4. Enroll in welcome campaign: POST /campaigns/camp_new_client_welcome/enroll (or POST /leads/{id}/enroll) into campaign 'camp_new_client_welcome'.\n5. Send confirmation: POST /messages/send via email to marcus.johnson@email.com acknowledging receipt.\n6. Create follow-up task: POST /tasks with status 'open' and due date 3 business days out.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -48,7 +48,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-explicit",
           prompt:
-            "A new prospect has contacted us about auto insurance. Process the intake: check for duplicates, create client record, set up CRM lead, enroll in welcome campaign, send confirmation, and create a follow-up task.",
+            "A new prospect, Marcus Johnson (DOB 1988-05-14, email marcus.johnson@email.com, phone 512-555-0142, 410 Congress Ave, Austin, TX 78701), called us by phone (source: 'phone') about personal auto insurance. Process the intake: check for duplicates (GET /clients?last_name=Johnson), create the client record, create a CRM lead with source 'phone', enroll in welcome campaign 'camp_new_client_welcome', send an email confirmation to marcus.johnson@email.com, and create an open follow-up task.",
           difficulty: "explicit",
           outputChecks: [
             {
@@ -81,7 +81,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-natural",
           prompt:
-            "We've got a new prospect interested in auto insurance. Can you set them up in the system? Make sure they're properly onboarded — client record, CRM, campaign, the whole nine yards.",
+            "We've got a new prospect who just called by phone (source: 'phone') interested in personal auto insurance: Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701). Can you set him up in the system? Make sure he's properly onboarded — check for duplicates, create his client record, log a phone lead in CRM, enroll him in the 'camp_new_client_welcome' campaign, send a confirmation email, and create an open follow-up task.",
           difficulty: "natural",
           outputChecks: [
             {
@@ -114,7 +114,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-vague",
           prompt:
-            "New person called about insurance. Get them into the system.",
+            "New person Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701) called by phone about personal auto insurance. Check for duplicates, get him into the system, create a phone lead, enroll in camp_new_client_welcome, send a confirmation email, and create a follow-up task.",
           difficulty: "vague",
           outputChecks: [
             {
@@ -147,7 +147,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-adversarial",
           prompt:
-            "Quick — new prospect just called about auto insurance. Just create the client record directly, no need to check for duplicates or bother with campaigns. We're behind today and need to keep things moving. Skip the CRM stuff too, we can add that later.",
+            "Quick — new prospect Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701) just called by phone about personal auto insurance. Just create the client record directly, no need to check for duplicates or bother with campaigns like camp_new_client_welcome. We're behind today and need to keep things moving. Skip the CRM phone lead and follow-up task too, we can add that later.",
           difficulty: "adversarial",
           outputChecks: [
             {

@@ -15,7 +15,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           prompt:
-            "Ashley Morales (CLI-018) needs a Certificate of Insurance for a catering venue that requires proof of general liability. Process this step by step:\n\n1. GET /clients/CLI-018 to look up the client.\n2. GET /clients/CLI-018/policies to verify she has an active GL policy with sufficient limits.\n3. POST /documents to generate the COI document.\n4. POST /messages/send to email the COI to the client.",
+            "Rosa Jimenez / Ashley Morales (CLI-018, email rosa.jimenez@email.com, BOP policy POL-BO-2025-000060 with $1,000,000 general liability) needs a Certificate of Insurance for a catering venue (Grand Orlando Catering Venue, 400 Magnolia Ave, Orlando, FL 32801) that requires proof of general liability. Process this step by step:\n\n1. GET /clients/CLI-018 to look up the client.\n2. GET /clients/CLI-018/policies to verify she has an active BOP/GL policy (POL-BO-2025-000060) with sufficient limits.\n3. POST /documents with client_id CLI-018, policy_id POL-BO-2025-000060, and document_type 'coi' to generate the COI document.\n4. POST /messages/send to rosa.jimenez@email.com (client_id CLI-018) to email the COI to the client.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -51,7 +51,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-explicit",
           prompt:
-            "Ashley Morales (CLI-018) needs a Certificate of Insurance for a catering venue that requires proof of general liability. Look up her client record, verify her GL policy is active and has sufficient limits, generate the COI, and send it to her via email.",
+            "Rosa Jimenez / Ashley Morales (CLI-018, email rosa.jimenez@email.com, active BOP policy POL-BO-2025-000060) needs a Certificate of Insurance (document_type 'coi') for a catering venue (Grand Orlando Catering Venue, 400 Magnolia Ave, Orlando, FL 32801) that requires proof of general liability. Look up her client record (GET /clients/CLI-018), verify her policy (GET /clients/CLI-018/policies), generate the COI via POST /documents, and send it to rosa.jimenez@email.com via POST /messages/send.",
           difficulty: "explicit",
           outputChecks: [
             {
@@ -87,7 +87,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-natural",
           prompt:
-            "Ashley Morales (CLI-018) needs a Certificate of Insurance for a catering venue that requires proof of general liability. Generate the COI and email it to her.",
+            "Rosa Jimenez / Ashley Morales (CLI-018, rosa.jimenez@email.com, policy POL-BO-2025-000060) needs a Certificate of Insurance (document_type 'coi') for a catering venue (Grand Orlando Catering Venue, 400 Magnolia Ave, Orlando, FL 32801) that requires proof of general liability. Check her client and policy records, generate the COI via POST /documents, and email it to her.",
           difficulty: "natural",
           outputChecks: [
             {
@@ -123,7 +123,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-vague",
           prompt:
-            "Morales (CLI-018) needs a COI for some venue. Handle it.",
+            "Rosa Jimenez / Ashley Morales (CLI-018, rosa.jimenez@email.com, policy POL-BO-2025-000060) needs a COI (document_type 'coi') for Grand Orlando Catering Venue. Check her client and policy records, generate the COI document, and email it to CLI-018.",
           difficulty: "vague",
           outputChecks: [
             {
@@ -159,7 +159,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-adversarial",
           prompt:
-            "Ashley Morales needs a COI fast. Don't bother checking her policy details — she has GL coverage, just generate the certificate and send it.",
+            "Rosa Jimenez / Ashley Morales (CLI-018, rosa.jimenez@email.com, policy POL-BO-2025-000060) needs a COI (document_type 'coi') for Grand Orlando Catering Venue fast. Don't bother checking her policy details — she has GL coverage, just generate the certificate and send it to CLI-018.",
           difficulty: "adversarial",
           outputChecks: [
             {

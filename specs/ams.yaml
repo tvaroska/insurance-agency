@@ -2577,8 +2577,8 @@ paths:
           schema:
             type: string
             format: date-time
-        - $ref: "#/components/parameters/limit"
-        - $ref: "#/components/parameters/cursor"
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
       responses:
         "200":
           description: Paginated list of escalations.
@@ -2592,7 +2592,7 @@ paths:
                     items:
                       $ref: "#/components/schemas/Escalation"
                   pagination:
-                    $ref: "#/components/schemas/Pagination"
+                    $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/401Unauthorized"
         "403":

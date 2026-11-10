@@ -68,11 +68,18 @@ beforeAll(() => {
       document_type: "signed_application",
       filename: "app.pdf",
     }),
+    //Insert documents that envelopes can reference
     makeDocument({
       document_id: "doc_env_002",
       client_id: "CLI-001",
       document_type: "dec_page",
       filename: "dec.pdf",
+    }),
+    makeDocument({
+      document_id: "doc_env_003",
+      client_id: "CLI-003",
+      document_type: "signed_application",
+      filename: "cli003_app.pdf",
     }),
   ];
 
@@ -241,5 +248,80 @@ describe("POST /v1/envelopes/create - Success", () => {
       (expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
     expect(diffDays).toBeGreaterThan(29);
     expect(diffDays).toBeLessThan(31);
+  });
+});
+
+// ── GET /v1/envelopes — List & Filter ──
+
+describe("GET /v1/envelopes", () => {
+  it("returns 401 without token", async () => {
+    const res = await app.request(ENVELOPES_URL);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 with wrong scope", async () => {
+    const headers = await authHeader(["ecm:assets:read"]);
+    const res = await app.request(ENVELOPES_URL, { headers });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 200 and filters by client_id=CLI-003&limit=50", async () => {
+    const createHeaders = await authHeader(["ecm:envelopes:create"]);
+    const createdRes = await createEnvelope(
+      validEnvelopeBody({
+        client_id: "CLI-003",
+        document_ids: ["doc_env_003"],
+        signers: [
+          {
+            name: "Maria Rodriguez",
+            email: "maria.rodriguez@example.com",
+            role: "policyholder",
+          },
+        ],
+        message: "Please sign endorsement application.",
+      }),
+      createHeaders,
+    );
+    expect(createdRes.status).toBe(201);
+
+    const readHeaders = await authHeader(["ecm:envelopes:read"]);
+    const res = await app.request(
+      `${ENVELOPES_URL}?client_id=CLI-003&limit=50`,
+      { headers: readHeaders },
+    );
+    expect(res.status).toBe(200);
+
+    const json = await res.json();
+    expect(Array.isArray(json.data)).toBe(true);
+    expect(json.data.length).toBeGreaterThanOrEqual(1);
+    expect(json.pagination).toBeDefined();
+    expect(json.pagination.limit).toBe(50);
+
+    for (const env of json.data) {
+      expect(env.client_id).toBe("CLI-003");
+      expect(env.envelope_id).toMatch(/^env_/);
+      expect(env.document_ids).toEqual(["doc_env_003"]);
+      expect(env.document_Ids).toEqual(["doc_env_003"]);
+      expect(env.signer_name).toBe("Maria Rodriguez");
+      expect(env.signer_email).toBe("maria.rodriguez@example.com");
+      expect(env.status).toBe("created");
+      expect(env.created_at).toBeTruthy();
+      expect(env.completed_at).toBeNull();
+    }
+  });
+
+  it("supports status filter and returns 400 on invalid status", async () => {
+    const readHeaders = await authHeader(["ecm:envelopes:read"]);
+    const okRes = await app.request(`${ENVELOPES_URL}?status=created`, {
+      headers: readHeaders,
+    });
+    expect(okRes.status).toBe(200);
+    const okJson = await okRes.json();
+    expect(okJson.data.every((e: any) => e.status === "created")).toBe(true);
+
+    const badRes = await app.request(`${ENVELOPES_URL}?status=not_a_status`, {
+      headers: readHeaders,
+    });
+    expect(badRes.status).toBe(400);
   });
 });

@@ -302,6 +302,36 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     await expectModalityViolation(await app.request("/v1/summit/quotes", { headers }));
   });
 
+  test("POST /sim/reset clears issued portal session tokens so pre-reset tokens are rejected", async () => {
+    const app = portalApp();
+    app.route(
+      "/sim",
+      createSimRouter({
+        serviceName: "carrier-summit",
+        prisma: {},
+        tables: [],
+      }),
+    );
+
+    process.env.MODALITY_MODE = "strict";
+    const token = await issueToken(app);
+    const headers = { "X-Portal-Session": token };
+
+    // Token works before reset
+    expect((await app.request("/v1/summit/quotes", { headers })).status).toBe(200);
+
+    // Trigger /sim/reset
+    const resetRes = await app.request("/sim/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seed_mode: "realistic" }),
+    });
+    expect(resetRes.status).toBe(200);
+
+    // Pre-reset token is now rejected by strictModalityGuard
+    await expectModalityViolation(await app.request("/v1/summit/quotes", { headers }));
+  });
+
   test("createTestPrismaClient and getTestDatabaseUrl support TEST_DATABASE_URL", async () => {
     class DummyPrismaClient {
       opts: any;

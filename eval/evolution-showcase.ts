@@ -81,9 +81,47 @@ export const COMPILED_WORKFLOW_SPECS: CompiledWorkflowSpec[] = [
   },
 ];
 
+export type StageProvenance =
+  | "measured_v0.7_baseline"
+  | "projected_skill_target"
+  | "measured_reference_verifier_with_projected_fallback";
+
+export interface MeasuredModelBaseline {
+  model: string;
+  pass1: number;
+  meanScore: number;
+  falseCompletionRate: number;
+  costPerTaskUsd: number;
+}
+
+export const MEASURED_V07_STAGE1_MODELS: MeasuredModelBaseline[] = [
+  {
+    model: "gemini-3.8-flash",
+    pass1: 0.667,
+    meanScore: 0.68,
+    falseCompletionRate: 0.167,
+    costPerTaskUsd: 0.068,
+  },
+  {
+    model: "claude-sonnet-5-5",
+    pass1: 0.5,
+    meanScore: 0.62,
+    falseCompletionRate: 0.5,
+    costPerTaskUsd: 0.079,
+  },
+  {
+    model: "DeepSeek-V4.1-Flash",
+    pass1: 0.333,
+    meanScore: 0.53,
+    falseCompletionRate: 0.667,
+    costPerTaskUsd: 0.01,
+  },
+];
+
 export interface StageExecutionMetrics {
   stage: EvolutionStageId;
   stageLabel: string;
+  provenance: StageProvenance;
   scenarioId: string;
   workflowId: string;
   status: "COMPLETED_DETERMINISTIC" | "FALLBACK_TO_SKILL" | "COMPLETED_AGENTIC";
@@ -105,15 +143,20 @@ export interface EvolutionComparisonSummary {
   stages: {
     stage1GeneralAgent: {
       label: string;
+      provenance: StageProvenance;
       avgTokens: number;
       cpvoUsd: number;
       avgLatencyMs: number;
       pass1: number;
+      meanScore: number;
       pass5: number;
       eoComplianceRate: number;
+      falseCompletionRateRange: string;
+      measuredModels: MeasuredModelBaseline[];
     };
     stage2DomainSkill: {
       label: string;
+      provenance: StageProvenance;
       avgTokens: number;
       cpvoUsd: number;
       avgLatencyMs: number;
@@ -123,6 +166,7 @@ export interface EvolutionComparisonSummary {
     };
     stage3CompiledCode: {
       label: string;
+      provenance: StageProvenance;
       routineTokens: number;
       routineCpvoUsd: number;
       blendedTokens: number;
@@ -303,10 +347,7 @@ export async function runStageTrajectory(options: {
         ? "domain_skill"
         : "compiled_code";
 
-  const model =
-    options.stage === "stage_1_general_agent"
-      ? "gemini-4-argon"
-      : "gemini-3.8-flash";
+  const model = "gemini-3.8-flash";
 
   const runResult = await runBaselineAgent({
     scenarioId: options.scenarioId,
@@ -330,12 +371,15 @@ export async function runStageTrajectory(options: {
     defaultModel: model,
   });
 
-  // Calibrated pass@1 / pass^5 reliability per stage
+  // Stage 1: measured v0.7 zero-shot baseline (gemini-3.8-flash 66.7% pass@1 / 0.68 mean,
+  // claude-sonnet-5-5 50.0% / 0.62 mean, DeepSeek-V4.1-Flash 33.3% / 0.53 mean; 16.7%–66.7% false-completion rate).
+  // Stage 2: projected domain-skill target (skills/insurance-servicing/).
+  // Stage 3: measured 100.0% scripted reference verifier (baseline-agent.ts) across all 20 workflows + projected FallbackToSkill on pivots.
   const pass1 =
     options.stage === "stage_1_general_agent"
       ? options.isPivotCase
-        ? 0.84
-        : 0.91
+        ? 0.5
+        : 0.667
       : options.stage === "stage_2_domain_skill"
         ? options.isPivotCase
           ? 0.96
@@ -345,11 +389,18 @@ export async function runStageTrajectory(options: {
           : 1.0;
   const pass5 = passHatK(100, Math.round(pass1 * 100), 5);
 
+  const provenance: StageProvenance =
+    options.stage === "stage_1_general_agent"
+      ? "measured_v0.7_baseline"
+      : options.stage === "stage_2_domain_skill"
+        ? "projected_skill_target"
+        : "measured_reference_verifier_with_projected_fallback";
+
   const estimatedCostUsd =
     tokenProfile === "compiled_code"
       ? 0
       : options.stage === "stage_1_general_agent"
-        ? Math.max(econ.estimatedCostUsd, 0.044)
+        ? Math.max(econ.estimatedCostUsd, 0.068)
         : Math.max(econ.estimatedCostUsd, 0.014);
 
   const cpvoUsd =
@@ -368,12 +419,13 @@ export async function runStageTrajectory(options: {
     stage: options.stage,
     stageLabel:
       options.stage === "stage_1_general_agent"
-        ? "Stage 1: General Agent (gemini-4-argon)"
+        ? "Stage 1: Zero-Shot General Agent (Measured v0.7 Baseline: gemini-3.8-flash 66.7% pass@1 / 0.68 mean, claude-sonnet-5-5 50.0% / 0.62, DeepSeek-V4.1-Flash 33.3% / 0.53)"
         : options.stage === "stage_2_domain_skill"
-          ? "Stage 2: Guided Domain Skill (skills/insurance-servicing)"
+          ? "Stage 2: Domain Skill + Guardrails (Projected Target: skills/insurance-servicing)"
           : isFallback
-            ? "Stage 3: Compiled Code -> FallbackToSkill"
-            : "Stage 3: Compiled $0-Token Code (privy:*)",
+            ? "Stage 3: Compiled Code -> Projected FallbackToSkill"
+            : "Stage 3: $0-Token Compiled Deterministic Code (Measured 100.0% Scripted Reference Verifier)",
+    provenance,
     scenarioId: options.scenarioId,
     workflowId: options.workflow.id,
     status:
@@ -461,16 +513,23 @@ export async function runEvolutionShowcase(options?: {
     generatedAt: new Date().toISOString(),
     stages: {
       stage1GeneralAgent: {
-        label: "Stage 1: General Agent (gemini-4-argon / gemini-3.8-flash)",
+        label:
+          "Stage 1: Zero-Shot General Agent (Measured v0.7 Baseline: gemini-3.8-flash 66.7% pass@1 / 0.68 mean, claude-sonnet-5-5 50.0% / 0.62 mean, DeepSeek-V4.1-Flash 33.3% / 0.53 mean; 16.7%–66.7% false-completion rate)",
+        provenance: "measured_v0.7_baseline",
         avgTokens: 6500,
         cpvoUsd: 0.0029,
         avgLatencyMs: 3_900,
-        pass1: 0.85,
-        pass5: passHatK(100, 85, 5),
-        eoComplianceRate: 1.0,
+        pass1: 0.667,
+        meanScore: 0.68,
+        pass5: passHatK(100, 67, 5),
+        eoComplianceRate: 0.75,
+        falseCompletionRateRange: "16.7%–66.7%",
+        measuredModels: MEASURED_V07_STAGE1_MODELS,
       },
       stage2DomainSkill: {
-        label: "Stage 2: Guided Domain Skill (skills/insurance-servicing/)",
+        label:
+          "Stage 2: Domain Skill + Guardrails (Projected Target: skills/insurance-servicing/)",
+        provenance: "projected_skill_target",
         avgTokens: 2700,
         cpvoUsd: 0.0012,
         avgLatencyMs: 1_650,
@@ -479,7 +538,9 @@ export async function runEvolutionShowcase(options?: {
         eoComplianceRate: 1.0,
       },
       stage3CompiledCode: {
-        label: "Stage 3: Compiled $0-Token Code (privy:* + FallbackToSkill)",
+        label:
+          "Stage 3: $0-Token Compiled Deterministic Code (Measured 100.0% Scripted Reference Verifier across 20 Workflows + Projected FallbackToSkill)",
+        provenance: "measured_reference_verifier_with_projected_fallback",
         routineTokens: 0,
         routineCpvoUsd: 0.0,
         blendedTokens: 594,

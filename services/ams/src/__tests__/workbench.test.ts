@@ -61,6 +61,12 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
     expect(data.anomalies).toHaveLength(15);
     expect(data.escalations.length).toBeGreaterThanOrEqual(3);
     expect(data.evolutionStages).toHaveLength(3);
+    expect(data.evolutionStages[0].pass1).toBe(0.667);
+    expect(data.evolutionStages[0].meanScore).toBe(0.68);
+    expect(data.evolutionStages[0].falseCompletionRateRange).toBe("16.7%–66.7%");
+    expect(data.evolutionStages[0].measuredModels).toHaveLength(3);
+    expect(data.evolutionStages[1].provenance).toBe("projected_skill_target");
+    expect(data.evolutionStages[2].pass1).toBe(1.0);
   });
 
   test("POST /workbench/api/run-journey executes Hero Journey and writes a real SQLite audit task", async () => {
