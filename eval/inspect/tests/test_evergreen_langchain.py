@@ -54,9 +54,70 @@ def test_task_runs_samples_one_at_a_time_with_setup_scorer_and_cleanup():
 
 
 def test_scenario_given_as_yaml_integer_still_filters():
-    # `-T scenario=01` reaches the task as the integer 1.
+    # `-T scenario=01` reaches the task as the integer 1; `-T scenario=01,14,20` as a list.
     task = harness.evergreen_langchain(scenario=1, seed="realistic")
     assert {s.metadata["scenario_id"] for s in task.dataset} == {"01"}
+    multi = harness.evergreen_langchain(scenario=["01", 14, "20"], seed="realistic")
+    assert {s.metadata["scenario_id"] for s in multi.dataset} == {"01", "14", "20"}
+
+
+def test_bridge_filters_preserve_assistant_reasoning_and_empty_list_content():
+    from inspect_ai._util.content import ContentReasoning, ContentText
+    from inspect_ai.model import ChatCompletionChoice, ChatMessageAssistant, GenerateConfig
+    from inspect_ai.tool import ToolCall
+
+    in_filter, out_filter = harness.bridge_filters()
+    tc_gemini = ToolCall(id="call_gem_1", function="listClients", arguments={"last_name": "Chen"})
+    gemini_blocks = [
+        ContentReasoning(reasoning=" visible thought ", redacted=False),
+        ContentReasoning(
+            reasoning="AY89a1878==",
+            redacted=True,
+            internal={"gemini_function_call_id": "call_gem_1"},
+        ),
+    ]
+    out_gemini = ModelOutput(
+        model="gemini-3.8-flash",
+        choices=[
+            ChatCompletionChoice(
+                message=ChatMessageAssistant(id="msg_g1", content=gemini_blocks, tool_calls=[tc_gemini]),
+                stop_reason="tool_calls",
+            )
+        ],
+    )
+    tc_claude = ToolCall(id="toolu_cl_1", function="createLead", arguments={"body": {}})
+    out_claude = ModelOutput(
+        model="claude-sonnet-5-5",
+        choices=[
+            ChatCompletionChoice(
+                message=ChatMessageAssistant(id="msg_c1", content=[], tool_calls=[tc_claude]),
+                stop_reason="tool_calls",
+            )
+        ],
+    )
+
+    async def run():
+        model = get_model("mockllm/model")
+        empty_in = harness.GenerateInput([], [], None, GenerateConfig())
+        await out_filter(model, out_gemini, empty_in)
+        await out_filter(model, out_claude, empty_in)
+
+        degraded_gemini = ChatMessageAssistant(
+            content=[
+                ContentReasoning(reasoning=" visible thought ", redacted=False),
+                ContentText(text="<think redacted='true'>AY89a1878==</think>"),
+            ],
+            tool_calls=[tc_gemini],
+        )
+        degraded_claude = ChatMessageAssistant(content="", tool_calls=[tc_claude])
+        res = await in_filter(model, [degraded_gemini, degraded_claude], [], None, GenerateConfig())
+        return res.input
+
+    restored_gemini, restored_claude = asyncio.run(run())
+    assert restored_gemini.content == gemini_blocks
+    assert restored_gemini.id == "msg_g1"
+    assert restored_claude.content == []
+    assert restored_claude.id == "msg_c1"
 
 
 def test_playwright_server_is_pinned_headless_isolated_and_limited_to_the_portals(

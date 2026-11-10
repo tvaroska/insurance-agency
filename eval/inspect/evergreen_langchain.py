@@ -25,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import os
 import tempfile
@@ -36,9 +37,18 @@ import httpx
 from inspect_ai import Task, task
 from inspect_ai.agent import Agent, AgentState, agent, agent_bridge
 from inspect_ai.dataset import MemoryDataset
-from inspect_ai.model import GenerateConfig, messages_to_openai
+from inspect_ai.model import (
+    ChatMessage,
+    ChatMessageAssistant,
+    GenerateConfig,
+    GenerateInput,
+    Model,
+    ModelOutput,
+    messages_to_openai,
+)
 from inspect_ai.scorer import Score, Scorer, Target, mean, scorer, stderr
 from inspect_ai.solver import Generate, Solver, TaskState, solver
+from inspect_ai.tool import ToolChoice, ToolInfo
 from inspect_ai.util import store, subprocess
 from langchain.agents import create_agent
 from langchain_core.tools import BaseTool
@@ -194,6 +204,52 @@ async def release_services(state: TaskState):
         _stack_lock().release()
 
 
+def bridge_filters():
+    """Preserve provider-native assistant content across the OpenAI Completions round-trip.
+
+    `ChatOpenAI(model="inspect")` serializes assistant messages through OpenAI Chat
+    Completions, which drops a second `<think redacted="true" internal=...>` block
+    (Gemini's `thought_signature` anchor) and turns `content=[]` into `content=""`
+    (which Anthropic renders as a trailing `(no content)` text block after `tool_use`).
+    Keying each assistant turn by its `tool_calls` IDs restores the original content
+    before the next provider call.
+    """
+    saved_content: dict[tuple[str, ...], str | list[Any]] = {}
+    saved_ids: dict[tuple[str, ...], str | None] = {}
+
+    async def on_response(model: Model, output: ModelOutput, generate_input: GenerateInput):
+        for choice in output.choices:
+            msg = choice.message
+            if msg.tool_calls:
+                key = tuple(tc.id for tc in msg.tool_calls)
+                saved_content[key] = copy.deepcopy(msg.content)
+                saved_ids[key] = msg.id
+        return None
+
+    async def on_input(
+        model: Model,
+        messages: list[ChatMessage],
+        tools: list[ToolInfo],
+        tool_choice: ToolChoice | None,
+        config: GenerateConfig,
+    ):
+        restored: list[ChatMessage] = []
+        for m in messages:
+            if isinstance(m, ChatMessageAssistant) and m.tool_calls:
+                key = tuple(tc.id for tc in m.tool_calls)
+                if key in saved_content:
+                    m = m.model_copy(
+                        update={
+                            "content": copy.deepcopy(saved_content[key]),
+                            "id": saved_ids.get(key) or m.id,
+                        }
+                    )
+            restored.append(m)
+        return GenerateInput(restored, tools, tool_choice, config)
+
+    return on_input, on_response
+
+
 @agent
 def langchain_agent():
     """LangChain's standard agent over the typed tools, run through Inspect's agent bridge."""
@@ -201,12 +257,20 @@ def langchain_agent():
     async def execute(state: AgentState):
         urls = service_base_urls()
         work_dir = Path(store().get(WORK_DIR_KEY))
+        in_filter, out_filter = bridge_filters()
         async with AsyncExitStack() as stack:
             http = await stack.enter_async_context(httpx.AsyncClient(timeout=60))
             tools = [*build_rest_tools(RestClient(http, urls)), *await open_mcp_tools(stack, urls, work_dir)]
             model = ChatOpenAI(model="inspect", api_key="inspect", disable_streaming=True)
             graph = create_agent(model, tools, system_prompt=system_prompt(urls))
-            async with agent_bridge(state, web_search=False, code_execution=False, client_mcp_servers=False) as bridge:
+            async with agent_bridge(
+                state,
+                filter=in_filter,
+                response_filter=out_filter,
+                web_search=False,
+                code_execution=False,
+                client_mcp_servers=False,
+            ) as bridge:
                 await graph.ainvoke({"messages": await messages_to_openai(state.messages)})
                 return bridge.state
 

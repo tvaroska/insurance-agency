@@ -124,7 +124,7 @@ Regulatory & E&O Guardrails:
 
 
 def load_evergreen_samples(
-    scenario: str | None = None,
+    scenario: str | int | list[str | int] | tuple[str | int, ...] | None = None,
     seed: str | None = "realistic",
     difficulty: str | None = None,
     modality_mode: str = "strict",
@@ -134,12 +134,13 @@ def load_evergreen_samples(
         raise FileNotFoundError(f"Tasks catalog not found at {TASKS_JSON_PATH}")
 
     raw_tasks: dict[str, dict[str, Any]] = json.loads(TASKS_JSON_PATH.read_text())
-    # str(): Inspect parses `-T scenario=01` as YAML, which yields the integer 1.
-    scenario_filter = (
-        {s.strip().zfill(2) for s in str(scenario).split(",") if s.strip()}
-        if scenario
-        else None
-    )
+    # Inspect CLI parses `-T scenario=01` as int 1 and `-T scenario=01,14,20` as a list.
+    if scenario is None:
+        scenario_filter = None
+    elif isinstance(scenario, (list, tuple, set)):
+        scenario_filter = {str(s).strip().zfill(2) for s in scenario if str(s).strip()}
+    else:
+        scenario_filter = {s.strip().zfill(2) for s in str(scenario).split(",") if s.strip()}
 
     samples: list[Sample] = []
     for task_id in sorted(raw_tasks.keys()):

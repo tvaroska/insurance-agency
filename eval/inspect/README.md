@@ -82,9 +82,10 @@ inspect eval eval/inspect/evergreen_langchain.py --model anthropic/vertex/claude
 
 # DeepSeek-V4.1-Flash through Vertex AI's OpenAI-compatible endpoint. The service name
 # vertex-maas keeps these variables apart from VERTEX_BASE_URL and VERTEX_API_KEY, which
-# the google provider also reads. Use the model ID shown in Model Garden. The access token
-# expires after an hour, so split longer runs (for example by scenario).
-VERTEX_MAAS_BASE_URL=https://<region>-aiplatform.googleapis.com/v1/projects/<project>/locations/<region>/endpoints/openapi \
+# the google provider also reads. When <region> is global, the host is
+# https://aiplatform.googleapis.com (for regional endpoints, https://<region>-aiplatform.googleapis.com).
+# The access token expires after an hour, so split longer runs (for example by scenario).
+VERTEX_MAAS_BASE_URL=https://aiplatform.googleapis.com/v1/projects/<project>/locations/global/endpoints/openapi \
 VERTEX_MAAS_API_KEY="$(gcloud auth print-access-token)" \
 inspect eval eval/inspect/evergreen_langchain.py \
   --model openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas --max-samples 1
