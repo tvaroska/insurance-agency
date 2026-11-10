@@ -8,5 +8,6 @@ export * from "./logging";
 export * from "./latency";
 export * from "./testing";
 export * from "./sim";
+export * from "./request-log";
 export * from "./compliance-firewall";
 

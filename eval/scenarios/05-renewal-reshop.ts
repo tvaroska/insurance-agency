@@ -30,8 +30,9 @@ const scenario: ScenarioDefinition = {
               path: "/quotes?client_id=CLI-006",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ client_id: "CLI-006" }] },
+                bodyRegex: { request_id: "^qr_" },
               },
             },
             {
@@ -68,8 +69,9 @@ const scenario: ScenarioDefinition = {
               path: "/quotes?client_id=CLI-006",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ client_id: "CLI-006" }] },
+                bodyRegex: { request_id: "^qr_" },
               },
             },
             {
@@ -106,8 +108,9 @@ const scenario: ScenarioDefinition = {
               path: "/quotes?client_id=CLI-006",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ client_id: "CLI-006" }] },
+                bodyRegex: { request_id: "^qr_" },
               },
             },
             {
@@ -144,8 +147,9 @@ const scenario: ScenarioDefinition = {
               path: "/quotes?client_id=CLI-006",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ client_id: "CLI-006" }] },
+                bodyRegex: { request_id: "^qr_" },
               },
             },
             {
@@ -182,8 +186,9 @@ const scenario: ScenarioDefinition = {
               path: "/quotes?client_id=CLI-006",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ client_id: "CLI-006" }] },
+                bodyRegex: { request_id: "^qr_" },
               },
             },
             {

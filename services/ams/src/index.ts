@@ -8,6 +8,7 @@ import {
   oauthTokenEndpoint,
   chaosMiddleware,
   createSimRouter,
+  createRequestLog,
   getSimulatedNow,
   type CorrelationVariables,
   type AuthVariables,
@@ -17,10 +18,12 @@ import { prisma } from "./prisma";
 type AppVariables = CorrelationVariables & AuthVariables;
 
 const app = new Hono<{ Variables: AppVariables }>();
+const requestLog = createRequestLog({ serviceName: "ams", port: 3000 });
 
 // ── Global middleware ────────────────────────────────────────────────
 app.use("*", correlationId);
 app.use("*", requestLogger);
+app.use("*", requestLog.middleware);
 app.use("*", chaosMiddleware());
 app.onError(errorHandler);
 
@@ -72,6 +75,7 @@ app.route(
     },
   }),
 );
+app.route("/sim", requestLog.router);
 
 // ── OAuth token endpoint (no auth required) ─────────────────────────
 app.route("/", oauthTokenEndpoint());

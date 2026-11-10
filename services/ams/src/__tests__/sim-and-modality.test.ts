@@ -157,7 +157,14 @@ describe("AMS /sim/* Control Plane & Strict Modality Enforcement", () => {
     expect(portalBlocked.status).toBe(403);
     expect((await portalBlocked.json()).error_code).toBe("MODALITY_VIOLATION");
 
-    // 4. Web-portal guard allows X-Portal-Session from /auth/portal-session
+    // 4. Web-portal guard blocks a token it never issued
+    const portalForged = await modApp.request("/v1/summit/quotes", {
+      headers: { "X-Portal-Session": "portal_sess_carrier-summit_forged" },
+    });
+    expect(portalForged.status).toBe(403);
+    expect((await portalForged.json()).error_code).toBe("MODALITY_VIOLATION");
+
+    // 5. Web-portal guard allows X-Portal-Session from /auth/portal-session
     const sessRes = await modApp.request("/auth/portal-session");
     const { session_token } = await sessRes.json();
     const portalAllowed = await modApp.request("/v1/summit/quotes", {

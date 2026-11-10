@@ -31,11 +31,12 @@ const scenario: ScenarioDefinition = {
               path: "/tasks?related_client_id=CLI-001",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-001", status: "open" }],
                 },
                 bodyRegex: {
+                  id: "^TASK-",
                   description: [
                     "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
                   ],
@@ -50,11 +51,12 @@ const scenario: ScenarioDefinition = {
               path: "/messages?client_id=CLI-001&direction=outbound",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
                   data: [{ client_id: "CLI-001", direction: "outbound" }],
                 },
                 bodyRegex: {
+                  message_id: "^msg_",
                   body: [
                     "(Chen|policy|policies|review|meeting|auto|homeowner|umbrella)",
                   ],
@@ -77,11 +79,12 @@ const scenario: ScenarioDefinition = {
               path: "/tasks?related_client_id=CLI-001",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-001", status: "open" }],
                 },
                 bodyRegex: {
+                  id: "^TASK-",
                   description: [
                     "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
                   ],
@@ -96,11 +99,12 @@ const scenario: ScenarioDefinition = {
               path: "/messages?client_id=CLI-001&direction=outbound",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
                   data: [{ client_id: "CLI-001", direction: "outbound" }],
                 },
                 bodyRegex: {
+                  message_id: "^msg_",
                   body: [
                     "(Chen|policy|policies|review|meeting|auto|homeowner|umbrella)",
                   ],
@@ -123,11 +127,12 @@ const scenario: ScenarioDefinition = {
               path: "/tasks?related_client_id=CLI-001",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-001", status: "open" }],
                 },
                 bodyRegex: {
+                  id: "^TASK-",
                   description: [
                     "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
                   ],
@@ -142,11 +147,12 @@ const scenario: ScenarioDefinition = {
               path: "/messages?client_id=CLI-001&direction=outbound",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
                   data: [{ client_id: "CLI-001", direction: "outbound" }],
                 },
                 bodyRegex: {
+                  message_id: "^msg_",
                   body: [
                     "(Chen|policy|policies|review|meeting|auto|homeowner|umbrella)",
                   ],
@@ -168,11 +174,12 @@ const scenario: ScenarioDefinition = {
               path: "/tasks?related_client_id=CLI-001",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-001", status: "open" }],
                 },
                 bodyRegex: {
+                  id: "^TASK-",
                   description: [
                     "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
                   ],
@@ -187,11 +194,12 @@ const scenario: ScenarioDefinition = {
               path: "/messages?client_id=CLI-001&direction=outbound",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
                   data: [{ client_id: "CLI-001", direction: "outbound" }],
                 },
                 bodyRegex: {
+                  message_id: "^msg_",
                   body: [
                     "(Chen|policy|policies|review|meeting|auto|homeowner|umbrella)",
                   ],
@@ -214,11 +222,12 @@ const scenario: ScenarioDefinition = {
               path: "/tasks?related_client_id=CLI-001",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
                   data: [{ related_client_id: "CLI-001", status: "open" }],
                 },
                 bodyRegex: {
+                  id: "^TASK-",
                   description: [
                     "(James|CLI-002|household|HH-001|umbrella|auto|homeowner)",
                   ],
@@ -233,11 +242,12 @@ const scenario: ScenarioDefinition = {
               path: "/messages?client_id=CLI-001&direction=outbound",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
                   data: [{ client_id: "CLI-001", direction: "outbound" }],
                 },
                 bodyRegex: {
+                  message_id: "^msg_",
                   body: [
                     "(Chen|policy|policies|review|meeting|auto|homeowner|umbrella)",
                   ],

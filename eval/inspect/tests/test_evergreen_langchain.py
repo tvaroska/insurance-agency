@@ -1,0 +1,232 @@
+"""Task wiring for evergreen_langchain: no network, no models."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import types
+from contextlib import AsyncExitStack, asynccontextmanager
+from pathlib import Path
+from typing import Any
+
+import httpx
+import pytest
+from inspect_ai import eval as inspect_eval
+from inspect_ai.model import ModelOutput, ModelUsage, get_model
+from langchain_core.tools import StructuredTool
+
+import evergreen_langchain as harness
+from evergreen import load_evergreen_samples
+from openapi_tools import load_operations, service_base_urls
+
+REPORT = {
+    "scenario": "08",
+    "caseId": "realistic-natural",
+    "overall": {"score": 0.62, "eoCompliant": True, "apiCalls": 7, "expectedRange": [4, 12]},
+    "trace": {"score": 0.5, "checks": [{"name": "escalated", "passed": True, "weight": 1}]},
+    "output": {"score": 0.7, "checks": []},
+    "eoTraps": [{"id": 0, "description": "state minimum", "caught": True}],
+    "stateDiff": {
+        "insertedCount": 1,
+        "updatedCount": 0,
+        "deletedCount": 0,
+        "totalMutations": 1,
+        "collateralFree": True,
+        "unauthorizedMutations": 0,
+        "collateralPenalty": 0,
+        "findings": [],
+    },
+}
+
+
+def test_task_runs_samples_one_at_a_time_with_setup_scorer_and_cleanup():
+    task = harness.evergreen_langchain(scenario="01,09", seed="realistic", modality_mode="strict")
+    expected = load_evergreen_samples(scenario="01,09", seed="realistic", modality_mode="strict")
+
+    assert [s.id for s in task.dataset] == [s.id for s in expected]
+    assert len(task.dataset) > 0
+    assert task.config.max_connections == 1
+    assert task.turn_limit == 100
+    assert task.setup is not None
+    assert task.cleanup is harness.release_services
+    assert task.metadata["modality_mode"] == "strict"
+    assert task.dataset[0].metadata["modality_mode"] == "strict"
+
+
+def test_scenario_given_as_yaml_integer_still_filters():
+    # `-T scenario=01` reaches the task as the integer 1.
+    task = harness.evergreen_langchain(scenario=1, seed="realistic")
+    assert {s.metadata["scenario_id"] for s in task.dataset} == {"01"}
+
+
+def test_playwright_server_is_pinned_headless_isolated_and_limited_to_the_portals(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    monkeypatch.delenv("EVERGREEN_BASE_URLS", raising=False)
+    monkeypatch.setenv("EVERGREEN_CHROME_PATH", "/opt/chrome/chrome")
+    args = harness.playwright_mcp_args(service_base_urls(), tmp_path)
+
+    assert args[: args.index("--headless")] == ["--prefer-offline", "--yes", "@playwright/mcp@0.0.85"]
+    assert "--isolated" in args
+    assert args[args.index("--executable-path") + 1] == "/opt/chrome/chrome"
+    assert args[args.index("--allowed-origins") + 1] == "http://localhost:3005;http://localhost:3006"
+    assert args[args.index("--output-dir") + 1] == str(tmp_path)
+
+
+def test_mcp_tools_drop_browser_code_execution(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    opened: list[str] = []
+
+    @asynccontextmanager
+    async def fake_session(self: Any, name: str):
+        opened.append(name)
+        yield name
+
+    async def fake_load(session: str, server_name: str):
+        names = {
+            "comm": ["get_inbox", "send_message"],
+            "portals": ["browser_navigate", "browser_evaluate", "browser_run_code_unsafe", "browser_click"],
+        }[server_name]
+        return [StructuredTool.from_function(func=lambda: "", name=n, description=n) for n in names]
+
+    monkeypatch.setattr(harness.MultiServerMCPClient, "session", fake_session)
+    monkeypatch.setattr(harness, "load_mcp_tools", fake_load)
+
+    async def run():
+        async with AsyncExitStack() as stack:
+            tools = await harness.open_mcp_tools(stack, service_base_urls(), tmp_path)
+            return [tool.name for tool in tools]
+
+    assert asyncio.run(run()) == ["get_inbox", "send_message", "browser_navigate", "browser_click"]
+    assert opened == ["comm", "portals"]
+
+
+def test_seed_mode_maps_variants_to_realistic_data():
+    assert harness.seed_mode("clean") == "clean"
+    assert harness.seed_mode("realistic") == "realistic"
+    assert harness.seed_mode("attorney") == "realistic"
+
+
+def test_system_prompt_names_real_tools_and_the_inbox_check():
+    prompt = harness.system_prompt(service_base_urls())
+    operation_ids = {op.operation_id for op in load_operations()}
+    assert "createEscalation" in operation_ids
+    assert "createEscalation" in prompt
+    assert "check the inbox with get_inbox for the client's reply" in prompt
+    assert "http://localhost:3005" in prompt and "http://localhost:3006" in prompt
+
+
+def test_report_score_carries_the_scorer_breakdown(tmp_path: Path):
+    score = harness.report_score(REPORT, answer="done", work_dir=tmp_path)
+
+    assert score.value == 0.62
+    assert score.answer == "done"
+    assert score.metadata["eo_compliant"] is True
+    assert score.metadata["trace_score"] == 0.5
+    assert score.metadata["output_score"] == 0.7
+    assert score.metadata["collateral"] == {
+        "collateral_free": True,
+        "unauthorized_mutations": 0,
+        "penalty": 0,
+        "total_mutations": 1,
+        "findings": [],
+    }
+    assert score.metadata["artifacts_dir"] == str(tmp_path)
+
+
+def run_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, max_samples: int, **task_args: Any):
+    """Two scenario 01 samples against fake services and a fake bun; returns the log and the event order."""
+    monkeypatch.delenv("EVERGREEN_BASE_URLS", raising=False)
+    monkeypatch.setattr(harness.tempfile, "tempdir", str(tmp_path))
+    events: list[str] = []
+
+    def services(request: httpx.Request):
+        path = request.url.path
+        if path == "/sim/status":
+            return httpx.Response(200, json={"modality_mode": "strict"})
+        if path == "/sim/reset":
+            if request.url.port == 3000:
+                events.append(f"reset {json.loads(request.content)['seed_mode']}")
+            return httpx.Response(200, json={"status": "reset"})
+        if path == "/sim/snapshot":
+            return httpx.Response(200, json={"service": "x", "tables": {"clients": [{"id": "CLI-001"}]}})
+        if path == "/oauth/token":
+            return httpx.Response(200, json={"access_token": "t", "expires_in": 3600})
+        events.append(f"{request.method} {path} {request.headers['authorization']}")
+        return httpx.Response(200, json={"data": []})
+
+    class FakeAsyncClient(httpx.AsyncClient):
+        def __init__(self, **kwargs: Any):
+            super().__init__(transport=httpx.MockTransport(services), **kwargs)
+
+    async def no_mcp_tools(stack: AsyncExitStack, urls: dict[str, str], work_dir: Path):
+        assert work_dir.is_dir()
+        return []
+
+    async def fake_bun(*args: str):
+        events.append(args[0])
+        out = Path(args[args.index("--out") + 1])
+        if args[0] == "eval/collect-trace.ts":
+            out.write_text('{"resourceSpans": []}')
+            return
+        assert args[args.index("--seed") + 1] == "realistic"
+        before = json.loads(Path(args[args.index("--snapshot-before") + 1]).read_text())
+        assert before["ams"] == {"clients": [{"id": "CLI-001"}]}
+        assert Path(args[args.index("--snapshot-after") + 1]).exists()
+        out.mkdir()
+        (out / f"{args[args.index('--scenario') + 1]}-report.json").write_text(json.dumps(REPORT))
+
+    monkeypatch.setattr(harness, "httpx", types.SimpleNamespace(AsyncClient=FakeAsyncClient))
+    monkeypatch.setattr(harness, "open_mcp_tools", no_mcp_tools)
+    monkeypatch.setattr(harness, "run_bun", fake_bun)
+
+    outputs = []
+    for _ in range(2):
+        outputs += [
+            ModelOutput.for_tool_call("mockllm/model", "listClients", {"status": "active"}),
+            ModelOutput.from_content("mockllm/model", "Listed the active clients."),
+        ]
+    for output in outputs:
+        # mockllm otherwise counts tokens with tiktoken, which downloads its encoding.
+        output.usage = ModelUsage(input_tokens=1, output_tokens=1, total_tokens=2)
+
+    (log,) = inspect_eval(
+        harness.evergreen_langchain(scenario="01", seed="realistic", **task_args),
+        model=get_model("mockllm/model", custom_outputs=outputs),
+        limit=2,
+        max_samples=max_samples,
+        log_dir=str(tmp_path / "logs"),
+        display="none",
+    )
+    assert log.status == "success", log.error
+    assert log.samples is not None and len(log.samples) == 2
+    return log, events
+
+
+ONE_SAMPLE = ["reset realistic", "GET /v1/clients Bearer t", "eval/collect-trace.ts", "eval/score.ts"]
+
+
+def test_pipeline_resets_runs_collects_and_scores_one_sample_at_a_time(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    """--max-samples 2: the stack lock must still serialize the samples."""
+    log, events = run_pipeline(monkeypatch, tmp_path, max_samples=2)
+
+    assert events == ONE_SAMPLE * 2
+    artifacts = set()
+    for sample in log.samples:
+        (score,) = sample.scores.values()
+        assert score.value == 0.62
+        assert score.answer == "Listed the active clients."
+        assert score.metadata["eo_compliant"] is True
+        artifacts.add(score.metadata["artifacts_dir"])
+    assert len(artifacts) == 2
+
+
+def test_turn_limit_hit_inside_the_agent_is_still_scored(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    log, events = run_pipeline(monkeypatch, tmp_path, max_samples=1, turn_limit=1)
+
+    assert events == ONE_SAMPLE * 2
+    for sample in log.samples:
+        assert sample.limit is not None and sample.limit.type == "turn"
+        (score,) = sample.scores.values()
+        assert score.value == 0.62

@@ -58,7 +58,8 @@ const outputChecks = [
     path: "/messages?client_id=CLI-025&direction=inbound",
     expect: {
       status: 200,
-      arrayMinLength: 1,
+      arrayMinLength: 3,
+      bodyRegex: { message_id: "^msg_sim_" },
     },
   },
 ];

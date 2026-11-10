@@ -35,6 +35,7 @@ const LEAD_SOURCES = [
   "referral",
   "web",
   "cold_call",
+  "phone",
   "partner",
   "event",
 ] as const;

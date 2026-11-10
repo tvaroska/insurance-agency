@@ -8,6 +8,7 @@ import {
   oauthTokenEndpoint,
   chaosMiddleware,
   createSimRouter,
+  createRequestLog,
   type CorrelationVariables,
   type AuthVariables,
 } from "@evergreen/shared";
@@ -16,10 +17,12 @@ import { prisma } from "./prisma";
 type AppVariables = CorrelationVariables & AuthVariables;
 
 const app = new Hono<{ Variables: AppVariables }>();
+const requestLog = createRequestLog({ serviceName: "ecm", port: 3003 });
 
 // ── Global middleware ────────────────────────────────────────────────
 app.use("*", correlationId);
 app.use("*", requestLogger);
+app.use("*", requestLog.middleware);
 app.use("*", chaosMiddleware());
 app.onError(errorHandler);
 
@@ -61,6 +64,7 @@ app.route(
     },
   }),
 );
+app.route("/sim", requestLog.router);
 
 // ── OAuth token endpoint (no auth required) ─────────────────────────
 app.route("/", oauthTokenEndpoint());

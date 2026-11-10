@@ -41,6 +41,7 @@ const scenario: ScenarioDefinition = {
               expect: {
                 status: 200,
                 bodyMatch: { id: "CLI-007" },
+                bodyRegex: { updated_at: "^2026-" },
               },
             },
           ],

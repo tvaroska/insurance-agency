@@ -86,6 +86,8 @@ export interface ScoreScenarioOptions {
   snapshotAfter?: GymSnapshot;
   model?: string;
   judgeModel?: string;
+  /** Service base URLs for output and rubric checks (default: defaultBaseUrls()). */
+  baseUrls?: Record<string, string>;
 }
 
 export async function scoreScenario(
@@ -129,7 +131,7 @@ export async function scoreScenario(
   const traceScores = evaluateTrace(variant.traceChecks, apiCalls);
 
   // Evaluate output using the selected case's checks
-  const outputScores = await evaluateOutput(testCase.outputChecks);
+  const outputScores = await evaluateOutput(testCase.outputChecks, opts.baseUrls);
 
   // Evaluate E&O traps (both trace check and optional outputCheck must pass)
   const eoTrapResults: EoTrapResult[] = [];
@@ -137,7 +139,7 @@ export async function scoreScenario(
     const [traceResult] = evaluateTrace([trap.check], apiCalls);
     let outputPassed = true;
     if (trap.outputCheck) {
-      const [outResult] = await evaluateOutput([trap.outputCheck]);
+      const [outResult] = await evaluateOutput([trap.outputCheck], opts.baseUrls);
       outputPassed = outResult.passed;
     }
     eoTrapResults.push({
@@ -163,6 +165,7 @@ export async function scoreScenario(
   if (variant.rubricChecks && variant.rubricChecks.length > 0) {
     rubric = await evaluateRubrics(variant.rubricChecks, {
       judgeModel: opts.judgeModel ?? DEFAULT_JUDGE_MODEL,
+      baseUrls: opts.baseUrls,
     });
   }
 

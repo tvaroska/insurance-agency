@@ -1,0 +1,16 @@
+# Harness for eval/inspect/evergreen_langchain.py (floors are the versions it was tested with).
+inspect-ai>=0.3.287
+langchain>=1.4.8
+langchain-openai>=1.7.3
+langchain-mcp-adapters>=0.3.2
+mcp>=1.30
+openai>=3.42
+httpx>=0.28
+pyyaml>=6.0
+
+# Model providers for the first results run, all served through Vertex AI.
+google-genai>=3.0
+anthropic[vertex]>=2.4
+
+# Tests (eval/inspect/tests).
+pytest>=9.0

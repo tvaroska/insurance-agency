@@ -27,7 +27,15 @@ const scenario: ScenarioDefinition = {
               expect: {
                 status: 200,
                 arrayMinLength: 1,
-                bodyMatch: { data: [{ client_id: "CLI-003", status: "completed" }] },
+                bodyMatch: {
+                  data: [
+                    {
+                      client_id: "CLI-003",
+                      status: "completed",
+                      carriers: [{ status: "bound" }],
+                    },
+                  ],
+                },
               },
             },
             {
@@ -59,7 +67,15 @@ const scenario: ScenarioDefinition = {
               expect: {
                 status: 200,
                 arrayMinLength: 1,
-                bodyMatch: { data: [{ client_id: "CLI-003", status: "completed" }] },
+                bodyMatch: {
+                  data: [
+                    {
+                      client_id: "CLI-003",
+                      status: "completed",
+                      carriers: [{ status: "bound" }],
+                    },
+                  ],
+                },
               },
             },
             {
@@ -91,7 +107,15 @@ const scenario: ScenarioDefinition = {
               expect: {
                 status: 200,
                 arrayMinLength: 1,
-                bodyMatch: { data: [{ client_id: "CLI-003", status: "completed" }] },
+                bodyMatch: {
+                  data: [
+                    {
+                      client_id: "CLI-003",
+                      status: "completed",
+                      carriers: [{ status: "bound" }],
+                    },
+                  ],
+                },
               },
             },
             {
@@ -123,7 +147,15 @@ const scenario: ScenarioDefinition = {
               expect: {
                 status: 200,
                 arrayMinLength: 1,
-                bodyMatch: { data: [{ client_id: "CLI-003", status: "completed" }] },
+                bodyMatch: {
+                  data: [
+                    {
+                      client_id: "CLI-003",
+                      status: "completed",
+                      carriers: [{ status: "bound" }],
+                    },
+                  ],
+                },
               },
             },
             {
@@ -155,7 +187,15 @@ const scenario: ScenarioDefinition = {
               expect: {
                 status: 200,
                 arrayMinLength: 1,
-                bodyMatch: { data: [{ client_id: "CLI-003", status: "completed" }] },
+                bodyMatch: {
+                  data: [
+                    {
+                      client_id: "CLI-003",
+                      status: "completed",
+                      carriers: [{ status: "bound" }],
+                    },
+                  ],
+                },
               },
             },
             {

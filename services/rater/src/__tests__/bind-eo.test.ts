@@ -131,11 +131,13 @@ describe("E&O - premium threshold", () => {
 
   test("premium >$10K with approved escalation returns 201", async () => {
     const headers = await authHeader(["rater:quotes:bind"]);
+    let escalationLookupHeaders: Record<string, string> | undefined;
 
     // Mock fetch to return approved escalation from AMS
     fetchSpy = spyOn(globalThis, "fetch").mockImplementation(async (input: any, init?: any) => {
       const url = typeof input === "string" ? input : input.url;
       if (url.includes("/v1/escalations/")) {
+        escalationLookupHeaders = init?.headers;
         return new Response(JSON.stringify({
           escalation_id: "esc_approved1",
           status: "approved",
@@ -153,6 +155,8 @@ describe("E&O - premium threshold", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.bind_status).toBe("bound");
+    // The AMS lookup is service-to-service, so AMS must not log it as an agent call.
+    expect(escalationLookupHeaders?.["X-Evergreen-Internal"]).toBe("1");
   });
 
   test("premium >$10K with denied escalation returns 409", async () => {

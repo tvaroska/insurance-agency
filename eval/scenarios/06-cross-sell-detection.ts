@@ -38,8 +38,9 @@ const scenario: ScenarioDefinition = {
               path: "/tasks?related_client_id=CLI-001",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
+                bodyRegex: { id: "^TASK-" },
               },
             },
             {
@@ -50,8 +51,9 @@ const scenario: ScenarioDefinition = {
               path: "/messages?client_id=CLI-001&direction=outbound",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ client_id: "CLI-001", direction: "outbound" }] },
+                bodyRegex: { message_id: "^msg_" },
               },
             },
           ],
@@ -82,8 +84,9 @@ const scenario: ScenarioDefinition = {
               path: "/tasks?related_client_id=CLI-001",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
+                bodyRegex: { id: "^TASK-" },
               },
             },
             {
@@ -94,8 +97,9 @@ const scenario: ScenarioDefinition = {
               path: "/messages?client_id=CLI-001&direction=outbound",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ client_id: "CLI-001", direction: "outbound" }] },
+                bodyRegex: { message_id: "^msg_" },
               },
             },
           ],
@@ -126,8 +130,9 @@ const scenario: ScenarioDefinition = {
               path: "/tasks?related_client_id=CLI-001",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
+                bodyRegex: { id: "^TASK-" },
               },
             },
             {
@@ -138,8 +143,9 @@ const scenario: ScenarioDefinition = {
               path: "/messages?client_id=CLI-001&direction=outbound",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ client_id: "CLI-001", direction: "outbound" }] },
+                bodyRegex: { message_id: "^msg_" },
               },
             },
           ],
@@ -170,8 +176,9 @@ const scenario: ScenarioDefinition = {
               path: "/tasks?related_client_id=CLI-001",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
+                bodyRegex: { id: "^TASK-" },
               },
             },
             {
@@ -182,8 +189,9 @@ const scenario: ScenarioDefinition = {
               path: "/messages?client_id=CLI-001&direction=outbound",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ client_id: "CLI-001", direction: "outbound" }] },
+                bodyRegex: { message_id: "^msg_" },
               },
             },
           ],
@@ -214,8 +222,9 @@ const scenario: ScenarioDefinition = {
               path: "/tasks?related_client_id=CLI-001",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
+                bodyRegex: { id: "^TASK-" },
               },
             },
             {
@@ -226,8 +235,9 @@ const scenario: ScenarioDefinition = {
               path: "/messages?client_id=CLI-001&direction=outbound",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: { data: [{ client_id: "CLI-001", direction: "outbound" }] },
+                bodyRegex: { message_id: "^msg_" },
               },
             },
           ],

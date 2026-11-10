@@ -28,6 +28,8 @@ const ESCALATION_REASONS = [
   "principal_review",
   "backdating",
   "attorney_involvement",
+  "claims_specialist",
+  "claim_specialist",
 ] as const;
 
 // ── POST / ──────────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ import {
   chaosMiddleware,
   strictModalityGuard,
   createSimRouter,
+  createRequestLog,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -22,8 +23,10 @@ import { webhooksRouter } from "./routes/webhooks";
 type AppVariables = CorrelationVariables & AuthVariables;
 
 const app = new Hono<{ Variables: AppVariables }>();
+const requestLog = createRequestLog({ serviceName: "comm", port: 3004, mcpPath: "/mcp" });
 app.use("*", correlationId);
 app.use("*", requestLogger);
+app.use("*", requestLog.middleware);
 app.use("*", chaosMiddleware());
 app.onError(errorHandler);
 
@@ -69,6 +72,7 @@ app.route(
     },
   }),
 );
+app.route("/sim", requestLog.router);
 
 // ── OAuth token endpoint (no auth required) ─────────────────────────
 app.route("/", oauthTokenEndpoint());

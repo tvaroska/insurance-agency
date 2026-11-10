@@ -424,3 +424,22 @@ describe("POST /v1/quotes/:quote_id/bind - errors", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("GET /v1/quotes - listing and client_id filter", () => {
+  test("lists quote requests with carrier quotes and resolves known client names to CLI IDs", async () => {
+    const createHeaders = await authHeader(["rater:quotes:create"]);
+    const readHeaders = await authHeader(["rater:quotes:read"]);
+
+    const createRes = await postQuoteRequest(validQuoteBody, createHeaders);
+    expect(createRes.status).toBe(202);
+
+    const listRes = await app.request("/v1/quotes?client_id=CLI-003", {
+      headers: readHeaders,
+    });
+    expect(listRes.status).toBe(200);
+    const body = await listRes.json();
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data[0].client_id).toBe("CLI-003");
+    expect(Array.isArray(body.data[0].carriers)).toBe(true);
+  });
+});

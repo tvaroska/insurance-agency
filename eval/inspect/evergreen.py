@@ -134,8 +134,9 @@ def load_evergreen_samples(
         raise FileNotFoundError(f"Tasks catalog not found at {TASKS_JSON_PATH}")
 
     raw_tasks: dict[str, dict[str, Any]] = json.loads(TASKS_JSON_PATH.read_text())
+    # str(): Inspect parses `-T scenario=01` as YAML, which yields the integer 1.
     scenario_filter = (
-        {s.strip().zfill(2) for s in scenario.split(",") if s.strip()}
+        {s.strip().zfill(2) for s in str(scenario).split(",") if s.strip()}
         if scenario
         else None
     )

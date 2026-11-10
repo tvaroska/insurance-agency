@@ -7,6 +7,7 @@ import {
 import { parseTrace, evaluateTrace } from "../evaluators/trace";
 import { evaluateEconomics } from "../evaluators/economics";
 import { scenarios } from "../scenarios";
+import { portalSessionEndpoint, strictModalityGuard } from "../../packages/shared/src/sim";
 
 describe("Playable Reference Baseline Agent (eval/agents/baseline-agent.ts)", () => {
   test("resolveCommMcpToolName maps comm REST endpoints to MCP tool names", () => {
@@ -67,6 +68,45 @@ describe("Playable Reference Baseline Agent (eval/agents/baseline-agent.ts)", ()
   test("executes Scenario 08 E&O trap playbook and tags conflict_escalation traffic", async () => {
     const playbook08 = getReferencePlaybook("08", "realistic", "strict");
     expect(playbook08.filter((s) => s.trafficType === "conflict_escalation")).toHaveLength(3);
+  });
+
+  test("opens an issued carrier portal session and passes the strict web-portal guard", async () => {
+    const carrier = portalSessionEndpoint("carrier-coastal");
+    carrier.use("/v1/*", strictModalityGuard("web-portal"));
+    carrier.get("/v1/coastal/quotes", (c) => c.json({ data: [] }));
+
+    const mockFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith("http://localhost:3006/")) {
+        return carrier.request(url, init);
+      }
+      if (url.endsWith("/oauth/token")) {
+        return new Response(JSON.stringify({ access_token: "test-jwt" }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ status: "ok", data: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const originalMode = process.env.MODALITY_MODE;
+    process.env.MODALITY_MODE = "strict";
+    try {
+      const result = await runBaselineAgent({
+        scenarioId: "09",
+        seed: "realistic",
+        modalityMode: "strict",
+        fetchImpl: mockFetch,
+      });
+      const carrierSteps = result.steps.filter((s) => s.action.service === "coastal-star");
+      expect(carrierSteps).toHaveLength(1);
+      expect(carrierSteps[0].status).toBe(200);
+      // The session request is setup, like the OAuth call, so it stays out of the trace.
+      expect(parseTrace(result.trace).length).toBe(result.steps.length);
+    } finally {
+      if (originalMode === undefined) {
+        delete process.env.MODALITY_MODE;
+      } else {
+        process.env.MODALITY_MODE = originalMode;
+      }
+    }
   });
 
   test("executes all 20 scenarios (01-20) and passes 100% of trace and privacy checks", async () => {

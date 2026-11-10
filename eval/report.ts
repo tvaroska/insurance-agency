@@ -45,8 +45,8 @@ export function generateReport(input: ReportInput): ScenarioReport {
   const penalty = input.stateDiff?.collateralPenalty ?? 0;
   const penalized = combined * Math.max(0, 1 - penalty);
 
-  // E&O override: any uncaught trap caps score at 0
-  const overall = eoCompliant ? penalized : 0;
+  // E&O override and empty-trace guard: any uncaught trap or zero recorded API calls caps score at 0
+  const overall = eoCompliant && input.apiCallCount > 0 ? penalized : 0;
   const roundedOverall = Math.round(overall * 1000) / 1000;
 
   const report: ScenarioReport = {

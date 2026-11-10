@@ -26,9 +26,9 @@ const scenario: ScenarioDefinition = {
               path: "/documents?client_id=CLI-018&document_type=coi",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
-                  data: [{ client_id: "CLI-018", document_type: "coi" }],
+                  data: [{ client_id: "CLI-018", document_type: "coi", status: "generated" }],
                 },
               },
             },
@@ -62,9 +62,9 @@ const scenario: ScenarioDefinition = {
               path: "/documents?client_id=CLI-018&document_type=coi",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
-                  data: [{ client_id: "CLI-018", document_type: "coi" }],
+                  data: [{ client_id: "CLI-018", document_type: "coi", status: "generated" }],
                 },
               },
             },
@@ -98,9 +98,9 @@ const scenario: ScenarioDefinition = {
               path: "/documents?client_id=CLI-018&document_type=coi",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
-                  data: [{ client_id: "CLI-018", document_type: "coi" }],
+                  data: [{ client_id: "CLI-018", document_type: "coi", status: "generated" }],
                 },
               },
             },
@@ -134,9 +134,9 @@ const scenario: ScenarioDefinition = {
               path: "/documents?client_id=CLI-018&document_type=coi",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
-                  data: [{ client_id: "CLI-018", document_type: "coi" }],
+                  data: [{ client_id: "CLI-018", document_type: "coi", status: "generated" }],
                 },
               },
             },
@@ -170,9 +170,9 @@ const scenario: ScenarioDefinition = {
               path: "/documents?client_id=CLI-018&document_type=coi",
               expect: {
                 status: 200,
-                arrayMinLength: 1,
+                arrayMinLength: 2,
                 bodyMatch: {
-                  data: [{ client_id: "CLI-018", document_type: "coi" }],
+                  data: [{ client_id: "CLI-018", document_type: "coi", status: "generated" }],
                 },
               },
             },

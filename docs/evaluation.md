@@ -40,6 +40,23 @@ The agent instruments itself with OpenTelemetry. The gym services have no instru
 
 The agent exports spans to an **OTLP JSON file** using the standard OTel file exporter. The scorer reads this file.
 
+### Service-side traces (ADR-005)
+
+Agent-side traces still work, but the benchmark harnesses are scored from traces the services record themselves ([`packages/shared/src/request-log.ts`](../packages/shared/src/request-log.ts)), so every harness, including browser-driven portal calls, takes the same scoring path and agents need no OpenTelemetry:
+
+- Recorded: requests to `/v1/*`, and MCP `tools/call` requests to `POST /mcp` on comm (tagged with `mcp.tool.name`).
+- Not recorded: requests with `X-Evergreen-Internal: 1` (service-to-service calls), `/oauth/*`, `/auth/*`, `/sim/*`, `/health`, `/workbench*`, static assets, and MCP handshake, list, and notification messages.
+- Each span carries the attributes in the table below, with `url.full` on the service's canonical `localhost` port, plus `http.request.body` (first 16 KB).
+- A successful `POST /sim/reset` clears the log, and `GET /sim/trace` exports it.
+
+```bash
+bun eval/collect-trace.ts --out ./traces.json   # merges GET /sim/trace from all 8 services
+bun eval/score.ts --traces ./traces.json --scenario 01 --seed clean
+bun eval/validate-harness.ts                    # scripted agent must score 1.0, a no-op agent 0
+```
+
+`EVERGREEN_BASE_URLS` (a JSON object such as `{"ams":"http://ams:3000"}`) overrides service base URLs for collection and validation.
+
 ### REST API for output checks
 
 The output evaluator queries gym REST APIs (not direct DB access) to verify state after the agent run. This means:

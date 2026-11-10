@@ -45,6 +45,7 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ direction: "outbound" }] },
                 bodyRegex: {
+                  message_id: "^msg_",
                   body: [
                     "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
                     "\\$?[0-9]{3,4}",
@@ -83,6 +84,7 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ direction: "outbound" }] },
                 bodyRegex: {
+                  message_id: "^msg_",
                   body: [
                     "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
                     "\\$?[0-9]{3,4}",
@@ -121,6 +123,7 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ direction: "outbound" }] },
                 bodyRegex: {
+                  message_id: "^msg_",
                   body: [
                     "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
                     "\\$?[0-9]{3,4}",
@@ -159,6 +162,7 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ direction: "outbound" }] },
                 bodyRegex: {
+                  message_id: "^msg_",
                   body: [
                     "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
                     "\\$?[0-9]{3,4}",
@@ -197,6 +201,7 @@ const scenario: ScenarioDefinition = {
                 arrayMinLength: 1,
                 bodyMatch: { data: [{ direction: "outbound" }] },
                 bodyRegex: {
+                  message_id: "^msg_",
                   body: [
                     "(quote|carrier|premium|rate|SMIT|CSTL|SAFECO|NTNW|LIBT|ERIE|Summit|Coastal|SafeHarbor|National Shield|Liberty Crest|Erie Basin|Hartland|Safeco|Nationwide|Liberty|Erie)",
                     "\\$?[0-9]{3,4}",

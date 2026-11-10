@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
+import { describe, expect, test, beforeEach, afterEach, setSystemTime } from "bun:test";
 import { Hono } from "hono";
 import {
   createSimRouter,
@@ -6,12 +6,35 @@ import {
   strictModalityGuard,
   portalSessionEndpoint,
   getSimulatedNow,
+  advanceSimulatedClock,
   resetSimulatedClock,
   resetChaosConfig,
   getChaosConfig,
   createTestPrismaClient,
   getTestDatabaseUrl,
 } from "../index";
+
+function portalApp() {
+  const app = new Hono();
+  app.route("/", portalSessionEndpoint("carrier-summit"));
+  app.use("/v1/summit/*", strictModalityGuard("web-portal"));
+  app.get("/v1/summit/quotes", (c) => c.json({ data: ["Q-1"] }));
+  return app;
+}
+
+async function issueToken(app: Hono): Promise<string> {
+  const res = await app.request("/auth/portal-session");
+  expect(res.status).toBe(200);
+  const body = await res.json();
+  expect(body.session_token).toStartWith("portal_sess_carrier-summit_");
+  expect(body.expires_in).toBe(3600);
+  return body.session_token;
+}
+
+async function expectModalityViolation(res: Response) {
+  expect(res.status).toBe(403);
+  expect((await res.json()).error_code).toBe("MODALITY_VIOLATION");
+}
 
 describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
   const originalModality = process.env.MODALITY_MODE;
@@ -25,6 +48,7 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
   });
 
   afterEach(() => {
+    setSystemTime();
     resetSimulatedClock();
     resetChaosConfig();
     if (originalModality !== undefined) {
@@ -213,29 +237,21 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     expect(scorerRes.status).toBe(200);
   });
 
-  test("strictModalityGuard('web-portal') requires X-Portal-Session or browser Referer in strict mode", async () => {
-    const app = new Hono();
-    app.route("/", portalSessionEndpoint("carrier-summit"));
-    app.use("/v1/summit/*", strictModalityGuard("web-portal"));
-    app.get("/v1/summit/quotes", (c) => c.json({ data: ["Q-1"] }));
+  test("strictModalityGuard('web-portal') accepts an issued X-Portal-Session in strict mode", async () => {
+    const app = portalApp();
+
+    // Permissive by default
+    expect((await app.request("/v1/summit/quotes")).status).toBe(200);
 
     process.env.MODALITY_MODE = "strict";
 
     // Headless REST call fails with 403 MODALITY_VIOLATION
-    const headlessRes = await app.request("/v1/summit/quotes");
-    expect(headlessRes.status).toBe(403);
-    const headlessBody = await headlessRes.json();
-    expect(headlessBody.error_code).toBe("MODALITY_VIOLATION");
+    await expectModalityViolation(await app.request("/v1/summit/quotes"));
 
-    // Obtain session token from /auth/portal-session
-    const sessRes = await app.request("/auth/portal-session");
-    expect(sessRes.status).toBe(200);
-    const sessBody = await sessRes.json();
-    expect(sessBody.session_token).toStartWith("portal_sess_carrier-summit_");
-
-    // Request with X-Portal-Session succeeds
+    // Request with an issued X-Portal-Session succeeds
+    const token = await issueToken(app);
     const portalRes = await app.request("/v1/summit/quotes", {
-      headers: { "X-Portal-Session": sessBody.session_token },
+      headers: { "X-Portal-Session": token },
     });
     expect(portalRes.status).toBe(200);
 
@@ -244,6 +260,46 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
       headers: { "X-Eval-Scorer": "true" },
     });
     expect(evalRes.status).toBe(200);
+  });
+
+  test("strictModalityGuard('web-portal') rejects forged tokens and Referer + Mozilla without a token", async () => {
+    const app = portalApp();
+    process.env.MODALITY_MODE = "strict";
+    const issued = await issueToken(app);
+
+    for (const forged of [
+      "portal-session-baseline",
+      "portal_sess_carrier-summit_00000000-0000-4000-8000-000000000000",
+      `${issued.slice(0, -1)}${issued.endsWith("0") ? "1" : "0"}`,
+    ]) {
+      await expectModalityViolation(
+        await app.request("/v1/summit/quotes", {
+          headers: { "X-Portal-Session": forged },
+        }),
+      );
+    }
+
+    await expectModalityViolation(
+      await app.request("/v1/summit/quotes", {
+        headers: {
+          Referer: "http://localhost:3005/",
+          "User-Agent":
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+        },
+      }),
+    );
+  });
+
+  test("strictModalityGuard('web-portal') rejects expired tokens but not after simulated time-travel", async () => {
+    const app = portalApp();
+    process.env.MODALITY_MODE = "strict";
+    const headers = { "X-Portal-Session": await issueToken(app) };
+
+    advanceSimulatedClock({ days: 30 });
+    expect((await app.request("/v1/summit/quotes", { headers })).status).toBe(200);
+
+    setSystemTime(new Date(Date.now() + 3_601_000));
+    await expectModalityViolation(await app.request("/v1/summit/quotes", { headers }));
   });
 
   test("createTestPrismaClient and getTestDatabaseUrl support TEST_DATABASE_URL", async () => {

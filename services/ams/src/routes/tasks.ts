@@ -73,7 +73,10 @@ tasksRouter.get("/", requireScopes("ams:tasks:read"), async (c) => {
   if (query.status) filters.push({ status: query.status });
   if (query.priority) filters.push({ priority: query.priority });
   if (query.assigned_to) filters.push({ assigned_to: query.assigned_to });
-  if (query.client_id) filters.push({ related_client_id: query.client_id });
+  const clientIdFilter = query.related_client_id ?? query.client_id;
+  if (clientIdFilter) filters.push({ related_client_id: clientIdFilter });
+  const policyIdFilter = query.related_policy_id ?? query.policy_id;
+  if (policyIdFilter) filters.push({ related_policy_id: policyIdFilter });
   if (query.due_date_before) filters.push({ due_date: { lte: query.due_date_before } });
   if (query.due_date_after) filters.push({ due_date: { gte: query.due_date_after } });
   if (cursorWhere) filters.push(cursorWhere);
@@ -122,8 +125,8 @@ tasksRouter.post("/", requireScopes("ams:tasks:write"), async (c) => {
     priority: body.priority ?? "medium",
     task_type: body.task_type ?? null,
     assigned_to: body.assigned_to ?? null,
-    related_client_id: body.client_id ?? null,
-    related_policy_id: body.policy_id ?? null,
+    related_client_id: body.related_client_id ?? body.client_id ?? null,
+    related_policy_id: body.related_policy_id ?? body.policy_id ?? null,
     due_date: body.due_date ?? null,
     created_at: now,
     updated_at: now,
@@ -224,6 +227,8 @@ function mapTaskRow(row: Task) {
     assigned_to: row.assigned_to,
     client_id: row.related_client_id,
     policy_id: row.related_policy_id,
+    related_client_id: row.related_client_id,
+    related_policy_id: row.related_policy_id,
     due_date: row.due_date,
     created_at: row.created_at,
     updated_at: row.updated_at,

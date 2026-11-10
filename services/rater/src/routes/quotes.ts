@@ -9,6 +9,7 @@ import {
   throwIfErrors,
   validateBindingAuthority,
   validateStateMinimums,
+  INTERNAL_REQUEST_HEADERS,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -35,6 +36,99 @@ const PAYMENT_METHODS = [
   "check",
   "mortgagee_billed",
 ] as const;
+
+const KNOWN_CLIENT_IDS_BY_NAME: Record<string, string> = {
+  "sarah chen": "CLI-001",
+  "james chen": "CLI-002",
+  "maria rodriguez": "CLI-003",
+  "david thompson": "CLI-004",
+  "linda thompson": "CLI-005",
+  "marcus williams": "CLI-006",
+  "priya patel": "CLI-007",
+  "robert kim": "CLI-008",
+  "jennifer kim": "CLI-009",
+  "angela foster": "CLI-010",
+  "carlos gutierrez": "CLI-011",
+  "natasha brooks": "CLI-012",
+  "william okafor": "CLI-013",
+  "emily nakamura": "CLI-014",
+  "george papadopoulos": "CLI-015",
+  "ashley morales": "CLI-016",
+  "daniel reeves": "CLI-017",
+  "rosa jimenez": "CLI-018",
+  "tyler morrison": "CLI-019",
+  "samantha west": "CLI-020",
+  "brian lawson": "CLI-021",
+  "megan sullivan": "CLI-022",
+  "kevin tran": "CLI-023",
+  "rachel adams": "CLI-024",
+  "derek hawkins": "CLI-025",
+  "victor marsh": "CLI-026",
+  "tanya marsh": "CLI-027",
+  "nathan blackwood": "CLI-028",
+  "kailani akana": "CLI-029",
+  "sara chen": "CLI-030",
+  "patricia kowalski": "CLI-032",
+  "andre washington": "CLI-033",
+};
+
+// ── GET /quotes ──────────────────────────────────────────────────────
+
+quotesRouter.get(
+  "/",
+  requireScopes("rater:quotes:read"),
+  async (c) => {
+    const query = c.req.query();
+    const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
+    const where: Record<string, unknown> = {};
+    if (query.client_id) where.client_id = query.client_id;
+    if (query.policy_type) where.policy_type = query.policy_type;
+    if (query.status) where.status = query.status;
+
+    const requests = await prisma.quoteRequest.findMany({
+      where,
+      orderBy: { request_id: "asc" },
+      take: limit,
+    });
+    const requestIds = requests.map((r) => r.request_id);
+    const carrierQuotes =
+      requestIds.length > 0
+        ? await prisma.carrierQuote.findMany({
+            where: { request_id: { in: requestIds } },
+          })
+        : [];
+
+    const quotesByRequest = new Map<string, typeof carrierQuotes>();
+    for (const q of carrierQuotes) {
+      const list = quotesByRequest.get(q.request_id) ?? [];
+      list.push(q);
+      quotesByRequest.set(q.request_id, list);
+    }
+
+    return c.json({
+      data: requests.map((r) => ({
+        request_id: r.request_id,
+        client_id: r.client_id,
+        policy_type: r.policy_type,
+        effective_date: r.effective_date,
+        status: r.status,
+        submitted_at: r.submitted_at,
+        completed_at: r.completed_at,
+        created_at: r.created_at,
+        carriers: (quotesByRequest.get(r.request_id) ?? []).map((q) => ({
+          quote_id: q.status === "declined" ? null : q.quote_id,
+          carrier_code: q.carrier_code,
+          carrier_name: q.carrier_name,
+          status: q.status,
+          premium_annual: q.premium_annual,
+          premium_monthly: q.premium_monthly,
+          decline_reason: q.decline_reason,
+          valid_until: q.valid_until,
+        })),
+      })),
+    });
+  },
+);
 
 // ── POST /quotes/request ─────────────────────────────────────────────
 
@@ -132,11 +226,19 @@ quotesRouter.post(
     if (body.property) riskData.property = body.property;
     if (body.business) riskData.business = body.business;
 
+    const fullName = `${body.client.first_name} ${body.client.last_name}`.trim().toLowerCase();
+    const resolvedClientId =
+      body.client_id ??
+      body.client?.client_id ??
+      body.client?.id ??
+      KNOWN_CLIENT_IDS_BY_NAME[fullName] ??
+      `${body.client.first_name}-${body.client.last_name}`.toLowerCase();
+
     // Insert quote request
     await prisma.quoteRequest.create({
       data: {
         request_id: requestId,
-        client_id: `${body.client.first_name}-${body.client.last_name}`.toLowerCase(),
+        client_id: resolvedClientId,
         policy_type: body.policy_type,
         effective_date: body.effective_date,
         status: eligible.length > 0 ? "completed" : "pending",
@@ -379,7 +481,7 @@ quotesRouter.post(
       const amsBase = process.env.AMS_BASE_URL ?? "http://localhost:3000";
       const authHeaderValue = c.req.header("Authorization") ?? "";
       const escRes = await fetch(`${amsBase}/v1/escalations/${escalationId}`, {
-        headers: { Authorization: authHeaderValue },
+        headers: { Authorization: authHeaderValue, ...INTERNAL_REQUEST_HEADERS },
       });
 
       if (!escRes.ok) {

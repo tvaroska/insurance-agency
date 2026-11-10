@@ -152,12 +152,40 @@ export function chaosMiddleware() {
 
 export type EnforcedModality = "mcp" | "web-portal";
 
+const PORTAL_SESSION_TTL_SECONDS = 3600;
+
+// Issued token to expiry (epoch ms). The store is per process and each service
+// runs in its own process, so a token only works on the service that issued it.
+// Expiry follows the wall clock so /sim/time-travel does not end open sessions.
+const issuedPortalSessions = new Map<string, number>();
+
+function issuePortalSession(serviceName: string): string {
+  const now = Date.now();
+  for (const [token, expiresAt] of issuedPortalSessions) {
+    if (expiresAt <= now) issuedPortalSessions.delete(token);
+  }
+  const token = `portal_sess_${serviceName}_${crypto.randomUUID()}`;
+  issuedPortalSessions.set(token, now + PORTAL_SESSION_TTL_SECONDS * 1000);
+  return token;
+}
+
+function isActivePortalSession(token: string | undefined): boolean {
+  if (!token) return false;
+  const expiresAt = issuedPortalSessions.get(token);
+  if (expiresAt === undefined) return false;
+  if (expiresAt <= Date.now()) {
+    issuedPortalSessions.delete(token);
+    return false;
+  }
+  return true;
+}
+
 /**
  * Middleware enforcing strict modality access (`MODALITY_MODE=strict`).
  * - Always allows requests with header `X-Eval-Scorer: true`.
  * - For `mcp`: blocks direct `/v1/*` REST bypass calls with 403 `MODALITY_VIOLATION`.
- * - For `web-portal`: requires `X-Portal-Session` header or browser `Referer` + `User-Agent`,
- *   blocking headless REST API bypass calls with 403 `MODALITY_VIOLATION`.
+ * - For `web-portal`: requires an unexpired `X-Portal-Session` token issued by
+ *   `/auth/portal-session`, blocking headless REST API bypass calls with 403 `MODALITY_VIOLATION`.
  */
 export function strictModalityGuard(modality: EnforcedModality) {
   return createMiddleware(async (c, next) => {
@@ -188,14 +216,7 @@ export function strictModalityGuard(modality: EnforcedModality) {
     }
 
     if (modality === "web-portal") {
-      const portalSession = c.req.header("X-Portal-Session");
-      const referer = c.req.header("Referer") || c.req.header("Referrer");
-      const userAgent = c.req.header("User-Agent") || "";
-      const hasPortalSession = Boolean(portalSession && portalSession.trim().length > 0);
-      const hasBrowserPortalContext =
-        Boolean(referer) && userAgent.includes("Mozilla");
-
-      if (hasPortalSession || hasBrowserPortalContext) {
+      if (isActivePortalSession(c.req.header("X-Portal-Session")?.trim())) {
         await next();
         return;
       }
@@ -203,7 +224,7 @@ export function strictModalityGuard(modality: EnforcedModality) {
       return c.json(
         createErrorResponse(
           "MODALITY_VIOLATION",
-          "MODALITY_MODE=strict requires interacting through the Carrier Web Portal UI (with X-Portal-Session from /auth/portal-session or browser Referer).",
+          "MODALITY_MODE=strict requires interacting through the Carrier Web Portal UI. This request has no valid X-Portal-Session (missing, unknown, or expired).",
           { correlationId },
         ),
         403,
@@ -215,18 +236,19 @@ export function strictModalityGuard(modality: EnforcedModality) {
 }
 
 /**
- * Creates the `/auth/portal-session` endpoint for React carrier portals.
+ * Creates the `/auth/portal-session` endpoint for React carrier portals. Each
+ * issued token is recorded so `strictModalityGuard("web-portal")` can accept it
+ * until it expires.
  */
 export function portalSessionEndpoint(serviceName: string) {
   const router = new Hono();
   router.get("/auth/portal-session", (c) => {
-    const sessionToken = `portal_sess_${serviceName}_${crypto.randomUUID().slice(0, 12)}`;
     return c.json({
-      session_token: sessionToken,
+      session_token: issuePortalSession(serviceName),
       service: serviceName,
       modality: "web-portal",
       header: "X-Portal-Session",
-      expires_in: 3600,
+      expires_in: PORTAL_SESSION_TTL_SECONDS,
     });
   });
   return router;

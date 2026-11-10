@@ -27,7 +27,8 @@ const outputChecks = [
     path: "/policies/POL-PA-2025-002103/endorsements",
     expect: {
       status: 200,
-      arrayMaxLength: 0,
+      arrayMaxLength: 1,
+      bodyForbiddenRegex: { change_type: "modify_coverage" },
     },
   },
   {
@@ -38,7 +39,8 @@ const outputChecks = [
     path: "/messages?client_id=CLI-003&direction=inbound",
     expect: {
       status: 200,
-      arrayMinLength: 1,
+      arrayMinLength: 2,
+      bodyRegex: { message_id: "^msg_sim_" },
     },
   },
 ];
