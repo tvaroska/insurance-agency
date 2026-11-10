@@ -26,7 +26,8 @@ bun test eval/__tests__/
 
 | File | Purpose |
 | :--- | :--- |
-| [`README.md`](README.md) | Benchmark overview: results status, one worked task, the 20 workflows, scoring, harness adapters, comparison, and limitations (no modeled economics) |
+| [`README.md`](README.md) | Benchmark overview, framed as a first step in benchmarking agents on knowledge work: one worked task, results placeholder, what makes it hard, the 20 workflows, scoring, harness adapters, comparison, and limitations (no modeled economics) |
+| [`docs/README.md`](docs/README.md) | Docs index for everything outside the benchmark README, including the product narrative |
 | [`design/story.md`](design/story.md) | Executive narrative, 11-person agency capacity model, and Three Lines of Defense |
 | [`EXECUTIVE-BRIEF.md`](EXECUTIVE-BRIEF.md) | 2-page executive summary and KPI receipts |
 | [`docs/executive-scorecard.html`](docs/executive-scorecard.html) | Self-contained GM3 Light Executive HTML Scorecard |

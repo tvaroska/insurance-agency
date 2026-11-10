@@ -162,6 +162,10 @@ Scores *what the agent produced* by querying gym REST APIs.
 | **Record counts** | No unexpected duplicates or deletions? | GET list endpoints, compare counts to expected |
 | **Relationship integrity** | Are cross-service references correct? | E.g., claim references correct policy ID, lead references correct client |
 
+### Rubric checks (LLM judge)
+
+Free-text replies in 10 workflows (02, 05, 11, 12, 15, and 16 to 20) also get atomic rubric checks from an LLM judge ([`eval/evaluators/rubric.ts`](../eval/evaluators/rubric.ts)), with Rogan-Gladen correction for judge bias (`roganGladenDebiasedPassRate`). The correction needs the judge's sensitivity and specificity. Until those are measured on a hand-labeled sample, the code uses defaults of 0.94 and 0.92, so corrected pass rates are provisional.
+
 ### Combined score
 
 ```

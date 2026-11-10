@@ -1,10 +1,10 @@
 # Evergreen Insurance Agency — Product Roadmap
 
-**Last Updated:** 2026-11-09
+**Last Updated:** 2026-11-10
 
 ## Strategic Overview
 
-High-level priorities and feature areas for the Evergreen Insurance API Gym — a multi-modal small-business benchmark environment for evaluating AI models and agent harnesses across REST APIs, MCP, and Web UIs.
+High-level priorities and feature areas for Evergreen, a first step in benchmarking AI agents on knowledge work: a simulated small-business insurance agency that agents work in across REST APIs, MCP, and web UIs.
 
 ---
 
@@ -114,5 +114,8 @@ Goals:
 - Done: `README.md` reframed as an agent benchmark for small-business work outside coding (one worked task, the 20 workflows, scoring, harness adapters, comparison, limitations); the product narrative and modeled economics stay in `design/story.md` and `EXECUTIVE-BRIEF.md`
 - Done: benchmark card hero (`docs/assets/benchmark_card.svg`)
 - Done: statutory minimums match the law in force on the benchmark date: CA 30/60/15 (since 2025-01-01) and NC 50/100/50 (since 2025-07-01)
-- Next: first published leaderboard, each task run 5 times per model through the Inspect or Harbor adapter, reported per workflow (`pass@1`, `pass^5`, E&O violation rate, collateral damage rate, cost per task); models to be chosen
+- Done (2026-11-10): `README.md` reframed as a first step in benchmarking agents on knowledge work; the workflow table's task counts now match `eval/harbor/tasks-manifest.json` (253, pinned by a test); Results is a placeholder until the implementation phase; product material moved behind `docs/README.md`, the service table into `docs/architecture.md`, and the judge-bias note into `docs/evaluation.md`
+- Next (implementation phase): choose the models, the harness, and the learning mechanism (how an agent improves its prompts between runs), then fill the `README.md` Results table. Smallest useful run: 2 to 3 models from different vendors, one `vague` task per workflow (n = 20), 5 trials each, realistic seed with `MODALITY_MODE=strict`, plus a control arm on the clean seed with REST shortcuts allowed. Report `pass@1`, `pass^5`, legal traps missed (3 system-caught vs. 7 judgment-only), runs where the agent said the work was done but the state check failed (a new check), records changed unasked, the clean-to-messy drop, and cost per task, with intervals for n = 20; take each model's tau2-bench rank from its public leaderboard
+- Next: measure the LLM judge's sensitivity and specificity on a hand-labeled sample; `roganGladenDebiasedPassRate` in `eval/evaluators/rubric.ts` defaults to 0.94 and 0.92 until then
+- Next: replace the hero card with a receipt from a real failing run (what the agent told the client vs. what changed in the 8 systems), picked by a fixed rule. The services already reject 15/30/10 in Texas with HTTP 422, so the receipt must show the missed escalation or a false "done", or use a judgment-only trap such as Scenario 19 (attorney mention)
 - Next: replace the illustrative Stage 1 to 3 pass rates in `eval/evolution-showcase.ts` (hard-coded `pass1` constants; `passHatK` computes `(c/n)^k`) with measured repeated trials

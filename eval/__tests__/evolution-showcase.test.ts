@@ -106,8 +106,8 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
       new URL("../../design/story.md", import.meta.url),
     ).text();
 
-    // 1. README.md is framed as a benchmark for small-business work and carries no modeled economics
-    expect(readme.startsWith("# Evergreen: An Agent Benchmark for Small-Business Work, Not Code")).toBe(true);
+    // 1. README.md is framed as a first step in benchmarking agents on knowledge work and carries no modeled economics
+    expect(readme.startsWith("# Evergreen: A First Step in Benchmarking Agents on Knowledge Work")).toBe(true);
     for (const heading of ["## Results", "## How Scoring Works", "## How It Compares", "## Limitations"]) {
       expect(readme).toContain(heading);
     }
@@ -139,20 +139,47 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
     expect(brief).toContain("Measured vs. Modeled Provenance:");
     expect(brief).toContain("calculateAgencyRoi");
 
-    // 4. All 10 required domain acronyms expanded in README.md
-    for (const acronym of [
-      "Property and Casualty (P&C)",
-      "Errors and Omissions (E&O)",
-      "Customer Service Representative (CSR)",
-      "Certificate of Insurance (COI)",
-      "First Notice of Loss (FNOL)",
-      "Special Investigations Unit (SIU)",
-      "Motor Vehicle Record (MVR)",
-      "Agency Management System (AMS)",
-      "Enterprise Content Management (ECM)",
-      "Model Context Protocol (MCP)",
-    ]) {
-      expect(readme).toContain(acronym);
+    // 4. Domain acronyms are expanded at their first use in README.md
+    const acronyms: Record<string, string> = {
+      "P&C": "Property and Casualty (P&C)",
+      "E&O": "Errors and Omissions (E&O)",
+      AMS: "Agency Management System (AMS)",
+      CRM: "Customer Relationship Management (CRM)",
+      ECM: "Enterprise Content Management (ECM)",
+      MCP: "Model Context Protocol (MCP)",
+      CSR: "Customer Service Representative (CSR)",
+      FNOL: "First Notice of Loss (FNOL)",
+      COI: "Certificate of Insurance (COI)",
+    };
+    for (const [short, expanded] of Object.entries(acronyms)) {
+      const firstExpanded = readme.indexOf(expanded);
+      expect(firstExpanded).toBeGreaterThan(-1);
+      const firstShort = readme.search(new RegExp(`\\b${short}\\b`));
+      expect(firstShort).toBe(firstExpanded + expanded.length - short.length - 1);
     }
+  });
+
+  test("README.md workflow table matches the Harbor task manifest", async () => {
+    const readme = await Bun.file(
+      new URL("../../README.md", import.meta.url),
+    ).text();
+    const manifest = (await Bun.file(
+      new URL("../harbor/tasks-manifest.json", import.meta.url),
+    ).json()) as {
+      total_tasks: number;
+      tasks: Record<string, { scenario_id: string }>;
+    };
+
+    const expected = new Map<string, number>();
+    for (const task of Object.values(manifest.tasks)) {
+      expected.set(task.scenario_id, (expected.get(task.scenario_id) ?? 0) + 1);
+    }
+
+    const rows = [...readme.matchAll(/^\| \*\*(\d{2})\*\* \|[^|]*\|[^|]*\| (\d+) \|/gm)];
+    expect(rows).toHaveLength(expected.size);
+    for (const row of rows) {
+      expect(Number(row[2])).toBe(expected.get(row[1] ?? "") ?? -1);
+    }
+    expect(readme).toContain(`${manifest.total_tasks} tasks`);
   });
 });

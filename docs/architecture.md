@@ -25,11 +25,11 @@ Each microservice runs as an independent Bun + Hono HTTP server with its own iso
 | **AMS** (`services/ams`) | 3000 | REST | Agency Management System: clients, policies, endorsements, commissions, tasks, escalations, and the automated Manager Persona rule engine (`services/ams/src/manager/rules.ts`). |
 | **Rater** (`services/rater`) | 3001 | REST | Multi-carrier comparative rating engine, carrier appetite checks, quote request/polling, and policy binding with E&O guardrails. |
 | **CRM** (`services/crm`) | 3002 | REST | Lead scoring, retention risk analytics, and marketing campaign enrollment. |
-| **ECM** (`services/ecm`) | 3003 | REST | Enterprise Content Management: document upload/audit, e-signature envelopes, marketing assets, and dynamic ACORD PDF generation (`pdf-lib`). |
-| **Comm Hub** (`services/comm`) | 3004 | MCP + REST | Communications hub exposing inbox messages, call transcripts, and webhook subscriptions via Model Context Protocol (MCP over stdio/SSE) and REST endpoints. |
+| **ECM** (`services/ecm`) | 3003 | REST | Enterprise Content Management: document upload/audit, e-signature envelopes, marketing assets, and ACORD form PDF generation (`pdf-lib`), including ACORD 25 Certificates of Insurance (COI). |
+| **Comm Hub** (`services/comm`) | 3004 | MCP + REST | Communications hub exposing inbox messages, call transcripts, and webhook subscriptions via Model Context Protocol (MCP over stdio/SSE) and REST endpoints, plus the scripted multi-turn customer simulator (`services/comm/src/simulator/`). |
 | **Summit Fire** (`services/carrier-summit`) | 3005 | Web UI + REST | Mock carrier portal with React + Vite frontend and underwriting REST API. |
 | **Coastal Star** (`services/carrier-coastal`) | 3006 | Web UI + REST | Mock carrier portal specializing in coastal/high-risk property and auto with moratorium rules. |
-| **Claims** (`services/claims`) | 3007 | REST | First Notice of Loss (FNOL) intake, adjuster assignment, and claim timeline tracking. |
+| **Claims** (`services/claims`) | 3007 | REST | First Notice of Loss (FNOL) intake, adjuster assignment, reserves, and claim timeline tracking. |
 
 ### 3. Evaluation & Scoring Engine (`eval/`)
 - **Responsibility:** Evaluates agent runs across 20 scenarios (253 cases across `scripted`, `explicit`, `natural`, `vague`, and `adversarial` prompt difficulty tiers) using a hybrid rubric:
