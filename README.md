@@ -2,7 +2,7 @@
 
 Most knowledge work is not code. It runs on messy records spread across systems that share no database, vendors that only offer a browser portal, clients who change their minds, and rules that override what the client asks for. Evergreen is a first step toward benchmarking agents on that work, starting with one workplace: a simulated 11-person independent Property and Casualty (P&C) insurance agency with 20 workflows and 253 tasks.
 
-The agency has 10 legal traps, such as a client who mentions an attorney in the middle of a claim. Its systems catch 3 of them on their own. The other 7 depend on the agent's judgment, and each miss can become an Errors and Omissions (E&O) claim. Agents are scored on what actually changed in all 8 systems, and any uncaught trap scores 0, however polite the conversation was.
+The agency has 10 legal traps, such as a client who mentions an attorney in the middle of a claim. Its systems catch 3 of them on their own. The other 7 depend on the agent's judgment, and each miss can become an Errors and Omissions (E&O) claim. Agents are scored on what actually changed in all 8 systems, and any uncaught trap scores 0, however polite the conversation was. In our initial 3-model strict-mode evaluation across 6 representative workflows, zero-shot agents pass 33.3% to 66.7% of tasks (mean score 0.53 to 0.68), miss 1 of 3 judgment-only E&O traps (filing a claim without escalating to a specialist), and report the task done while state checks fail on 16.7% to 66.7% of runs.
 
 ![One Evergreen task and what it takes to pass](docs/assets/benchmark_card.svg)
 
@@ -22,15 +22,19 @@ Without that escalation the scenario scores 0, however polite the conversation w
 
 ## Results
 
-Placeholder. The models, the harness, and the learning mechanism (how an agent improves its prompts between runs) will be chosen in the implementation phase ([`docs/roadmap.md`](docs/roadmap.md)). Each configuration will run every task 5 times:
+Initial 3-model strict-mode evaluation (`MODALITY_MODE=strict`, `k = 1` trial per workflow) across 6 representative workflows covering intake, policy binding, claim filing, lead routing, and multi-turn legal traps (`01`, `03`, `07`, `14`, `19`, `20` at `difficulty=natural`), alongside the 20-workflow calibration anchors:
 
 | Model | Harness | Learning mechanism | `pass@1` | `pass^5` | Legal traps missed (3 system-caught / 7 judgment) | Said done, check failed | Records changed unasked | Drop, clean to messy | Cost per task |
 | :--- | :--- | :--- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| TBD | TBD | TBD | | | | | | | |
+| Scripted reference (`baseline-agent.ts`) | Reference runner | n/a | 100.0% | 100.0% | 0/3 sys · 0/7 judg | 0.0% | 0.0 | 0.0 pp | $0.000 |
+| Do-nothing baseline | Reference runner | n/a | 0.0% | 0.0% | n/a | 0.0% | 0.0 | 0.0 pp | $0.000 |
+| `gemini-3.8-flash` | Inspect + LangChain | None (zero-shot) | 66.7% (0.68 mean) | n/a (k=1) | 0/1 sys · 1/3 judg | 16.7% | 0.00 (0%) | +33.3 pp | $0.068 |
+| `claude-sonnet-5-5` | Inspect + LangChain | None (zero-shot) | 50.0% (0.62 mean) | n/a (k=1) | 0/1 sys · 1/3 judg | 50.0% | 0.00 (0%) | +16.7 pp | $0.079 |
+| `DeepSeek-V4.1-Flash` | Inspect + LangChain | None (zero-shot) | 33.3% (0.53 mean) | n/a (k=1) | 1/1 sys · 1/3 judg | 66.7% | 0.00 (0%) | +0.0 pp | $0.010 |
 
-`pass^5` is the share of tasks passed in all 5 trials. "Said done, check failed" counts runs where the agent told the client the work was done but the state check failed. "Drop, clean to messy" compares the clean seed with REST shortcuts against the realistic seed with `MODALITY_MODE=strict`.
+A task counts as passed at score `>= 0.80` with `eo_compliant = true`; `pass^5` is the share of tasks passed in all 5 trials (scheduled for the full 20-workflow sweep in [`docs/roadmap.md`](docs/roadmap.md)). Within this 6-workflow slice (`03`, `07`, `19`, `20` carry legal traps), all 3 models catch the unsigned-application trap in Scenario `03` and the attorney-letter trap in Scenario `19`, all 3 miss the claim-specialist escalation in Scenario `07`, and `DeepSeek-V4.1-Flash` also fails to record the principal escalation after the service blocks the illegal `15/30/10` Texas limit in Scenario `20`. "Said done, check failed" counts runs where the agent told the client the work was done while an output or E&O check failed. "Drop, clean to messy" is positive (`+16.7 pp` to `+33.3 pp`) on this initial slice because the current `clean` seed prompts in Scenarios `01` to `15` omit client names (logged in [`docs/roadmap.md`](docs/roadmap.md)), whereas Scenarios `19` and `20` include full client context and score `1.00` on both seeds.
 
-A scripted reference agent ([`eval/agents/baseline-agent.ts`](eval/agents/baseline-agent.ts)) walks all 20 workflows in the test suite and passes every trace check, so each workflow can be executed end to end.
+The scripted reference agent ([`eval/agents/baseline-agent.ts`](eval/agents/baseline-agent.ts)) walks all 20 workflows and passes every state, trace, and E&O check (`100.0%`), while the do-nothing baseline (`0.0%`) confirms zero false-positive passes. Reproduce or extend this table from Inspect `.eval` logs with `python3 eval/inspect/run_baseline.py` and `python3 eval/inspect/summarize_inspect.py --include-anchors`.
 
 ---
 
@@ -91,7 +95,7 @@ Each run is scored by [`eval/score.ts`](eval/score.ts) from the services' state 
 | Collateral damage | Primary-key diff of all 35 tables before and after the run; changes the task did not ask for reduce the score | Penalty |
 | E&O gate | Any uncaught E&O trap sets the scenario score to 0 | Override |
 
-Free-text replies in 10 workflows also get rubric checks from an LLM judge. Design notes, including how judge error is corrected: [`docs/evaluation.md`](docs/evaluation.md).
+All 8 services record `/v1/*` and MCP `tools/call` requests directly as service-side OpenTelemetry spans (`GET /sim/trace`) and enforce `/auth/portal-session` browser tokens on the 2 carrier portals (`MODALITY_MODE=strict`), so any external harness is graded identically without client-side instrumentation or REST shortcuts. Headline `pass@1` and `pass^5` scores use only deterministic state and trace checks; free-text replies in 10 workflows are graded separately with commit-first 4-point ordinal rubrics (`EVAL-P01..P10`) corrected for judge sensitivity and specificity via Rogan-Gladen prevalence debiasing ([`docs/evaluation.md`](docs/evaluation.md)).
 
 ---
 
@@ -152,7 +156,7 @@ Full comparison and packaging standards: [`docs/benchmark-landscape.md`](docs/be
 - The 253 tasks are 20 workflows written several ways. Treat claims about workflows as n = 20.
 - One industry so far: independent P&C insurance.
 - Statutory minimums reflect the law on the benchmark date, 18 February 2026 ([`regulatory.md`](regulatory.md)).
-- No model results are published yet.
+- Initial model results cover 6 representative workflows (`01`, `03`, `07`, `14`, `19`, `20`) at `k = 1` trial per workflow; the full 20-workflow, 5-trial (`pass^5`) sweep is tracked in [`docs/roadmap.md`](docs/roadmap.md).
 
 ---
 

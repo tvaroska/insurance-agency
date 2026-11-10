@@ -244,7 +244,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "realistic-scripted",
           prompt:
-            "A lead came in for Angela Foster-Blake requesting auto insurance. Check CRM leads and search AMS clients by both 'Foster-Blake' and 'Foster'. CLI-010 (Angela Foster) is likely the same person — verify by DOB/email. If match, link lead to existing client. Do NOT create a duplicate client.",
+            "A lead came in for Angela Foster-Blake requesting auto insurance. Check CRM leads and search AMS clients by both 'Foster-Blake' and 'Foster'. CLI-010 (Angela Foster) is likely the same person — verify by DOB/email. If match, link lead to existing client, send an acknowledgment message, and create a follow-up task for the assigned producer. Do NOT create a duplicate client.",
           difficulty: "scripted",
           outputChecks: [
             {
@@ -290,7 +290,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "realistic-explicit",
           prompt:
-            "New lead for Angela Foster-Blake — she wants auto insurance. Check if she's already a client. Note: she may be listed under her maiden name 'Foster'. If existing, link the lead to her client record.",
+            "New lead for Angela Foster-Blake — she wants auto insurance. Check if she's already a client. Note: she may be listed under her maiden name 'Foster'. If existing, link the lead to her client record, send an acknowledgment message, and create a follow-up task for the assigned producer.",
           difficulty: "explicit",
           outputChecks: [
             {

@@ -141,6 +141,16 @@ describe("GET /v1/clients - filters", () => {
     }
   });
 
+  test("filters by last_name and first_name prefix", async () => {
+    const res = await app.request("/v1/clients?last_name=Adams&first_name=Ali", {
+      headers: await authHeader(["ams:clients:read"]),
+    });
+    const body = await res.json();
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].id).toBe("CL-001");
+    expect(body.data[0].first_name).toBe("Alice");
+  });
+
   test("filters by email", async () => {
     const res = await app.request("/v1/clients?email=alice@example.com", {
       headers: await authHeader(["ams:clients:read"]),

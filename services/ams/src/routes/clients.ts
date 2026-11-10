@@ -30,6 +30,7 @@ clientsRouter.get("/", requireScopes("ams:clients:read"), async (c) => {
   throwIfErrors([
     checkEnum("status", query.status, CLIENT_STATUSES),
     checkMaxLength("last_name", query.last_name, 100),
+    checkMaxLength("first_name", query.first_name, 100),
   ]);
 
   // Parse pagination
@@ -50,6 +51,7 @@ clientsRouter.get("/", requireScopes("ams:clients:read"), async (c) => {
   const filters: Record<string, unknown>[] = [];
   if (query.status) filters.push({ status: query.status });
   if (query.last_name) filters.push({ last_name: { startsWith: query.last_name } });
+  if (query.first_name) filters.push({ first_name: { startsWith: query.first_name } });
   if (query.email) filters.push({ email: query.email });
   if (query.household_id) filters.push({ household_id: query.household_id });
   if (cursorWhere) filters.push(cursorWhere);

@@ -102,6 +102,9 @@ if (import.meta.main) {
   const args = new Set(process.argv.slice(2));
   const checkOnly = args.has("--check") || args.has("--dry-run");
   const seedMode = process.env.SEED_MODE || "realistic";
+  const modalityMode = args.has("--strict")
+    ? "strict"
+    : process.env.MODALITY_MODE || "permissive";
 
   const readiness = verifyShowcaseReadiness();
   if (!readiness.ready) {
@@ -157,6 +160,7 @@ if (import.meta.main) {
         ...process.env,
         PORT: String(svc.port),
         SEED_MODE: seedMode,
+        MODALITY_MODE: modalityMode,
         JWT_SECRET: jwtSecret,
       },
       stdout: "inherit",

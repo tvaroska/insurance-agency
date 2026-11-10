@@ -8,6 +8,12 @@ Use `bun run showcase` for zero-Docker local execution of all 8 services (`:3000
 # Zero-Docker Executive Showcase (preflight check or full launch):
 bun run showcase:check
 bun run showcase
+bun run showcase --strict                        # strict modality + portal session enforcement
+
+# Run 3-model Inspect AI evaluation & regenerate README Results table:
+~/.venvs/evergreen-inspect/bin/python eval/inspect/run_baseline.py --scenario 01,03,07,14,19,20 --difficulty natural
+~/.venvs/evergreen-inspect/bin/python eval/inspect/summarize_inspect.py /tmp/evergreen-v07-run/realistic-natural --clean-logs /tmp/evergreen-v07-run/clean-natural --include-anchors
+~/.venvs/evergreen-inspect/bin/pytest eval/inspect/tests
 
 # Build & start via Docker Compose (seeds DB on first start):
 docker compose build
@@ -26,14 +32,14 @@ bun test eval/__tests__/
 
 | File | Purpose |
 | :--- | :--- |
-| [`README.md`](README.md) | Benchmark overview, framed as a first step in benchmarking agents on knowledge work: one worked task, results placeholder, what makes it hard, the 20 workflows, scoring, harness adapters, comparison, and limitations (no modeled economics) |
+| [`README.md`](README.md) | Benchmark overview, framed as a first step in benchmarking agents on knowledge work: one worked task, 3-model strict results table, what makes it hard, the 20 workflows, scoring, harness adapters, comparison, and limitations (`0` `—`/`→`/`->`; expand `P&C`, `E&O`, `AMS`, `CRM`, `ECM`, `MCP`, `CSR`, `FNOL`, `COI` on first use) |
 | [`docs/README.md`](docs/README.md) | Docs index for everything outside the benchmark README, including the product narrative |
 | [`design/story.md`](design/story.md) | Executive narrative, 11-person agency capacity model, and Three Lines of Defense |
 | [`EXECUTIVE-BRIEF.md`](EXECUTIVE-BRIEF.md) | 2-page executive summary and KPI receipts |
 | [`docs/executive-scorecard.html`](docs/executive-scorecard.html) | Self-contained GM3 Light Executive HTML Scorecard |
 | [`.stitch/DESIGN.md`](.stitch/DESIGN.md) | Tier-2 Reusable Showcase GM3 Light token contract |
 | [`CRITICAL.md`](CRITICAL.md) | Protected paths, OpenAPI contracts, seed determinism, and `EVAL-P01..P10` rubric invariants |
-| [`DECISIONS.md`](DECISIONS.md) | Architectural Decision Records (`ADR-001`–`ADR-004`) |
+| [`DECISIONS.md`](DECISIONS.md) | Architectural Decision Records (`ADR-001`–`ADR-005`) |
 | [`docs/roadmap.md`](docs/roadmap.md) | Strategic priorities by feature area & live roadmap |
 | [`landscape.md`](landscape.md) | Insurance brokerage & agency market landscape |
 | [`regulatory.md`](regulatory.md) | State & federal insurance regulatory compliance rules |
