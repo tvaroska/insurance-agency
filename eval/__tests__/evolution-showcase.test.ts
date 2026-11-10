@@ -104,7 +104,7 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
       "Evergreen Insurance Partners — Executive Governance &amp; Benchmark Scorecard",
     );
     expect(html).toContain('rel="icon" type="image/svg+xml"');
-    expect(html).toContain("Trajectory Claim vs. 35-Table SQLite Database State Evidence");
+    expect(html).toContain("Trajectory Claim vs. 32-Table SQLite Database State Evidence");
     expect(html).toContain("3-Stage Agent-to-Code Evolution");
     expect(html).toContain("#20");
   });

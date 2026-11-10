@@ -29,7 +29,7 @@ End-to-end flows for researchers and agent developers benchmarking AI agents aga
 **Steps:**
 1. Researcher runs `bun eval/score.ts --traces <path-to-trace.json> --scenario <id> --seed realistic --out ./results [--html-out docs/executive-scorecard.html]`.
 2. Scorer auto-detects OTLP HTTP spans or GenAI `execute_tool` spans via `parseTrace()`.
-3. Scorer queries live service endpoints using `evaluateOutput()` (`eval/evaluators/output.ts`) to verify created/updated records and diffs 35-table snapshots when `--snapshot-before` is supplied.
+3. Scorer queries live service endpoints using `evaluateOutput()` (`eval/evaluators/output.ts`) to verify created/updated records and diffs 32-table snapshots when `--snapshot-before` is supplied.
 4. Scorer checks `eoTraps` (both trace checks and client-specific output checks) and writes `<id>.json`, `<id>.md`, and optional self-contained HTML scorecard reports.
 
 **Success Criteria:**
@@ -82,7 +82,7 @@ End-to-end flows for researchers and agent developers benchmarking AI agents aga
 1. Executive runs `bun run showcase` and opens `http://localhost:3000/`.
 2. In **Tab 1 (Agency Command & 5 Hero Journeys)**, executive clicks **Run J1–J5** to execute live workflows (e.g., `J2` 60-second ACORD 25 COI generation or `J1` 15-anomaly book audit) and inspects the live SQLite state-diff receipt.
 3. In **Tab 2 (Principal E&O & Escalation Queue)**, executive tests the 1st-line HTTP `422` statutory firewall and clicks **Approve** or **Deny** on pending high-premium escalations.
-4. In **Tab 3 & Tab 4**, executive compares Trajectory Claims vs. 35-Table SQLite Evidence and reviews the Stage 1 → Stage 2 → Stage 3 (`$0`-token compiled `privy:*` + `FallbackToSkill`) economics.
+4. In **Tab 3 & Tab 4**, executive compares Trajectory Claims vs. 32-Table SQLite Evidence and reviews the Stage 1 → Stage 2 → Stage 3 (`$0`-token compiled `privy:*` + `FallbackToSkill`) economics.
 
 **Success Criteria:**
 - Workbench renders in GM3 Light with zero console/favicon errors and mutates real SQLite rows on journey execution and escalation resolution.

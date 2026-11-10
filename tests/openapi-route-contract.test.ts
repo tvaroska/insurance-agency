@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "fs";
-import { join, resolve } from "path";
-import { parse as parseYaml } from "yaml";
+import { spawnSync } from "child_process";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { dirname, join, resolve } from "path";
+import { parse as parseYaml, parseAllDocuments, stringify as stringifyYaml } from "yaml";
 
 const ROOT_DIR = resolve(import.meta.dir, "..");
 const SPECS_DIR = join(ROOT_DIR, "specs");
@@ -129,7 +131,12 @@ function extractServiceRoutes(serviceName: string): Set<string> {
 
 describe("OpenAPI Specs & Service Route Contract Suite", () => {
   const specFiles = readdirSync(SPECS_DIR)
-    .filter((f) => f.endsWith(".yaml") && !f.endsWith(".behavior.yaml"))
+    .filter(
+      (f) =>
+        f.endsWith(".yaml") &&
+        !f.endsWith(".behavior.yaml") &&
+        !f.endsWith(".rules.yaml"),
+    )
     .sort();
 
   test("discovers all 8 OpenAPI 3.0 specification files", () => {
@@ -207,5 +214,82 @@ describe("OpenAPI Specs & Service Route Contract Suite", () => {
     );
     expect(envelopesSource).toContain('requireScopes("ecm:envelopes:read")');
     expect(envelopesSource).toContain("formatEnvelope");
+  });
+});
+
+function resolveAstGrepBin(): string | null {
+  const fromPath = Bun.which("ast-grep");
+  if (fromPath) return fromPath;
+  const homeBin = join(process.env.HOME ?? "/root", ".local", "bin", "ast-grep");
+  return existsSync(homeBin) ? homeBin : null;
+}
+
+describe("Declarative AST Structural & Security Contract (specs/ast.rules.yaml)", () => {
+  const rulesPath = join(SPECS_DIR, "ast.rules.yaml");
+
+  test("specs/ast.rules.yaml defines >=4 error-severity rules with positive/negative metadata examples", () => {
+    expect(existsSync(rulesPath)).toBe(true);
+    const docs = parseAllDocuments(readFileSync(rulesPath, "utf-8"))
+      .map((d) => d.toJSON() as Record<string, any>)
+      .filter(Boolean);
+    expect(docs.length).toBeGreaterThanOrEqual(4);
+
+    for (const doc of docs) {
+      expect(typeof doc.id).toBe("string");
+      expect(doc.language).toBe("TypeScript");
+      expect(doc.severity).toBe("error");
+      expect(typeof doc.metadata?.test_path).toBe("string");
+      expect(Array.isArray(doc.metadata?.invalid_examples)).toBe(true);
+      expect(doc.metadata.invalid_examples.length).toBeGreaterThanOrEqual(1);
+      expect(Array.isArray(doc.metadata?.valid_examples)).toBe(true);
+      expect(doc.metadata.valid_examples.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  test("ast-grep passes across repository and flags every invalid_example positive control", () => {
+    const astGrep = resolveAstGrepBin();
+    if (!astGrep) return;
+
+    const liveScan = spawnSync(astGrep, ["scan", "--rule", rulesPath], {
+      cwd: ROOT_DIR,
+      encoding: "utf-8",
+    });
+    expect(liveScan.status).toBe(0);
+
+    const docs = parseAllDocuments(readFileSync(rulesPath, "utf-8"))
+      .map((d) => d.toJSON() as Record<string, any>)
+      .filter(Boolean);
+
+    const scratchRoot = mkdtempSync(join(tmpdir(), "evergreen-ast-guard-"));
+    try {
+      docs.forEach((doc, idx) => {
+        const caseDir = join(scratchRoot, `case_${idx}_${doc.id}`);
+        const singleRulePath = join(caseDir, "_rule.yaml");
+        const targetFile = join(caseDir, doc.metadata.test_path);
+        mkdirSync(dirname(targetFile), { recursive: true });
+        writeFileSync(singleRulePath, stringifyYaml(doc), "utf-8");
+
+        for (const badCode of doc.metadata.invalid_examples as string[]) {
+          writeFileSync(targetFile, `${badCode}\n`, "utf-8");
+          const badRes = spawnSync(astGrep, ["scan", "--rule", singleRulePath, "."], {
+            cwd: caseDir,
+            encoding: "utf-8",
+          });
+          expect(badRes.status).toBe(1);
+          expect(`${badRes.stdout}${badRes.stderr}`).toContain(doc.id);
+        }
+
+        for (const goodCode of doc.metadata.valid_examples as string[]) {
+          writeFileSync(targetFile, `${goodCode}\n`, "utf-8");
+          const goodRes = spawnSync(astGrep, ["scan", "--rule", singleRulePath, "."], {
+            cwd: caseDir,
+            encoding: "utf-8",
+          });
+          expect(goodRes.status).toBe(0);
+        }
+      });
+    } finally {
+      rmSync(scratchRoot, { recursive: true, force: true });
+    }
   });
 });

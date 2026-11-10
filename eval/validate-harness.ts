@@ -9,7 +9,8 @@ import { scoreScenario } from "./score";
 
 // Pre-spend check (ADR-005 item 6). Scored from the service-side trace, the scripted
 // reference agent must score 1.0 and an agent that does nothing must score 0 on every
-// scenario's first test case. Needs the live services (bun run showcase).
+// scenario's first test case. Connects to live services (:3000..:3007) when running, or
+// automatically falls back to zero-daemon in-process Hono app.request() dispatch.
 
 interface RunResult {
   report: ScenarioReport;
@@ -229,6 +230,7 @@ Exits non-zero on any mismatch. Base URLs honor EVERGREEN_BASE_URLS like eval/co
       console.error(`scenario ${id} (${variant}): ${isMismatch(row) ? "MISMATCH" : "ok"}`);
     }
   }
+  await resetServices(baseUrls, "realistic");
 
   const header = ["Scenario", "Case", "Scripted", "No-op", "Scripted spans", "Result"];
   const table = rows.map((row) => [

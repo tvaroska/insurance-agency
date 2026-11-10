@@ -1,9 +1,17 @@
-# Privy/gym — Testing
+# Evergreen Insurance Agency — Testing
 
 ## Test Command
 
 ```bash
-cd services/<name> && bun test
+# Full test suite (showcase:check, shared, 8 services in parallel, eval, contract/hygiene, integration, pytest):
+proj-test insurance-agency
+
+# Fast targeted subtargets:
+proj-test insurance-agency <service>        # ams | rater | crm | ecm | comm | carrier-summit | carrier-coastal | claims
+proj-test insurance-agency eval             # eval/__tests__/ and eval/*/__tests__/
+proj-test insurance-agency integration      # tests/integration/*.test.ts
+proj-test insurance-agency pytest           # eval/inspect/tests
+proj-test insurance-agency validate-harness # zero-daemon in-process 20-scenario harness validation
 ```
 
 ## Strategy

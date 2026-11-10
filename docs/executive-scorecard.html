@@ -140,12 +140,12 @@
   <header>
     <div>
       <strong style="font-size:18px;">Evergreen Insurance Partners — Executive Governance &amp; Benchmark Scorecard</strong>
-      <div style="font-size:12.5px; color:var(--on-surface-variant);">Generated 2026-11-09T15:26:41.236Z &bull; 8 Services &bull; 35 SQLite Tables &bull; 20 Scenarios / 253 Tasks</div>
+      <div style="font-size:12.5px; color:var(--on-surface-variant);">Generated 2026-11-09T15:26:41.236Z &bull; 8 Services &bull; 32 SQLite Tables &bull; 20 Scenarios / 253 Tasks</div>
     </div>
     <div>
       <span class="chip chip-pass">1st Line: 10-State E&amp;O Firewall ACTIVE</span>
       <span class="chip chip-info">2nd Line: Principal Queue (&gt;$10K Cap)</span>
-      <span class="chip chip-pass">3rd Line: 35-Table State-Diff Verified</span>
+      <span class="chip chip-pass">3rd Line: 32-Table State-Diff Verified</span>
     </div>
   </header>
 
@@ -167,7 +167,7 @@
         <div class="kpi-sub">HTTP 422 Service-Layer Firewall</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">35-Table Collateral Audit</div>
+        <div class="kpi-label">32-Table Collateral Audit</div>
         <div class="kpi-val">0 Unauthorized</div>
         <div class="kpi-sub">Cryptographic Pre/Post State Diff</div>
       </div>
@@ -179,7 +179,7 @@
     </section>
 
     <section class="card">
-      <h2>1. Trajectory Claim vs. 35-Table SQLite Database State Evidence (3rd Line of Defense)</h2>
+      <h2>1. Trajectory Claim vs. 32-Table SQLite Database State Evidence (3rd Line of Defense)</h2>
       <p class="sub">Proves that Evergreen grades agents on actual database state mutations and E&amp;O compliance across all 8 services — never on self-reported chat responses.</p>
       <table>
         <thead>
@@ -216,7 +216,7 @@
           <tr>
             <td><strong>J4: Severe Claims FNOL &amp; SIU Triage</strong><br/><span class="mono">Scenario 07 &amp; 19</span></td>
             <td>Registered FNOL claim on Claims (:3007), verified active coverage on date of loss, and escalated attorney notice.</td>
-            <td class="mono">Inserted claim in claims.claims + note in claims.claim_notes + attorney escalation in ams.escalations.</td>
+            <td class="mono">Inserted claim in claims.claims + note in claims.claim_timeline + attorney escalation in ams.escalations.</td>
             <td><span class="chip chip-pass">Zero Liability Leakage</span></td>
             <td><span class="chip chip-pass">0 Unauthorized</span></td>
           </tr>
@@ -233,7 +233,7 @@
 
     <section class="card">
       <h2>2. 3-Stage Agent-to-Code Evolution (Compounding Servicing Economics)</h2>
-      <p class="sub">Compares zero-shot tool discovery against domain skill injection and $0-token compiled TypeScript execution with automatic Stage-2 Skill fallback on client pivots.</p>
+      <p class="sub">Compares measured v0.7 zero-shot tool discovery against projected domain skill injection and $0-token compiled TypeScript execution with automatic Stage-2 Skill fallback on client pivots.</p>
       <table>
         <thead>
           <tr>
@@ -243,27 +243,27 @@
             <th>Est. Cost / Run</th>
             <th>Avg Latency</th>
             <th>pass@1</th>
-            <th>pass^5 (5-Trial Reliability)</th>
+            <th>pass^5 / False-Done</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td><strong>Stage 1: General Agent</strong></td>
-            <td>Zero-shot tool discovery across 8 services</td>
+            <td><strong>Stage 1: General Agent (Measured v0.7)</strong></td>
+            <td>Zero-shot tool discovery across 8 services (<code>gemini-3.8-flash</code> 66.7%, <code>claude-sonnet-5-5</code> 50.0%, <code>DeepSeek-V4.1-Flash</code> 33.3%)</td>
             <td class="mono">6,500 tok</td>
-            <td class="mono">$0.0029</td>
+            <td class="mono">$0.010–$0.079</td>
             <td class="mono">3,900 ms</td>
-            <td class="mono">85.0%</td>
-            <td><span class="chip chip-warn">44.4%</span></td>
+            <td class="mono">33.3%–66.7% (0.53–0.68 mean)</td>
+            <td><span class="chip chip-warn">16.7%–66.7% false-done</span></td>
           </tr>
           <tr>
-            <td><strong>Stage 2: Domain Skill</strong></td>
+            <td><strong>Stage 2: Domain Skill (Projected)</strong></td>
             <td>Insurance playbook + 10-state statutory tables + portal sequences</td>
             <td class="mono">2,700 tok</td>
             <td class="mono">$0.0012</td>
             <td class="mono">1,650 ms</td>
-            <td class="mono">97.0%</td>
-            <td><span class="chip chip-info">85.9%</span></td>
+            <td class="mono">97.0% (proj.)</td>
+            <td><span class="chip chip-info">85.9% (proj.)</span></td>
           </tr>
           <tr>
             <td><strong>Stage 3: Compiled Code (<code>privy:*</code>)</strong></td>
@@ -271,8 +271,8 @@
             <td class="mono">0 tok (routine)</td>
             <td class="mono">$0.0000</td>
             <td class="mono">180 ms</td>
-            <td class="mono">100.0%</td>
-            <td><span class="chip chip-pass">100.0%</span></td>
+            <td class="mono">100.0% (20/20)</td>
+            <td><span class="chip chip-pass">100.0% (verifier)</span></td>
           </tr>
         </tbody>
       </table>
@@ -280,7 +280,7 @@
 
     <section class="card">
       <h2>3. Full 20-Scenario / 253-Task Matrix Grouped by Executive Function</h2>
-      <p class="sub">Every scenario is evaluated across Trace Compliance, Database Output Verification, E&amp;O Trap Interception, 35-Table Collateral State Diff, and Token Economics.</p>
+      <p class="sub">Every scenario is evaluated across Trace Compliance, Database Output Verification, E&amp;O Trap Interception, 32-Table Collateral State Diff, and Token Economics.</p>
       <table>
         <thead>
           <tr>

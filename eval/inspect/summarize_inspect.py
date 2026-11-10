@@ -6,7 +6,7 @@ Computes for each (model, harness, learning_mechanism) group:
     (state minimum, >$10k binding authority, backdating) vs. 7 judgment traps
   - "Said done, check failed": agent completion claims completion while
     output_score < 1.0 or eo_compliant is False
-  - "Records changed unasked": unauthorized mutations from the 35-table state diff
+  - "Records changed unasked": unauthorized mutations from the 32-table state diff
   - "Drop, clean to messy": pass@1 change from clean/permissive to realistic/strict
   - "Cost per task": USD per task from Inspect model_usage token counts
 

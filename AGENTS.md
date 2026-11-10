@@ -5,27 +5,30 @@
 Use `bun run showcase` for zero-Docker local execution of all 8 services (`:3000`–`:3007`) and the Executive Workbench (`http://localhost:3000/`), or `docker compose` for containerized execution:
 
 ```bash
+# Canonical single-command runner (runs showcase:check, shared, 8 services in parallel, eval, contract, integration, and pytest):
+proj-test insurance-agency
+
+# Fast targeted subtargets (~0.5s–1.5s):
+proj-test insurance-agency claims               # single service: ams|rater|crm|ecm|comm|carrier-summit|carrier-coastal|claims
+proj-test insurance-agency eval                 # eval/__tests__/ + eval/*/__tests__/
+proj-test insurance-agency integration          # tests/integration/*.test.ts
+proj-test insurance-agency pytest               # eval/inspect/tests
+proj-test insurance-agency showcase-check       # bun run showcase:check
+proj-test insurance-agency validate-harness     # zero-daemon in-process 20-scenario harness validation
+
 # Zero-Docker Executive Showcase (preflight check or full launch):
 bun run showcase:check
 bun run showcase
 bun run showcase --strict                        # strict modality + portal session enforcement
 
 # Run 3-model Inspect AI evaluation & regenerate README Results table:
-~/.venvs/evergreen-inspect/bin/python eval/inspect/run_baseline.py --scenario 01,03,07,14,19,20 --difficulty natural
-~/.venvs/evergreen-inspect/bin/python eval/inspect/summarize_inspect.py eval/results/v0.7/realistic-natural --clean-logs eval/results/v0.7/clean-natural --include-anchors
-~/.venvs/evergreen-inspect/bin/pytest eval/inspect/tests
+proj-test insurance-agency inspect-baseline --scenario 01,03,07,14,19,20 --difficulty natural
+proj-test insurance-agency inspect-summary eval/results/v0.7/realistic-natural --clean-logs eval/results/v0.7/clean-natural --include-anchors
 
 # Build & start via Docker Compose (seeds DB on first start):
 docker compose build
 docker compose up                                # realistic (default, adversarial data)
 SEED_MODE=clean docker compose up                # clean (no adversarial data)
-
-# Reset to seed state:
-docker compose down && docker compose up
-
-# Run tests (in-memory, no docker needed):
-cd services/<name> && bun test
-bun test eval/__tests__/
 ```
 
 ## 2. Documentation & Planning Workflow
@@ -50,4 +53,4 @@ bun test eval/__tests__/
 | [`prompts/REGENERATE.md`](prompts/REGENERATE.md) | Single-service Phoenix regeneration blueprint (`services/claims` `:3007`) for Claude Code & Antigravity |
 | `docs/features/*.md` | Completed work history per feature area |
 
-Run `cd services/<name> && bun test` (or `proj-test insurance-agency`) before committing. Tests must pass before marking tasks complete.
+Run `proj-test insurance-agency` (or a targeted subtarget like `proj-test insurance-agency claims`) before committing. Tests must pass before marking tasks complete.

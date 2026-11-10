@@ -49,9 +49,12 @@ steps:
       - -c
       - |
         set -euo pipefail
+        bunx @ast-grep/cli scan --rule specs/ast.rules.yaml
         bun test eval/__tests__/ eval/*/__tests__/
-        echo "=== Running tests/*.test.ts (including tests/k8s-manifests.test.ts) ==="
+        echo "=== Running tests/*.test.ts (including tests/k8s-manifests.test.ts and tests/repo-hygiene.test.ts) ==="
         bun test tests/*.test.ts
+        echo "=== Running tests/integration/*.test.ts ==="
+        bun test tests/integration/*.test.ts
         if [[ -x "${HOME:-/root}/.venvs/evergreen-inspect/bin/pytest" ]]; then
           "${HOME:-/root}/.venvs/evergreen-inspect/bin/pytest" -p no:cacheprovider eval/inspect/tests
         elif command -v pytest >/dev/null 2>&1 && python3 -c "import inspect_ai" >/dev/null 2>&1; then

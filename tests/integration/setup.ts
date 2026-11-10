@@ -2,6 +2,9 @@ import { Hono } from "hono";
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { mock } from "bun:test";
+import { mkdtempSync } from "fs";
+import { join } from "path";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 import {
   correlationId,
   jwtAuth,
@@ -40,20 +43,48 @@ import * as raterSchema from "../../services/rater/src/schema";
 import * as crmSchema from "../../services/crm/src/schema";
 import * as ecmSchema from "../../services/ecm/src/schema";
 import * as commSchema from "../../services/comm/src/schema";
+import { PrismaClient as AmsPrismaClient } from "../../services/ams/src/generated/prisma/client";
+import { PrismaClient as RaterPrismaClient } from "../../services/rater/src/generated/prisma/client";
+import { PrismaClient as CrmPrismaClient } from "../../services/crm/src/generated/prisma/client";
+import { PrismaClient as EcmPrismaClient } from "../../services/ecm/src/generated/prisma/client";
+import { PrismaClient as CommPrismaClient } from "../../services/comm/src/generated/prisma/client";
 
-function createDb<T extends Record<string, unknown>>(schema: T) {
-  const sqlite = new Database(":memory:");
+function createDb<T extends Record<string, unknown>, P>(
+  schema: T,
+  PrismaCtor: new (opts: any) => P,
+  prefix: string,
+) {
+  const tmpDir = mkdtempSync(join("/tmp", prefix));
+  const dbPath = join(tmpDir, "test.db");
+  const sqlite = new Database(dbPath);
+  sqlite.exec("PRAGMA journal_mode = WAL;");
   sqlite.exec("PRAGMA foreign_keys = ON;");
-  return { sqlite, db: drizzle(sqlite, { schema }) };
+  const drizzleDb = drizzle(sqlite, { schema });
+  const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
+  const prisma = new PrismaCtor({ adapter });
+  return { sqlite, drizzleDb, prisma, db: drizzleDb };
 }
 
 // ── Create all 5 databases (local mode only, but schemas imported regardless) ──
 
-export const ams = K8S_MODE ? ({ db: null, sqlite: null } as any) : createDb(amsSchema);
-export const rater = K8S_MODE ? ({ db: null, sqlite: null } as any) : createDb(raterSchema);
-export const crm = K8S_MODE ? ({ db: null, sqlite: null } as any) : createDb(crmSchema);
-export const ecm = K8S_MODE ? ({ db: null, sqlite: null } as any) : createDb(ecmSchema);
-export const comm = K8S_MODE ? ({ db: null, sqlite: null } as any) : createDb(commSchema);
+export const ams = K8S_MODE
+  ? ({ db: null, drizzleDb: null, prisma: null, sqlite: null } as any)
+  : createDb(amsSchema, AmsPrismaClient, "test-int-ams-");
+export const rater = K8S_MODE
+  ? ({ db: null, drizzleDb: null, prisma: null, sqlite: null } as any)
+  : createDb(raterSchema, RaterPrismaClient, "test-int-rater-");
+export const crm = K8S_MODE
+  ? ({ db: null, drizzleDb: null, prisma: null, sqlite: null } as any)
+  : createDb(crmSchema, CrmPrismaClient, "test-int-crm-");
+export const ecm = K8S_MODE
+  ? ({ db: null, drizzleDb: null, prisma: null, sqlite: null } as any)
+  : createDb(ecmSchema, EcmPrismaClient, "test-int-ecm-");
+const commCtx = K8S_MODE
+  ? ({ db: null, drizzleDb: null, prisma: null, sqlite: null } as any)
+  : createDb(commSchema, CommPrismaClient, "test-int-comm-");
+export const comm = K8S_MODE
+  ? commCtx
+  : { ...commCtx, db: commCtx.prisma };
 
 // ── Create tables (local mode only) ──
 
@@ -133,12 +164,35 @@ function createAmsTables() {
       description TEXT,
       status TEXT NOT NULL DEFAULT 'open',
       priority TEXT NOT NULL DEFAULT 'medium',
+      task_type TEXT,
       assigned_to TEXT,
       related_client_id TEXT,
       related_policy_id TEXT,
       due_date TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS escalations (
+      escalation_id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      policy_id TEXT,
+      reason TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      context TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      manager_response TEXT,
+      poll_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS escalation_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      escalation_id TEXT NOT NULL REFERENCES escalations(escalation_id),
+      event_type TEXT NOT NULL,
+      from_status TEXT,
+      to_status TEXT,
+      details TEXT,
+      created_at TEXT NOT NULL
     );
   `);
 }
@@ -336,46 +390,61 @@ if (!K8S_MODE) {
   createEcmTables();
   createCommTables();
 
-  // ── Mock all service DB modules ──
+  // ── Mock all service Prisma & DB modules ──
+  mock.module("../../services/ams/src/prisma", () => ({
+    prisma: ams.prisma,
+  }));
+  mock.module("../../services/rater/src/prisma", () => ({
+    prisma: rater.prisma,
+  }));
+  mock.module("../../services/crm/src/prisma", () => ({
+    prisma: crm.prisma,
+  }));
+  mock.module("../../services/ecm/src/prisma", () => ({
+    prisma: ecm.prisma,
+  }));
+  mock.module("../../services/comm/src/prisma", () => ({
+    prisma: comm.prisma,
+  }));
   mock.module("../../services/ams/src/db", () => ({
-    db: ams.db,
+    db: ams.drizzleDb,
     sqlite: ams.sqlite,
   }));
   mock.module("../../services/rater/src/db", () => ({
-    db: rater.db,
+    db: rater.drizzleDb,
     sqlite: rater.sqlite,
   }));
   mock.module("../../services/crm/src/db", () => ({
-    db: crm.db,
+    db: crm.drizzleDb,
     sqlite: crm.sqlite,
   }));
   mock.module("../../services/ecm/src/db", () => ({
-    db: ecm.db,
+    db: ecm.drizzleDb,
     sqlite: ecm.sqlite,
   }));
   mock.module("../../services/comm/src/db", () => ({
-    db: comm.db,
+    db: comm.drizzleDb,
     sqlite: comm.sqlite,
   }));
 }
 
 // ── Build Hono apps (local mode) or HTTP clients (K8s mode) ──
 
-import { clientsRouter } from "../../services/ams/src/routes/clients";
-import { policiesRouter } from "../../services/ams/src/routes/policies";
-import { accountingRouter } from "../../services/ams/src/routes/accounting";
-import { tasksRouter } from "../../services/ams/src/routes/tasks";
+const { clientsRouter } = await import("../../services/ams/src/routes/clients");
+const { policiesRouter } = await import("../../services/ams/src/routes/policies");
+const { accountingRouter } = await import("../../services/ams/src/routes/accounting");
+const { tasksRouter } = await import("../../services/ams/src/routes/tasks");
 
-import { quotesRouter } from "../../services/rater/src/routes/quotes";
-import { carriersRouter } from "../../services/rater/src/routes/carriers";
+const { quotesRouter } = await import("../../services/rater/src/routes/quotes");
+const { carriersRouter } = await import("../../services/rater/src/routes/carriers");
 
-import { leadsRouter } from "../../services/crm/src/routes/leads";
-import { campaignsRouter } from "../../services/crm/src/routes/campaigns";
-import { analyticsRouter } from "../../services/crm/src/routes/analytics";
+const { leadsRouter } = await import("../../services/crm/src/routes/leads");
+const { campaignsRouter } = await import("../../services/crm/src/routes/campaigns");
+const { analyticsRouter } = await import("../../services/crm/src/routes/analytics");
 
-import { documentsRouter } from "../../services/ecm/src/routes/documents";
-import { envelopesRouter } from "../../services/ecm/src/routes/envelopes";
-import { assetsRouter } from "../../services/ecm/src/routes/assets";
+const { documentsRouter } = await import("../../services/ecm/src/routes/documents");
+const { envelopesRouter } = await import("../../services/ecm/src/routes/envelopes");
+const { assetsRouter } = await import("../../services/ecm/src/routes/assets");
 
 function buildApp(routes: Record<string, Hono<{ Variables: AppVariables }>>) {
   const app = new Hono<{ Variables: AppVariables }>();
@@ -620,6 +689,6 @@ export function seedCommMessage(overrides: Partial<typeof commSchema.messages.$i
     attachments: "[]",
     ...overrides,
   };
-  comm.db.insert(commSchema.messages).values(msg).run();
+  comm.drizzleDb.insert(commSchema.messages).values(msg).run();
   return msg;
 }

@@ -147,7 +147,7 @@ export const HERO_JOURNEYS: HeroJourneySpec[] = [
     expectedTablesMutated: [
       "rater.quote_requests",
       "rater.carrier_quotes",
-      "carrier_summit.submissions",
+      "carrier_summit.quotes",
       "ams.escalations",
     ],
     steps: [
@@ -190,7 +190,7 @@ export const HERO_JOURNEYS: HeroJourneySpec[] = [
     compiledHandler: "privy:claims-intake",
     eoGuardrail:
       "Zero coverage-admission language in outbound client communications; immediate escalation on attorney representation or coverage-lapse disputes.",
-    expectedTablesMutated: ["claims.claims", "claims.claim_notes", "ams.escalations", "comm.messages"],
+    expectedTablesMutated: ["claims.claims", "claims.claim_timeline", "ams.escalations", "comm.messages"],
     steps: [
       {
         step: 1,
@@ -206,7 +206,7 @@ export const HERO_JOURNEYS: HeroJourneySpec[] = [
         service: "claims",
         operation: "POST /v1/claims (:3007)",
         claim: "Registered FNOL claim record with loss description and reserve.",
-        dbEvidence: "Inserted 1 row in claims.claims + 1 audit note in claims.claim_notes.",
+        dbEvidence: "Inserted 1 row in claims.claims + 1 audit entry in claims.claim_timeline.",
       },
       {
         step: 3,
@@ -1158,13 +1158,13 @@ export function renderWorkbenchHtml(): string {
       <div class="brand-shield">E</div>
       <div>
         <div class="brand-title">Evergreen Insurance Partners — Executive Operations &amp; Governance Workbench</div>
-        <div class="brand-subtitle">8 Microservices &bull; 35 SQLite Tables &bull; 20 Scenarios / 253 Tasks &bull; REST + MCP + Legacy Carrier Portals</div>
+        <div class="brand-subtitle">8 Microservices &bull; 32 SQLite Tables &bull; 20 Scenarios / 253 Tasks &bull; REST + MCP + Legacy Carrier Portals</div>
       </div>
     </div>
     <div class="defense-pills">
       <span class="chip chip-pass">1st Line: 10-State E&amp;O Firewall ACTIVE</span>
       <span class="chip chip-info">2nd Line: Principal Queue (&gt;$10K Cap)</span>
-      <span class="chip chip-pass">3rd Line: 35-Table State-Diff Receipt</span>
+      <span class="chip chip-pass">3rd Line: 32-Table State-Diff Receipt</span>
     </div>
   </header>
 
@@ -1221,7 +1221,7 @@ export function renderWorkbenchHtml(): string {
                 <strong>Why Transcript Evals Fail Toggle:</strong> Compare the Governed Evergreen Agent against an Unguarded Transcript-Only Agent (which outputs a polite confirmation but leaves 0 SQLite rows mutated).
               </div>
               <select id="eval-mode-select" style="padding:6px 10px; border:1px solid var(--outline); border-radius:6px; font-size:12px; font-weight:600;">
-                <option value="governed">Governed Evergreen Agent (35-Table State-Diff)</option>
+                <option value="governed">Governed Evergreen Agent (32-Table State-Diff)</option>
                 <option value="unguarded_transcript">Unguarded Transcript-Only Agent (False Positive Demo)</option>
               </select>
             </div>
@@ -1288,7 +1288,7 @@ export function renderWorkbenchHtml(): string {
               <span class="chip chip-pass" id="journey-status-chip">Ready</span>
             </div>
             <div id="journey-receipt-container" class="receipt-box">
-              Select <strong>Run J1–J5</strong> on the left to execute a live Hero Journey and inspect the step-by-step trace and 35-table SQLite state receipt.
+              Select <strong>Run J1–J5</strong> on the left to execute a live Hero Journey and inspect the step-by-step trace and 32-table SQLite state receipt.
             </div>
             <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
               <a class="btn btn-success" href="/workbench/api/acord25-preview.pdf" target="_blank" rel="noopener">Preview Real ACORD 25 COI PDF (%PDF-1.7)</a>
@@ -1421,8 +1421,8 @@ export function renderWorkbenchHtml(): string {
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">3rd Line of Defense — Trajectory Claim vs. 35-Table SQLite Database State Evidence</h2>
-            <p class="card-subtitle">Unlike chat-only benchmarks, Evergreen snapshots all 35 SQLite tables across all 8 services before and after every run and penalizes any unauthorized collateral mutation.</p>
+            <h2 class="card-title">3rd Line of Defense — Trajectory Claim vs. 32-Table SQLite Database State Evidence</h2>
+            <p class="card-subtitle">Unlike chat-only benchmarks, Evergreen snapshots all 32 SQLite tables across all 8 services before and after every run and penalizes any unauthorized collateral mutation.</p>
           </div>
           <span class="chip chip-pass">Collateral Damage = 0</span>
         </div>
@@ -1580,7 +1580,7 @@ export function renderWorkbenchHtml(): string {
         '<strong>Step ' + s.step + ' [' + s.modality + ' &rarr; ' + s.service + ']:</strong> <code>' + s.operation + '</code><br/>' +
         '<span>Claim: ' + s.claim + '</span><br/>' +
         '<span class="mono" style="color:' + (data.evalMode === 'unguarded_transcript' ? 'var(--status-block-fg)' : 'var(--status-pass-fg)') + ';">DB Evidence: ' +
-        (data.evalMode === 'unguarded_transcript' ? 'MISSING (0 rows mutated in SQLite — caught by 35-table state-diff!)' : s.dbEvidence) + '</span>' +
+        (data.evalMode === 'unguarded_transcript' ? 'MISSING (0 rows mutated in SQLite — caught by 32-table state-diff!)' : s.dbEvidence) + '</span>' +
         '</div>'
       ).join('');
       box.innerHTML =

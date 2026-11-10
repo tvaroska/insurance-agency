@@ -13,8 +13,8 @@
 | **Revenue per Employee (11 Staff, Modeled)** | `$200,000 / FTE` | **`$385,000 / FTE`** | [`design/story.md`](design/story.md) & [`docs/executive-scorecard.html`](docs/executive-scorecard.html) |
 | **Routine CSR Work Automated** | `0%` (manual re-keying) | **`78%`** (COIs, FNOL, renewals, audits) | `privy:cert-issuer`, `privy:claims-intake`, `privy:renewal-monitor`, `privy:endorsement-guard` |
 | **1st-Line Statutory E&O Firewall (Measured)** | Manual CSR memory | **HTTP `422` Hard Service Gate (10 States)** | [`packages/shared/src/compliance-firewall.ts`](packages/shared/src/compliance-firewall.ts) |
-| **3rd-Line Database Collateral Audit (Measured)** | Unverified chat logs | **35-Table Pre/Post SQLite State Diff (`0` unauthorized)** | [`eval/evaluators/state-diff.ts`](eval/evaluators/state-diff.ts) |
-| **Routine Servicing Token Cost** | `$0.0029 / run` (`6,500` tok) | **`$0.0000 / run`** (`0` tokens in Stage 3) | [`eval/evolution-showcase.ts`](eval/evolution-showcase.ts) (`COMPILED_WORKFLOW_SPECS`) |
+| **3rd-Line Database Collateral Audit (Measured)** | Unverified chat logs | **32-Table Pre/Post SQLite State Diff (`0` unauthorized)** | [`eval/evaluators/state-diff.ts`](eval/evaluators/state-diff.ts) |
+| **Routine Servicing Token Cost** | `$0.010 to $0.079 / task` (measured v0.7) | **`$0.0000 / run`** (`0` tokens in Stage 3) | [`eval/evolution-showcase.ts`](eval/evolution-showcase.ts) (`COMPILED_WORKFLOW_SPECS`) |
 
 ---
 
@@ -32,17 +32,17 @@ Launch the Executive Operations & Governance Workbench (`bun run showcase` at `h
 
 ## 3. 3-Stage Agent-to-Code Evolution (`$0`-Token Routine Execution + `FallbackToSkill`)
 
-| Stage | Architecture | Avg Tokens / Run | Est. Cost / Run | Latency | `pass@1` | `pass^5` (5-Trial Reliability) |
+| Stage | Architecture | Avg Tokens / Run | Est. Cost / Run | Latency | `pass@1` | `pass^5` / False-Done |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Stage 1: General Agent** | Zero-shot tool discovery across 8 services | `6,500` | `$0.0029` | `3,900 ms` | `85.0%` | `44.4%` |
-| **Stage 2: Domain Skill** | Insurance playbook + 10-state E&O rules + portal sequences | `2,700` | `$0.0012` | `1,650 ms` | `97.0%` | `85.9%` |
-| **Stage 3: Compiled Code (`privy:*`)** | Deterministic TypeScript handlers + `FallbackToSkill` on client pivots (`Scenarios 17–20`) | **`0` (routine)** | **`$0.0000`** | **`180 ms`** | **`100.0%`** | **`100.0%`** |
+| **Stage 1: General Agent (Measured v0.7)** | Zero-shot tool discovery across 8 services | `6,500` | `$0.010 to $0.079` | `3,900 ms` | `33.3% to 66.7%` | `16.7% to 66.7% false-done` |
+| **Stage 2: Domain Skill (Projected)** | Insurance playbook + 10-state E&O rules + portal sequences | `2,700` | `$0.0012` | `1,650 ms` | `97.0% (proj.)` | `85.9% (proj.)` |
+| **Stage 3: Compiled Code (`privy:*`)** | Deterministic TypeScript handlers + `FallbackToSkill` on client pivots (`Scenarios 17–20`) | **`0` (routine)** | **`$0.0000`** | **`180 ms`** | **`100.0% (20/20)`** | **`100.0% (verifier)`** |
 
 ---
 
 ## 4. Measured vs. Modeled Provenance & 60-Second Executive Quickstart
 
-> **Measured vs. Modeled Provenance:** All 8 microservices, 35 SQLite tables, 20 scenarios (253 tasks), the HTTP `422` statutory firewall across 10 US states, and `%PDF-1.7` ACORD 25 output are **measured in code** and verified by automated tests. The 11-person agency financials (`$20.0M` to `$38.5M` written premium and `$200,000` to `$385,000` revenue per employee) are **modeled projections** computed by `calculateAgencyRoi` ([`eval/evolution-showcase.ts`](eval/evolution-showcase.ts) / [`landscape.md`](landscape.md)).
+> **Measured vs. Modeled Provenance:** All 8 microservices, 32 SQLite tables, 20 scenarios (253 tasks), the HTTP `422` statutory firewall across 10 US states, and `%PDF-1.7` ACORD 25 output are **measured in code** and verified by automated tests. The 11-person agency financials (`$20.0M` to `$38.5M` written premium and `$200,000` to `$385,000` revenue per employee) are **modeled projections** computed by `calculateAgencyRoi` ([`eval/evolution-showcase.ts`](eval/evolution-showcase.ts) / [`landscape.md`](landscape.md)).
 
 ```bash
 # 1. Preflight check all 8 microservices and Executive Workbench

@@ -1,6 +1,6 @@
 # Evaluation System
 
-Scorer that evaluates AI agent performance on 20 benchmark scenarios (253 test cases across 5 prompt difficulty tiers) using output scoring (DB state assertions and 35-table pre/post state diffing), trace scoring (OTLP HTTP and GenAI trace analysis), hard E&O compliance overrides, and calibrated atomic rubrics.
+Scorer that evaluates AI agent performance on 20 benchmark scenarios (253 test cases across 5 prompt difficulty tiers) using output scoring (DB state assertions and 32-table pre/post state diffing), trace scoring (OTLP HTTP and GenAI trace analysis), hard E&O compliance overrides, and calibrated atomic rubrics.
 
 ---
 
@@ -55,7 +55,7 @@ Scorer that evaluates AI agent performance on 20 benchmark scenarios (253 test c
 ### Sprint 2 & Sprint 3: 20-Scenario Multi-Turn Suite, State Diffing, Economics & Adapters (v0.5.0)
 
 - **S2-INTOP-1 & S3-INTOP-2..4:** Shipped Harbor / Terminal-Bench 2.0 adapter (`eval/harbor/`), UK AISI Inspect AI `@task` (`eval/inspect/evergreen.py`), OpenEnv / `verifiers` RL control plane (`eval/openenv/`), and Princeton HAL exporter (`eval/hal/`).
-- **S3-DIFF-1:** Shipped 35-table pre/post snapshot state diffing and collateral damage scoring (`eval/evaluators/state-diff.ts`).
+- **S3-DIFF-1:** Shipped 32-table pre/post snapshot state diffing and collateral damage scoring (`eval/evaluators/state-diff.ts`).
 - **S3-MOD-1:** Shipped `MODALITY_MODE=strict` enforcement across Comm MCP and Carrier Web Portals.
 - **S3-SIM-1 & S3-SIM-2:** Added 5 interactive multi-turn scenarios (`Scenarios 16–20`, expanding the suite to **20 scenarios and 253 total test cases**), deterministic customer simulator (`eval/simulator/`), `/sim/time-travel`, and `/sim/chaos`.
 - **S3-ECON-1 & S3-HARN-1:** Shipped OTel GenAI token/cost/turn-budget Pareto evaluator (`eval/evaluators/economics.ts`), calibrated atomic rubrics (`eval/evaluators/rubric.ts`), and multi-harness runner (`eval/harnesses/runner.ts`).

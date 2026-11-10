@@ -12,6 +12,7 @@ Rather than regenerating all 8 microservices at once, Hexagonal Architecture fre
 | :--- | :--- | :--- | :--- |
 | **Syntactic Wire Contract (OpenAPI 3.0)** | [`../specs/claims.yaml`](../specs/claims.yaml) | **Frozen (Durable)** | Defines all REST paths, request/response JSON schemas, and OAuth 2.0 scopes (`claims:read`, `claims:write`, `claims:assign`, `claims:documents`). |
 | **Formal Behavioral Contract (State Machine + DbC)** | [`../specs/claims.behavior.yaml`](../specs/claims.behavior.yaml) | **Frozen (Durable)** | Machine-readable finite state machine (`transitions`), input normalization aliases, `requires` preconditions, `ensures` postconditions, `claim_timeline` side-effects, and multi-step Arazzo-style verification workflows. |
+| **Declarative AST Contract (`ast-grep`)** | [`../specs/ast.rules.yaml`](../specs/ast.rules.yaml) | **Frozen (Durable)** | Tree-sitter AST invariants banning cross-microservice source imports, `$queryRawUnsafe` / `$executeRawUnsafe`, shell execution, and direct `PrismaClient` instantiation inside disposable route handlers. |
 | **Data & Persistence Contract** | [`../services/claims/src/schema.ts`](../services/claims/src/schema.ts), [`../services/claims/src/seed.ts`](../services/claims/src/seed.ts) | **Frozen (Durable)** | Defines the 4 SQLite/Prisma tables (`claims`, `adjusters`, `claim_documents`, `claim_timeline`) and deterministic benchmark seed rows. |
 | **Server Envelope & Simulation Port** | [`../services/claims/src/index.ts`](../services/claims/src/index.ts), [`../packages/shared/`](../packages/shared/) | **Frozen (Durable)** | Mounts `/health`, `/sim` (`snapshot`, `reset`, `time-travel`), `/oauth/token`, validation helpers, and cursor pagination. |
 | **Contract & Invariant Test Suite** | [`../services/claims/src/__tests__/claims.test.ts`](../services/claims/src/__tests__/claims.test.ts) | **Frozen (Durable)** | Behavioral & contract test suite that parses `specs/claims.behavior.yaml`, exhaustively executes all 30 `(fromState, toState)` transition pairs, and verifies every `requires`/`ensures` invariant. |
@@ -31,7 +32,7 @@ Asking an LLM to *"build a Hono + Prisma CRUD service for insurance claims and a
 2. **Forward-Only Status State Machine:** Claims cannot jump backward (for example, `settled` back to `investigating` or `reported` straight to `settled`). Only explicit forward transitions are valid, and `settled` / `denied` are terminal states.
 3. **Adjuster Capacity & Active Guards:** Assigning a claim to an inactive adjuster (`active === false`) or an adjuster whose open claims (`status NOT IN ('settled', 'denied')`) have reached `max_open_claims` must fail before mutating the claim record.
 4. **Temporal Integrity on Loss Dates:** `loss_date` must match `YYYY-MM-DD`, represent a real calendar date, and never lie in the future (`loss_date > today`).
-5. **3rd-Line Audit Trail Completeness (`claim_timeline`):** Every FNOL creation, adjuster assignment, status transition, reserve update, note edit, and document upload must append a structured row to `claim_timeline`. Our 35-table SQLite State-Diff Auditor ([`../eval/evaluators/state-diff.ts`](../eval/evaluators/state-diff.ts)) grades database state directly rather than trusting chat transcripts.
+5. **3rd-Line Audit Trail Completeness (`claim_timeline`):** Every FNOL creation, adjuster assignment, status transition, reserve update, note edit, and document upload must append a structured row to `claim_timeline`. Our 32-table SQLite State-Diff Auditor ([`../eval/evaluators/state-diff.ts`](../eval/evaluators/state-diff.ts)) grades database state directly rather than trusting chat transcripts.
 
 ### Stage B: Domain Specification & State-Machine Invariants (`spec.md`)
 
@@ -85,12 +86,13 @@ Strict Hexagonal Port & Contract Rules:
 1. Read these frozen contracts first:
    - `specs/claims.yaml` (OpenAPI 3.0 syntactic wire contract: routes, scopes, JSON schemas)
    - `specs/claims.behavior.yaml` (Formal Behavioral Contract: finite state machine `transitions`, `input_aliases`, `requires` preconditions, `ensures` postconditions, `timeline_effects`, and `workflows`)
+   - `specs/ast.rules.yaml` (Declarative `ast-grep` Structural & Security AST Contract: microservice port isolation, safe Prisma queries, no shell execution)
    - `services/claims/src/schema.ts` and `services/claims/src/index.ts`
    - `services/claims/src/__tests__/claims.test.ts`
-2. Do NOT edit `specs/claims.yaml`, `specs/claims.behavior.yaml`, `services/claims/src/schema.ts`, `services/claims/src/index.ts`, `packages/shared/*`, or any test file under `services/claims/src/__tests__/`.
+2. Do NOT edit `specs/claims.yaml`, `specs/claims.behavior.yaml`, `specs/ast.rules.yaml`, `services/claims/src/schema.ts`, `services/claims/src/index.ts`, `packages/shared/*`, or any test file under `services/claims/src/__tests__/`.
 3. Use Hono (`new Hono<AppVariables>()`), `prisma` from `../prisma`, and shared helpers from `@evergreen/shared` (`requireScopes`, `parsePaginationParams`, `buildCursorWhere`, `paginatedResponse`, `notFoundError`, `validationError`, `checkRequired`, `checkEnum`, `checkMaxLength`, `checkRange`, `throwIfErrors`).
 4. Export `{ claimsRouter }` from `services/claims/src/routes/claims.ts` and `{ adjustersRouter }` from `services/claims/src/routes/adjusters.ts`.
-5. Run `cd services/claims && bun test` and `bun run showcase:check` until 100% of unit, formal behavioral contract, and showcase checks pass with zero modifications to frozen files.
+5. Run `proj-test insurance-agency claims` and `proj-test insurance-agency showcase-check` until 100% of unit, formal behavioral contract, and showcase checks pass with zero modifications to frozen files.
 ```
 
 ### Step 2B: Regenerate with Antigravity / Jetski (Stateless Goldfish Session)
@@ -102,18 +104,18 @@ Execute the Phoenix Drill in `prompts/REGENERATE.md` for `services/claims`:
 1. Read `specs/claims.yaml`, `specs/claims.behavior.yaml`, `services/claims/src/schema.ts`, `services/claims/src/index.ts`, and `services/claims/src/__tests__/claims.test.ts`.
 2. Regenerate `services/claims/src/routes/claims.ts` (`export { claimsRouter }`) and `services/claims/src/routes/adjusters.ts` (`export { adjustersRouter }`) to satisfy every OpenAPI wire schema and every state-machine transition, guard (`requires`), and `claim_timeline` side-effect (`ensures`) in `specs/claims.behavior.yaml`.
 3. Keep all Driving Ports, behavioral specs, schemas, and tests untouched (`git diff --exit-code specs/ services/claims/src/schema.ts services/claims/src/__tests__/`).
-4. Verify in under 5 seconds via `cd services/claims && bun test` and `bun run showcase:check`.
+4. Verify in under 5 seconds via `proj-test insurance-agency claims` and `proj-test insurance-agency showcase-check`.
 ```
 
 ### Step 3: Deterministic Verification Gate (`< 5 Seconds`)
 
 ```bash
 # 1. Run the Claims unit + formal behavioral contract suite (< 1s):
-cd services/claims && bun test && cd ../..
+proj-test insurance-agency claims
 
 # 2. Verify zero drift across all frozen Driving Ports, behavioral specs, schemas, and tests:
 git diff --exit-code specs/claims.yaml specs/claims.behavior.yaml services/claims/src/schema.ts services/claims/src/index.ts services/claims/src/__tests__/
 
 # 3. Verify all 8 microservices and the Executive Workbench preflight:
-bun run showcase:check
+proj-test insurance-agency showcase-check
 ```

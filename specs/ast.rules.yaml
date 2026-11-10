@@ -1,0 +1,91 @@
+# Declarative Structural & Security AST Contract (ast-grep)
+# Pairs with specs/*.yaml (OpenAPI 3.0 wire contracts) and specs/*.behavior.yaml
+# (state-machine & Design-by-Contract specs) to enforce microservice isolation,
+# Prisma SQL safety, and disposable-adapter boundaries across TypeScript services.
+
+id: no-cross-microservice-imports
+language: TypeScript
+severity: error
+message: "Microservice boundary violation: services/* must communicate over HTTP or MCP, never via cross-service source imports."
+files:
+  - "services/**/*.ts"
+ignores:
+  - "services/**/__tests__/**"
+metadata:
+  test_path: "services/claims/src/routes/probe.ts"
+  invalid_examples:
+    - 'import { router } from "../../../ams/src/routes/policies";'
+    - 'import { prisma as amsPrisma } from "services/ams/src/prisma";'
+  valid_examples:
+    - 'import { requireScopes } from "@evergreen/shared";'
+    - 'import { prisma } from "../prisma";'
+rule:
+  kind: import_statement
+  regex: "(services/[a-z-]+/src|\\.{2}/\\.{2}/\\.{2}/[a-z-]+/src)"
+---
+id: no-prisma-unsafe-raw-sql
+language: TypeScript
+severity: error
+message: "Security violation: $queryRawUnsafe / $executeRawUnsafe is forbidden in service code; use typed Prisma queries or tagged $queryRaw."
+files:
+  - "services/*/src/**/*.ts"
+ignores:
+  - "services/**/__tests__/**"
+  - "services/*/src/seed.ts"
+metadata:
+  test_path: "services/claims/src/routes/sql_probe.ts"
+  invalid_examples:
+    - 'await prisma.$queryRawUnsafe(`SELECT * FROM claims WHERE claim_id = ${id}`);'
+    - 'await prisma.$executeRawUnsafe(sql);'
+  valid_examples:
+    - 'await prisma.claim.findUnique({ where: { claim_id: id } });'
+rule:
+  any:
+    - pattern: $DB.$queryRawUnsafe($$$)
+    - pattern: $DB.$executeRawUnsafe($$$)
+---
+id: no-child-process-or-shell-spawn
+language: TypeScript
+severity: error
+message: "Security violation: shell execution (child_process / Bun.spawn / eval) is forbidden inside microservice handlers."
+files:
+  - "services/*/src/**/*.ts"
+ignores:
+  - "services/**/__tests__/**"
+  - "services/*/src/index.ts"
+  - "services/*/src/seed.ts"
+metadata:
+  test_path: "services/claims/src/routes/exec_probe.ts"
+  invalid_examples:
+    - 'import { execSync } from "node:child_process";'
+    - 'Bun.spawnSync(["sh", "-c", cmd]);'
+    - 'eval(userPayload);'
+  valid_examples:
+    - 'const claim = await prisma.claim.findMany();'
+rule:
+  any:
+    - kind: import_statement
+      regex: "[\"'](node:)?child_process[\"']"
+    - pattern: Bun.spawn($$$)
+    - pattern: Bun.spawnSync($$$)
+    - pattern: eval($CODE)
+---
+id: claims-disposable-routes-port-boundary
+language: TypeScript
+severity: error
+message: "Hexagonal port violation: disposable claims routes must use ../prisma and @evergreen/shared, never instantiate PrismaClient directly."
+files:
+  - "services/claims/src/routes/**/*.ts"
+metadata:
+  test_path: "services/claims/src/routes/claims_probe.ts"
+  invalid_examples:
+    - 'import { PrismaClient } from "../generated/prisma";'
+    - "const db = new PrismaClient();"
+  valid_examples:
+    - 'import { prisma } from "../prisma";'
+    - 'import { requireScopes, validationError } from "@evergreen/shared";'
+rule:
+  any:
+    - kind: import_statement
+      regex: "generated/prisma|@prisma/client"
+    - pattern: new PrismaClient($$$)
