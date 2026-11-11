@@ -582,7 +582,7 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
         label: "Measured v0.8 Baseline (Strict 3-Modality, 20 Workflows x 5 Trials)",
         provenance: "measured_v0.8_baseline",
         avgTokensPerRun: 6500,
-        avgCostUsd: 0.064,
+        avgCostUsd: 0.449,
         avgLatencyMs: 3900,
         pass1: 0.58,
         meanScore: 0.71,
@@ -594,21 +594,21 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
             pass1: 0.59,
             meanScore: 0.78,
             falseCompletionRate: 0.39,
-            costPerTaskUsd: 0.033,
+            costPerTaskUsd: 0.073,
           },
           {
             model: "gemini-3.8-flash",
             pass1: 0.58,
             meanScore: 0.71,
             falseCompletionRate: 0.37,
-            costPerTaskUsd: 0.064,
+            costPerTaskUsd: 0.449,
           },
           {
             model: "claude-sonnet-5-5",
             pass1: 0.55,
             meanScore: 0.69,
             falseCompletionRate: 0.5,
-            costPerTaskUsd: 0.12,
+            costPerTaskUsd: 0.111,
           },
         ],
         description:
@@ -619,7 +619,7 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
         label: "Measured v0.8 Domain Skill (Agency Procedure Guide)",
         provenance: "measured_v0.8_domain_skill",
         avgTokensPerRun: 2700,
-        avgCostUsd: 0.058,
+        avgCostUsd: 0.405,
         avgLatencyMs: 1650,
         pass1: 0.69,
         pass5: 0.602,
@@ -1772,7 +1772,7 @@ export function renderWorkbenchHtml(): string {
               <td><strong>Stage 1: Zero-Shot General Agent</strong><br/><span class="chip chip-warn">Measured v0.8</span></td>
               <td>Zero-shot tool discovery across 8 services (<code>DeepSeek-V4.1-Flash</code> 59.0% pass@1, <code>gemini-3.8-flash</code> 58.0%, <code>claude-sonnet-5-5</code> 55.0%)</td>
               <td class="mono">6,500 tok</td>
-              <td class="mono">$0.033–$0.120</td>
+              <td class="mono">$0.073–$0.449</td>
               <td class="mono">3,900 ms</td>
               <td class="mono">55.0%–59.0%<br/>(0.69–0.78 mean)</td>
               <td><span class="chip chip-block">39%–47% pass^5 · 37%–50% said "done" with a check failing</span></td>
@@ -1781,7 +1781,7 @@ export function renderWorkbenchHtml(): string {
               <td><strong>Stage 2: Domain Skill + Guardrails</strong><br/><span class="chip chip-info">Measured v0.8</span></td>
               <td>One-page agency procedure guide appended to the <code>gemini-3.8-flash</code> prompt (<code>eval/inspect/evergreen_domain_skill.md</code>)</td>
               <td class="mono">2,700 tok</td>
-              <td class="mono">$0.058</td>
+              <td class="mono">$0.405</td>
               <td class="mono">1,650 ms</td>
               <td class="mono">69.0%</td>
               <td><span class="chip chip-info">60.2% pass^5 · 35% false-done</span></td>

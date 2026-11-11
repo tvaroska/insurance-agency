@@ -35,18 +35,20 @@ DEFAULT_RESULTS_CANDIDATES: tuple[Path, ...] = (
     GYM_ROOT / "eval" / "results" / "v0.7" / "realistic-natural",
 )
 
-# USD per 1M tokens (input, output, cache_read)
-MODEL_PRICING_PER_1M: dict[str, tuple[float, float, float]] = {
-    "gemini-3.8-flash": (0.15, 0.60, 0.0375),
-    "gemini-4-argon": (1.25, 5.00, 0.3125),
-    "gemini-3.5-flash-lite": (0.075, 0.30, 0.01875),
-    "claude-sonnet-5-5": (3.00, 15.00, 0.30),
-    "claude-sonnet-4-5": (3.00, 15.00, 0.30),
-    "deepseek-v4.1-flash-maas": (0.14, 0.28, 0.014),
-    "deepseek-v4.1-flash": (0.14, 0.28, 0.014),
+# USD per 1M tokens at Vertex AI list price (input, output, cache_read, cache_write), calibrated
+# against the Cloud Billing export on 2026-11-11 (cost / billed units per SKU). Gemini implicit
+# caching has no separate write charge, so its cache_write rate equals the input rate.
+MODEL_PRICING_PER_1M: dict[str, tuple[float, float, float, float]] = {
+    "gemini-3.8-flash": (1.50, 7.50, 0.15, 1.50),
+    "gemini-4-argon": (1.25, 5.00, 0.3125, 1.25),
+    "gemini-3.5-flash-lite": (0.075, 0.30, 0.01875, 0.075),
+    "claude-sonnet-5-5": (2.00, 10.00, 0.10, 2.50),
+    "claude-sonnet-4-5": (3.00, 15.00, 0.30, 3.75),
+    "deepseek-v4.1-flash-maas": (0.30, 1.20, 0.03, 0.30),
+    "deepseek-v4.1-flash": (0.30, 1.20, 0.03, 0.30),
 }
 
-DEFAULT_PRICING_PER_1M: tuple[float, float, float] = (0.15, 0.60, 0.0375)
+DEFAULT_PRICING_PER_1M: tuple[float, float, float, float] = MODEL_PRICING_PER_1M["gemini-3.8-flash"]
 
 DISPLAY_MODEL_NAMES: dict[str, str] = {
     "google/gemini-3.8-flash": "`gemini-3.8-flash`",
@@ -126,7 +128,7 @@ def said_done_check_failed(
     return output_score < 1.0 or not eo_compliant
 
 
-def resolve_pricing(model_name: str) -> tuple[float, float, float]:
+def resolve_pricing(model_name: str) -> tuple[float, float, float, float]:
     lowered = model_name.lower()
     for key, rates in MODEL_PRICING_PER_1M.items():
         if key in lowered:
@@ -137,14 +139,16 @@ def resolve_pricing(model_name: str) -> tuple[float, float, float]:
 def estimate_usage_cost_usd(model_name: str, usage: Any) -> float:
     if usage is None:
         return 0.0
-    in_rate, out_rate, cache_rate = resolve_pricing(model_name)
+    in_rate, out_rate, cache_rate, cache_write_rate = resolve_pricing(model_name)
     input_tokens = max(0, int(getattr(usage, "input_tokens", 0) or 0))
     output_tokens = max(0, int(getattr(usage, "output_tokens", 0) or 0))
     cache_read = max(0, int(getattr(usage, "input_tokens_cache_read", 0) or 0))
+    cache_write = max(0, int(getattr(usage, "input_tokens_cache_write", 0) or 0))
     return (
         (input_tokens / 1_000_000.0) * in_rate
         + (output_tokens / 1_000_000.0) * out_rate
         + (cache_read / 1_000_000.0) * cache_rate
+        + (cache_write / 1_000_000.0) * cache_write_rate
     )
 
 

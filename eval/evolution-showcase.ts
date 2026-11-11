@@ -102,21 +102,21 @@ export const MEASURED_V08_STAGE1_MODELS: MeasuredModelBaseline[] = [
     pass1: 0.59,
     meanScore: 0.78,
     falseCompletionRate: 0.39,
-    costPerTaskUsd: 0.033,
+    costPerTaskUsd: 0.073,
   },
   {
     model: "gemini-3.8-flash",
     pass1: 0.58,
     meanScore: 0.71,
     falseCompletionRate: 0.37,
-    costPerTaskUsd: 0.064,
+    costPerTaskUsd: 0.449,
   },
   {
     model: "claude-sonnet-5-5",
     pass1: 0.55,
     meanScore: 0.69,
     falseCompletionRate: 0.5,
-    costPerTaskUsd: 0.12,
+    costPerTaskUsd: 0.111,
   },
 ];
 
@@ -393,8 +393,8 @@ export async function runStageTrajectory(options: {
     tokenProfile === "compiled_code"
       ? 0
       : options.stage === "stage_1_general_agent"
-        ? Math.max(econ.estimatedCostUsd, 0.064)
-        : Math.max(econ.estimatedCostUsd, 0.058);
+        ? Math.max(econ.estimatedCostUsd, 0.449)
+        : Math.max(econ.estimatedCostUsd, 0.405);
 
   const cpvoUsd =
     Math.round((estimatedCostUsd / Math.max(pass1, 0.01)) * 10000) / 10000;
@@ -517,7 +517,7 @@ export async function runEvolutionShowcase(options?: {
           "Stage 1: Zero-Shot General Agent (Measured v0.8, 20 workflows x 5 trials: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%; 37%–50% false-completion rate)",
         provenance: "measured_v0.8_baseline",
         avgTokens: 6500,
-        cpvoUsd: 0.1103,
+        cpvoUsd: 0.7741,
         avgLatencyMs: 3_900,
         pass1: 0.58,
         meanScore: 0.71,
@@ -531,7 +531,7 @@ export async function runEvolutionShowcase(options?: {
           "Stage 2: Domain Skill Procedure Guide (Measured v0.8: gemini-3.8-flash 69.0% pass@1, 60.2% pass^5; eval/inspect/evergreen_domain_skill.md)",
         provenance: "measured_v0.8_domain_skill",
         avgTokens: 2700,
-        cpvoUsd: 0.0841,
+        cpvoUsd: 0.587,
         avgLatencyMs: 1_650,
         pass1: 0.69,
         pass5: 0.602,

@@ -19,11 +19,12 @@ export interface ModelPricing {
 }
 
 export const MODEL_PRICING_USD_PER_1M: Record<string, ModelPricing> = {
-  "gemini-3.8-flash": { inputCostPer1MUsd: 0.15, outputCostPer1MUsd: 0.6 },
+  // Vertex AI list prices, calibrated against the Cloud Billing export on 2026-11-11.
+  "gemini-3.8-flash": { inputCostPer1MUsd: 1.5, outputCostPer1MUsd: 7.5 },
   "gemini-4-argon": { inputCostPer1MUsd: 1.25, outputCostPer1MUsd: 5.0 },
   "gemini-3.5-flash-lite": { inputCostPer1MUsd: 0.075, outputCostPer1MUsd: 0.3 },
-  "claude-sonnet-5-5": { inputCostPer1MUsd: 3.0, outputCostPer1MUsd: 15.0 },
-  "deepseek-v4.1-flash": { inputCostPer1MUsd: 0.14, outputCostPer1MUsd: 0.28 },
+  "claude-sonnet-5-5": { inputCostPer1MUsd: 2.0, outputCostPer1MUsd: 10.0 },
+  "deepseek-v4.1-flash": { inputCostPer1MUsd: 0.3, outputCostPer1MUsd: 1.2 },
 };
 
 export interface TaskTelemetryUsage {

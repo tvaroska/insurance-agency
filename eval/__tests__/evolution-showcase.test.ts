@@ -46,7 +46,7 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
       "skills/insurance-servicing",
     );
     expect(summary.stages.stage1GeneralAgent.avgTokens).toBe(6500);
-    expect(summary.stages.stage1GeneralAgent.cpvoUsd).toBe(0.1103);
+    expect(summary.stages.stage1GeneralAgent.cpvoUsd).toBe(0.7741);
     expect(summary.stages.stage1GeneralAgent.avgLatencyMs).toBe(3900);
     expect(summary.stages.stage1GeneralAgent.pass1).toBe(0.58);
     expect(summary.stages.stage1GeneralAgent.meanScore).toBe(0.71);
@@ -58,7 +58,7 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
     );
     expect(summary.stages.stage1GeneralAgent.measuredModels).toHaveLength(3);
     expect(summary.stages.stage2DomainSkill.avgTokens).toBe(2700);
-    expect(summary.stages.stage2DomainSkill.cpvoUsd).toBe(0.0841);
+    expect(summary.stages.stage2DomainSkill.cpvoUsd).toBe(0.587);
     expect(summary.stages.stage2DomainSkill.avgLatencyMs).toBe(1650);
     expect(summary.stages.stage2DomainSkill.pass1).toBe(0.69);
     expect(summary.stages.stage2DomainSkill.provenance).toBe(

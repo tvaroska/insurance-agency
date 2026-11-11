@@ -17,7 +17,7 @@
     "unasked_mutation_rate": 0.07,
     "mean_unasked_mutations": 0.09,
     "drop_clean_to_messy_pp": null,
-    "mean_cost_usd": 0.0581,
+    "mean_cost_usd": 0.4048,
     "pass_at_1_ci95": [
       0.5937,
       0.7722
@@ -45,7 +45,7 @@
     "unasked_mutation_rate": 0.09,
     "mean_unasked_mutations": 0.22,
     "drop_clean_to_messy_pp": -1.1,
-    "mean_cost_usd": 0.033,
+    "mean_cost_usd": 0.073,
     "pass_at_1_ci95": [
       0.492,
       0.6813
@@ -73,7 +73,7 @@
     "unasked_mutation_rate": 0.1,
     "mean_unasked_mutations": 0.39,
     "drop_clean_to_messy_pp": -21.1,
-    "mean_cost_usd": 0.0643,
+    "mean_cost_usd": 0.4491,
     "pass_at_1_ci95": [
       0.4821,
       0.672
@@ -101,7 +101,7 @@
     "unasked_mutation_rate": 0.0,
     "mean_unasked_mutations": 0.0,
     "drop_clean_to_messy_pp": -20.0,
-    "mean_cost_usd": 0.1201,
+    "mean_cost_usd": 0.1111,
     "pass_at_1_ci95": [
       0.4524,
       0.6439
