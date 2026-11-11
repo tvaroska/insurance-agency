@@ -39,6 +39,8 @@ SEED_MODE=clean docker compose up                # clean (no adversarial data)
 
 Fix everything the pilot surfaces in one pass, then run the production sweep once as-is.
 
+**Sweep cost and cleanup:** state the expected cost before launching, using `summarize_inspect.py` rates (calibrated against the billing export; at list price about $0.45 per trial for Gemini, $0.11 for Claude, $0.07 for DeepSeek; Gemini gets a 50% credit). Check actual spend afterwards with `bq` against the billing export (it lags 3 to 5 hours). After cancelling a sweep, kill its stacks before relaunching (with `BypassSandbox: true`: `pgrep -f "[r]un-showcase.ts --strict"` and `pgrep -f "[i]nsurance-agency/services/.*/src/index.ts"`), because the runner attaches to any stack already listening on `3100+`.
+
 ## 2. Documentation & Planning Workflow
 
 | File | Purpose |
