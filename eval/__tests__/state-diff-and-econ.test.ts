@@ -224,7 +224,8 @@ describe("S3-DIFF-1: state-diff evaluator", () => {
     expect(collateral.collateralFree).toBe(false);
     // 1 unauthorized deletion (CLI-030) + 1 wrong client update (CLI-001) + 1 wrong policy insert (END-BAD) + 1 excess task insert = 4
     expect(collateral.unauthorizedMutations).toBe(4);
-    expect(collateral.collateralPenalty).toBe(1);
+    // 0.1 per unauthorized mutation, capped at maxPenalty (default 0.5)
+    expect(collateral.collateralPenalty).toBe(0.4);
     expect(collateral.findings.map((f) => f.type)).toEqual(
       expect.arrayContaining([
         "unauthorized_deletion",
@@ -487,7 +488,7 @@ describe("S3-ECON-1 & S3-SIM-1: economics & turn-budget evaluator", () => {
       {
         ams: {
           clients: [
-            // Unauthorized mutation on CLI-001 (1 unauthorized mutation -> 0.25 penalty)
+            // Unauthorized mutation on CLI-001 (1 unauthorized mutation -> 0.1 penalty)
             { id: "CLI-001", phone: "310-555-9999" },
             { id: "CLI-002", phone: "310-555-0199" },
           ],
@@ -501,7 +502,7 @@ describe("S3-ECON-1 & S3-SIM-1: economics & turn-budget evaluator", () => {
 
     expect(stateDiffSummary.collateralFree).toBe(false);
     expect(stateDiffSummary.unauthorizedMutations).toBe(1);
-    expect(stateDiffSummary.collateralPenalty).toBe(0.25);
+    expect(stateDiffSummary.collateralPenalty).toBe(0.1);
 
     const report = generateReport({
       runId: "collateral-penalty-run",
@@ -516,12 +517,144 @@ describe("S3-ECON-1 & S3-SIM-1: economics & turn-budget evaluator", () => {
       stateDiff: stateDiffSummary,
     });
 
-    // Combined score is 1.0, minus 25% collateral penalty = 0.75
-    expect(report.overall.score).toBe(0.75);
+    // Combined score is 1.0, minus 10% collateral penalty = 0.9
+    expect(report.overall.score).toBe(0.9);
 
     const md = formatMarkdown(report);
     expect(md).toContain(
-      "> **COLLATERAL DAMAGE PENALTY:** Overall score reduced by 25.0% due to 1 unauthorized state mutation(s).",
+      "> **COLLATERAL DAMAGE PENALTY:** Overall score reduced by 10.0% due to 1 unauthorized state mutation(s).",
     );
+  });
+});
+
+describe("collateralPolicy semantics (strict empty allow-list, new clients, environment rows)", () => {
+  test("allowedClientIds: [] forbids mutating any existing client and ignores 'unknown' placeholders", () => {
+    const before: GymSnapshot = {
+      ams: { clients: [{ id: "CLI-005", phone: "1" }], tasks: [] },
+      comm: { messages: [] },
+    };
+    const after: GymSnapshot = {
+      ams: {
+        clients: [{ id: "CLI-005", phone: "2" }],
+        tasks: [{ id: "T-1", related_client_id: null, status: "open" }],
+      },
+      comm: { messages: [{ message_id: "MSG-1", client_id: "unknown", direction: "outbound" }] },
+    };
+    const res = evaluateCollateralDamage(diffSnapshots(before, after), {
+      allowedClientIds: [],
+      maxTotalMutations: 8,
+    });
+    expect(res.findings.filter((f) => f.type === "unauthorized_client_mutation")).toHaveLength(1);
+    expect(res.findings[0].clientId).toBe("CLI-005");
+  });
+
+  test("allowNewClients admits rows attached to clients created during the run", () => {
+    const before: GymSnapshot = { ams: { clients: [], tasks: [] } };
+    const after: GymSnapshot = {
+      ams: {
+        clients: [{ id: "CL-NEW1" }],
+        tasks: [{ id: "T-1", related_client_id: "CL-NEW1" }],
+      },
+    };
+    const res = evaluateCollateralDamage(diffSnapshots(before, after), {
+      allowedClientIds: ["CLI-023"],
+      allowNewClients: true,
+    });
+    expect(res.collateralFree).toBe(true);
+  });
+
+  test("Comm Hub simulator auto-replies (msg_sim_*, inbound) are not attributed to the agent", () => {
+    const before: GymSnapshot = { comm: { messages: [] } };
+    const after: GymSnapshot = {
+      comm: {
+        messages: [
+          { message_id: "MSG-OUT", client_id: "CLI-001", direction: "outbound" },
+          { message_id: "msg_sim_16_t1_abcd1234", client_id: "CLI-002", direction: "inbound" },
+        ],
+      },
+    };
+    const res = evaluateCollateralDamage(diffSnapshots(before, after), {
+      allowedClientIds: ["CLI-001"],
+      maxTotalMutations: 1,
+    });
+    expect(res.collateralFree).toBe(true);
+  });
+});
+
+describe("collateralPolicy governance rows (escalations and review tasks)", () => {
+  const before: GymSnapshot = {
+    ams: {
+      clients: [{ id: "CLI-008", phone: "1" }, { id: "CLI-020", phone: "2" }],
+      escalations: [],
+      tasks: [],
+      endorsements: [],
+    },
+  };
+
+  test("escalations and tasks on an allowed client's other policy are not policy collateral and do not count toward maxTotalMutations", () => {
+    const after: GymSnapshot = {
+      ams: {
+        clients: [{ id: "CLI-008", phone: "1" }, { id: "CLI-020", phone: "2" }],
+        escalations: [
+          { escalation_id: "esc_1", client_id: "CLI-008", policy_id: "POL-GL-2025-000022", reason: "coverage_gap" },
+          { escalation_id: "esc_2", client_id: "CLI-008", policy_id: "POL-GL-2025-000022", reason: "coverage_gap" },
+        ],
+        tasks: [{ id: "T-1", related_client_id: "CLI-008", related_policy_id: "POL-GL-2025-000022" }],
+        endorsements: [],
+      },
+    };
+    const collateral = evaluateCollateralDamage(diffSnapshots(before, after), {
+      allowedClientIds: ["CLI-008"],
+      allowedPolicyIds: ["POL-BO-2025-000100"],
+      maxTotalMutations: 1,
+    });
+    expect(collateral.collateralFree).toBe(true);
+    expect(collateral.collateralPenalty).toBe(0);
+  });
+
+  test("governance rows on an uninvolved client are still flagged unless governanceAnyClient is set; record writes stay scoped", () => {
+    const after: GymSnapshot = {
+      ams: {
+        clients: [{ id: "CLI-008", phone: "1" }, { id: "CLI-020", phone: "2" }],
+        escalations: [{ escalation_id: "esc_9", client_id: "CLI-020", reason: "audit_finding" }],
+        tasks: [],
+        endorsements: [{ endorsement_id: "END-9", policy_id: "POL-PA-2025-009999", change_type: "modify_coverage" }],
+      },
+    };
+    const diff = diffSnapshots(before, after);
+    const single = evaluateCollateralDamage(diff, {
+      allowedClientIds: ["CLI-008"],
+      allowedPolicyIds: ["POL-BO-2025-000100"],
+    });
+    expect(single.unauthorizedMutations).toBe(2);
+    expect(single.collateralPenalty).toBe(0.2);
+
+    const audit = evaluateCollateralDamage(diff, {
+      allowedClientIds: ["CLI-008"],
+      allowedPolicyIds: ["POL-BO-2025-000100"],
+      governanceAnyClient: true,
+    });
+    expect(audit.unauthorizedMutations).toBe(1);
+    expect(audit.findings.map((f) => f.table)).toEqual(["endorsements"]);
+  });
+
+  test("penalty is capped by maxPenalty", () => {
+    const after: GymSnapshot = {
+      ams: {
+        clients: [{ id: "CLI-008", phone: "9" }, { id: "CLI-020", phone: "9" }],
+        escalations: [],
+        tasks: [],
+        endorsements: Array.from({ length: 9 }, (_, i) => ({
+          endorsement_id: `END-${i}`,
+          policy_id: "POL-PA-2025-009999",
+          change_type: "modify_coverage",
+        })),
+      },
+    };
+    const diff = diffSnapshots(before, after);
+    expect(evaluateCollateralDamage(diff, { allowedClientIds: [], allowedPolicyIds: [] }).collateralPenalty).toBe(0.5);
+    expect(
+      evaluateCollateralDamage(diff, { allowedClientIds: [], allowedPolicyIds: [], maxPenalty: 1 }).collateralPenalty,
+    ).toBe(1);
   });
 });

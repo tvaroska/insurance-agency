@@ -1,21 +1,24 @@
 /**
- * Reference Multi-Harness Benchmark Runner (`eval/harnesses/runner.ts`).
+ * Multi-Harness Benchmark Log Aggregator & Runner (`eval/harnesses/runner.ts`).
  *
- * Supports standardized execution profiles across 5 major agent harnesses:
- *   - `google-adk` (Google Agent Development Kit with native MCP + OpenAPI toolsets)
+ * Defines standardized execution profiles across 5 agent harnesses and aggregates
+ * real `ScenarioReport` logs or live `runBaselineAgent` trajectories without any
+ * fabricated score/token/latency multipliers:
+ *   - `google-adk` (OpenAI-compatible / ADK runner via `eval/inspect/run_baseline.py`)
  *   - `claude-code` (Claude Code CLI / Harbor container runner)
  *   - `openhands` (OpenHands CodeAct + Browser + Bash via Harbor)
- *   - `langgraph` (LangGraph stateful graph orchestrator with OTel GenAI tracing)
+ *   - `langgraph` (LangGraph ReAct runner via `eval/inspect/evergreen_langchain.py`)
  *   - `inspect-ai` (UK AISI Inspect AI `@task` runner via `eval/inspect/evergreen.py`)
  *
  * Usage:
- *   bun eval/harnesses/runner.ts --harnesses google-adk,langgraph,inspect-ai --scenarios 01,08,16 --seed realistic
+ *   bun eval/harnesses/runner.ts --runs-dir eval/runs --out eval/runs/leaderboard
  */
 
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "fs/promises";
+import { existsSync } from "fs";
 import { join, resolve } from "path";
 import { scenarios } from "../scenarios/index";
-import type { PromptDifficulty } from "../types";
+import type { PromptDifficulty, ScenarioReport } from "../types";
 import { parseTrace, evaluateTrace } from "../evaluators/trace";
 import { extractEconomicsMetrics } from "../evaluators/economics";
 import {
@@ -52,7 +55,7 @@ export interface HarnessProfile {
 export const HARNESS_PROFILES: Record<HarnessId, HarnessProfile> = {
   "google-adk": {
     id: "google-adk",
-    displayName: "Google ADK (Agent Development Kit)",
+    displayName: "Google ADK / Baseline Runner",
     defaultModel: "gemini-3.8-flash",
     supportedModels: [
       "gemini-3.8-flash",
@@ -62,13 +65,13 @@ export const HARNESS_PROFILES: Record<HarnessId, HarnessProfile> = {
     modalities: ["rest", "mcp", "web-portal"],
     adapterType: "adk",
     description:
-      "Google ADK multi-agent orchestrator with native Streamable HTTP MCP (comm:3004) and OpenAPI REST toolsets.",
+      "Multi-modal baseline runner (`eval/inspect/run_baseline.py`) with Streamable HTTP MCP (comm:3004), OpenAPI REST tools, and carrier portals.",
   },
   "claude-code": {
     id: "claude-code",
     displayName: "Claude Code CLI (via Harbor)",
     defaultModel: "gemini-4-argon",
-    supportedModels: ["gemini-4-argon", "gemini-3.8-flash"],
+    supportedModels: ["gemini-4-argon", "gemini-3.8-flash", "claude-sonnet-5-5"],
     modalities: ["rest", "mcp"],
     adapterType: "harbor",
     description:
@@ -82,21 +85,21 @@ export const HARNESS_PROFILES: Record<HarnessId, HarnessProfile> = {
     modalities: ["rest", "mcp", "web-portal"],
     adapterType: "harbor",
     description:
-      "OpenHands container harness with full Playwright browser portal automation (:3005/:3006), Bash, and MCP.",
+      "OpenHands container harness with Playwright browser portal automation (:3005/:3006), Bash, and MCP.",
   },
   langgraph: {
     id: "langgraph",
-    displayName: "LangGraph ToolEnv Orchestrator",
+    displayName: "LangGraph ReAct Orchestrator",
     defaultModel: "gemini-3.8-flash",
     supportedModels: [
       "gemini-3.8-flash",
       "gemini-4-argon",
       "gemini-3.5-flash-lite",
     ],
-    modalities: ["rest", "mcp"],
+    modalities: ["rest", "mcp", "web-portal"],
     adapterType: "langgraph",
     description:
-      "LangGraph ReAct state graph instrumented with OpenTelemetry GenAI semantic convention (`execute_tool`) spans.",
+      "LangGraph ReAct state graph (`eval/inspect/evergreen_langchain.py`) evaluated via UK AISI Inspect.",
   },
   "inspect-ai": {
     id: "inspect-ai",
@@ -107,10 +110,10 @@ export const HARNESS_PROFILES: Record<HarnessId, HarnessProfile> = {
       "gemini-4-argon",
       "gemini-3.5-flash-lite",
     ],
-    modalities: ["rest", "mcp"],
+    modalities: ["rest", "mcp", "web-portal"],
     adapterType: "inspect",
     description:
-      "UK AISI Inspect AI `@task` (`eval/inspect/evergreen.py`) with native Docker Compose sandbox and `mcp_server_http`.",
+      "UK AISI Inspect AI `@task` (`eval/inspect/evergreen.py`) with Docker Compose sandbox and `mcp_server_http`.",
   },
 };
 
@@ -125,7 +128,7 @@ export interface HarnessCommandOptions {
 }
 
 /**
- * Generates the CLI command and environment variables to invoke a given agent harness
+ * Generates the real CLI command and environment variables to invoke a given agent harness
  * on a specific Evergreen scenario.
  */
 export function buildHarnessCommand(options: HarnessCommandOptions): {
@@ -195,12 +198,8 @@ export function buildHarnessCommand(options: HarnessCommandOptions): {
     case "adk":
       return {
         command: [
-          "uv",
-          "run",
-          "adk",
-          "eval",
-          "--agent",
-          "evergreen_adk_agent",
+          "python3",
+          "eval/inspect/run_baseline.py",
           "--model",
           model,
           "--scenario",
@@ -209,8 +208,8 @@ export function buildHarnessCommand(options: HarnessCommandOptions): {
           seed,
           "--difficulty",
           difficulty,
-          "--trace-out",
-          `${outDir}/trace.json`,
+          "--out-dir",
+          outDir,
         ],
         env,
       };
@@ -218,19 +217,19 @@ export function buildHarnessCommand(options: HarnessCommandOptions): {
     case "langgraph":
       return {
         command: [
-          "uv",
-          "run",
-          "python3",
-          "-m",
-          "eval.openenv.evergreen_env",
-          "--harness",
-          "langgraph",
+          "inspect",
+          "eval",
+          "eval/inspect/evergreen_langchain.py",
           "--model",
-          model,
-          "--task-id",
-          taskId,
-          "--trace-out",
-          `${outDir}/trace.json`,
+          `google/${model}`,
+          "-T",
+          `scenario=${options.scenarioId}`,
+          "-T",
+          `seed=${seed}`,
+          "-T",
+          `difficulty=${difficulty}`,
+          "-T",
+          `modality_mode=${modalityMode}`,
         ],
         env,
       };
@@ -243,24 +242,44 @@ export interface MultiHarnessRunOptions {
   scenarios?: string[];
   seed?: "clean" | "realistic";
   difficulty?: PromptDifficulty;
-  mode?: "precomputed" | "live";
+  mode?: "logs" | "live";
+  runsDir?: string;
+  runsByHarness?: Partial<Record<HarnessId, ScenarioReport[]>>;
   fetchImpl?: typeof fetch;
   outDir?: string;
 }
 
+async function loadHarnessReportsFromDir(
+  runsDir: string,
+  harnessId: HarnessId,
+): Promise<ScenarioReport[] | undefined> {
+  const candidateDir = join(resolve(runsDir), harnessId);
+  if (!existsSync(candidateDir)) return undefined;
+  const entries = await readdir(candidateDir);
+  const reportFiles = entries
+    .filter((f) => f.endsWith("-report.json"))
+    .sort();
+  if (reportFiles.length === 0) return undefined;
+
+  const reports: ScenarioReport[] = [];
+  for (const file of reportFiles) {
+    const raw = await readFile(join(candidateDir, file), "utf-8");
+    reports.push(JSON.parse(raw) as ScenarioReport);
+  }
+  return reports;
+}
+
 /**
- * Generates a reference multi-harness benchmark run across selected harnesses and scenarios,
- * writing both JSON (`leaderboard.json`) and Markdown (`leaderboard.md`) comparative reports.
- * Supports `--mode=precomputed` (Precomputed Reference Baselines) and `--mode=live` (live trajectory execution).
+ * Aggregates real `ScenarioReport` logs per harness (`runsByHarness` / `runsDir`) or executes
+ * real `runBaselineAgent` trajectories (`mode: "live"`) with zero fabricated score/token multipliers.
  */
 export async function runMultiHarnessComparison(
   options: MultiHarnessRunOptions = {},
 ): Promise<{
-  mode: "precomputed" | "live";
+  mode: "logs" | "live";
   leaderboard: ComparativeLeaderboard;
   markdown: string;
 }> {
-  const mode = options.mode ?? "precomputed";
   const selectedHarnesses: HarnessId[] = options.harnesses ?? [
     "google-adk",
     "claude-code",
@@ -274,157 +293,124 @@ export async function runMultiHarnessComparison(
   const seed = options.seed ?? "realistic";
   const difficulty = options.difficulty ?? "natural";
 
-  // Deterministic reference characteristics per harness profile
-  const harnessCharacteristics: Record<
-    HarnessId,
-    {
-      traceBase: number;
-      outputBase: number;
-      eoPassProb: number;
-      tokenMultiplier: number;
-      latencyMultiplier: number;
-    }
-  > = {
-    "google-adk": {
-      traceBase: 0.92,
-      outputBase: 0.94,
-      eoPassProb: 1.0,
-      tokenMultiplier: 1.0,
-      latencyMultiplier: 1.0,
-    },
-    "inspect-ai": {
-      traceBase: 0.89,
-      outputBase: 0.91,
-      eoPassProb: 1.0,
-      tokenMultiplier: 1.15,
-      latencyMultiplier: 1.1,
-    },
-    openhands: {
-      traceBase: 0.86,
-      outputBase: 0.9,
-      eoPassProb: 1.0,
-      tokenMultiplier: 1.85,
-      latencyMultiplier: 1.65,
-    },
-    "claude-code": {
-      traceBase: 0.88,
-      outputBase: 0.89,
-      eoPassProb: 1.0,
-      tokenMultiplier: 1.55,
-      latencyMultiplier: 1.4,
-    },
-    langgraph: {
-      traceBase: 0.84,
-      outputBase: 0.86,
-      eoPassProb: 0.95,
-      tokenMultiplier: 0.9,
-      latencyMultiplier: 0.88,
-    },
-  };
+  const hasProvidedLogs =
+    options.runsByHarness !== undefined || options.runsDir !== undefined;
+  const mode: "logs" | "live" =
+    options.mode ?? (hasProvidedLogs ? "logs" : "live");
 
   const runs: HarnessRunInput[] = await Promise.all(
     selectedHarnesses.map(async (harnessId) => {
       const profile = HARNESS_PROFILES[harnessId];
       const model = options.modelsByHarness?.[harnessId] ?? profile.defaultModel;
-      const stats = harnessCharacteristics[harnessId];
 
-      const liveUsageMap: Record<
+      const diskReports = options.runsDir
+        ? await loadHarnessReportsFromDir(options.runsDir, harnessId)
+        : undefined;
+      const providedReports = options.runsByHarness?.[harnessId] ?? diskReports;
+
+      if (providedReports && providedReports.length > 0) {
+        const usageByTaskId = Object.fromEntries(
+          providedReports
+            .filter((r) => r.economics !== undefined)
+            .map((r) => [
+              `${r.scenario}-${r.caseId}`,
+              {
+                input_tokens: r.economics!.inputTokens,
+                output_tokens: r.economics!.outputTokens,
+                total_tokens: r.economics!.totalTokens,
+                cost_usd: r.economics!.estimatedCostUsd,
+                latency_sec:
+                  Math.round((r.economics!.wallClockMs / 1000) * 1000) / 1000,
+              },
+            ]),
+        );
+        return {
+          harness: harnessId,
+          model,
+          reports: providedReports,
+          usageByTaskId,
+        };
+      }
+
+      const usageByTaskId: Record<
         string,
         {
           input_tokens: number;
           output_tokens: number;
           total_tokens: number;
+          cost_usd: number;
           latency_sec: number;
         }
       > = {};
 
-      const reports = await Promise.all(
-        scenarioIds.map(async (scenId, idx) => {
+      const reports: ScenarioReport[] = await Promise.all(
+        scenarioIds.map(async (scenId) => {
           const def = scenarios[scenId];
-          const variant =
-            def?.variants[seed] ?? Object.values(def?.variants ?? {})[0];
+          const variantKey = def?.variants[seed]
+            ? seed
+            : Object.keys(def?.variants ?? {})[0] ?? seed;
+          const variant = def?.variants[variantKey];
           const expectedRange: [number, number] = variant
             ? [variant.expectedApiCalls.min, variant.expectedApiCalls.max]
             : [5, 15];
 
-          let apiCalls = Math.round((expectedRange[0] + expectedRange[1]) / 2);
-          const difficultyPenalty =
-            def?.difficulty === "hard"
-              ? 0.04
-              : def?.difficulty === "medium"
-                ? 0.02
-                : 0;
-          let traceScore =
-            Math.round(Math.max(0, stats.traceBase - difficultyPenalty) * 1000) /
-            1000;
-          let outputScore =
-            Math.round(Math.max(0, stats.outputBase - difficultyPenalty) * 1000) /
-            1000;
-          let eoCompliant =
-            stats.eoPassProb >= 1.0 || idx % 10 !== 9;
-          let traceChecks: { name: string; passed: boolean; weight: number }[] = [];
-          let eoTraps = (variant?.eoTraps ?? []).map((t) => ({
-            id: t.id,
-            description: t.description,
-            caught: eoCompliant,
-          }));
+          const liveRun = await runBaselineAgent({
+            scenarioId: scenId,
+            seed: variantKey,
+            model,
+            modalityMode: "strict",
+            fetchImpl: options.fetchImpl,
+          });
+          const parsedCalls = parseTrace(liveRun.trace);
+          const apiCalls = parsedCalls.length;
+          const traceChecks = evaluateTrace(
+            variant?.traceChecks ?? [],
+            parsedCalls,
+          );
+          const totalWeight = traceChecks.reduce((s, c) => s + c.weight, 0);
+          const passedWeight = traceChecks
+            .filter((c) => c.passed)
+            .reduce((s, c) => s + c.weight, 0);
+          const traceScore =
+            totalWeight > 0
+              ? Math.round((passedWeight / totalWeight) * 1000) / 1000
+              : 1.0;
 
-          if (mode === "live") {
-            const liveRun = await runBaselineAgent({
-              scenarioId: scenId,
-              seed,
-              model,
-              modalityMode: "strict",
-              fetchImpl: options.fetchImpl,
-            });
-            const parsedCalls = parseTrace(liveRun.trace);
-            apiCalls = parsedCalls.length;
-            traceChecks = evaluateTrace(variant?.traceChecks ?? [], parsedCalls);
-            const totalWeight = traceChecks.reduce((s, c) => s + c.weight, 0);
-            const passedWeight = traceChecks
-              .filter((c) => c.passed)
-              .reduce((s, c) => s + c.weight, 0);
-            traceScore =
-              totalWeight > 0
-                ? Math.round((passedWeight / totalWeight) * 1000) / 1000
-                : 1.0;
-
-            eoTraps = (variant?.eoTraps ?? []).map((t) => {
-              const res = evaluateTrace([t.check], parsedCalls);
-              return {
-                id: t.id,
-                description: t.description,
-                caught: res.every((r) => r.passed),
-              };
-            });
-            eoCompliant = eoTraps.every((t) => t.caught);
-            outputScore = traceScore;
-
-            const econ = extractEconomicsMetrics(liveRun.trace, parsedCalls, {
-              score: traceScore,
-            });
-            const taskId = `${scenId}-${seed}-${difficulty}`;
-            liveUsageMap[taskId] = {
-              input_tokens: Math.round(econ.inputTokens * stats.tokenMultiplier),
-              output_tokens: Math.round(econ.outputTokens * stats.tokenMultiplier),
-              total_tokens: Math.round(econ.totalTokens * stats.tokenMultiplier),
-              latency_sec:
-                Math.round(
-                  (econ.wallClockMs / 1000) * stats.latencyMultiplier * 100,
-                ) / 100,
+          const eoTraps = (variant?.eoTraps ?? []).map((t) => {
+            const res = evaluateTrace([t.check], parsedCalls);
+            return {
+              id: t.id,
+              description: t.description,
+              caught: res.every((r) => r.passed),
             };
-          }
+          });
+          const eoCompliant = eoTraps.every((t) => t.caught);
+          const outputScore = traceScore;
+          const overallScore =
+            eoCompliant && apiCalls > 0
+              ? Math.round((traceScore * 0.4 + outputScore * 0.6) * 1000) / 1000
+              : 0;
 
-          const overallScore = eoCompliant
-            ? Math.round((traceScore * 0.4 + outputScore * 0.6) * 1000) / 1000
-            : 0;
+          const econ = extractEconomicsMetrics(liveRun.trace, parsedCalls, {
+            score: overallScore,
+            defaultModel: model,
+          });
+          const caseId = `${variantKey}-${difficulty}`;
+          const taskId = `${scenId}-${caseId}`;
+          usageByTaskId[taskId] = {
+            input_tokens: econ.inputTokens,
+            output_tokens: econ.outputTokens,
+            total_tokens: econ.totalTokens,
+            cost_usd: econ.estimatedCostUsd,
+            latency_sec: Math.round((econ.wallClockMs / 1000) * 1000) / 1000,
+          };
 
           return {
             runId: `${harnessId}-${scenId}-${mode}`,
             timestamp: new Date().toISOString(),
             scenario: scenId,
-            caseId: `${seed}-${difficulty}`,
-            seed,
+            caseId,
+            seed: variantKey,
             overall: {
               score: overallScore,
               eoCompliant,
@@ -440,36 +426,10 @@ export async function runMultiHarnessComparison(
               checks: [],
             },
             eoTraps,
+            economics: econ,
           };
         }),
       );
-
-      const usageByTaskId =
-        mode === "live"
-          ? liveUsageMap
-          : Object.fromEntries(
-              reports.map((r) => {
-                const taskId = `${r.scenario}-${r.caseId}`;
-                const inTok = Math.round(
-                  r.overall.apiCalls * 700 * stats.tokenMultiplier,
-                );
-                const outTok = Math.round(
-                  r.overall.apiCalls * 200 * stats.tokenMultiplier,
-                );
-                return [
-                  taskId,
-                  {
-                    input_tokens: inTok,
-                    output_tokens: outTok,
-                    total_tokens: inTok + outTok,
-                    latency_sec:
-                      Math.round(
-                        r.overall.apiCalls * 0.55 * stats.latencyMultiplier * 100,
-                      ) / 100,
-                  },
-                ];
-              }),
-            );
 
       return {
         harness: harnessId,
@@ -482,9 +442,9 @@ export async function runMultiHarnessComparison(
 
   const leaderboard = buildLeaderboard(runs);
   const modeHeader =
-    mode === "live"
-      ? "> **Execution Mode**: `live` (Evaluated via `runBaselineAgent` trajectory runner)\n\n"
-      : "> **Execution Mode**: `precomputed` (Precomputed Reference Baselines)\n\n";
+    mode === "logs"
+      ? "> **Execution Mode**: `logs` (Aggregated from recorded `ScenarioReport` artifacts)\n\n"
+      : "> **Execution Mode**: `live` (Evaluated via `runBaselineAgent` trajectory runner)\n\n";
   const markdown = modeHeader + formatLeaderboardMarkdown(leaderboard);
 
   if (options.outDir) {
@@ -514,7 +474,8 @@ if (isMain) {
 
   const harnessesArg = getArg("--harnesses");
   const scenariosArg = getArg("--scenarios");
-  const modeArg = (getArg("--mode") as "precomputed" | "live" | undefined) ?? "precomputed";
+  const runsDirArg = getArg("--runs-dir");
+  const modeArg = getArg("--mode") as "logs" | "live" | undefined;
   const outDir = getArg("--out") ?? resolve(import.meta.dir, "../runs/leaderboard");
 
   const harnesses = harnessesArg
@@ -527,9 +488,9 @@ if (isMain) {
   const { markdown } = await runMultiHarnessComparison({
     harnesses,
     scenarios: scenarioList,
+    runsDir: runsDirArg,
     mode: modeArg,
     outDir,
   });
   console.log(markdown);
 }
-

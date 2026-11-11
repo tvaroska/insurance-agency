@@ -7,7 +7,8 @@ import {
 import { parseTrace, evaluateTrace } from "../evaluators/trace";
 import { evaluateEconomics } from "../evaluators/economics";
 import { scenarios } from "../scenarios";
-import { portalSessionEndpoint, strictModalityGuard } from "../../packages/shared/src/sim";
+import * as simModule from "../../packages/shared/src/sim";
+const { portalSessionEndpoint, strictModalityGuard } = simModule;
 
 describe("Playable Reference Baseline Agent (eval/agents/baseline-agent.ts)", () => {
   test("resolveCommMcpToolName maps comm REST endpoints to MCP tool names", () => {
@@ -70,14 +71,27 @@ describe("Playable Reference Baseline Agent (eval/agents/baseline-agent.ts)", ()
     expect(playbook08.filter((s) => s.trafficType === "conflict_escalation")).toHaveLength(3);
   });
 
-  test("opens an issued carrier portal session and passes the strict web-portal guard", async () => {
+  test("opens an issued carrier portal session via GET / bootstrap cookie and passes strict web-portal guard", async () => {
     const carrier = portalSessionEndpoint("carrier-coastal");
+    let seenPortalCookie = "";
+    carrier.get("/", (c: any) => {
+      const issueFn = (simModule as Record<string, unknown>).issuePortalBootstrapCookie;
+      const cookieVal =
+        typeof issueFn === "function"
+          ? String((issueFn as (svc: string) => string)("carrier-coastal"))
+          : "evergreen_portal_boot_carrier-coastal=boot-token-123; HttpOnly; SameSite=Strict; Path=/";
+      c.header("Set-Cookie", cookieVal);
+      return c.html("<html><body>Coastal Star Portal</body></html>");
+    });
     carrier.use("/v1/*", strictModalityGuard("web-portal"));
     carrier.get("/v1/coastal/quotes", (c) => c.json({ data: [] }));
 
     const mockFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.startsWith("http://localhost:3006/")) {
+        if (url.endsWith("/auth/portal-session")) {
+          seenPortalCookie = (init?.headers as Record<string, string> | undefined)?.Cookie ?? "";
+        }
         return carrier.request(url, init);
       }
       if (url.endsWith("/oauth/token")) {
@@ -95,10 +109,11 @@ describe("Playable Reference Baseline Agent (eval/agents/baseline-agent.ts)", ()
         modalityMode: "strict",
         fetchImpl: mockFetch,
       });
+      expect(seenPortalCookie).toContain("evergreen_portal_boot_carrier-coastal=");
       const carrierSteps = result.steps.filter((s) => s.action.service === "coastal-star");
       expect(carrierSteps).toHaveLength(1);
       expect(carrierSteps[0].status).toBe(200);
-      // The session request is setup, like the OAuth call, so it stays out of the trace.
+      // The bootstrap + session requests are setup, like the OAuth call, so they stay out of the trace.
       expect(parseTrace(result.trace).length).toBe(result.steps.length);
     } finally {
       if (originalMode === undefined) {

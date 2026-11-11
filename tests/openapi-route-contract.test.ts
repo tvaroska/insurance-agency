@@ -20,6 +20,7 @@ const OPENAPI_SPEC_SERVICES: Record<string, string> = {
   "claims.yaml": "claims",
 };
 
+const REST_TOOL_SPEC_FILES = ["ams.yaml", "rater.yaml", "crm.yaml", "ecm.yaml", "claims.yaml"] as const;
 const HTTP_METHODS = ["get", "post", "put", "patch", "delete"] as const;
 
 function collectRefs(node: unknown, refs: string[] = []): string[] {
@@ -64,7 +65,22 @@ function normalizePathTemplate(pathStr: string): string {
     .replace(/:[A-Za-z0-9_]+/g, ":param");
 }
 
-function extractServiceRoutes(serviceName: string): Set<string> {
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+interface ExtractedServiceRoutes {
+  /** Routes mounted under `api` (`/v1` or `/v1/<portal>`), normalized relative to `/v1` */
+  v1Routes: Map<string, string>;
+  /** Routes mounted directly on `app` (`/health`, `/auth/dev-token`, `/workbench/*`, etc.) */
+  appRoutes: Map<string, string>;
+  /** All combined routes (`v1Routes` + `appRoutes`) */
+  allRoutes: Set<string>;
+  /** Any `.ts` file in `src/routes/` that was never mounted in `src/index.ts` */
+  unmountedRouteFiles: string[];
+}
+
+function extractServiceRoutes(serviceName: string): ExtractedServiceRoutes {
   const srcDir = join(SERVICES_DIR, serviceName, "src");
   const indexPath = join(srcDir, "index.ts");
   const indexContent = readFileSync(indexPath, "utf-8");
@@ -88,32 +104,53 @@ function extractServiceRoutes(serviceName: string): Set<string> {
     ? apiMountMatch[1].replace(/^\/v1\b/, "")
     : "";
 
-  // Find mount prefixes in index.ts: api.route("/prefix", routerVar)
-  const mounts: Array<{ prefix: string; filePath: string }> = [];
+  const mounts: Array<{ target: "api" | "app"; prefix: string; filePath: string }> = [];
+  const mountedFiles = new Set<string>();
   const routeMountRegex = /\b(api|app)\.route\(\s*["']([^"']+)["']\s*,\s*([A-Za-z0-9_]+)\s*\)/g;
   while ((match = routeMountRegex.exec(indexContent)) !== null) {
-    const target = match[1];
+    const target = match[1] as "api" | "app";
     const rawPrefix = match[2];
     const routerVar = match[3];
     const filePath = importMap.get(routerVar);
     if (filePath) {
-      const prefix =
-        target === "api" ? `${apiBasePrefix}${rawPrefix}` : rawPrefix;
-      mounts.push({ prefix, filePath });
+      mountedFiles.add(filePath);
+      const prefix = target === "api" ? `${apiBasePrefix}${rawPrefix}` : rawPrefix;
+      mounts.push({ target, prefix, filePath });
     }
   }
 
-  const routes = new Set<string>();
+  const routesDir = join(srcDir, "routes");
+  const unmountedRouteFiles = existsSync(routesDir)
+    ? readdirSync(routesDir)
+        .filter((f) => f.endsWith(".ts") && !mountedFiles.has(join(routesDir, f)))
+        .sort()
+    : [];
+
+  const v1Routes = new Map<string, string>();
+  const appRoutes = new Map<string, string>();
 
   // Collect direct routes registered on `app` in index.ts (e.g., /health, /auth/dev-token)
   const directMethodRegex = /\bapp\.(get|post|put|patch|delete)\(\s*["']([^"'*]+)["']/g;
   while ((match = directMethodRegex.exec(indexContent)) !== null) {
-    routes.add(`${match[1].toUpperCase()} ${normalizePathTemplate(match[2])}`);
+    const method = match[1].toUpperCase();
+    const rawPath = match[2];
+    appRoutes.set(`${method} ${normalizePathTemplate(rawPath)}`, `${method} ${rawPath} (index.ts)`);
   }
 
-  for (const { prefix, filePath } of mounts) {
+  for (const { target, prefix, filePath } of mounts) {
     const routeSource = readFileSync(filePath, "utf-8");
-    const methodRegex = /\.\b(get|post|put|patch|delete)\(\s*["']([^"']+)["']/g;
+    // Only match Hono router instances (`new Hono...`), never `formData.get(...)` or `c.get(...)`
+    const routerVars = Array.from(
+      routeSource.matchAll(/\bconst\s+([A-Za-z0-9_]+)\s*=\s*new\s+Hono\b/g),
+      (m) => m[1],
+    );
+    if (routerVars.length === 0) continue;
+
+    const routerPattern = routerVars.map(escapeRegExp).join("|");
+    const methodRegex = new RegExp(
+      `\\b(?:${routerPattern})\\.(get|post|put|patch|delete)\\(\\s*["']([^"']+)["']`,
+      "g",
+    );
     let m: RegExpExecArray | null;
     while ((m = methodRegex.exec(routeSource)) !== null) {
       const method = m[1].toUpperCase();
@@ -122,14 +159,21 @@ function extractServiceRoutes(serviceName: string): Set<string> {
         subPath === "/"
           ? prefix
           : `${prefix === "/" ? "" : prefix}${subPath.startsWith("/") ? subPath : `/${subPath}`}`;
-      routes.add(`${method} ${normalizePathTemplate(fullPath)}`);
+      const normKey = `${method} ${normalizePathTemplate(fullPath)}`;
+      const desc = `${method} ${fullPath}`;
+      if (target === "api") {
+        v1Routes.set(normKey, desc);
+      } else {
+        appRoutes.set(normKey, desc);
+      }
     }
   }
 
-  return routes;
+  const allRoutes = new Set<string>([...v1Routes.keys(), ...appRoutes.keys()]);
+  return { v1Routes, appRoutes, allRoutes, unmountedRouteFiles };
 }
 
-describe("OpenAPI Specs & Service Route Contract Suite", () => {
+describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
   const specFiles = readdirSync(SPECS_DIR)
     .filter(
       (f) =>
@@ -139,11 +183,20 @@ describe("OpenAPI Specs & Service Route Contract Suite", () => {
     )
     .sort();
 
-  test("discovers all 8 OpenAPI 3.0 specification files", () => {
+  test("discovers all 8 OpenAPI 3.0 specification files and zero unmounted route modules", () => {
     expect(specFiles).toEqual(Object.keys(OPENAPI_SPEC_SERVICES).sort());
+
+    const unmounted: string[] = [];
+    for (const serviceName of Object.values(OPENAPI_SPEC_SERVICES)) {
+      const { unmountedRouteFiles } = extractServiceRoutes(serviceName);
+      for (const f of unmountedRouteFiles) {
+        unmounted.push(`${serviceName}: ${f}`);
+      }
+    }
+    expect(unmounted).toEqual([]);
   });
 
-  test("(a) zero dangling internal $refs across all 8 OpenAPI specs", () => {
+  test("(a) zero dangling internal $refs across all 8 OpenAPI specs and unique REST operationIds", () => {
     const dangling: string[] = [];
 
     for (const file of specFiles) {
@@ -160,53 +213,119 @@ describe("OpenAPI Specs & Service Route Contract Suite", () => {
         }
       }
     }
-
     expect(dangling).toEqual([]);
+
+    const seenOpIds = new Map<string, string>();
+    const duplicateOpIds: string[] = [];
+    const missingOpIds: string[] = [];
+    for (const file of REST_TOOL_SPEC_FILES) {
+      const doc = parseYaml(readFileSync(join(SPECS_DIR, file), "utf-8")) as {
+        paths?: Record<string, Record<string, { operationId?: string }>>;
+      };
+      for (const [specPath, pathItem] of Object.entries(doc.paths ?? {})) {
+        for (const method of HTTP_METHODS) {
+          if (pathItem && method in pathItem) {
+            const opId = pathItem[method]?.operationId;
+            if (!opId) {
+              missingOpIds.push(`${file}: ${method.toUpperCase()} ${specPath}`);
+            } else if (seenOpIds.has(opId)) {
+              duplicateOpIds.push(`${opId} (${seenOpIds.get(opId)} vs ${file})`);
+            } else {
+              seenOpIds.set(opId, `${file} ${method.toUpperCase()} ${specPath}`);
+            }
+          }
+        }
+      }
+    }
+    expect(missingOpIds).toEqual([]);
+    expect(duplicateOpIds).toEqual([]);
   });
 
-  test("(b) every path and operation declared in specs/*.yaml has a matching route handler in services/*/src/", () => {
-    const missingRoutes: string[] = [];
+  test("(b1) spec -> code parity: every path and operation in specs/*.yaml has a matching route handler in services/*/src/", () => {
+    const missingInCode: string[] = [];
 
     for (const [specFile, serviceName] of Object.entries(OPENAPI_SPEC_SERVICES)) {
       const raw = readFileSync(join(SPECS_DIR, specFile), "utf-8");
       const doc = parseYaml(raw) as {
         paths?: Record<string, Record<string, unknown>>;
       };
-      const serviceRoutes = extractServiceRoutes(serviceName);
+      const { allRoutes } = extractServiceRoutes(serviceName);
 
       for (const [specPath, pathItem] of Object.entries(doc.paths ?? {})) {
         for (const method of HTTP_METHODS) {
           if (pathItem && method in pathItem) {
             const key = `${method.toUpperCase()} ${normalizePathTemplate(specPath)}`;
-            if (!serviceRoutes.has(key)) {
-              missingRoutes.push(`${specFile} (${serviceName}): ${method.toUpperCase()} ${specPath}`);
+            if (!allRoutes.has(key)) {
+              missingInCode.push(`${specFile} (${serviceName}): ${method.toUpperCase()} ${specPath}`);
             }
           }
         }
       }
     }
 
-    expect(missingRoutes).toEqual([]);
+    expect(missingInCode).toEqual([]);
   });
 
-  test("(c) GET /quotes exists in specs/rater.yaml and GET /envelopes exists in both specs/ecm.yaml and services/ecm/src/routes/envelopes.ts", () => {
-    const raterSpec = parseYaml(
-      readFileSync(join(SPECS_DIR, "rater.yaml"), "utf-8"),
-    ) as { paths?: Record<string, Record<string, any>> };
+  test("(b2) code -> spec parity: every /v1/* route handler in services/*/src/ is documented in specs/*.yaml", () => {
+    const undocumentedInSpec: string[] = [];
 
-    expect(raterSpec.paths?.["/quotes"]?.get).toBeDefined();
+    for (const [specFile, serviceName] of Object.entries(OPENAPI_SPEC_SERVICES)) {
+      const raw = readFileSync(join(SPECS_DIR, specFile), "utf-8");
+      const doc = parseYaml(raw) as {
+        paths?: Record<string, Record<string, unknown>>;
+      };
+      const specRouteKeys = new Set<string>();
+      for (const [specPath, pathItem] of Object.entries(doc.paths ?? {})) {
+        for (const method of HTTP_METHODS) {
+          if (pathItem && method in pathItem) {
+            specRouteKeys.add(`${method.toUpperCase()} ${normalizePathTemplate(specPath)}`);
+          }
+        }
+      }
+
+      const { v1Routes } = extractServiceRoutes(serviceName);
+      for (const [routeKey, routeDesc] of v1Routes.entries()) {
+        if (!specRouteKeys.has(routeKey)) {
+          undocumentedInSpec.push(`${serviceName} -> ${specFile}: /v1${routeDesc.slice(routeDesc.indexOf(" ") + 1)} (${routeDesc.split(" ")[0]})`);
+        }
+      }
+    }
+
+    expect(undocumentedInSpec).toEqual([]);
+  });
+
+  test("(c) key quotes, envelopes, COI PDF, client detail, and FNOL endpoints are documented and wired", () => {
+    const amsSpec = parseYaml(readFileSync(join(SPECS_DIR, "ams.yaml"), "utf-8")) as {
+      paths?: Record<string, Record<string, any>>;
+    };
+    expect(amsSpec.paths?.["/clients/{id}"]?.get?.operationId).toBe("getClient");
+
+    const raterSpec = parseYaml(readFileSync(join(SPECS_DIR, "rater.yaml"), "utf-8")) as {
+      paths?: Record<string, Record<string, any>>;
+    };
     expect(raterSpec.paths?.["/quotes"]?.get?.operationId).toBe("listQuotes");
-    expect(raterSpec.paths?.["/quotes"]?.get?.summary).toBe("List quotes");
 
-    const ecmSpec = parseYaml(
-      readFileSync(join(SPECS_DIR, "ecm.yaml"), "utf-8"),
-    ) as { paths?: Record<string, Record<string, any>> };
-
-    expect(ecmSpec.paths?.["/envelopes"]?.get).toBeDefined();
+    const ecmSpec = parseYaml(readFileSync(join(SPECS_DIR, "ecm.yaml"), "utf-8")) as {
+      paths?: Record<string, Record<string, any>>;
+    };
     expect(ecmSpec.paths?.["/envelopes"]?.get?.operationId).toBe("listEnvelopes");
+    expect(ecmSpec.paths?.["/documents/coi/generate"]?.post?.operationId).toBe("generateCoi");
+    expect(ecmSpec.paths?.["/documents/coi"]?.post?.operationId).toBe("issueDocumentCoi");
+    expect(ecmSpec.paths?.["/documents/coi/{document_id}/pdf"]?.get?.operationId).toBe("getCoiPdf");
+    expect(ecmSpec.paths?.["/coi/generate"]?.post?.operationId).toBe("generateCoiDirect");
+    expect(ecmSpec.paths?.["/coi"]?.post?.operationId).toBe("createCoi");
+    expect(ecmSpec.paths?.["/coi/{document_id}/pdf"]?.get?.operationId).toBe("downloadCoiPdf");
 
-    const ecmRoutes = extractServiceRoutes("ecm");
-    expect(ecmRoutes.has("GET /envelopes")).toBe(true);
+    const claimsSpec = parseYaml(readFileSync(join(SPECS_DIR, "claims.yaml"), "utf-8")) as {
+      paths?: Record<string, Record<string, any>>;
+    };
+    expect(claimsSpec.paths?.["/claims/fnol"]?.post?.operationId).toBe("fileFnol");
+    expect(claimsSpec.paths?.["/claims"]?.post?.operationId).toBe("fileClaim");
+
+    const { v1Routes: ecmV1Routes } = extractServiceRoutes("ecm");
+    expect(ecmV1Routes.has("GET /envelopes")).toBe(true);
+    expect(ecmV1Routes.has("GET /documents/coi/:param/pdf")).toBe(true);
+    expect(ecmV1Routes.has("GET /coi/:param/pdf")).toBe(true);
 
     const envelopesSource = readFileSync(
       join(SERVICES_DIR, "ecm", "src", "routes", "envelopes.ts"),

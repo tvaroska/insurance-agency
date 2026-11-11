@@ -6,9 +6,71 @@ import { createMiddleware } from "hono/factory";
 // from the same trace without instrumenting the agent.
 
 export const INTERNAL_REQUEST_HEADER = "X-Evergreen-Internal";
+export const EVAL_SCORER_HEADER = "X-Eval-Scorer";
+export const SCORER_SECRET_HEADER = "X-Evergreen-Scorer-Secret";
 
 /** Headers for service-to-service calls, which the request log must not attribute to the agent. */
 export const INTERNAL_REQUEST_HEADERS = { [INTERNAL_REQUEST_HEADER]: "1" } as const;
+
+export type HeaderSource =
+  | Headers
+  | Record<string, string | undefined>
+  | ((name: string) => string | undefined);
+
+function readHeader(headers: HeaderSource, name: string): string | undefined {
+  if (typeof headers === "function") {
+    return headers(name) ?? headers(name.toLowerCase());
+  }
+  if (headers instanceof Headers) {
+    return headers.get(name) ?? undefined;
+  }
+  const lower = name.toLowerCase();
+  for (const [k, v] of Object.entries(headers)) {
+    if (k.toLowerCase() === lower) return v;
+  }
+  return undefined;
+}
+
+/**
+ * Verifies whether a request carrying `X-Eval-Scorer: true` or `X-Evergreen-Internal: 1`
+ * is authorized. When `process.env.EVERGREEN_SCORER_SECRET` is non-empty, the request must
+ * also carry `X-Evergreen-Scorer-Secret === process.env.EVERGREEN_SCORER_SECRET`.
+ */
+export function isAuthorizedScorerOrInternal(
+  headers: HeaderSource,
+  kind?: "scorer" | "internal",
+): boolean {
+  const isScorer = readHeader(headers, EVAL_SCORER_HEADER)?.toLowerCase() === "true";
+  const isInternal = readHeader(headers, INTERNAL_REQUEST_HEADER) === "1";
+  const hasMarker =
+    kind === "scorer"
+      ? isScorer
+      : kind === "internal"
+        ? isInternal
+        : isScorer || isInternal;
+  if (!hasMarker) return false;
+
+  const expectedSecret = process.env.EVERGREEN_SCORER_SECRET;
+  if (expectedSecret && expectedSecret.length > 0) {
+    return readHeader(headers, SCORER_SECRET_HEADER) === expectedSecret;
+  }
+  return true;
+}
+
+/**
+ * Builds headers for internal service-to-service HTTP calls (`X-Evergreen-Internal: 1`,
+ * plus `X-Evergreen-Scorer-Secret` when `process.env.EVERGREEN_SCORER_SECRET` is set).
+ */
+export function getInternalRequestHeaders(): Record<string, string> {
+  const secret = process.env.EVERGREEN_SCORER_SECRET;
+  if (secret && secret.length > 0) {
+    return {
+      [INTERNAL_REQUEST_HEADER]: "1",
+      [SCORER_SECRET_HEADER]: secret,
+    };
+  }
+  return { [INTERNAL_REQUEST_HEADER]: "1" };
+}
 
 const SCOPE_NAME = "evergreen-request-log";
 const SPAN_KIND_CLIENT = 3;
@@ -92,10 +154,10 @@ export function createRequestLog(options: RequestLogOptions) {
     }
 
     const isMcp = method === "POST" && path === options.mcpPath;
-    if (
-      (!isMcp && !path.startsWith("/v1/")) ||
-      c.req.header(INTERNAL_REQUEST_HEADER) === "1"
-    ) {
+    const isAuthorizedInternal =
+      c.req.header(INTERNAL_REQUEST_HEADER) === "1" &&
+      isAuthorizedScorerOrInternal(c.req.raw.headers, "internal");
+    if ((!isMcp && !path.startsWith("/v1/")) || isAuthorizedInternal) {
       await next();
       return;
     }

@@ -4,25 +4,20 @@ import {
   correlationId,
   jwtAuth,
   errorHandler,
-  createTestDatabase as _createTestDb,
   createTestPrismaClient,
   getTestDatabaseUrl,
+  insertSqliteRow,
   authHeader as _authHeader,
   type AppVariables,
 } from "@evergreen/shared";
-import * as schema from "../schema";
 import { PrismaClient } from "../generated/prisma/client";
 
-export { getTestDatabaseUrl };
+export { getTestDatabaseUrl, insertSqliteRow };
 
 export const TEST_SECRET = "test-secret-for-claims-tests";
 process.env.JWT_SECRET = TEST_SECRET;
 
 // ── Database helpers ──
-
-export function createTestDatabase() {
-  return _createTestDb(schema);
-}
 
 export function createTestPrisma() {
   const ctx = createTestPrismaClient(PrismaClient, "test-claims-");
@@ -115,7 +110,7 @@ export async function authHeader(scopes: string[]) {
 const now = new Date().toISOString();
 
 export function makeClaim(
-  overrides: Partial<typeof schema.claims.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     claim_id: `CLM-${Math.random().toString(36).slice(2, 10)}`,
@@ -138,7 +133,7 @@ export function makeClaim(
 }
 
 export function makeAdjuster(
-  overrides: Partial<typeof schema.adjusters.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     adjuster_id: `ADJ-${Math.random().toString(36).slice(2, 5)}`,
@@ -155,7 +150,7 @@ export function makeAdjuster(
 }
 
 export function makeClaimDocument(
-  overrides: Partial<typeof schema.claimDocuments.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     document_id: `DOC-${Math.random().toString(36).slice(2, 10)}`,
@@ -170,7 +165,7 @@ export function makeClaimDocument(
 }
 
 export function makeTimelineEvent(
-  overrides: Partial<typeof schema.claimTimeline.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     event_id: `EVT-${Math.random().toString(36).slice(2, 10)}`,

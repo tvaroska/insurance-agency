@@ -1,9 +1,13 @@
 import { parseArgs } from "util";
+import { mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 
 import type { ScenarioReport } from "./types";
 import { scenarios } from "./scenarios/index";
 import { runBaselineAgent, type AgentStepResult } from "./agents/baseline-agent";
 import { collectTrace, resolveBaseUrls, summarizeTrace } from "./collect-trace";
+import { scorerHeaders } from "./evaluators/output";
 import { fetchGymSnapshot } from "./evaluators/state-diff";
 import { scoreScenario } from "./score";
 
@@ -31,6 +35,19 @@ function seedModeFor(variant: string): "clean" | "realistic" {
   return variant === "clean" ? "clean" : "realistic";
 }
 
+let isolatedTempDataDir: string | undefined;
+
+function cleanupIsolatedTempDataDir(): void {
+  if (!isolatedTempDataDir) return;
+  const dir = isolatedTempDataDir;
+  isolatedTempDataDir = undefined;
+  try {
+    rmSync(dir, { recursive: true, force: true });
+  } catch {
+    // Ignore cleanup errors on exit
+  }
+}
+
 async function ensureServicesAvailable(baseUrls: Record<string, string>): Promise<void> {
   try {
     const res = await fetch(`${baseUrls.ams ?? "http://localhost:3000"}/health`);
@@ -39,6 +56,11 @@ async function ensureServicesAvailable(baseUrls: Record<string, string>): Promis
     // Fall back to in-process Hono service dispatch when live TCP servers are not running
   }
 
+  if (!process.env.EVERGREEN_DATA_DIR) {
+    isolatedTempDataDir = mkdtempSync(join(tmpdir(), "evergreen-validate-"));
+    process.env.EVERGREEN_DATA_DIR = isolatedTempDataDir;
+    process.once("exit", cleanupIsolatedTempDataDir);
+  }
   process.env.JWT_SECRET ??= "dev-secret";
   process.env.MODALITY_MODE ??= "strict";
 
@@ -69,6 +91,9 @@ async function ensureServicesAvailable(baseUrls: Record<string, string>): Promis
     const req = input instanceof Request ? new Request(input, init) : new Request(String(input), init);
     if (req.headers.get("X-Eval-Scorer") === "true") {
       req.headers.set("X-Evergreen-Internal", "1");
+      if (process.env.EVERGREEN_SCORER_SECRET) {
+        req.headers.set("X-Evergreen-Scorer-Secret", process.env.EVERGREEN_SCORER_SECRET);
+      }
     }
     const origin = new URL(req.url).origin;
     const target = serviceApps[origin];
@@ -84,7 +109,7 @@ async function resetServices(baseUrls: Record<string, string>, seedMode: string)
     Object.entries(baseUrls).map(async ([service, baseUrl]) => {
       const res = await fetch(`${baseUrl}/sim/reset`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: scorerHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ seed_mode: seedMode }),
       });
       if (!res.ok) {
@@ -230,7 +255,11 @@ Exits non-zero on any mismatch. Base URLs honor EVERGREEN_BASE_URLS like eval/co
       console.error(`scenario ${id} (${variant}): ${isMismatch(row) ? "MISMATCH" : "ok"}`);
     }
   }
-  await resetServices(baseUrls, "realistic");
+  try {
+    await resetServices(baseUrls, "realistic");
+  } catch (err) {
+    console.error(`final reset failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   const header = ["Scenario", "Case", "Scripted", "No-op", "Scripted spans", "Result"];
   const table = rows.map((row) => [
@@ -268,5 +297,6 @@ Exits non-zero on any mismatch. Base URLs honor EVERGREEN_BASE_URLS like eval/co
     `\n${rows.length - mismatches.length}/${rows.length} scenario variants OK` +
       (mismatches.length > 0 ? `; mismatches: ${mismatches.map((r) => `${r.scenario}(${r.caseId})`).join(", ")}` : ""),
   );
+  cleanupIsolatedTempDataDir();
   process.exit(mismatches.length > 0 ? 1 : 0);
 }

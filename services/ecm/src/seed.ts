@@ -1,9 +1,6 @@
 import { prisma } from "./prisma";
 import { join } from "path";
 
-const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
-const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
-
 interface SeedDocument {
   document_id: string;
   client_id: string;
@@ -52,8 +49,8 @@ interface SeedMarketingAsset {
   published_date: string;
 }
 
-async function loadJson<T>(filename: string): Promise<T> {
-  const path = join(SEED_DIR, filename);
+async function loadJson<T>(seedDir: string, filename: string): Promise<T> {
+  const path = join(seedDir, filename);
   const file = Bun.file(path);
   return file.json() as Promise<T>;
 }
@@ -101,24 +98,31 @@ async function createTables() {
   )`);
 }
 
-async function seed() {
-  console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
-  console.log("Creating tables...");
+export async function seedDatabase(
+  seedMode = process.env.SEED_MODE || "realistic",
+): Promise<void> {
+  const seedFolder = seedMode === "clean" ? "seed-clean" : "seed";
+  const seedDir = join(import.meta.dir, "..", "..", "..", "data", seedFolder);
+  const verbose = import.meta.main;
+
+  if (verbose) {
+    console.log(`Seed mode: ${seedFolder} (seedMode=${seedMode})`);
+    console.log("Creating tables...");
+  }
   await createTables();
 
-  console.log("Loading seed data...");
   const [docsData, envelopesData, assetsData] = await Promise.all([
-    loadJson<SeedDocument[]>("documents.json"),
-    loadJson<SeedEnvelope[]>("envelopes.json"),
-    loadJson<SeedMarketingAsset[]>("marketing_assets.json"),
+    loadJson<SeedDocument[]>(seedDir, "documents.json"),
+    loadJson<SeedEnvelope[]>(seedDir, "envelopes.json"),
+    loadJson<SeedMarketingAsset[]>(seedDir, "marketing_assets.json"),
   ]);
 
-  console.log(
-    `Loaded: ${docsData.length} documents, ${envelopesData.length} envelopes, ${assetsData.length} marketing assets`,
-  );
+  if (verbose) {
+    console.log(
+      `Loaded: ${docsData.length} documents, ${envelopesData.length} envelopes, ${assetsData.length} marketing assets`,
+    );
+  }
 
-  // Insert documents
-  console.log("Seeding documents...");
   await prisma.document.createMany({
     data: docsData.map((d) => ({
       document_id: d.document_id,
@@ -137,8 +141,6 @@ async function seed() {
     })),
   });
 
-  // Insert envelopes
-  console.log("Seeding envelopes...");
   await prisma.envelope.createMany({
     data: envelopesData.map((e) => ({
       envelope_id: e.envelope_id,
@@ -154,8 +156,6 @@ async function seed() {
     })),
   });
 
-  // Insert marketing assets
-  console.log("Seeding marketing assets...");
   await prisma.marketingAsset.createMany({
     data: assetsData.map((a) => ({
       asset_id: a.asset_id,
@@ -169,20 +169,22 @@ async function seed() {
     })),
   });
 
-  // Verify counts
-  const counts = {
-    documents: await prisma.document.count(),
-    envelopes: await prisma.envelope.count(),
-    marketing_assets: await prisma.marketingAsset.count(),
-  };
-
-  console.log("\nSeed complete:");
-  for (const [table, count] of Object.entries(counts)) {
-    console.log(`  ${table}: ${count} rows`);
+  if (verbose) {
+    const counts = {
+      documents: await prisma.document.count(),
+      envelopes: await prisma.envelope.count(),
+      marketing_assets: await prisma.marketingAsset.count(),
+    };
+    console.log("\nSeed complete:");
+    for (const [table, count] of Object.entries(counts)) {
+      console.log(`  ${table}: ${count} rows`);
+    }
   }
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  seedDatabase().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}

@@ -1,9 +1,6 @@
 import { prisma } from "./prisma";
 import { join } from "path";
 
-const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
-const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
-
 interface SeedCoverage {
   type: string;
   limit?: string | number | null;
@@ -46,8 +43,8 @@ interface SeedPolicy {
   updated_at: string;
 }
 
-async function loadJson<T>(filename: string): Promise<T> {
-  const path = join(SEED_DIR, filename);
+async function loadJson<T>(seedDir: string, filename: string): Promise<T> {
+  const path = join(seedDir, filename);
   const file = Bun.file(path);
   return file.json() as Promise<T>;
 }
@@ -117,18 +114,24 @@ async function createTables() {
   )`);
 }
 
-async function seed() {
-  console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
-  console.log("Creating tables...");
+export async function seedDatabase(
+  seedMode = process.env.SEED_MODE || "realistic",
+): Promise<void> {
+  const seedFolder = seedMode === "clean" ? "seed-clean" : "seed";
+  const seedDir = join(import.meta.dir, "..", "..", "..", "data", seedFolder);
+  const verbose = import.meta.main;
+
+  if (verbose) {
+    console.log(`Seed mode: ${seedFolder} (seedMode=${seedMode})`);
+    console.log("Creating tables...");
+  }
   await createTables();
 
-  console.log("Loading seed data...");
   const [quoteRequests, allPolicies] = await Promise.all([
-    loadJson<SeedQuoteRequest[]>("quotes.json"),
-    loadJson<SeedPolicy[]>("policies.json"),
+    loadJson<SeedQuoteRequest[]>(seedDir, "quotes.json"),
+    loadJson<SeedPolicy[]>(seedDir, "policies.json"),
   ]);
 
-  // Extract Summit quotes from quote requests
   const summitQuotes: Array<{
     result: SeedQuoteResult;
     request: SeedQuoteRequest;
@@ -141,15 +144,14 @@ async function seed() {
     }
   }
 
-  // Filter Summit policies
   const summitPolicies = allPolicies.filter((p) => p.carrier_code === "SMIT");
 
-  console.log(
-    `Found: ${summitQuotes.length} Summit quotes, ${summitPolicies.length} Summit policies`,
-  );
+  if (verbose) {
+    console.log(
+      `Found: ${summitQuotes.length} Summit quotes, ${summitPolicies.length} Summit policies`,
+    );
+  }
 
-  // Insert quotes
-  console.log("Seeding quotes...");
   await prisma.quote.createMany({
     data: summitQuotes.map(({ result, request }) => {
       const uwStatus =
@@ -178,8 +180,6 @@ async function seed() {
     }),
   });
 
-  // Insert policies
-  console.log("Seeding policies...");
   await prisma.policy.createMany({
     data: summitPolicies.map((p) => ({
       policy_id: p.policy_id,
@@ -195,8 +195,6 @@ async function seed() {
     })),
   });
 
-  // Generate policy documents for each Summit policy
-  console.log("Seeding policy documents...");
   const docTypes = [
     { type: "dec_page", suffix: "declarations", size: 180000 },
     { type: "id_cards", suffix: "id_cards", size: 95000 },
@@ -204,36 +202,47 @@ async function seed() {
   ];
 
   let docCounter = 1;
+  const allDocs: Array<{
+    document_id: string;
+    policy_id: string;
+    document_type: string;
+    filename: string;
+    file_size_bytes: number;
+    created_at: string;
+  }> = [];
   for (const p of summitPolicies) {
     const policySlug = p.policy_id.toLowerCase().replace(/[^a-z0-9]/g, "_");
     for (const dt of docTypes) {
-      await prisma.policyDocument.create({
-        data: {
-          document_id: `SDOC-${String(docCounter++).padStart(3, "0")}`,
-          policy_id: p.policy_id,
-          document_type: dt.type,
-          filename: `${policySlug}_${dt.suffix}.pdf`,
-          file_size_bytes: dt.size + Math.floor(Math.random() * 50000),
-          created_at: p.created_at,
-        },
+      allDocs.push({
+        document_id: `SDOC-${String(docCounter++).padStart(3, "0")}`,
+        policy_id: p.policy_id,
+        document_type: dt.type,
+        filename: `${policySlug}_${dt.suffix}.pdf`,
+        file_size_bytes: dt.size + ((docCounter * 1337) % 50000),
+        created_at: p.created_at,
       });
     }
   }
+  if (allDocs.length > 0) {
+    await prisma.policyDocument.createMany({ data: allDocs });
+  }
 
-  // Verify counts
-  const counts = {
-    quotes: await prisma.quote.count(),
-    policies: await prisma.policy.count(),
-    policy_documents: await prisma.policyDocument.count(),
-  };
-
-  console.log("\nSeed complete:");
-  for (const [table, count] of Object.entries(counts)) {
-    console.log(`  ${table}: ${count} rows`);
+  if (verbose) {
+    const counts = {
+      quotes: await prisma.quote.count(),
+      policies: await prisma.policy.count(),
+      policy_documents: await prisma.policyDocument.count(),
+    };
+    console.log("\nSeed complete:");
+    for (const [table, count] of Object.entries(counts)) {
+      console.log(`  ${table}: ${count} rows`);
+    }
   }
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  seedDatabase().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}

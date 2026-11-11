@@ -1,30 +1,39 @@
 """Aggregate UK AISI Inspect AI (.eval) logs into the Evergreen README Results table.
 
 Computes for each (model, harness, learning_mechanism) group:
-  - pass@1 and pass^5 (mean per-task (c/n)^5 across workflows)
+  - pass@1 (with 95% Wilson score confidence interval) and pass^5 (mean per-task (c/n)^5 across workflows)
   - Legal traps missed, split into the 3 HTTP-422 system-caught traps
     (state minimum, >$10k binding authority, backdating) vs. 7 judgment traps
   - "Said done, check failed": agent completion claims completion while
     output_score < 1.0 or eo_compliant is False
   - "Records changed unasked": unauthorized mutations from the 32-table state diff
-  - "Drop, clean to messy": pass@1 change from clean/permissive to realistic/strict
+  - "Drop, clean to messy": pass@1 change from clean to realistic
   - "Cost per task": USD per task from Inspect model_usage token counts
 
 Usage:
-  python eval/inspect/summarize_inspect.py <log_file_or_dir> [...] [--clean-logs <dir>] [--include-anchors]
+  python3 eval/inspect/summarize_inspect.py --include-anchors
+  python3 eval/inspect/summarize_inspect.py <log_file_or_dir> [...] [--clean-logs <dir>] [--include-anchors]
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
+import random
 import re
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 from inspect_ai.log import EvalLog, read_eval_log
+
+GYM_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_RESULTS_CANDIDATES: tuple[Path, ...] = (
+    GYM_ROOT / "eval" / "results" / "v0.8" / "realistic-natural",
+    GYM_ROOT / "eval" / "results" / "v0.7" / "realistic-natural",
+)
 
 # USD per 1M tokens (input, output, cache_read)
 MODEL_PRICING_PER_1M: dict[str, tuple[float, float, float]] = {
@@ -54,6 +63,34 @@ _SYSTEM_TRAP_DESC_RE = re.compile(
     r"(state minimum|below.*minimum|backdat|\$10,000|\$15k|premium threshold|binding authority)",
     re.IGNORECASE,
 )
+
+
+def wilson_ci95(successes: int, total: int) -> list[float]:
+    """95% Wilson score confidence interval [low, high] for a binomial proportion."""
+    if total <= 0:
+        return [0.0, 0.0]
+    z = 1.959963984540054
+    z2 = z * z
+    p = max(0.0, min(1.0, successes / total))
+    denom = 1.0 + z2 / total
+    center = (p + z2 / (2.0 * total)) / denom
+    half = (z * math.sqrt((p * (1.0 - p) + z2 / (4.0 * total)) / total)) / denom
+    return [round(max(0.0, center - half), 4), round(min(1.0, center + half), 4)]
+
+
+def bootstrap_mean_ci95(values: list[float], n_resamples: int = 2000, seed: int = 20260218) -> list[float]:
+    """Deterministic percentile bootstrap 95% CI over per-task scores/pass^k values."""
+    if not values:
+        return [0.0, 0.0]
+    if len(values) == 1:
+        v = round(values[0], 4)
+        return [v, v]
+    rng = random.Random(seed)
+    n = len(values)
+    means = sorted(sum(rng.choices(values, k=n)) / n for _ in range(n_resamples))
+    lo = means[int(0.025 * (n_resamples - 1))]
+    hi = means[int(0.975 * (n_resamples - 1))]
+    return [round(lo, 4), round(hi, 4)]
 
 
 def is_system_caught_trap(trap: dict[str, Any]) -> bool:
@@ -142,6 +179,8 @@ class SampleRecord:
     said_done_failed: bool
     unauthorized_mutations: int
     cost_usd: float
+    artifacts_dir: str | None = None
+    eval_log: str | None = None
 
 
 @dataclass
@@ -164,6 +203,22 @@ class RowSummary:
     mean_unasked_mutations: float
     drop_clean_to_messy_pp: float | None
     mean_cost_usd: float
+    pass_at_1_ci95: list[float] | None = None
+    pass_hat_5_ci95: list[float] | None = None
+
+
+def _rel_if_in_repo(raw_path: str | Path | None) -> str | None:
+    if not raw_path:
+        return None
+    p = Path(raw_path)
+    try:
+        resolved = p.resolve()
+        gym_resolved = GYM_ROOT.resolve()
+        if resolved.is_relative_to(gym_resolved):
+            return resolved.relative_to(gym_resolved).as_posix()
+    except OSError:
+        pass
+    return str(raw_path)
 
 
 def extract_records_from_log(
@@ -171,6 +226,7 @@ def extract_records_from_log(
     pass_threshold: float = 0.80,
     default_harness: str = "Inspect + LangChain",
     default_learning: str = "None (zero-shot)",
+    eval_log_path: str | Path | None = None,
 ) -> list[SampleRecord]:
     samples = log.samples or []
     if not samples:
@@ -180,6 +236,7 @@ def extract_records_from_log(
     task_meta = (log.eval.metadata or {}) if getattr(log, "eval", None) else {}
     harness = str(task_meta.get("harness_label") or default_harness)
     learning = str(task_meta.get("learning_mechanism") or default_learning)
+    rel_eval_log = _rel_if_in_repo(eval_log_path or getattr(log, "location", None))
 
     # Fallback per-sample cost if sample.model_usage is empty
     log_cost_total = 0.0
@@ -254,6 +311,8 @@ def extract_records_from_log(
                 said_done_failed=said_done_check_failed(answer_text, out_score, eo_ok, api_calls),
                 unauthorized_mutations=unauth,
                 cost_usd=sample_cost,
+                artifacts_dir=_rel_if_in_repo(meta.get("artifacts_dir")),
+                eval_log=rel_eval_log,
             )
         )
     return records
@@ -263,8 +322,10 @@ def summarize_records(
     records: list[SampleRecord],
     clean_records: list[SampleRecord] | None = None,
 ) -> list[RowSummary]:
+    clean_by_group: dict[tuple[str, str, str], list[SampleRecord]] = defaultdict(list)
     clean_by_model: dict[str, list[SampleRecord]] = defaultdict(list)
     for r in clean_records or []:
+        clean_by_group[(r.model, r.harness, r.learning_mechanism)].append(r)
         clean_by_model[r.model].append(r)
 
     grouped: dict[tuple[str, str, str], list[SampleRecord]] = defaultdict(list)
@@ -279,15 +340,18 @@ def summarize_records(
 
         task_pass1: list[float] = []
         task_pass5: list[float] = []
-        for t_runs in by_task.values():
+        for sample_id in sorted(by_task):
+            t_runs = by_task[sample_id]
             p_rate = sum(1 for r in t_runs if r.passed) / len(t_runs)
             task_pass1.append(p_rate)
             task_pass5.append(p_rate**5)
 
         n_trials = len(group)
+        n_passed_trials = sum(1 for r in group if r.passed)
         pass_at_1 = sum(task_pass1) / len(task_pass1) if task_pass1 else 0.0
         pass_hat_5 = sum(task_pass5) / len(task_pass5) if task_pass5 else 0.0
         mean_score = sum(r.score for r in group) / n_trials if n_trials else 0.0
+        k_per_task = n_trials // len(by_task) if by_task else 1
 
         sys_missed = sum(r.system_traps_missed for r in group)
         sys_total = sum(r.system_traps_total for r in group)
@@ -300,15 +364,22 @@ def summarize_records(
         mean_cost = sum(r.cost_usd for r in group) / n_trials if n_trials else 0.0
 
         drop_pp: float | None = None
-        if model in clean_by_model and clean_by_model[model]:
-            c_runs = clean_by_model[model]
-            c_by_task: dict[str, list[SampleRecord]] = defaultdict(list)
+        # Only compare against this arm's own clean runs, on the scenarios both seeds cover.
+        c_runs = clean_by_group.get((model, harness, learning)) or []
+        if c_runs:
+            c_by_scenario: dict[str, list[SampleRecord]] = defaultdict(list)
             for r in c_runs:
-                c_by_task[r.sample_id].append(r)
-            c_pass1 = sum(
-                sum(1 for r in tr if r.passed) / len(tr) for tr in c_by_task.values()
-            ) / len(c_by_task)
-            drop_pp = (pass_at_1 - c_pass1) * 100.0
+                c_by_scenario[r.scenario_id].append(r)
+            m_by_scenario: dict[str, list[SampleRecord]] = defaultdict(list)
+            for r in group:
+                if r.scenario_id in c_by_scenario:
+                    m_by_scenario[r.scenario_id].append(r)
+            if m_by_scenario:
+                def _mean_pass(by_sc: dict[str, list[SampleRecord]]) -> float:
+                    return sum(sum(1 for r in runs if r.passed) / len(runs) for runs in by_sc.values()) / len(by_sc)
+
+                shared = {sc: c_by_scenario[sc] for sc in m_by_scenario}
+                drop_pp = (_mean_pass(m_by_scenario) - _mean_pass(shared)) * 100.0
 
         summaries.append(
             RowSummary(
@@ -330,9 +401,11 @@ def summarize_records(
                 mean_unasked_mutations=round(mean_unasked, 3),
                 drop_clean_to_messy_pp=round(drop_pp, 1) if drop_pp is not None else None,
                 mean_cost_usd=round(mean_cost, 4),
+                pass_at_1_ci95=wilson_ci95(n_passed_trials, n_trials),
+                pass_hat_5_ci95=bootstrap_mean_ci95(task_pass5) if k_per_task >= 5 else None,
             )
         )
-    summaries.sort(key=lambda r: (-r.pass_at_1, -r.mean_score, r.model))
+    summaries.sort(key=lambda r: (-r.pass_at_1, -r.mean_score, r.model, r.learning_mechanism))
     return summaries
 
 
@@ -359,7 +432,11 @@ def format_markdown_table(rows: list[RowSummary], include_anchors: bool = False)
         drop_str = f"{r.drop_clean_to_messy_pp:+.1f} pp" if r.drop_clean_to_messy_pp is not None else "n/a"
         k_per_task = r.trials_count // r.tasks_count if r.tasks_count > 0 else 1
         if k_per_task >= 5:
-            pass1_str = f"{r.pass_at_1 * 100:.1f}%"
+            if r.pass_at_1_ci95:
+                lo, hi = r.pass_at_1_ci95
+                pass1_str = f"{r.pass_at_1 * 100:.1f}% [{lo * 100:.1f}, {hi * 100:.1f}]"
+            else:
+                pass1_str = f"{r.pass_at_1 * 100:.1f}%"
             pass5_str = f"{r.pass_hat_5 * 100:.1f}%"
         else:
             pass1_str = f"{r.pass_at_1 * 100:.1f}% ({r.mean_score:.2f} mean)"
@@ -385,32 +462,132 @@ def collect_eval_files(paths: list[str | Path]) -> list[Path]:
     return found
 
 
+def resolve_log_paths(
+    logs: list[str | Path],
+    clean_logs: list[str | Path] | None,
+    candidates: tuple[Path, ...] = DEFAULT_RESULTS_CANDIDATES,
+) -> tuple[list[Path], list[Path]]:
+    """Resolve default realistic logs (v0.8 -> v0.7 fallback) and auto-detect sibling clean-<tier> logs."""
+    resolved_logs: list[Path] = [Path(p) for p in logs] if logs else []
+    if not resolved_logs:
+        for cand in candidates:
+            if cand.exists() and collect_eval_files([cand]):
+                resolved_logs = [cand]
+                break
+
+    if clean_logs is not None:
+        resolved_clean = [Path(p) for p in clean_logs]
+    else:
+        resolved_clean = []
+        for p in resolved_logs:
+            if p.is_dir() and p.name.startswith("realistic-"):
+                sibling = p.parent / p.name.replace("realistic-", "clean-", 1)
+                if sibling.is_dir() and collect_eval_files([sibling]):
+                    resolved_clean.append(sibling)
+
+    return resolved_logs, resolved_clean
+
+
+def build_replay_manifest(records: list[SampleRecord]) -> dict[str, Any]:
+    """Build a deterministic replay manifest linking every scored sample to its .eval log and SHA-256 receipts."""
+    entries: list[dict[str, Any]] = []
+    for r in sorted(records, key=lambda item: (item.model, item.learning_mechanism, item.sample_id, item.epoch)):
+        checksums: dict[str, str] = {}
+        if r.artifacts_dir:
+            cand = GYM_ROOT / r.artifacts_dir / "sha256sums.txt"
+            if not cand.exists():
+                cand = Path(r.artifacts_dir) / "sha256sums.txt"
+            if cand.is_file():
+                for line in cand.read_text(encoding="utf-8").splitlines():
+                    parts = line.strip().split(None, 1)
+                    if len(parts) == 2:
+                        checksums[parts[1].strip()] = parts[0].strip()
+        entries.append(
+            {
+                "model": r.model,
+                "harness": r.harness,
+                "learning_mechanism": r.learning_mechanism,
+                "sample_id": r.sample_id,
+                "scenario_id": r.scenario_id,
+                "seed": r.seed,
+                "epoch": r.epoch,
+                "score": round(r.score, 4),
+                "passed": r.passed,
+                "eo_compliant": r.eo_compliant,
+                "eval_log": r.eval_log,
+                "artifacts_dir": r.artifacts_dir,
+                "sha256": checksums,
+            }
+        )
+    return {
+        "benchmark": "evergreen_insurance_gym",
+        "total_trials": len(entries),
+        "trials": entries,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("logs", nargs="+", help="Inspect .eval log files or directories")
-    parser.add_argument("--clean-logs", nargs="*", default=[], help="Optional clean-seed .eval logs for Drop calculation")
-    parser.add_argument("--pass-threshold", type=float, default=0.80, help="Minimum overall score to count as a pass (default: 0.80)")
-    parser.add_argument("--include-anchors", action="store_true", help="Include scripted reference (100%) and do-nothing (0%) calibration rows")
-    parser.add_argument("--json", action="store_true", help="Emit JSON instead of Markdown")
+    parser.add_argument(
+        "logs",
+        nargs="*",
+        default=[],
+        help="Inspect .eval log files or directories (defaults to eval/results/v0.8/realistic-natural, falling back to v0.7)",
+    )
+    parser.add_argument(
+        "--clean-logs",
+        nargs="*",
+        default=None,
+        help="Optional clean-seed .eval logs for Drop calculation (auto-detected from sibling clean-<tier> dir when omitted)",
+    )
+    parser.add_argument(
+        "--pass-threshold",
+        type=float,
+        default=0.80,
+        help="Minimum overall score to count as a pass (default: 0.80)",
+    )
+    parser.add_argument(
+        "--include-anchors",
+        action="store_true",
+        help="Include scripted reference (100%) and do-nothing (0%) calibration rows",
+    )
+    parser.add_argument("--json", action="store_true", help="Emit JSON instead of Markdown to stdout")
+    parser.add_argument("--json-out", default="", help="Optional path to write summary-report.json")
+    parser.add_argument(
+        "--export-replay-manifest",
+        default="",
+        help="Optional path to write deterministic per-trial replay manifest JSON",
+    )
     args = parser.parse_args(argv)
 
-    eval_files = collect_eval_files(args.logs)
+    log_paths, clean_paths = resolve_log_paths(args.logs, args.clean_logs)
+    eval_files = collect_eval_files(log_paths)
     if not eval_files:
-        raise SystemExit(f"No .eval files found in: {args.logs}")
+        raise SystemExit(f"No .eval files found in: {log_paths or args.logs}")
 
     records: list[SampleRecord] = []
     for f in eval_files:
         log = read_eval_log(str(f))
         if log.status == "success":
-            records.extend(extract_records_from_log(log, pass_threshold=args.pass_threshold))
+            records.extend(extract_records_from_log(log, pass_threshold=args.pass_threshold, eval_log_path=f))
 
     clean_records: list[SampleRecord] = []
-    for f in collect_eval_files(args.clean_logs):
+    for f in collect_eval_files(clean_paths):
         log = read_eval_log(str(f))
         if log.status == "success":
-            clean_records.extend(extract_records_from_log(log, pass_threshold=args.pass_threshold))
+            clean_records.extend(extract_records_from_log(log, pass_threshold=args.pass_threshold, eval_log_path=f))
 
     rows = summarize_records(records, clean_records=clean_records)
+    if args.json_out:
+        out_path = Path(args.json_out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps([asdict(r) for r in rows], indent=2) + "\n")
+
+    if args.export_replay_manifest:
+        manifest_path = Path(args.export_replay_manifest)
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        manifest_path.write_text(json.dumps(build_replay_manifest([*records, *clean_records]), indent=2) + "\n")
+
     if args.json:
         print(json.dumps([asdict(r) for r in rows], indent=2))
     else:

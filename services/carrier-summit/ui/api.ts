@@ -11,7 +11,11 @@ async function getToken(): Promise<string> {
 }
 
 async function requestPortalSession(): Promise<string> {
-  const res = await fetch("/auth/portal-session");
+  let res = await fetch("/auth/portal-session");
+  if (res.status === 403) {
+    await fetch("/", { cache: "no-store" });
+    res = await fetch("/auth/portal-session");
+  }
   if (!res.ok) throw new Error(`Portal session error ${res.status}`);
   const data = await res.json();
   portalSession = {

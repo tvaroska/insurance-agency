@@ -201,15 +201,28 @@ components:
         claim_type:
           type: string
           enum: [auto_collision, auto_comprehensive, property_damage, theft, liability, medical, fire, water, weather]
+        loss_type:
+          type: string
+          description: Optional alternate alias normalized to `claim_type`.
         loss_date:
           type: string
           format: date
         loss_description:
           type: string
           maxLength: 5000
+        description:
+          type: string
+          description: Optional alternate alias normalized to `loss_description`.
         loss_location:
           type: string
           maxLength: 500
+        estimated_loss:
+          type: number
+          minimum: 0
+          description: Optional initial loss estimate persisted as `reserve_amount`.
+        adjuster_id:
+          type: string
+          description: Optional adjuster ID to assign immediately during FNOL intake.
         notes:
           type: string
 
@@ -360,6 +373,11 @@ paths:
                   type: string
                   description: Alternate name for `loss_description` (normalized automatically).
                 loss_location:
+                  type: string
+                estimated_loss:
+                  type: number
+                  minimum: 0
+                adjuster_id:
                   type: string
                 notes:
                   type: string

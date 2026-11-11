@@ -19,9 +19,8 @@ import {
 const clientId = "CLI-004";
 let requestId: string;
 
-beforeAll(() => {
-  // Seed: commercial client with BOP policy
-  seedAmsClient({
+beforeAll(async () => {
+  await seedAmsClient({
     id: clientId,
     first_name: "David",
     last_name: "Thompson",
@@ -29,7 +28,7 @@ beforeAll(() => {
     address_state: "IL",
   });
 
-  seedAmsPolicy({
+  await seedAmsPolicy({
     policy_id: "POL-BOP-004",
     client_id: clientId,
     carrier_code: "TRAV",
@@ -37,17 +36,14 @@ beforeAll(() => {
     premium_current: 3200.0,
   });
 
-  // No general_liability policy — underwriting agent should detect this gap
-
-  // Seed documents for compliance audit
-  seedEcmDocument({
+  await seedEcmDocument({
     document_id: "doc_lease_004",
     client_id: clientId,
     document_type: "lease_agreement",
     filename: "thompson_llc_lease.pdf",
     status: "uploaded",
   });
-  seedEcmDocument({
+  await seedEcmDocument({
     document_id: "doc_app_004",
     client_id: clientId,
     document_type: "signed_application",
@@ -58,8 +54,7 @@ beforeAll(() => {
     signed_date: "2025-06-15",
   });
 
-  // Seed carrier for BOP quotes
-  seedRaterCarrier({
+  await seedRaterCarrier({
     carrier_code: "HART",
     carrier_name: "Hartland Commercial",
     states: JSON.stringify(["IL", "IN", "OH", "WI"]),

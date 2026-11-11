@@ -13,7 +13,11 @@ import type {
 } from "./types";
 import { parseTrace, evaluateTrace } from "./evaluators/trace";
 import { evaluateOutput } from "./evaluators/output";
-import { evaluateRubrics, DEFAULT_JUDGE_MODEL } from "./evaluators/rubric";
+import {
+  evaluateRubrics,
+  DEFAULT_JUDGE_MODEL,
+  type JudgeInferenceFn,
+} from "./evaluators/rubric";
 import {
   fetchGymSnapshot,
   diffSnapshots,
@@ -86,6 +90,8 @@ export interface ScoreScenarioOptions {
   snapshotAfter?: GymSnapshot;
   model?: string;
   judgeModel?: string;
+  useLlmJudge?: boolean;
+  judgeFn?: JudgeInferenceFn;
   /** Service base URLs for output and rubric checks (default: defaultBaseUrls()). */
   baseUrls?: Record<string, string>;
 }
@@ -163,8 +169,14 @@ export async function scoreScenario(
   // Optional Tier-2 Atomic Rubric & Rogan-Gladen Calibration evaluation
   let rubric: RubricEvaluationSummary | undefined;
   if (variant.rubricChecks && variant.rubricChecks.length > 0) {
+    const useLlmJudge =
+      opts.useLlmJudge ??
+      (process.env.EVERGREEN_USE_LLM_JUDGE === "1" ||
+        process.env.EVERGREEN_USE_LLM_JUDGE === "true");
     rubric = await evaluateRubrics(variant.rubricChecks, {
       judgeModel: opts.judgeModel ?? DEFAULT_JUDGE_MODEL,
+      useLlmJudge,
+      judgeFn: opts.judgeFn,
       baseUrls: opts.baseUrls,
     });
   }
@@ -226,6 +238,8 @@ if (import.meta.main) {
       "snapshot-before": { type: "string" },
       "snapshot-after": { type: "string" },
       model: { type: "string" },
+      "llm-judge": { type: "boolean", default: false },
+      "judge-model": { type: "string" },
       help: { type: "boolean", default: false },
     },
     strict: true,
@@ -250,6 +264,8 @@ Options:
   --snapshot-before  Optional path to pre-run GymSnapshot JSON file
   --snapshot-after   Optional path to post-run GymSnapshot JSON file (or fetched live if omitted when --snapshot-before is set)
   --model            Default model name for token pricing (default: gemini-3.8-flash)
+  --llm-judge        Enable live Vertex AI / Gemini rubric autorater with Rogan-Gladen debiasing
+  --judge-model      Judge model identifier when --llm-judge is set (default: gemini-4-argon)
   --out              Output directory (default: eval/runs/<run-id>/)
   --html-out         Write self-contained GM3 Light Executive HTML Scorecard to <path>
   --help             Show this help`);
@@ -273,12 +289,18 @@ Options:
   const collectedReports: ScenarioReport[] = [];
 
   for (const scenarioId of scenarioIds) {
+    const useLlmJudge =
+      Boolean(values["llm-judge"]) ||
+      process.env.EVERGREEN_USE_LLM_JUDGE === "1" ||
+      process.env.EVERGREEN_USE_LLM_JUDGE === "true";
     const { report, runId } = await scoreScenario(scenarioId, trace, {
       seed,
       caseId: values.case,
       snapshotBefore,
       snapshotAfter,
       model: values.model,
+      useLlmJudge,
+      judgeModel: values["judge-model"],
     });
     collectedReports.push(report);
 

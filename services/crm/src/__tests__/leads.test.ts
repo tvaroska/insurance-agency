@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeAll } from "bun:test";
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -13,7 +12,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -68,7 +66,7 @@ beforeAll(() => {
   ];
 
   for (const l of leads) {
-    testDb.insert(schema.leads).values(l).run();
+    insertSqliteRow(testSqlite, "leads", l);
   }
 });
 
@@ -752,3 +750,27 @@ describe("POST /v1/leads/:id/enroll - success", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("POST /v1/leads/:id/enroll - net-new leads with null client_id", () => {
+  it("enrolls multiple net-new (client_id = null) leads in the same campaign without a false duplicate", async () => {
+    testSqlite.exec(`INSERT OR IGNORE INTO campaigns (campaign_id, name, type, status, enrolled_count, conversion_rate) VALUES ('camp_netnew', 'Net New', 'welcome', 'active', 0, 0)`);
+    insertSqliteRow(testSqlite, "leads", makeLead({ lead_id: "lead_null_1", client_id: null }));
+    insertSqliteRow(testSqlite, "leads", makeLead({ lead_id: "lead_null_2", client_id: null }));
+
+    const headers = await authHeader(["crm:campaigns:enroll", "crm:leads:read"]);
+    for (const id of ["lead_null_1", "lead_null_2"]) {
+      const res = await app.request(`${LEADS_URL}/${id}/enroll`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify({ campaign_id: "camp_netnew" }),
+      });
+      expect(res.status).toBe(201);
+      expect((await res.json()).client_id).toBe("");
+    }
+
+    const getRes = await app.request(`${LEADS_URL}/lead_null_1`, { headers });
+    expect(getRes.status).toBe(200);
+    expect((await getRes.json()).client_id).toBeNull();
+  });
+});
+

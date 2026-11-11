@@ -2,7 +2,7 @@
  * Integration Test: The Retention Agent
  *
  * Agent detects at-risk clients and proactively re-shops to prevent churn.
- * Flow: CRM → AMS → Rater → Rater → ECM → CRM → Comm
+ * Flow: CRM → AMS → Rater → Rater → ECM → CRM → Comm (HTTP /mcp JSON-RPC)
  */
 import { describe, expect, test, beforeAll } from "bun:test";
 import {
@@ -10,9 +10,8 @@ import {
   raterApp,
   crmApp,
   ecmApp,
-  comm,
   authHeader,
-  handleSendMessage,
+  callCommMcpTool,
   seedAmsClient,
   seedAmsPolicy,
   seedRaterCarrier,
@@ -25,9 +24,8 @@ const clientId = "CLI-002";
 let leadId: string;
 let requestId: string;
 
-beforeAll(() => {
-  // Seed: at-risk client with high premium increase
-  seedAmsClient({
+beforeAll(async () => {
+  await seedAmsClient({
     id: clientId,
     first_name: "Maria",
     last_name: "Chen",
@@ -35,7 +33,7 @@ beforeAll(() => {
     address_state: "IL",
   });
 
-  seedAmsPolicy({
+  await seedAmsPolicy({
     policy_id: "POL-HOME-002",
     client_id: clientId,
     carrier_code: "TRAV",
@@ -44,7 +42,7 @@ beforeAll(() => {
     premium_prior: 2000.0,
   });
 
-  seedAmsPolicy({
+  await seedAmsPolicy({
     policy_id: "POL-AUTO-002",
     client_id: clientId,
     carrier_code: "PROG",
@@ -53,8 +51,7 @@ beforeAll(() => {
     premium_prior: 1350.0,
   });
 
-  // Seed retention risk
-  seedCrmRetentionRisk({
+  await seedCrmRetentionRisk({
     client_id: clientId,
     client_name: "Maria Chen",
     risk_score: 88,
@@ -65,8 +62,7 @@ beforeAll(() => {
     recommended_action: "Re-shop homeowners and send comparison.",
   });
 
-  // Seed lead for CRM update
-  const lead = seedCrmLead({
+  const lead = await seedCrmLead({
     lead_id: "lead_ret_002",
     client_id: clientId,
     first_name: "Maria",
@@ -77,8 +73,7 @@ beforeAll(() => {
   });
   leadId = lead.lead_id;
 
-  // Seed carrier for re-quoting
-  seedRaterCarrier({
+  await seedRaterCarrier({
     carrier_code: "PROG",
     carrier_name: "Coastal Star Insurance",
     states: JSON.stringify(["IL", "IN", "OH", "MI"]),
@@ -90,8 +85,7 @@ beforeAll(() => {
     accepts_sr22: true,
   });
 
-  // Seed comparison template in ECM
-  seedEcmAsset({
+  await seedEcmAsset({
     asset_id: "asset_comparison_tmpl",
     name: "Price Comparison Template",
     description: "Side-by-side premium comparison for retention outreach",
@@ -124,7 +118,6 @@ describe("Retention Agent — end-to-end", () => {
     const body = await res.json();
     expect(body.data.length).toBe(2);
 
-    // Verify premium increase on homeowners
     const homePolicy = body.data.find((p: any) => p.policy_type === "homeowners");
     expect(homePolicy).toBeDefined();
     expect(homePolicy.premium_current).toBeGreaterThan(homePolicy.premium_prior);
@@ -171,7 +164,6 @@ describe("Retention Agent — end-to-end", () => {
     expect(body.request_id).toBe(requestId);
     expect(body.carriers.length).toBeGreaterThanOrEqual(1);
 
-    // At least one carrier should have a quote
     const quoted = body.carriers.filter((c: any) => c.status === "quoted");
     expect(quoted.length).toBeGreaterThanOrEqual(1);
   });
@@ -206,20 +198,17 @@ describe("Retention Agent — end-to-end", () => {
     expect(body.status).toBe("contacted");
   });
 
-  test("Step 7: Send comparison email via Comm Hub", async () => {
-    const result = await handleSendMessage(
-      {
-        to: "maria.chen@email.com",
-        channel: "email",
-        subject: "Your Homeowners Insurance — Better Options Available",
-        body: "Hi Maria, we found lower rates for your homeowners coverage. See the attached comparison.",
-        client_id: clientId,
-      },
-      comm.db,
-    );
+  test("Step 7: Send comparison email via Comm Hub HTTP /mcp JSON-RPC", async () => {
+    const result = await callCommMcpTool("send_message", {
+      to: "maria.chen@email.com",
+      channel: "email",
+      subject: "Your Homeowners Insurance — Better Options Available",
+      body: "Hi Maria, we found lower rates for your homeowners coverage. See the attached comparison.",
+      client_id: clientId,
+    });
     expect(result.isError).toBeUndefined();
 
-    const data = JSON.parse(result.content[0].text as string);
+    const data = JSON.parse(result.content[0].text);
     expect(data.message_id).toBeTruthy();
     expect(data.status).toBe("queued");
   });

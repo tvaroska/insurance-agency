@@ -7,10 +7,20 @@ import {
 } from "../export-hal";
 
 describe("Princeton HAL (hal-harness) Leaderboard Exporter (S3-INTOP-4)", () => {
-  it("defines pricing for customer-facing Gemini models", () => {
+  it("defines pricing for customer-facing Gemini, Claude, and DeepSeek models and defaults pass_threshold to 0.80", () => {
     expect(MODEL_PRICING_USD_PER_1M["gemini-3.8-flash"]).toBeDefined();
     expect(MODEL_PRICING_USD_PER_1M["gemini-4-argon"]).toBeDefined();
     expect(MODEL_PRICING_USD_PER_1M["gemini-3.5-flash-lite"]).toBeDefined();
+    expect(MODEL_PRICING_USD_PER_1M["claude-sonnet-5-5"]).toEqual({
+      inputCostPer1MUsd: 3.0,
+      outputCostPer1MUsd: 15.0,
+    });
+    expect(MODEL_PRICING_USD_PER_1M["deepseek-v4.1-flash"]).toEqual({
+      inputCostPer1MUsd: 0.14,
+      outputCostPer1MUsd: 0.28,
+    });
+    const emptyHal = buildHalResults({ reports: [] });
+    expect(emptyHal.config.pass_threshold).toBe(0.8);
   });
 
   it("extracts token counts, dollar cost, and latency from OTLP GenAI spans", () => {

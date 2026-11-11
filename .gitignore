@@ -1,7 +1,9 @@
 # Dependencies
 node_modules/
 
-# SQLite runtime files
+# SQLite runtime & seed files
+services/*/data/*.db
+data/seed/*.db
 *.db-shm
 *.db-wal
 
@@ -10,6 +12,9 @@ dist/
 
 # Prisma generated client
 **/src/generated/
+
+# Generated Harbor task bundles
+eval/harbor/tasks/
 
 # Environment
 .env
@@ -25,3 +30,6 @@ experiments/
 # Python cache
 __pycache__/
 *.pyc
+
+# Replay bundles live in GCS (gs://btvaroska/insurance-agency/results/<version>/artifacts/); hashes are in replay-manifest.json
+eval/results/*/artifacts/

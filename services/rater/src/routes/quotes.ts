@@ -9,7 +9,7 @@ import {
   throwIfErrors,
   validateBindingAuthority,
   validateStateMinimums,
-  INTERNAL_REQUEST_HEADERS,
+  getInternalRequestHeaders,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -219,6 +219,8 @@ quotesRouter.post(
 
     // Build risk_data JSON
     const riskData: Record<string, unknown> = {
+      state: body.client.address.state,
+      address: body.client.address,
       requested_coverages: body.requested_coverages,
     };
     if (body.drivers) riskData.drivers = body.drivers;
@@ -465,45 +467,113 @@ quotesRouter.post(
     }
 
     if (eoRules.length > 0) {
+      // Statutory minimum auto liability limits cannot be waived by manager escalation
+      const stateRule = eoRules.find((r) => r.rule === "state_minimum_violation");
+      if (stateRule) {
+        return c.json(
+          {
+            error: "E&O_RULES_TRIGGERED",
+            error_code: "E_EO_STATE_MINIMUM_VIOLATION",
+            message: stateRule.message,
+            details: [
+              {
+                field: "coverages",
+                message: stateRule.message,
+                code: "E_EO_STATE_MINIMUM_VIOLATION",
+              },
+            ],
+            eo_rules: eoRules,
+          },
+          422,
+        );
+      }
+
       const escalationId = body.escalation_id;
+      const primaryCode =
+        eoRules[0]?.error_code ?? "E_EO_PREMIUM_THRESHOLD_EXCEEDED";
       if (!escalationId) {
         return c.json(
           {
             error: "E&O_RULES_TRIGGERED",
-            message: "This bind request triggers E&O rules that require manager escalation.",
+            error_code: primaryCode,
+            message:
+              "This bind request triggers E&O rules that require manager escalation.",
+            details: eoRules.map((r) => ({
+              field:
+                r.rule === "premium_threshold" ? "premium_annual" : "coverages",
+              message: r.message,
+              code: r.error_code ?? primaryCode,
+            })),
             eo_rules: eoRules,
           },
-          409,
+          422,
         );
       }
 
-      // Verify escalation approval via AMS
-      const amsBase = process.env.AMS_BASE_URL ?? "http://localhost:3000";
+      // Verify escalation approval & strict client/reason scope via AMS
+      const amsBase = (
+        process.env.AMS_BASE_URL ||
+        process.env.AMS_URL ||
+        "http://localhost:3000"
+      ).replace(/\/+$/, "");
       const authHeaderValue = c.req.header("Authorization") ?? "";
-      const escRes = await fetch(`${amsBase}/v1/escalations/${escalationId}`, {
-        headers: { Authorization: authHeaderValue, ...INTERNAL_REQUEST_HEADERS },
-      });
+      const escRes = await fetch(
+        `${amsBase}/v1/escalations/${encodeURIComponent(String(escalationId))}`,
+        {
+          headers: {
+            Authorization: authHeaderValue,
+            ...getInternalRequestHeaders(),
+          },
+        },
+      );
 
       if (!escRes.ok) {
+        const verifyMsg = `Could not verify escalation ${escalationId}: ${escRes.status}`;
         return c.json(
           {
             error: "ESCALATION_VERIFICATION_FAILED",
-            message: `Could not verify escalation ${escalationId}: ${escRes.status}`,
+            error_code: primaryCode,
+            message: verifyMsg,
+            details: [
+              {
+                field: "escalation_id",
+                message: verifyMsg,
+                code: primaryCode,
+              },
+            ],
             eo_rules: eoRules,
           },
-          409,
+          422,
         );
       }
 
       const escData = await escRes.json();
-      if (escData.status !== "approved") {
+      if (
+        escData.status !== "approved" ||
+        escData.client_id !== quoteRequest?.client_id ||
+        escData.reason !== "premium_threshold"
+      ) {
+        const reasonMsg =
+          escData.status !== "approved"
+            ? `Escalation ${escalationId} has status '${escData.status}', but 'approved' is required.`
+            : escData.client_id !== quoteRequest?.client_id
+              ? `Escalation ${escalationId} belongs to client '${escData.client_id}', not '${quoteRequest?.client_id}'.`
+              : `Escalation ${escalationId} has reason '${escData.reason}', but 'premium_threshold' is required.`;
         return c.json(
           {
             error: "ESCALATION_NOT_APPROVED",
-            message: `Escalation ${escalationId} has status '${escData.status}', but 'approved' is required.`,
+            error_code: primaryCode,
+            message: reasonMsg,
+            details: [
+              {
+                field: "escalation_id",
+                message: reasonMsg,
+                code: primaryCode,
+              },
+            ],
             eo_rules: eoRules,
           },
-          409,
+          422,
         );
       }
     }

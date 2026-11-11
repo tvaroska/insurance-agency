@@ -1,7 +1,6 @@
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -12,7 +11,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -35,50 +33,29 @@ beforeAll(() => {
   createTables(testSqlite);
 
   // Seed carriers for quote request tests
-  testDb
-    .insert(schema.carriers)
-    .values(
-      makeCarrier({
+  insertSqliteRow(testSqlite, "carriers", makeCarrier({
         carrier_code: "CSTL",
         carrier_name: "Coastal Star",
         states: JSON.stringify(["IL", "IN", "OH"]),
         policy_types: JSON.stringify(["personal_auto", "homeowners"]),
-      }),
-    )
-    .run();
-  testDb
-    .insert(schema.carriers)
-    .values(
-      makeCarrier({
+      }),);
+  insertSqliteRow(testSqlite, "carriers", makeCarrier({
         carrier_code: "SMIT",
         carrier_name: "Summit",
         states: JSON.stringify(["IL", "NY", "CA"]),
         policy_types: JSON.stringify(["personal_auto", "homeowners", "bop"]),
-      }),
-    )
-    .run();
+      }),);
 
   // Seed existing quote request + quotes for results/bind tests
-  testDb
-    .insert(schema.quoteRequests)
-    .values(makeQuoteRequest({ request_id: "QR-001", status: "completed" }))
-    .run();
+  insertSqliteRow(testSqlite, "quote_requests", makeQuoteRequest({ request_id: "QR-001", status: "completed" }));
 
-  testDb
-    .insert(schema.carrierQuotes)
-    .values(
-      makeCarrierQuote({
+  insertSqliteRow(testSqlite, "carrier_quotes", makeCarrierQuote({
         quote_id: "QT-QUOTED",
         request_id: "QR-001",
         carrier_code: "CSTL",
         status: "quoted",
-      }),
-    )
-    .run();
-  testDb
-    .insert(schema.carrierQuotes)
-    .values(
-      makeCarrierQuote({
+      }),);
+  insertSqliteRow(testSqlite, "carrier_quotes", makeCarrierQuote({
         quote_id: "QT-DECLINED",
         request_id: "QR-001",
         carrier_code: "SMIT",
@@ -86,22 +63,15 @@ beforeAll(() => {
         premium_annual: null,
         premium_monthly: null,
         decline_reason: "Insufficient driving history",
-      }),
-    )
-    .run();
-  testDb
-    .insert(schema.carrierQuotes)
-    .values(
-      makeCarrierQuote({
+      }),);
+  insertSqliteRow(testSqlite, "carrier_quotes", makeCarrierQuote({
         quote_id: "QT-BOUND",
         request_id: "QR-001",
         carrier_code: "ERIE",
         carrier_name: "Erie Basin Mutual",
         status: "bound",
         bound_at: new Date().toISOString(),
-      }),
-    )
-    .run();
+      }),);
 });
 
 const validQuoteBody = {

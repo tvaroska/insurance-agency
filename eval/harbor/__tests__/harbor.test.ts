@@ -43,7 +43,7 @@ describe("Harbor / Terminal-Bench 2.0 Exporter (S2-INTOP-1)", () => {
     expect(yaml).toContain("POST http://localhost:3000/oauth/token");
   });
 
-  it("renders test_outputs.py that delegates grading to bun eval/score.ts", () => {
+  it("renders test_outputs.py that collects service traces and delegates grading to bun eval/score.ts", () => {
     const manifest = buildHarborManifest();
     const task19 = manifest.tasks["19-realistic-natural"];
     const py = renderTestOutputsPy(task19);
@@ -51,15 +51,23 @@ describe("Harbor / Terminal-Bench 2.0 Exporter (S2-INTOP-1)", () => {
     expect(py).toContain('SCENARIO_ID = "19"');
     expect(py).toContain('SEED_VARIANT = "realistic"');
     expect(py).toContain('CASE_ID = "realistic-natural"');
+    expect(py).toContain('"eval/collect-trace.ts"');
     expect(py).toContain('"eval/score.ts"');
+    expect(py).toContain('"--snapshot-before"');
+    expect(py).toContain('"--snapshot-after"');
+    expect(py).toContain('"0.80"');
+    expect(py).not.toContain("otlp-scenario01.json");
     expect(py).toContain("def test_eo_compliance_and_score()");
   });
 
-  it("renders shared docker-compose.harbor.yaml referencing all 8 services", () => {
+  it("renders shared docker-compose.harbor.yaml with MODALITY_MODE=strict and without mounting repo answer keys", () => {
     const compose = renderHarborDockerCompose();
     expect(compose).toContain("include:");
     expect(compose).toContain("../../docker-compose.yml");
     expect(compose).toContain("harbor-agent:");
+    expect(compose).toContain("MODALITY_MODE=${MODALITY_MODE:-strict}");
+    expect(compose).toContain("../../specs:/workspace/specs:ro");
+    expect(compose).not.toContain("../../:/workspace");
     expect(compose).toContain("gemini-3.8-flash");
     for (const svc of [
       "ams",

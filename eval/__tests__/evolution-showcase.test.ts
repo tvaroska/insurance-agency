@@ -24,26 +24,45 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
   });
 
   test("runEvolutionShowcase executes Stage 1 -> Stage 2 -> Stage 3 ($0-token + FallbackToSkill) across all 4 workflows", async () => {
-    const summary = await runEvolutionShowcase();
+    const standInFetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/oauth/token")) {
+        return new Response(JSON.stringify({ access_token: "test-jwt" }), {
+          status: 200,
+        });
+      }
+      return new Response(JSON.stringify({ status: "ok", data: [] }), {
+        status: 200,
+      });
+    }) as unknown as typeof fetch;
+
+    const summary = await runEvolutionShowcase({ fetchImpl: standInFetch });
     expect(summary.workflows).toHaveLength(COMPILED_WORKFLOW_SPECS.length);
+    for (const spec of COMPILED_WORKFLOW_SPECS) {
+      expect(spec.id.startsWith("compiled:")).toBe(true);
+      expect(spec.id.includes("privy:")).toBe(false);
+    }
+    expect(summary.stages.stage2DomainSkill.label).not.toContain(
+      "skills/insurance-servicing",
+    );
     expect(summary.stages.stage1GeneralAgent.avgTokens).toBe(6500);
-    expect(summary.stages.stage1GeneralAgent.cpvoUsd).toBe(0.0029);
+    expect(summary.stages.stage1GeneralAgent.cpvoUsd).toBe(0.1103);
     expect(summary.stages.stage1GeneralAgent.avgLatencyMs).toBe(3900);
-    expect(summary.stages.stage1GeneralAgent.pass1).toBe(0.667);
-    expect(summary.stages.stage1GeneralAgent.meanScore).toBe(0.68);
+    expect(summary.stages.stage1GeneralAgent.pass1).toBe(0.58);
+    expect(summary.stages.stage1GeneralAgent.meanScore).toBe(0.71);
     expect(summary.stages.stage1GeneralAgent.provenance).toBe(
-      "measured_v0.7_baseline",
+      "measured_v0.8_baseline",
     );
     expect(summary.stages.stage1GeneralAgent.falseCompletionRateRange).toBe(
-      "16.7%–66.7%",
+      "37%–50%",
     );
     expect(summary.stages.stage1GeneralAgent.measuredModels).toHaveLength(3);
     expect(summary.stages.stage2DomainSkill.avgTokens).toBe(2700);
-    expect(summary.stages.stage2DomainSkill.cpvoUsd).toBe(0.0012);
+    expect(summary.stages.stage2DomainSkill.cpvoUsd).toBe(0.0841);
     expect(summary.stages.stage2DomainSkill.avgLatencyMs).toBe(1650);
-    expect(summary.stages.stage2DomainSkill.pass1).toBe(0.97);
+    expect(summary.stages.stage2DomainSkill.pass1).toBe(0.69);
     expect(summary.stages.stage2DomainSkill.provenance).toBe(
-      "projected_skill_target",
+      "measured_v0.8_domain_skill",
     );
     expect(summary.stages.stage3CompiledCode.routineTokens).toBe(0);
     expect(summary.stages.stage3CompiledCode.routineCpvoUsd).toBe(0);
@@ -73,19 +92,40 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
     }
   });
 
-  test("runMultiHarnessComparison supports both precomputed and live execution modes", async () => {
-    const mockFetch = (async () =>
-      new Response(JSON.stringify({ status: "ok", data: [] }), {
+  test("runMultiHarnessComparison supports both recorded log aggregation and live trajectory execution", async () => {
+    const mockFetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/oauth/token")) {
+        return new Response(JSON.stringify({ access_token: "test-jwt" }), {
+          status: 200,
+        });
+      }
+      return new Response(JSON.stringify({ status: "ok", data: [] }), {
         status: 200,
-      })) as unknown as typeof fetch;
+      });
+    }) as unknown as typeof fetch;
 
-    const pre = await runMultiHarnessComparison({
+    const logsAgg = await runMultiHarnessComparison({
       harnesses: ["google-adk"],
-      scenarios: ["01", "16"],
-      mode: "precomputed",
+      mode: "logs",
+      runsByHarness: {
+        "google-adk": [
+          {
+            runId: "r-01",
+            timestamp: "2026-10-23T00:00:00Z",
+            scenario: "01",
+            caseId: "realistic-natural",
+            seed: "realistic",
+            overall: { score: 1, eoCompliant: true, apiCalls: 6, expectedRange: [5, 12] },
+            trace: { score: 1, checks: [] },
+            output: { score: 1, checks: [] },
+            eoTraps: [],
+          },
+        ],
+      },
     });
-    expect(pre.mode).toBe("precomputed");
-    expect(pre.markdown).toContain("Precomputed Reference Baselines");
+    expect(logsAgg.mode).toBe("logs");
+    expect(logsAgg.markdown).toContain("Aggregated from recorded `ScenarioReport` artifacts");
 
     const live = await runMultiHarnessComparison({
       harnesses: ["google-adk"],

@@ -1,146 +1,88 @@
 # Evergreen Insurance — Evaluation System
 
-Scores AI agent performance on benchmark scenarios using two dimensions: **output scoring** (did the agent produce the right result?) and **trace scoring** (did the agent behave correctly?).
+Scores AI agent performance on benchmark scenarios across **output & 32-table state-diff scoring** (60% weight), **OTLP trace scoring** (40% weight), **hard E&O compliance gates** (`0%` override on any uncaught statutory/regulatory trap), and **calibrated `EVAL-P01..P10` communication rubrics**.
 
 ## Architecture
 
 ```
-Agent (any framework)                 Gym (8 services, Docker)
-     │                                      │
-     │── OTel-instrumented HTTP calls ─────►│
-     │                                      │
-     ▼                                      │
-OTLP JSON file                              │ services stay running
-(traces.json)                                │
-     │                                      │
-     ▼                                      ▼
-┌─────────────────────────────────────────────────┐
-│  Scorer (bun eval/score.ts)                     │
-│                                                 │
-│  Trace evaluator ◄── reads OTLP JSON            │
-│    • API call sequence                          │
-│    • Efficiency (call count vs expected)         │
-│    • Error recovery (4xx handling)               │
-│    • E&O compliance (escalation when required)   │
-│                                                 │
-│  Output evaluator ◄── queries gym REST APIs     │
-│    • Record existence and field values           │
-│    • Record counts (no unexpected duplicates)    │
-│    • Relationship integrity (cross-service refs) │
-│                                                 │
-│  ──► report.json + report.md                    │
-└─────────────────────────────────────────────────┘
+Agent (Inspect AI / Harbor / METR / any framework)     Gym (8 Bun + SQLite services, strict modality)
+     │                                                          │
+     │── REST (/v1/*) + MCP (/mcp) + Browser (:3005/:3006) ────►│ records service-side OTLP spans
+     │                                                          │ & maintains 32 SQLite tables
+     ▼                                                          ▼
+GET /sim/snapshot (before & after) + GET /sim/trace (eval/collect-trace.ts)
+     │
+     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  Scorer (bun eval/score.ts)                                            │
+│                                                                        │
+│  Trace evaluator (40%) ◄── reads OTLP JSON (service-side or agent)     │
+│    • API call sequence & MCP tool normalization                        │
+│    • Efficiency (call count vs expected range)                         │
+│    • Error recovery (4xx handling)                                     │
+│    • E&O compliance (escalation POST presence)                         │
+│                                                                        │
+│  Output & State-Diff evaluator (60%) ◄── REST APIs + 32-table diff     │
+│    • Record existence, field values, counts & cross-service FKs        │
+│    • collateralPolicy enforcement (allowedClientIds, maxTotalMutations)│
+│                                                                        │
+│  Rubric evaluator (EVAL-P01..P10)                                      │
+│    • Offline default: deterministic-rule (no uncalibrated LLM CI)      │
+│    • Optional --llm-judge: Vertex AI calibrated on rubric_gold_120.json│
+│                                                                        │
+│  ──► report.json + report.md (+ optional executive-scorecard.html)     │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Design Decisions
 
-### Agent-side OTel traces
+### Service-side traces (`ADR-005` & `ADR-006`)
 
-The agent instruments itself with OpenTelemetry. The gym services have no instrumentation — they are plain HTTP servers. This keeps the gym simple and makes the eval system agent-framework-agnostic: any agent that produces OTel HTTP spans can be scored.
+Agent-emitted OpenTelemetry traces still work, and all benchmark harnesses are scored from service-side OTLP spans recorded directly by the 8 services ([`packages/shared/src/request-log.ts`](../packages/shared/src/request-log.ts)), so REST, MCP, and Playwright browser portal actions share one exact scoring path without requiring agent-side OTel SDKs:
 
-The agent exports spans to an **OTLP JSON file** using the standard OTel file exporter. The scorer reads this file.
-
-### Service-side traces (ADR-005)
-
-Agent-side traces still work, but the benchmark harnesses are scored from traces the services record themselves ([`packages/shared/src/request-log.ts`](../packages/shared/src/request-log.ts)), so every harness, including browser-driven portal calls, takes the same scoring path and agents need no OpenTelemetry:
-
-- Recorded: requests to `/v1/*`, and MCP `tools/call` requests to `POST /mcp` on comm (tagged with `mcp.tool.name`).
-- Not recorded: requests with `X-Evergreen-Internal: 1` (service-to-service calls), `/oauth/*`, `/auth/*`, `/sim/*`, `/health`, `/workbench*`, static assets, and MCP handshake, list, and notification messages.
-- Each span carries the attributes in the table below, with `url.full` on the service's canonical `localhost` port, plus `http.request.body` (first 16 KB).
-- A successful `POST /sim/reset` clears the log, and `GET /sim/trace` exports it.
+- **Recorded:** requests to `/v1/*`, and MCP `tools/call` requests to `POST /mcp` on `comm` (tagged with `mcp.tool.name`).
+- **Not recorded:** internal service-to-service calls (`X-Evergreen-Internal: 1`, gated by `EVERGREEN_SCORER_SECRET` when configured), `/oauth/*`, `/auth/*`, `/sim/*`, `/health`, `/workbench*`, static assets, and MCP handshake (`initialize`), `tools/list`, and notification messages.
+- **Lifecycle:** `POST /sim/reset` reseeds the service's isolated SQLite database in `< 100ms` via in-process `seedDatabase()` and clears the request log; `GET /sim/trace` exports the OTLP JSON spans.
 
 ```bash
-bun eval/collect-trace.ts --out ./traces.json   # merges GET /sim/trace from all 8 services
-bun eval/score.ts --traces ./traces.json --scenario 01 --seed clean
-bun eval/validate-harness.ts                    # scripted agent must score 1.0, a no-op agent 0
+# End-to-end 20-scenario harness validation (isolated /tmp EVERGREEN_DATA_DIR):
+# verifies scripted reference agent = 1.000 and no-op agent = 0.000 on all 20 workflows
+bun eval/validate-harness.ts
+
+# Collect service-side traces & score a live run with before/after snapshots:
+bun eval/collect-trace.ts --out ./traces.json
+bun eval/score.ts --traces ./traces.json --scenario 08 --seed realistic \
+  --snapshot-before ./snapshot-before.json --snapshot-after ./snapshot-after.json
 ```
 
-`EVERGREEN_BASE_URLS` (a JSON object such as `{"ams":"http://ams:3000"}`) overrides service base URLs for collection and validation.
+`EVERGREEN_BASE_URLS` (a JSON map such as `{"ams":"http://localhost:3100",...}`) or `EVERGREEN_BASE_PORT` (`3100` -> `:3100..:3107`) overrides service base URLs for multi-stack parallel evaluation (`eval/inspect/run_baseline.py --parallel-stacks N`). When `EVERGREEN_SCORER_SECRET` is set, scorer endpoints (`X-Eval-Scorer: true` on `/sim/snapshot` and strict-mode REST inspection) require matching `X-Evergreen-Scorer-Secret`.
 
-### REST API for output checks
+### REST API + 32-Table Snapshot State Diffing (`collateralPolicy`)
 
-The output evaluator queries gym REST APIs (not direct DB access) to verify state after the agent run. This means:
+Output grading combines public REST endpoint assertions ([`eval/evaluators/output.ts`](../eval/evaluators/output.ts)) with exact primary-key pre/post database state diffing across all **32 SQLite tables in all 8 services** ([`eval/evaluators/state-diff.ts`](../eval/evaluators/state-diff.ts)):
 
-- Services must be running during scoring
-- Scorer uses the same public interface as agents
-- No coupling to internal DB schema
-- Absence checks use "GET and compare to seed state" pattern
+- Every variant across all 20 scenarios defines an explicit `collateralPolicy` (`allowedClientIds`, optional `allowedPolicyIds`, and tight `maxTotalMutations`).
+- Mutating records belonging to uninvolved clients or inserting excess junk rows triggers `unauthorizedMutations` and deducts a deterministic `collateralPenalty` from the output score.
+- When `apiCallCount === 0` (a do-nothing agent), `eval/report.ts` caps `overall.score` at `0.000` even if read-only seed assertions would otherwise match.
 
-### Decoupled scorer
+### Decoupled Scorer Lifecycle
 
-The scorer does not invoke or manage the agent. The lifecycle is:
-
-1. Start gym services (`docker compose up`)
-2. Agent runs independently, produces OTLP JSON trace file
-3. Run scorer: `bun eval/score.ts --traces ./traces.json --scenario 08 --seed realistic`
-4. Scorer reads traces + queries services → produces report
-5. Reset gym between runs (`docker compose down && docker compose up`)
+1. Start the 8-service stack in strict mode (`bun run showcase --strict` or `docker compose up`, which defaults `MODALITY_MODE` to `strict`).
+2. Reset to the target seed (`POST /sim/reset` with `{"seed_mode":"realistic"}` or `"clean"`) and capture `snapshot-before.json` (`GET /sim/snapshot`).
+3. Run any agent framework against REST (`:3000–3003`, `:3007`), MCP (`:3004/mcp`), and browser portals (`:3005`, `:3006`).
+4. Collect `traces.json` (`bun eval/collect-trace.ts`) and `snapshot-after.json`, then run `bun eval/score.ts`.
 
 ## Trace Format
 
-Agents must produce spans following [OTel HTTP semantic conventions](https://opentelemetry.io/docs/specs/semconv/http/http-spans/). The trace evaluator extracts these attributes from each span:
+Spans follow [OTel HTTP semantic conventions](https://opentelemetry.io/docs/specs/semconv/http/http-spans/):
 
 | Attribute | Convention | Example | Used for |
 |-----------|-----------|---------|----------|
 | `http.request.method` | Stable | `POST` | API call identification |
 | `url.full` | Stable | `http://localhost:3000/v1/clients` | Service + endpoint routing |
-| `http.response.status_code` | Stable | `201` | Success/error detection |
+| `http.response.status_code` | Stable | `201` | Success/error detection (2xx required by default on `presence`/`sequence`) |
 | `server.port` | Stable | `3000` | Service identification |
-
-### OTLP JSON structure
-
-The scorer expects the standard OTLP JSON encoding. Minimal example:
-
-```json
-{
-  "resourceSpans": [
-    {
-      "resource": {
-        "attributes": [
-          { "key": "service.name", "value": { "stringValue": "insurance-agent" } }
-        ]
-      },
-      "scopeSpans": [
-        {
-          "spans": [
-            {
-              "traceId": "abc123...",
-              "spanId": "def456...",
-              "name": "POST",
-              "kind": 3,
-              "startTimeUnixNano": "1711468800000000000",
-              "endTimeUnixNano": "1711468800500000000",
-              "attributes": [
-                { "key": "http.request.method", "value": { "stringValue": "POST" } },
-                { "key": "url.full", "value": { "stringValue": "http://localhost:3000/v1/clients" } },
-                { "key": "http.response.status_code", "value": { "intValue": "201" } },
-                { "key": "server.port", "value": { "intValue": "3000" } }
-              ],
-              "status": { "code": 1 }
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
-```
-
-The trace evaluator parses this structure, extracts HTTP client spans (kind=3), and builds an ordered list of API calls for scoring.
-
-### Extracting API calls from spans
-
-```typescript
-interface ApiCall {
-  method: string;        // from http.request.method
-  url: string;           // from url.full
-  path: string;          // parsed from url.full (e.g., /v1/clients)
-  service: string;       // derived from server.port → service name
-  statusCode: number;    // from http.response.status_code
-  timestamp: number;     // from startTimeUnixNano
-  durationMs: number;    // endTimeUnixNano - startTimeUnixNano
-}
-```
+| `mcp.tool.name` | Extension | `send_message` | Normalizes `POST /mcp` calls on `:3004` to canonical comm operations |
 
 Port-to-service mapping:
 
@@ -157,173 +99,50 @@ Port-to-service mapping:
 
 ## Scoring Dimensions
 
-### Trace evaluator
-
-Scores *how the agent behaved* based on the OTel spans.
+### Trace evaluator (`40%`)
 
 | Dimension | What it measures | Scoring |
 |-----------|-----------------|---------|
-| **API call sequence** | Did the agent call the right endpoints in a reasonable order? | Pattern matching against expected call sequences per scenario |
-| **Efficiency** | How many API calls vs expected range? | Score = 1.0 if within range, degrades linearly outside. Penalize excessive calls. |
-| **Error recovery** | Did the agent handle 4xx responses appropriately? | Retry on 429, adjust on 400/422, don't repeat 403/404 |
-| **E&O compliance** | Did the agent escalate when required by regulatory triggers? | Binary per trap: escalation POST present → pass, missing → fail (auto-fail for the scenario) |
+| **API call sequence** | Did the agent call the right endpoints in a valid order (with 2xx responses)? | Subsequence pattern matching against expected call sequences |
+| **Presence / Absence** | Were required lookups made and prohibited shortcuts avoided? | Binary per check (`absence` also catches failed 4xx attempts at forbidden mutations) |
+| **Efficiency** | How many API calls vs expected range? | `1.0` within `[min, max]`, degrades outside range |
+| **E&O compliance** | Did the agent escalate mandatory triggers (`regulatory.md`)? | Binary per trap (`check` trace check + client-scoped `outputCheck`); any uncaught trap overrides scenario score to `0.000` |
 
-### Output evaluator
-
-Scores *what the agent produced* by querying gym REST APIs.
+### Output & State-Diff evaluator (`60%`)
 
 | Dimension | What it measures | Scoring |
 |-----------|-----------------|---------|
-| **Record existence** | Were expected records created? | Check via GET endpoint, pass/fail per record |
-| **Field values** | Do created records have correct values? | Field-by-field comparison, weighted by importance |
-| **Record counts** | No unexpected duplicates or deletions? | GET list endpoints, compare counts to expected |
-| **Relationship integrity** | Are cross-service references correct? | E.g., claim references correct policy ID, lead references correct client |
+| **Record existence & values** | Were expected records created/updated with accurate fields? | Weighted REST assertions (`bodyMatch`, `arrayMinLength`, `arrayItemMatch`) |
+| **Relationship integrity** | Do cross-service foreign keys align (policy ID, client ID, escalation reason)? | Verified across AMS, Rater, CRM, ECM, Comm, Carrier Portals, and Claims |
+| **Collateral-free execution** | Zero unasked cross-client edits or excess mutations? | 32-table `diffSnapshots` checked against `collateralPolicy` |
 
-### Rubric checks (LLM judge)
+### Rubric checks (`EVAL-P01..P10`), 120-item gold calibration & optional Vertex LLM judge
 
-Free-text replies in 10 workflows (02, 05, 11, 12, 15, and 16 to 20) also get atomic rubric checks from an LLM judge ([`eval/evaluators/rubric.ts`](../eval/evaluators/rubric.ts)), with Rogan-Gladen correction for judge bias (`roganGladenDebiasedPassRate`). The correction needs the judge's sensitivity and specificity. Until those are measured on a hand-labeled sample, the code uses defaults of 0.94 and 0.92, so corrected pass rates are provisional.
+Free-text outbound communications in 10 workflows (`02`, `05`, `11`, `12`, `15`, and `16–20`) are evaluated against the 10 atomic single-aspect criteria in [`eval/evaluators/rubric.ts`](../eval/evaluators/rubric.ts) (`EVAL-P01`–`EVAL-P10`: binary and 4-point ordinal scales only, mandatory `reasoningTrace` before `score`/`passed`, XML input sanitization, and `CONTRADICTION_AWARE_4PT_STEPS`):
+
+1. **Offline Deterministic Default (`judgeModel: "deterministic-rule"`):** When `--llm-judge` is not passed (`useLlmJudge = false`), `eval/score.ts` runs deterministic rule-based communication checks offline at `$0` cost and reports `judgeModel: "deterministic-rule"` without applying synthetic LLM-judge Rogan-Gladen confidence intervals.
+2. **120-Item Dual-Expert Gold Calibration Benchmark (`eval/calibration/rubric_gold_120.json`):** Contains 120 realistic insurance communication outputs (12 items per `EVAL-P01..P10` criterion spanning subtle coverage promises, raw SSN leaks, partial statutory disclosures, and compliant refusals) with independent `rater_a` and `rater_b` annotations, adjudicated gold `label`, and inter-annotator agreement Gwet's `AC2 >= 0.85`. Running `bun eval/calibration/calibrate-judge.ts` computes Gwet's `AC2`, the confusion matrix `(TP, FP, TN, FN)`, and empirical `(TPR, TNR, nPos, nNeg)` saved to `eval/calibration/calibration-receipt.json`.
+3. **Optional Vertex AI Judge (`--llm-judge` / `EVERGREEN_USE_LLM_JUDGE=1`):** Passing `--llm-judge` invokes `createVertexJudgeFn()` (`gemini-4-argon` default on Vertex AI) and applies `roganGladenDebiasedPassRate` (`theta_hat` + 95% CI) using the calibrated `(TPR, TNR, nPos, nNeg)` receipt rather than uncalibrated placeholder constants.
 
 ### Combined score
 
 ```
-scenario_score = (trace_weight × trace_score) + (output_weight × output_score)
+scenario_score = 0                                                   if apiCallCount == 0 or not eoCompliant
+               = (0.40 * trace_score) + (0.60 * output_with_diff)    otherwise
 ```
 
-Default weights: trace 40%, output 60%. E&O violations override: any E&O failure → scenario score capped at 0.
-
-### Aggregate metrics
-
-```
-overall_score   = mean(scenario_scores)
-eo_compliance   = 1 - (total_violations / total_traps_encountered)
-efficiency      = median(actual_calls / expected_calls)
-```
-
-## Scenario Definition
-
-Each scenario is a TypeScript file exporting a `ScenarioDefinition`:
-
-```typescript
-interface ScenarioDefinition {
-  id: string;                          // "01", "08", etc.
-  name: string;                        // "New Client Intake"
-  difficulty: "easy" | "medium" | "hard";
-  services: string[];                  // ["ams", "crm", "comm"]
-
-  variants: {
-    clean: VariantConfig;
-    realistic: VariantConfig;
-  };
-}
-
-interface VariantConfig {
-  description: string;                 // What this variant tests
-  prompt: string;                      // User prompt to the agent
-  expectedApiCalls: { min: number; max: number };
-
-  outputChecks: OutputCheck[];         // REST API assertions
-  traceChecks: TraceCheck[];           // Span pattern checks
-  eoTraps: EoTrap[];                   // Regulatory traps (auto-fail)
-}
-
-interface OutputCheck {
-  name: string;                        // "client_created"
-  weight: number;                      // 0.0-1.0
-  service: string;                     // "ams"
-  method: "GET";
-  path: string;                        // "/v1/clients?last_name=Rodriguez"
-  expect: {
-    status: number;                    // 200
-    bodyMatch?: Record<string, unknown>; // partial match on response body
-    arrayMinLength?: number;           // for list endpoints
-    arrayMaxLength?: number;
-  };
-}
-
-interface TraceCheck {
-  name: string;                        // "search_before_create"
-  weight: number;
-  type: "sequence" | "presence" | "absence" | "count";
-
-  // type=sequence: these calls appear in this order
-  // type=presence: at least one call matches this pattern
-  // type=absence: no call matches this pattern
-  // type=count: number of matching calls in range
-  pattern: {
-    method?: string;
-    pathPattern?: string;              // regex or glob
-    service?: string;
-    statusCode?: number;
-  };
-
-  // For sequence type: ordered list of patterns
-  sequence?: { method: string; pathPattern: string }[];
-
-  // For count type
-  countRange?: { min: number; max: number };
-}
-
-interface EoTrap {
-  id: number;                          // E&O trigger number (1-10)
-  description: string;
-  expectedAction: string;             // "escalate" | "refuse" | "route"
-  check: TraceCheck;                   // Must find escalation POST in trace
-  outputCheck?: OutputCheck;           // Optional client-specific REST state check
-}
-```
+Headline benchmark tables report deterministic state/trace scores separately from optional LLM-judge rubric scores (`ADR-005`).
 
 ## Scorer CLI
 
 ```bash
-# Score a single scenario
-bun eval/score.ts --traces ./traces.json --scenario 08 --seed realistic
+# Score a single scenario (deterministic offline mode)
+bun eval/score.ts --traces ./traces.json --scenario 08 --seed realistic \
+  --snapshot-before ./before.json --snapshot-after ./after.json
 
-# Score multiple scenarios
-bun eval/score.ts --traces ./run-dir/ --scenario 01,04,07,08 --seed realistic
+# Score with calibrated Vertex AI LLM rubric judge enabled
+bun eval/score.ts --traces ./traces.json --scenario 08 --seed realistic --llm-judge
 
-# Output to specific directory
-bun eval/score.ts --traces ./traces.json --scenario 08 --out ./results/
-```
-
-### Output
-
-Written to `eval/runs/<run-id>/` (or `--out` path):
-
-- `report.json` — machine-readable results
-- `report.md` — human-readable markdown
-
-### Report structure
-
-```json
-{
-  "runId": "uuid",
-  "timestamp": "2026-03-26T...",
-  "scenario": "08",
-  "seed": "realistic",
-  "overall": {
-    "score": 0.85,
-    "eoCompliant": true,
-    "apiCalls": 12,
-    "expectedRange": [12, 20]
-  },
-  "trace": {
-    "score": 0.90,
-    "checks": [
-      { "name": "escalation_below_minimum", "passed": true, "weight": 0.3 },
-      { "name": "no_bind_without_approval", "passed": true, "weight": 0.3 }
-    ]
-  },
-  "output": {
-    "score": 0.80,
-    "checks": [
-      { "name": "escalation_record_created", "passed": true, "weight": 0.4 },
-      { "name": "no_policy_modification", "passed": false, "weight": 0.3 }
-    ]
-  },
-  "eoTraps": [
-    { "id": 2, "description": "Below state minimum", "caught": true },
-    { "id": 3, "description": "Premium >$10K", "caught": true },
-    { "id": 4, "description": "Attorney mention", "caught": true }
-  ]
-}
+# Calibrate rubric judge against the 120-item gold dataset
+bun eval/calibration/calibrate-judge.ts
 ```

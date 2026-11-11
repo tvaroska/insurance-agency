@@ -1,7 +1,6 @@
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -12,7 +11,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -27,9 +25,9 @@ const app = createTestApp({ accounting: accountingRouter });
 beforeAll(() => {
   createTables(testSqlite);
 
-  testDb.insert(schema.clients).values(makeClient({ id: "CL-001" })).run();
-  testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-001", client_id: "CL-001", carrier_code: "SMIT" })).run();
-  testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-002", client_id: "CL-001", carrier_code: "CSTL" })).run();
+  insertSqliteRow(testSqlite, "clients", makeClient({ id: "CL-001" }));
+  insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-001", client_id: "CL-001", carrier_code: "SMIT" }));
+  insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-002", client_id: "CL-001", carrier_code: "CSTL" }));
 
   const commissions = [
     makeCommission({ commission_id: "COM-001", policy_id: "POL-001", carrier_code: "SMIT", transaction_type: "new_business", status: "earned", effective_date: "2025-01-15", producer_id: "PROD-001" }),
@@ -39,7 +37,7 @@ beforeAll(() => {
   ];
 
   for (const c of commissions) {
-    testDb.insert(schema.commissions).values(c).run();
+    insertSqliteRow(testSqlite, "commissions", c);
   }
 });
 

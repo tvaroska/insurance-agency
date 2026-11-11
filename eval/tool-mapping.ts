@@ -27,7 +27,12 @@ function serviceFromUrl(url: string): string {
 
 export function loadToolMapping(specsDir = SPECS_DIR): ToolMapping {
   const mapping: ToolMapping = {};
-  const files = readdirSync(specsDir).filter((f) => f.endsWith(".yaml"));
+  const files = readdirSync(specsDir).filter(
+    (f) =>
+      f.endsWith(".yaml") &&
+      !f.endsWith(".rules.yaml") &&
+      !f.endsWith(".behavior.yaml"),
+  );
 
   for (const file of files) {
     const raw = readFileSync(join(specsDir, file), "utf-8");

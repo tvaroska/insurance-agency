@@ -16,7 +16,7 @@ Most public AI agent benchmarks fall into one of two extremes:
 
 **Evergreen Insurance API Gym** occupies the middle ground:
 - **Real Small-Business Operations:** Models a 5,000-policy independent insurance brokerage across 8 distinct operational systems (AMS, Rater, CRM, ECM, Comm Hub, Claims, and 2 Carrier Portals).
-- **True 3-Modality Hybrid Execution:** Tests **REST APIs** (5 services), **Model Context Protocol / MCP** (`comm` on `:3004`), and **Web UIs** (`carrier-summit` on `:3005`, `carrier-coastal` on `:3006`) inside a single lightweight Bun + SQLite/PostgreSQL Docker Compose stack (<2 GB RAM).
+- **True 3-Modality Hybrid Execution:** Tests **REST APIs** (5 services), **Model Context Protocol / MCP** (`comm` on `:3004`), and **Web UIs** (`carrier-summit` on `:3005`, `carrier-coastal` on `:3006`) inside a single lightweight Bun + isolated per-service SQLite stack (<2 GB RAM).
 - **5-Tier Prompt Framing:** Every scenario variant is tested across 5 prompt styles (`scripted`, `explicit`, `natural`, `vague`, `adversarial`) to separate instruction-following from autonomous planning and social-engineering resistance.
 - **Hard Regulatory Guardrails (E&O Traps) + Async Manager Loop:** Unlike soft reward rubrics, triggering any of the 10 Errors & Omissions (E&O) regulatory traps without escalating to the stateful Manager Persona engine (`services/ams/src/manager/rules.ts`) results in an automatic `0%` scenario score.
 - **Dirty-Data Hygiene:** Includes paired `clean` and `realistic` seed datasets (`data/seed-clean/` vs. `data/seed/`) with planted duplicates, below-minimum policies, lapsed coverage, unsigned ACORD forms, and carrier moratorium zones.
@@ -60,7 +60,7 @@ To evaluate both **models** and **harnesses** without writing custom adapter glu
 ### 3.4 OpenEnv (Meta PyTorch + Hugging Face) & Prime Intellect `verifiers` — *Sprint 3 Backlog (`S3-INTOP-3`)*
 - **Maintainer:** Meta PyTorch, Hugging Face (`openenv-hub`), and Prime Intellect (`verifiers` / ` Environments Hub`).
 - **How It Works:** Standardizes agentic environments around `reset()`, `step()`, and `state()` HTTP APIs (`vf.ToolEnv`) for online Reinforcement Learning (GRPO/RLOO via Hugging Face TRL and `prime-rl`).
-- **Best For:** **Fast-reset RL training loops.** Requires adding a lightweight gym control-plane API (`POST /sim/reset`, `GET /sim/snapshot`, `POST /sim/score`) so all 8 SQLite/Postgres databases can reset in `<100ms` without restarting Docker containers.
+- **Best For:** **Fast-reset RL training loops.** Uses Evergreen's gym control-plane API (`POST /sim/reset`, `GET /sim/snapshot`, `GET /sim/trace`) so all 8 isolated per-service SQLite databases reset in `<100ms` in-process without restarting containers (`ADR-006`).
 
 ### 3.5 Princeton HAL (`hal-harness`) — *Sprint 3 Backlog (`S3-INTOP-4`)*
 - **Maintainer:** Princeton NLP (Holistic Agent Leaderboard).

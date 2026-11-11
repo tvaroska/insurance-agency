@@ -19,5 +19,6 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Copy gym source
+# Copy gym source and generate Prisma clients
 COPY . .
+RUN bun install && bun run db:generate

@@ -1,7 +1,6 @@
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync, readFileSync } from "fs";
@@ -13,7 +12,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -44,7 +42,7 @@ beforeAll(() => {
     makeAdjuster({ adjuster_id: "ADJ-003", first_name: "David", last_name: "Okafor", specialty: "general", active: 0, max_open_claims: 30 }),
   ];
   for (const row of adjusterRows) {
-    testDb.insert(schema.adjusters).values(row).run();
+    insertSqliteRow(testSqlite, "adjusters", row);
   }
 
   // Seed claims
@@ -56,13 +54,11 @@ beforeAll(() => {
     makeClaim({ claim_id: "CLM-2026-000005", client_id: "CLI-005", policy_id: "POL-PA-2025-002250", claim_type: "theft", status: "denied", adjuster_id: "ADJ-001", loss_date: "2025-12-01", created_at: "2025-12-05T11:00:00Z" }),
   ];
   for (const row of claimRows) {
-    testDb.insert(schema.claims).values(row).run();
+    insertSqliteRow(testSqlite, "claims", row);
   }
 
   // Seed timeline events
-  testDb.insert(schema.claimTimeline).values(
-    makeTimelineEvent({ event_id: "EVT-001", claim_id: "CLM-2026-000001", event_type: "status_change", description: "Status changed to settled.", old_value: "reserved", new_value: "settled" }),
-  ).run();
+  insertSqliteRow(testSqlite, "claim_timeline", makeTimelineEvent({ event_id: "EVT-001", claim_id: "CLM-2026-000001", event_type: "status_change", description: "Status changed to settled.", old_value: "reserved", new_value: "settled" }),);
 });
 
 // ── Auth tests ──
@@ -683,16 +679,11 @@ describe("Formal Behavioral Contract (specs/claims.behavior.yaml)", () => {
         if (fromState === toState) continue;
         pairIndex += 1;
         const claimId = `CLM-FSM-${ String(pairIndex).padStart(3, "0") }`;
-        testDb
-          .insert(schema.claims)
-          .values(
-            makeClaim({
+        insertSqliteRow(testSqlite, "claims", makeClaim({
               claim_id: claimId,
               status: fromState,
               loss_date: "2026-01-10",
-            }),
-          )
-          .run();
+            }),);
 
         const res = await app.request(`/v1/claims/${claimId}`, {
           method: "PATCH",
@@ -831,5 +822,67 @@ describe("Formal Behavioral Contract (specs/claims.behavior.yaml)", () => {
       (e: { event_type: string }) => e.event_type,
     );
     expect(actualEventTypes).toEqual(workflow.steps[5].expect_timeline_events);
+  });
+});
+
+// ── FNOL field normalization, estimated_loss & adjuster_id ──
+
+describe("POST /v1/claims/fnol - normalization and optional fields", () => {
+  async function postFnol(body: Record<string, unknown>) {
+    return app.request("/v1/claims/fnol", {
+      method: "POST",
+      headers: {
+        ...(await authHeader(["claims:write"])),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  test("accepts loss_type/description aliases like POST /v1/claims", async () => {
+    const res = await postFnol({
+      policy_id: "POL-PA-2025-001847",
+      client_id: "CLI-001",
+      loss_type: "theft",
+      loss_date: "2026-01-15",
+      description: "Catalytic converter stolen.",
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.claim_type).toBe("theft");
+    expect(body.loss_description).toBe("Catalytic converter stolen.");
+  });
+
+  test("persists estimated_loss as reserve_amount and an active adjuster_id while staying reported", async () => {
+    const res = await postFnol({
+      policy_id: "POL-PA-2025-001847",
+      client_id: "CLI-001",
+      claim_type: "auto_collision",
+      loss_date: "2026-01-15",
+      loss_description: "Hail damage.",
+      estimated_loss: 4200,
+      adjuster_id: "ADJ-001",
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.status).toBe("reported");
+    expect(body.reserve_amount).toBe(4200);
+    expect(body.adjuster_id).toBe("ADJ-001");
+    const stored = await testPrisma.claim.findUnique({ where: { claim_id: body.claim_id } });
+    expect(stored?.reserve_amount).toBe(4200);
+    expect(stored?.adjuster_id).toBe("ADJ-001");
+  });
+
+  test("rejects negative estimated_loss, unknown adjuster and inactive adjuster", async () => {
+    const base = {
+      policy_id: "POL-PA-2025-001847",
+      client_id: "CLI-001",
+      claim_type: "auto_collision",
+      loss_date: "2026-01-15",
+      loss_description: "Test.",
+    };
+    expect((await postFnol({ ...base, estimated_loss: -1 })).status).toBe(400);
+    expect((await postFnol({ ...base, adjuster_id: "ADJ-NOPE" })).status).toBe(404);
+    expect((await postFnol({ ...base, adjuster_id: "ADJ-003" })).status).toBe(400);
   });
 });

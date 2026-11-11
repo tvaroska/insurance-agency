@@ -1,6 +1,12 @@
-import { INTERNAL_REQUEST_HEADERS } from "@evergreen/shared";
+import { getInternalRequestHeaders } from "@evergreen/shared";
 
-const CLAIMS_BASE_URL = process.env.CLAIMS_URL ?? "http://localhost:3007";
+function getClaimsBaseUrl(): string {
+  return (
+    process.env.CLAIMS_BASE_URL ||
+    process.env.CLAIMS_URL ||
+    "http://localhost:3007"
+  ).replace(/\/+$/, "");
+}
 
 export interface ClaimDetail {
   claim_id: string;
@@ -25,8 +31,8 @@ export interface ClaimDetail {
 }
 
 export async function fetchClaim(claimId: string, authToken: string): Promise<ClaimDetail> {
-  const res = await fetch(`${CLAIMS_BASE_URL}/v1/claims/${claimId}`, {
-    headers: { Authorization: authToken, ...INTERNAL_REQUEST_HEADERS },
+  const res = await fetch(`${getClaimsBaseUrl()}/v1/claims/${claimId}`, {
+    headers: { Authorization: authToken, ...getInternalRequestHeaders() },
   });
   if (!res.ok) {
     throw Object.assign(new Error(`Claims lookup failed`), { status: res.status });

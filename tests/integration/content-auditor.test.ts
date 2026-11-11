@@ -2,16 +2,15 @@
  * Integration Test: The Content Auditor Agent
  *
  * Agent monitors new leads and sends appropriate Welcome Kits.
- * Flow: CRM → AMS → ECM → Comm → CRM → ECM
+ * Flow: CRM → AMS → ECM → Comm (HTTP /mcp JSON-RPC) → CRM → ECM
  */
 import { describe, expect, test, beforeAll } from "bun:test";
 import {
   amsApp,
   crmApp,
   ecmApp,
-  comm,
   authHeader,
-  handleSendMessage,
+  callCommMcpTool,
   seedAmsClient,
   seedAmsPolicy,
   seedCrmLead,
@@ -22,9 +21,8 @@ import {
 const clientId = "CLI-018";
 let leadId: string;
 
-beforeAll(() => {
-  // Seed: new client with homeowners policy
-  seedAmsClient({
+beforeAll(async () => {
+  await seedAmsClient({
     id: clientId,
     first_name: "Lisa",
     last_name: "Martinez",
@@ -32,7 +30,7 @@ beforeAll(() => {
     address_state: "OH",
   });
 
-  seedAmsPolicy({
+  await seedAmsPolicy({
     policy_id: "POL-HOME-018",
     client_id: clientId,
     carrier_code: "TRAV",
@@ -40,8 +38,7 @@ beforeAll(() => {
     premium_current: 1850.0,
   });
 
-  // Seed new lead
-  const lead = seedCrmLead({
+  const lead = await seedCrmLead({
     lead_id: "lead_ca_018",
     client_id: clientId,
     first_name: "Lisa",
@@ -52,8 +49,7 @@ beforeAll(() => {
   });
   leadId = lead.lead_id;
 
-  // Seed welcome kit marketing asset
-  seedEcmAsset({
+  await seedEcmAsset({
     asset_id: "asset_wk_homeowners",
     name: "Homeowners Welcome Kit",
     description: "Welcome packet for new homeowners policyholders",
@@ -62,8 +58,7 @@ beforeAll(() => {
     url: "https://cdn.evergreen-insurance.com/assets/homeowners-welcome-kit.pdf",
   });
 
-  // Seed some existing documents for audit
-  seedEcmDocument({
+  await seedEcmDocument({
     document_id: "doc_app_018",
     client_id: clientId,
     document_type: "signed_application",
@@ -97,7 +92,6 @@ describe("Content Auditor Agent — end-to-end", () => {
     const body = await res.json();
     expect(body.data.length).toBeGreaterThanOrEqual(1);
 
-    // Client has homeowners — we'll send homeowners welcome kit
     const policyTypes = body.data.map((p: any) => p.policy_type);
     expect(policyTypes).toContain("homeowners");
   });
@@ -115,20 +109,17 @@ describe("Content Auditor Agent — end-to-end", () => {
     expect(homeKit.url).toBeTruthy();
   });
 
-  test("Step 4: Send welcome kit email via Comm Hub", async () => {
-    const result = await handleSendMessage(
-      {
-        to: "l.martinez@email.com",
-        channel: "email",
-        subject: "Welcome to Evergreen Insurance — Your Homeowners Welcome Kit",
-        body: "Hi Lisa, welcome to Evergreen! Attached is your Homeowners Welcome Kit with important policy information.",
-        client_id: clientId,
-      },
-      comm.db,
-    );
+  test("Step 4: Send welcome kit email via Comm Hub HTTP /mcp JSON-RPC", async () => {
+    const result = await callCommMcpTool("send_message", {
+      to: "l.martinez@email.com",
+      channel: "email",
+      subject: "Welcome to Evergreen Insurance — Your Homeowners Welcome Kit",
+      body: "Hi Lisa, welcome to Evergreen! Attached is your Homeowners Welcome Kit with important policy information.",
+      client_id: clientId,
+    });
     expect(result.isError).toBeUndefined();
 
-    const data = JSON.parse(result.content[0].text as string);
+    const data = JSON.parse(result.content[0].text);
     expect(data.message_id).toBeTruthy();
     expect(data.status).toBe("queued");
     expect(data.channel).toBe("email");

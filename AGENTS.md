@@ -31,6 +31,14 @@ docker compose up                                # realistic (default, adversari
 SEED_MODE=clean docker compose up                # clean (no adversarial data)
 ```
 
+**Pre-sweep pilot gate (required before any multi-model `inspect-baseline` sweep):** run 1 trial per workflow on natural prompts for every planned arm (`--epochs 1` per model and per `--learning-mechanism`), then check before the production run:
+1. every requested scenario produced samples (no `dataset is empty`)
+2. `stateDiff.findings` contain no correct actions flagged as collateral (escalations or audit tasks on the variant's trap clients)
+3. receipt directories are unique per arm (`replay-manifest.json` has no duplicate `artifacts_dir`)
+4. a 1-token call to each provider succeeds (Vertex Model Garden access; Claude runs on project `coding007`)
+
+Fix everything the pilot surfaces in one pass, then run the production sweep once as-is.
+
 ## 2. Documentation & Planning Workflow
 
 | File | Purpose |

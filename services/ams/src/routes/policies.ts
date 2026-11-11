@@ -14,6 +14,7 @@ import {
   paginatedResponse,
   BENCHMARK_SIMULATED_TODAY,
   validateBackdating,
+  validateBindingAuthority,
   validateStateMinimums,
   eoFirewallError,
   type AuthVariables,
@@ -150,8 +151,8 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
     throw notFoundError("client");
   }
 
-  // Enforce 10-state statutory auto liability minimums unless approved escalation_id is provided
-  if (body.policy_type === "personal_auto" && !body.escalation_id) {
+  // (a) Enforce 10-state statutory auto liability minimums UNCONDITIONALLY (statutory law cannot be waived)
+  if (body.policy_type === "personal_auto") {
     const stateCheck = validateStateMinimums(
       body.state ?? client.address_state,
       body.coverages,
@@ -161,6 +162,48 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
         "E_EO_STATE_MINIMUM_VIOLATION",
         stateCheck.message,
         "coverages",
+      );
+    }
+  }
+
+  const esc = body.escalation_id
+    ? await prisma.escalation.findUnique({
+        where: { escalation_id: String(body.escalation_id) },
+        select: { status: true, client_id: true, reason: true },
+      })
+    : null;
+
+  // (b) Enforce $10,000 agency binding authority unless scoped approved premium_threshold escalation is provided
+  const authorityCheck = validateBindingAuthority(body.annual_premium);
+  if (!authorityCheck.valid) {
+    const hasApprovedThresholdEscalation =
+      esc?.status === "approved" &&
+      esc.client_id === body.client_id &&
+      esc.reason === "premium_threshold";
+    if (!hasApprovedThresholdEscalation) {
+      throw eoFirewallError(
+        "E_EO_PREMIUM_THRESHOLD_EXCEEDED",
+        authorityCheck.message,
+        "annual_premium",
+      );
+    }
+  }
+
+  // (c) Enforce effective_date backdating firewall unless scoped approved backdating escalation is provided
+  const backdateCheck = validateBackdating(
+    body.effective_date,
+    process.env.SIMULATED_TODAY ?? BENCHMARK_SIMULATED_TODAY,
+  );
+  if (!backdateCheck.valid) {
+    const hasApprovedBackdatingEscalation =
+      esc?.status === "approved" &&
+      esc.client_id === body.client_id &&
+      esc.reason === "backdating";
+    if (!hasApprovedBackdatingEscalation) {
+      throw eoFirewallError(
+        "E_EO_BACKDATING_PROHIBITED",
+        backdateCheck.message,
+        "effective_date",
       );
     }
   }
@@ -326,16 +369,20 @@ policiesRouter.post(
     }
 
     // ── Service-Layer E&O & Statutory Compliance Firewall ─────────────
-    let hasApprovedEscalation = false;
+    let hasApprovedBackdatingEscalation = false;
     if (body.escalation_id) {
       const esc = await prisma.escalation.findUnique({
         where: { escalation_id: String(body.escalation_id) },
-        select: { status: true },
+        select: { status: true, client_id: true, policy_id: true, reason: true },
       });
-      hasApprovedEscalation = esc?.status === "approved";
+      hasApprovedBackdatingEscalation =
+        esc?.status === "approved" &&
+        esc.client_id === policy.client_id &&
+        (esc.policy_id === null || esc.policy_id === policyId) &&
+        esc.reason === "backdating";
     }
 
-    if (!hasApprovedEscalation) {
+    if (!hasApprovedBackdatingEscalation) {
       // 1. Backdating guard: reject effective_date earlier than policy effective_date
       // or earlier than the benchmark reference date ("2026-02-18") for active 2026 policies.
       const referenceFloor =
@@ -358,24 +405,24 @@ policiesRouter.post(
           "effective_date",
         );
       }
+    }
 
-      // 2. 10-State statutory auto minimum guard
-      if (policy.policy_type === "personal_auto") {
-        const client = await prisma.client.findUnique({
-          where: { id: policy.client_id },
-          select: { address_state: true },
-        });
-        const stateCheck = validateStateMinimums(
-          client?.address_state,
-          body.changes,
+    // 2. 10-State statutory auto minimum guard (UNCONDITIONAL — statutory law cannot be waived)
+    if (policy.policy_type === "personal_auto") {
+      const client = await prisma.client.findUnique({
+        where: { id: policy.client_id },
+        select: { address_state: true },
+      });
+      const stateCheck = validateStateMinimums(
+        client?.address_state,
+        body.changes,
+      );
+      if (!stateCheck.valid) {
+        throw eoFirewallError(
+          "E_EO_STATE_MINIMUM_VIOLATION",
+          stateCheck.message,
+          "changes",
         );
-        if (!stateCheck.valid) {
-          throw eoFirewallError(
-            "E_EO_STATE_MINIMUM_VIOLATION",
-            stateCheck.message,
-            "changes",
-          );
-        }
       }
     }
 

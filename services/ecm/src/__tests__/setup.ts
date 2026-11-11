@@ -4,25 +4,20 @@ import {
   correlationId,
   jwtAuth,
   errorHandler,
-  createTestDatabase as _createTestDb,
   createTestPrismaClient,
   getTestDatabaseUrl,
+  insertSqliteRow,
   authHeader as _authHeader,
   type AppVariables,
 } from "@evergreen/shared";
-import * as schema from "../schema";
 import { PrismaClient } from "../generated/prisma/client";
 
-export { getTestDatabaseUrl };
+export { getTestDatabaseUrl, insertSqliteRow };
 
 export const TEST_SECRET = "test-secret-for-ecm-tests";
 process.env.JWT_SECRET = TEST_SECRET;
 
 // ── Database helpers ──
-
-export function createTestDatabase() {
-  return _createTestDb(schema);
-}
 
 export function createTestPrisma() {
   const ctx = createTestPrismaClient(PrismaClient, "test-ecm-");
@@ -113,7 +108,7 @@ export async function authHeader(scopes: string[]) {
 const now = new Date().toISOString();
 
 export function makeDocument(
-  overrides: Partial<typeof schema.documents.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     document_id: `doc_${Math.random().toString(36).slice(2, 10)}`,
@@ -134,7 +129,7 @@ export function makeDocument(
 }
 
 export function makeEnvelope(
-  overrides: Partial<typeof schema.envelopes.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     envelope_id: `env_${Math.random().toString(36).slice(2, 10)}`,
@@ -160,7 +155,7 @@ export function makeEnvelope(
 }
 
 export function makeAsset(
-  overrides: Partial<typeof schema.marketingAssets.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     asset_id: `asset_${Math.random().toString(36).slice(2, 10)}`,

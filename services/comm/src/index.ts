@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { join } from "path";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createServer } from "./server";
 import { prisma } from "./prisma";
+import { seedDatabase } from "./seed";
 import {
   oauthTokenEndpoint,
   correlationId,
@@ -62,13 +62,7 @@ app.route(
       return { webhook_deliveries_expired: expiredDeliveries.count };
     },
     onReset: async (seedMode) => {
-      const seedScript = join(import.meta.dir, "seed.ts");
-      const proc = Bun.spawnSync(["bun", "run", seedScript], {
-        env: { ...process.env, SEED_MODE: seedMode },
-      });
-      if (proc.exitCode !== 0) {
-        throw new Error(`Comm seed reset failed: ${proc.stderr.toString()}`);
-      }
+      await seedDatabase(seedMode);
     },
   }),
 );
@@ -77,7 +71,7 @@ app.route("/sim", requestLog.router);
 // ── OAuth token endpoint (no auth required) ─────────────────────────
 app.route("/", oauthTokenEndpoint());
 
-// ── REST API (authenticated, blocked under MODALITY_MODE=strict unless X-Eval-Scorer: true) ──
+// ── REST API (authenticated, blocked under MODALITY_MODE=strict unless authorized X-Eval-Scorer: true) ──
 const api = new Hono<{ Variables: AppVariables }>();
 api.use("*", strictModalityGuard("mcp"));
 api.use("*", jwtAuth);
@@ -86,8 +80,9 @@ api.route("/calls", callsRouter);
 api.route("/webhooks", webhooksRouter);
 app.route("/v1", api);
 
-// ── MCP Streamable HTTP transport ───────────────────────────────────
+// ── MCP Streamable HTTP transport (authenticated via Bearer JWT) ────
 // Stateless mode: each request creates a fresh transport + server pair
+app.use("/mcp", jwtAuth);
 app.all("/mcp", async (c) => {
   const transport = new WebStandardStreamableHTTPServerTransport();
   const server = createServer(prisma);
@@ -97,8 +92,11 @@ app.all("/mcp", async (c) => {
 
 // ── Start server ────────────────────────────────────────────────────
 const port = parseInt(process.env.PORT || "3004", 10);
-console.log(`Comm MCP service (HTTP) listening on port ${port}`);
+if (import.meta.main) {
+  console.log(`Comm MCP service (HTTP) listening on port ${port}`);
+}
 
+export { app, seedDatabase };
 export default {
   port,
   fetch: app.fetch,

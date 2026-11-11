@@ -1,9 +1,6 @@
 import { prisma } from "./prisma";
 import { join } from "path";
 
-const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
-const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
-
 interface SeedClient {
   id: string;
   first_name: string;
@@ -87,8 +84,8 @@ interface SeedTask {
   updated_at: string;
 }
 
-async function loadJson<T>(filename: string): Promise<T> {
-  const path = join(SEED_DIR, filename);
+async function loadJson<T>(seedDir: string, filename: string): Promise<T> {
+  const path = join(seedDir, filename);
   const file = Bun.file(path);
   return file.json() as Promise<T>;
 }
@@ -213,12 +210,19 @@ async function createTables() {
   )`);
 }
 
-async function seed() {
-  console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
-  console.log("Creating tables...");
+export async function seedDatabase(
+  seedMode = process.env.SEED_MODE || "realistic",
+): Promise<void> {
+  const seedFolder = seedMode === "clean" ? "seed-clean" : "seed";
+  const seedDir = join(import.meta.dir, "..", "..", "..", "data", seedFolder);
+  const verbose = import.meta.main;
+
+  if (verbose) {
+    console.log(`Seed mode: ${seedFolder} (seedMode=${seedMode})`);
+    console.log("Creating tables...");
+  }
   await createTables();
 
-  console.log("Loading seed data...");
   const [
     clientsData,
     policiesData,
@@ -226,21 +230,21 @@ async function seed() {
     commissionsData,
     tasksData,
   ] = await Promise.all([
-    loadJson<SeedClient[]>("clients.json"),
-    loadJson<SeedPolicy[]>("policies.json"),
-    loadJson<SeedEndorsement[]>("endorsements.json"),
-    loadJson<SeedCommission[]>("commissions.json"),
-    loadJson<SeedTask[]>("tasks.json"),
+    loadJson<SeedClient[]>(seedDir, "clients.json"),
+    loadJson<SeedPolicy[]>(seedDir, "policies.json"),
+    loadJson<SeedEndorsement[]>(seedDir, "endorsements.json"),
+    loadJson<SeedCommission[]>(seedDir, "commissions.json"),
+    loadJson<SeedTask[]>(seedDir, "tasks.json"),
   ]);
 
-  console.log(
-    `Loaded: ${clientsData.length} clients, ${policiesData.length} policies, ` +
-    `${endorsementsData.length} endorsements, ${commissionsData.length} commissions, ` +
-    `${tasksData.length} tasks`
-  );
+  if (verbose) {
+    console.log(
+      `Loaded: ${clientsData.length} clients, ${policiesData.length} policies, ` +
+        `${endorsementsData.length} endorsements, ${commissionsData.length} commissions, ` +
+        `${tasksData.length} tasks`,
+    );
+  }
 
-  // Insert clients
-  console.log("Seeding clients...");
   await prisma.client.createMany({
     data: clientsData.map((c) => ({
       id: c.id,
@@ -265,40 +269,35 @@ async function seed() {
     })),
   });
 
-  // Insert policies + coverages
-  console.log("Seeding policies and coverages...");
-  for (const p of policiesData) {
-    await prisma.policy.create({
-      data: {
-        policy_id: p.policy_id,
-        client_id: p.client_id,
-        carrier_code: p.carrier_code,
-        policy_type: p.policy_type,
-        effective_date: p.effective_date,
-        expiration_date: p.expiration_date,
-        premium_current: p.premium_current,
-        premium_prior: p.premium_prior ?? null,
-        status: p.status,
-        multi_policy_discount: p.multi_policy_discount ?? false,
-        created_at: p.created_at,
-        updated_at: p.updated_at,
-      },
-    });
+  await prisma.policy.createMany({
+    data: policiesData.map((p) => ({
+      policy_id: p.policy_id,
+      client_id: p.client_id,
+      carrier_code: p.carrier_code,
+      policy_type: p.policy_type,
+      effective_date: p.effective_date,
+      expiration_date: p.expiration_date,
+      premium_current: p.premium_current,
+      premium_prior: p.premium_prior ?? null,
+      status: p.status,
+      multi_policy_discount: p.multi_policy_discount ?? false,
+      created_at: p.created_at,
+      updated_at: p.updated_at,
+    })),
+  });
 
-    if (p.coverages.length > 0) {
-      await prisma.coverage.createMany({
-        data: p.coverages.map((cov) => ({
-          policy_id: p.policy_id,
-          type: cov.type,
-          limit: cov.limit != null ? String(cov.limit) : null,
-          deductible: cov.deductible ?? null,
-        })),
-      });
-    }
+  const allCoverages = policiesData.flatMap((p) =>
+    p.coverages.map((cov) => ({
+      policy_id: p.policy_id,
+      type: cov.type,
+      limit: cov.limit != null ? String(cov.limit) : null,
+      deductible: cov.deductible ?? null,
+    })),
+  );
+  if (allCoverages.length > 0) {
+    await prisma.coverage.createMany({ data: allCoverages });
   }
 
-  // Insert endorsements
-  console.log("Seeding endorsements...");
   await prisma.endorsement.createMany({
     data: endorsementsData.map((e) => ({
       endorsement_id: e.endorsement_id,
@@ -314,8 +313,6 @@ async function seed() {
     })),
   });
 
-  // Insert commissions
-  console.log("Seeding commissions...");
   await prisma.commission.createMany({
     data: commissionsData.map((com) => ({
       commission_id: com.commission_id,
@@ -333,8 +330,6 @@ async function seed() {
     })),
   });
 
-  // Insert tasks
-  console.log("Seeding tasks...");
   await prisma.task.createMany({
     data: tasksData.map((t) => ({
       id: t.id,
@@ -351,23 +346,25 @@ async function seed() {
     })),
   });
 
-  // Verify counts
-  const counts = {
-    clients: await prisma.client.count(),
-    policies: await prisma.policy.count(),
-    coverages: await prisma.coverage.count(),
-    endorsements: await prisma.endorsement.count(),
-    commissions: await prisma.commission.count(),
-    tasks: await prisma.task.count(),
-  };
-
-  console.log("\nSeed complete:");
-  for (const [table, count] of Object.entries(counts)) {
-    console.log(`  ${table}: ${count} rows`);
+  if (verbose) {
+    const counts = {
+      clients: await prisma.client.count(),
+      policies: await prisma.policy.count(),
+      coverages: await prisma.coverage.count(),
+      endorsements: await prisma.endorsement.count(),
+      commissions: await prisma.commission.count(),
+      tasks: await prisma.task.count(),
+    };
+    console.log("\nSeed complete:");
+    for (const [table, count] of Object.entries(counts)) {
+      console.log(`  ${table}: ${count} rows`);
+    }
   }
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  seedDatabase().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}

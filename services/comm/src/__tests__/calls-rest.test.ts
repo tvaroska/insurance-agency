@@ -1,7 +1,8 @@
+import { insertSqliteRow } from "@evergreen/shared";
 import { mock } from "bun:test";
 import { createTestDb, makePhoneMessage } from "./setup";
 
-const { sqlite: testSqlite, db: testDb, prisma: testPrisma } = createTestDb();
+const { sqlite: testSqlite, prisma: testPrisma } = createTestDb();
 mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { describe, expect, test, beforeAll } from "bun:test";
@@ -14,7 +15,6 @@ import {
   type CorrelationVariables,
   type AuthVariables,
 } from "@evergreen/shared";
-import * as schema from "../schema";
 import { callsRouter } from "../routes/calls";
 
 type AppVariables = CorrelationVariables & AuthVariables;
@@ -60,7 +60,7 @@ beforeAll(() => {
     sentiment: "positive",
     topics: JSON.stringify(["policy_inquiry"]),
   });
-  testDb.insert(schema.messages).values(msg).run();
+  insertSqliteRow(testSqlite, "messages", msg);
 });
 
 describe("GET /v1/calls/transcripts/:call_id", () => {

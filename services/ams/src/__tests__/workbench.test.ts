@@ -16,7 +16,7 @@ const testPrisma = new PrismaClient({ adapter: testAdapter });
 mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { Hono } from "hono";
-import { workbenchRouter } from "../routes/workbench";
+import { workbenchRouter, resolveStackUrls } from "../routes/workbench";
 import { createTables } from "./setup";
 
 const app = new Hono();
@@ -61,11 +61,11 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
     expect(data.anomalies).toHaveLength(15);
     expect(data.escalations.length).toBeGreaterThanOrEqual(3);
     expect(data.evolutionStages).toHaveLength(3);
-    expect(data.evolutionStages[0].pass1).toBe(0.667);
-    expect(data.evolutionStages[0].meanScore).toBe(0.68);
-    expect(data.evolutionStages[0].falseCompletionRateRange).toBe("16.7%–66.7%");
+    expect(data.evolutionStages[0].pass1).toBe(0.58);
+    expect(data.evolutionStages[0].meanScore).toBe(0.71);
+    expect(data.evolutionStages[0].falseCompletionRateRange).toBe("37%–50%");
     expect(data.evolutionStages[0].measuredModels).toHaveLength(3);
-    expect(data.evolutionStages[1].provenance).toBe("projected_skill_target");
+    expect(data.evolutionStages[1].provenance).toBe("measured_v0.8_domain_skill");
     expect(data.evolutionStages[2].pass1).toBe(1.0);
   });
 
@@ -83,6 +83,79 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
     expect(data.stateDiffReceipt.amsTasksAfter).toBe(
       data.stateDiffReceipt.amsTasksBefore + 1,
     );
+    // Without a live sibling stack the fallback is labeled honestly
+    expect(data.executionSummary.executionMode).toBe("local_ams_fallback");
+    expect(data.executionSummary.fallbackUsed).toBe(true);
+    expect(typeof data.executionSummary.fallbackReason).toBe("string");
+    expect(data.stateDiffReceipt.mutatedTables).toEqual(["ams.tasks"]);
+  });
+
+  test("GET /workbench/api/documents/DOC-002/pdf returns a valid PDF (never 401) and the button links to it", async () => {
+    const res = await app.request("/workbench/api/documents/DOC-002/pdf");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/pdf");
+    expect(res.headers.get("x-evergreen-pdf-source")).toBe("workbench-render");
+    const text = await res.text();
+    expect(text.startsWith("%PDF-1.7")).toBe(true);
+    expect(text).toContain("DOC-002");
+    expect(text.trimEnd().endsWith("%%EOF")).toBe(true);
+
+    const html = await (await app.request("/")).text();
+    expect(html).toContain('href="/workbench/api/documents/DOC-002/pdf"');
+    expect(html).not.toContain("localhost:3003/v1/documents/DOC-002/download");
+  });
+
+  test("resolveStackUrls honors EVERGREEN_BASE_PORT and *_BASE_URL overrides", () => {
+    const prevBase = process.env.EVERGREEN_BASE_PORT;
+    const prevRater = process.env.RATER_BASE_URL;
+    process.env.EVERGREEN_BASE_PORT = "3100";
+    process.env.RATER_BASE_URL = "http://rater.internal:9001/";
+    try {
+      const urls = resolveStackUrls();
+      expect(urls.ams).toBe("http://localhost:3100");
+      expect(urls.rater).toBe("http://rater.internal:9001");
+      expect(urls["summit-fire"]).toBe("http://localhost:3105");
+      expect(urls["coastal-star"]).toBe("http://localhost:3106");
+      expect(urls.claims).toBe("http://localhost:3107");
+    } finally {
+      if (prevBase === undefined) delete process.env.EVERGREEN_BASE_PORT;
+      else process.env.EVERGREEN_BASE_PORT = prevBase;
+      if (prevRater === undefined) delete process.env.RATER_BASE_URL;
+      else process.env.RATER_BASE_URL = prevRater;
+    }
+  });
+
+  test("POST /workbench/api/chaos forwards POST /sim/chaos to rater, summit and coastal", async () => {
+    const calls: { url: string; body: any }[] = [];
+    const realFetch = globalThis.fetch;
+    const prevLive = process.env.WORKBENCH_LIVE_STACK;
+    process.env.WORKBENCH_LIVE_STACK = "1";
+    globalThis.fetch = (async (input: any, init?: any) => {
+      const url = typeof input === "string" ? input : input.url;
+      calls.push({ url, body: init?.body ? JSON.parse(init.body) : null });
+      return new Response(JSON.stringify({ status: "ok" }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const res = await app.request("/workbench/api/chaos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: true, failureRate: 0.5 }),
+      });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.forwarded).toHaveLength(3);
+      expect(data.forwarded.every((f: any) => f.ok)).toBe(true);
+      expect(calls.map((c) => c.url).sort()).toEqual([
+        "http://localhost:3001/sim/chaos",
+        "http://localhost:3005/sim/chaos",
+        "http://localhost:3006/sim/chaos",
+      ]);
+      expect(calls[0].body).toMatchObject({ enabled: true, error_rate: 0.5, status_code: 503 });
+    } finally {
+      globalThis.fetch = realFetch;
+      if (prevLive === undefined) delete process.env.WORKBENCH_LIVE_STACK;
+      else process.env.WORKBENCH_LIVE_STACK = prevLive;
+    }
   });
 
   test("POST /workbench/api/test-firewall returns HTTP 422 EO_COMPLIANCE_VIOLATION on illegal CA 10/20/5 limits", async () => {

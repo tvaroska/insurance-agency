@@ -1,7 +1,6 @@
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -12,7 +11,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -163,15 +161,15 @@ describe("GET /v1/escalations/:id", () => {
 
   test("returns pending on first poll", async () => {
     const esc = makeEscalation({ escalation_id: "esc_first001" });
-    testDb.insert(schema.escalations).values(esc).run();
-    testDb.insert(schema.escalationEvents).values({
+    insertSqliteRow(testSqlite, "escalations", esc);
+    insertSqliteRow(testSqlite, "escalation_events", {
       escalation_id: "esc_first001",
       event_type: "created",
       from_status: null,
       to_status: "pending",
       details: null,
       created_at: esc.created_at,
-    }).run();
+    });
 
     const headers = await authHeader(["ams:escalations:read"]);
     const res = await getEscalation("esc_first001", headers);
@@ -184,15 +182,15 @@ describe("GET /v1/escalations/:id", () => {
 
   test("resolves on second poll (poll_count >= 2)", async () => {
     const esc = makeEscalation({ escalation_id: "esc_second01", poll_count: 0 });
-    testDb.insert(schema.escalations).values(esc).run();
-    testDb.insert(schema.escalationEvents).values({
+    insertSqliteRow(testSqlite, "escalations", esc);
+    insertSqliteRow(testSqlite, "escalation_events", {
       escalation_id: "esc_second01",
       event_type: "created",
       from_status: null,
       to_status: "pending",
       details: null,
       created_at: esc.created_at,
-    }).run();
+    });
 
     const headers = await authHeader(["ams:escalations:read"]);
 
@@ -214,15 +212,15 @@ describe("GET /v1/escalations/:id", () => {
 
   test("includes audit trail after resolution", async () => {
     const esc = makeEscalation({ escalation_id: "esc_audit001", poll_count: 1 });
-    testDb.insert(schema.escalations).values(esc).run();
-    testDb.insert(schema.escalationEvents).values({
+    insertSqliteRow(testSqlite, "escalations", esc);
+    insertSqliteRow(testSqlite, "escalation_events", {
       escalation_id: "esc_audit001",
       event_type: "created",
       from_status: null,
       to_status: "pending",
       details: null,
       created_at: esc.created_at,
-    }).run();
+    });
 
     const headers = await authHeader(["ams:escalations:read"]);
     const res = await getEscalation("esc_audit001", headers);
@@ -241,7 +239,7 @@ describe("GET /v1/escalations/:id", () => {
       status: "approved",
       manager_response: JSON.stringify({ decision: "approved", template_id: "premium_threshold_approval", response_text: "Approved" }),
     });
-    testDb.insert(schema.escalations).values(esc).run();
+    insertSqliteRow(testSqlite, "escalations", esc);
 
     const headers = await authHeader(["ams:escalations:read"]);
     const res = await getEscalation("esc_resolved1", headers);
@@ -263,7 +261,7 @@ describe("GET /v1/escalations - listing", () => {
       makeEscalation({ escalation_id: "esc_list0004", client_id: "CL-002", status: "needs_info", created_at: "2026-01-04T00:00:00.000Z", updated_at: now }),
     ];
     for (const row of escalationRows) {
-      testDb.insert(schema.escalations).values(row).run();
+      insertSqliteRow(testSqlite, "escalations", row);
     }
   });
 

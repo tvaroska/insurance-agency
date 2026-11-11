@@ -380,6 +380,15 @@ components:
           type: string
           description: Generated filename.
           example: "coi_POL-PA-2024-001847_2026-02-22.pdf"
+        file_size_bytes:
+          type: integer
+          minimum: 0
+          description: Byte size of the rendered ACORD 25 PDF.
+          example: 4820
+        pdf_url:
+          type: string
+          description: Relative URL to download the rendered ACORD 25 PDF.
+          example: "/v1/documents/coi/doc_a1b2c3d4/pdf"
         status:
           $ref: "#/components/schemas/DocumentStatus"
         certificate_holder:
@@ -926,6 +935,193 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # -----------------------------------------------------------------------
+  # POST /documents/coi
+  # -----------------------------------------------------------------------
+  /documents/coi:
+    post:
+      operationId: issueDocumentCoi
+      summary: Generate Certificate of Insurance (root /documents/coi alias)
+      description: |
+        Shorthand alias for `POST /documents/coi/generate`. Renders an ACORD 25
+        Certificate of Insurance PDF for an active policy and stores the document
+        record in ECM.
+      tags:
+        - Documents
+      security:
+        - oauth2:
+            - ecm:documents:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoiGenerateRequest"
+      responses:
+        "201":
+          description: Certificate of Insurance generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoiGenerateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # -----------------------------------------------------------------------
+  # GET /documents/coi/{document_id}/pdf
+  # -----------------------------------------------------------------------
+  /documents/coi/{document_id}/pdf:
+    get:
+      operationId: getCoiPdf
+      summary: Download generated ACORD 25 Certificate of Insurance PDF
+      description: |
+        Returns the binary ACORD 25 Certificate of Insurance PDF (`application/pdf`)
+        for a previously generated COI document record.
+      tags:
+        - Documents
+      security:
+        - oauth2:
+            - ecm:documents:read
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          description: Identifier of the COI document (`doc_*` or `DOC-*`).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Binary ACORD 25 PDF stream.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # -----------------------------------------------------------------------
+  # POST /coi/generate, POST /coi & GET /coi/{document_id}/pdf
+  # -----------------------------------------------------------------------
+  /coi/generate:
+    post:
+      operationId: generateCoiDirect
+      summary: Generate Certificate of Insurance (/coi/generate alias)
+      description: |
+        Alias for `POST /documents/coi/generate` mounted at `/v1/coi/generate`.
+      tags:
+        - Documents
+      security:
+        - oauth2:
+            - ecm:documents:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoiGenerateRequest"
+      responses:
+        "201":
+          description: Certificate of Insurance generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoiGenerateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /coi:
+    post:
+      operationId: createCoi
+      summary: Issue Certificate of Insurance (/coi alias)
+      description: |
+        Alias for `POST /documents/coi/generate` mounted at `/v1/coi`.
+      tags:
+        - Documents
+      security:
+        - oauth2:
+            - ecm:documents:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoiGenerateRequest"
+      responses:
+        "201":
+          description: Certificate of Insurance generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoiGenerateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /coi/{document_id}/pdf:
+    get:
+      operationId: downloadCoiPdf
+      summary: Download ACORD 25 Certificate of Insurance PDF (/coi alias)
+      description: |
+        Alias for `GET /documents/coi/{document_id}/pdf` mounted at `/v1/coi/{document_id}/pdf`.
+      tags:
+        - Documents
+      security:
+        - oauth2:
+            - ecm:documents:read
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          description: Identifier of the COI document.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Binary ACORD 25 PDF stream.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerError"
 

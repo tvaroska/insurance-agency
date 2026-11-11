@@ -1,12 +1,9 @@
 import { prisma } from "./prisma";
 import { join } from "path";
 
-const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
-const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
-
 interface SeedLead {
   lead_id: string;
-  client_id: string;
+  client_id: string | null;
   first_name: string;
   last_name: string;
   email: string;
@@ -43,8 +40,8 @@ interface SeedRetentionRisk {
   assigned_producer: string | null;
 }
 
-async function loadJson<T>(filename: string): Promise<T> {
-  const path = join(SEED_DIR, filename);
+async function loadJson<T>(seedDir: string, filename: string): Promise<T> {
+  const path = join(seedDir, filename);
   const file = Bun.file(path);
   return file.json() as Promise<T>;
 }
@@ -60,7 +57,7 @@ async function createTables() {
   }
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS leads (
     lead_id TEXT PRIMARY KEY,
-    client_id TEXT NOT NULL,
+    client_id TEXT,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     email TEXT NOT NULL,
@@ -105,24 +102,31 @@ async function createTables() {
   )`);
 }
 
-async function seed() {
-  console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
-  console.log("Creating tables...");
+export async function seedDatabase(
+  seedMode = process.env.SEED_MODE || "realistic",
+): Promise<void> {
+  const seedFolder = seedMode === "clean" ? "seed-clean" : "seed";
+  const seedDir = join(import.meta.dir, "..", "..", "..", "data", seedFolder);
+  const verbose = import.meta.main;
+
+  if (verbose) {
+    console.log(`Seed mode: ${seedFolder} (seedMode=${seedMode})`);
+    console.log("Creating tables...");
+  }
   await createTables();
 
-  console.log("Loading seed data...");
   const [leadsData, campaignsData, risksData] = await Promise.all([
-    loadJson<SeedLead[]>("leads.json"),
-    loadJson<SeedCampaign[]>("campaigns.json"),
-    loadJson<SeedRetentionRisk[]>("retention_risks.json"),
+    loadJson<SeedLead[]>(seedDir, "leads.json"),
+    loadJson<SeedCampaign[]>(seedDir, "campaigns.json"),
+    loadJson<SeedRetentionRisk[]>(seedDir, "retention_risks.json"),
   ]);
 
-  console.log(
-    `Loaded: ${leadsData.length} leads, ${campaignsData.length} campaigns, ${risksData.length} retention risks`,
-  );
+  if (verbose) {
+    console.log(
+      `Loaded: ${leadsData.length} leads, ${campaignsData.length} campaigns, ${risksData.length} retention risks`,
+    );
+  }
 
-  // Insert campaigns
-  console.log("Seeding campaigns...");
   await prisma.campaign.createMany({
     data: campaignsData.map((c) => ({
       campaign_id: c.campaign_id,
@@ -134,12 +138,10 @@ async function seed() {
     })),
   });
 
-  // Insert leads
-  console.log("Seeding leads...");
   await prisma.lead.createMany({
     data: leadsData.map((l) => ({
       lead_id: l.lead_id,
-      client_id: l.client_id,
+      client_id: l.client_id ?? null,
       first_name: l.first_name,
       last_name: l.last_name,
       email: l.email,
@@ -156,8 +158,6 @@ async function seed() {
     })),
   });
 
-  // Insert retention risks
-  console.log("Seeding retention risks...");
   await prisma.retentionRisk.createMany({
     data: risksData.map((r) => ({
       client_id: r.client_id,
@@ -172,21 +172,23 @@ async function seed() {
     })),
   });
 
-  // Verify counts
-  const counts = {
-    leads: await prisma.lead.count(),
-    campaigns: await prisma.campaign.count(),
-    campaign_enrollments: await prisma.campaignEnrollment.count(),
-    retention_risks: await prisma.retentionRisk.count(),
-  };
-
-  console.log("\nSeed complete:");
-  for (const [table, count] of Object.entries(counts)) {
-    console.log(`  ${table}: ${count} rows`);
+  if (verbose) {
+    const counts = {
+      leads: await prisma.lead.count(),
+      campaigns: await prisma.campaign.count(),
+      campaign_enrollments: await prisma.campaignEnrollment.count(),
+      retention_risks: await prisma.retentionRisk.count(),
+    };
+    console.log("\nSeed complete:");
+    for (const [table, count] of Object.entries(counts)) {
+      console.log(`  ${table}: ${count} rows`);
+    }
   }
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  seedDatabase().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}

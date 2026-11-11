@@ -23,6 +23,7 @@ const TEXT_EXTENSIONS = new Set([
   ".yaml",
   ".yml",
   ".html",
+  ".svg",
   ".sh",
 ]);
 
@@ -43,7 +44,7 @@ function walkRepoFiles(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-describe("Repository Hygiene & Governance Spine (ADR-005)", () => {
+describe("Repository Hygiene & Governance Spine (ADR-005 & ADR-006)", () => {
   const repoFiles = walkRepoFiles(ROOT);
 
   test("4-file governance spine and CRITICAL.md size cap (< 10,000B) hold", () => {
@@ -55,6 +56,28 @@ describe("Repository Hygiene & Governance Spine (ADR-005)", () => {
     const decisionsStat = statSync(join(ROOT, "DECISIONS.md"));
     expect(decisionsStat.size).toBeLessThanOrEqual(25_000);
     expect(existsSync(join(ROOT, ".github", "workflows"))).toBe(false);
+  });
+
+  test("retired PG/K8s manifests, Drizzle schema.ts stubs, and committed caches are absent and .gitignore covers runtime DBs", () => {
+    expect(existsSync(join(ROOT, "docker-compose.pg.yaml"))).toBe(false);
+    expect(existsSync(join(ROOT, "k8s"))).toBe(false);
+    expect(existsSync(join(ROOT, "eval", "metr", "__pycache__"))).toBe(false);
+
+    const servicesDir = join(ROOT, "services");
+    const staleSchemaFiles: string[] = [];
+    for (const svc of readdirSync(servicesDir)) {
+      const schemaTs = join(servicesDir, svc, "src", "schema.ts");
+      if (existsSync(schemaTs)) {
+        staleSchemaFiles.push(`services/${svc}/src/schema.ts`);
+      }
+    }
+    expect(staleSchemaFiles).toEqual([]);
+
+    const gitignore = readFileSync(join(ROOT, ".gitignore"), "utf-8");
+    expect(gitignore).toContain("services/*/data/*.db");
+    expect(gitignore).toContain("data/seed/*.db");
+    expect(gitignore).toContain("eval/harbor/tasks/");
+    expect(gitignore).toContain("__pycache__/");
   });
 
   test("all CRITICAL.md load-bearing paths exist on disk", () => {
@@ -73,7 +96,9 @@ describe("Repository Hygiene & Governance Spine (ADR-005)", () => {
     }
   });
 
-  test("ADR-005 portability: zero machine-specific home paths or file:// URIs in tracked files", () => {
+  test("ADR-005 portability: zero machine-specific home paths or file:// URIs in tracked files (including .svg)", () => {
+    expect(repoFiles.some((f) => f.endsWith(".svg"))).toBe(true);
+
     const violations: string[] = [];
     for (const filePath of repoFiles) {
       const rel = relative(ROOT, filePath);
@@ -89,7 +114,7 @@ describe("Repository Hygiene & Governance Spine (ADR-005)", () => {
     expect(violations).toEqual([]);
   });
 
-  test("32-Table state-diff invariant holds with zero stale 35-Table or non-existent table claims", () => {
+  test("32-Table state-diff invariant holds across docs & SVGs with zero stale 35-Table or non-existent table claims", () => {
     const servicesDir = join(ROOT, "services");
     let totalPrismaModels = 0;
     for (const svc of readdirSync(servicesDir)) {
@@ -108,11 +133,11 @@ describe("Repository Hygiene & Governance Spine (ADR-005)", () => {
       if (rel === "tests/repo-hygiene.test.ts") continue;
       const content = readFileSync(filePath, "utf-8");
       for (const forbidden of [
+        "35 Tables",
+        "35 tables",
         "35-Table",
         "35-table",
-        "35 SQLite tables",
-        "35 SQLite Tables",
-        "35 tables across all 8 services",
+        "35 SQLite",
         "carrier_summit.submissions",
         "claims.claim_notes",
       ]) {

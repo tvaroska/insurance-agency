@@ -2,7 +2,7 @@
 
 Most knowledge work is not code. It runs on messy records spread across systems that share no database, vendors that only offer a browser portal, clients who change their minds, and rules that override what the client asks for. Evergreen is a first step toward benchmarking agents on that work, starting with one workplace: a simulated 11-person independent Property and Casualty (P&C) insurance agency with 20 workflows and 253 tasks.
 
-The agency has 10 legal traps, such as a client who mentions an attorney in the middle of a claim. Its systems catch 3 of them on their own. The other 7 depend on the agent's judgment, and each miss can become an Errors and Omissions (E&O) claim. Agents are scored on what actually changed in all 8 systems, and any uncaught trap scores 0, however polite the conversation was. In our initial 3-model strict-mode evaluation across 6 representative workflows, zero-shot agents pass 33.3% to 66.7% of tasks (mean score 0.53 to 0.68), miss 1 of 3 judgment-only E&O traps (filing a claim without escalating to a specialist), and report the task done while state checks fail on 16.7% to 66.7% of runs.
+The agency has 10 legal traps, such as a client who mentions an attorney in the middle of a claim. Its systems catch 3 of them on their own. The other 7 depend on the agent's judgment, and each miss can become an Errors and Omissions (E&O) claim. Agents are scored on what actually changed in all 8 systems, and any uncaught trap scores 0, however polite the conversation was. In our first full run (20 workflows, 5 trials each, strict mode), zero-shot agents pass 55% to 59% of tasks on the first try, pass every trial on only 39% to 47% of tasks, and tell the client the work is done while a state check fails on 37% to 50% of runs. A written agency procedure guide lifts `gemini-3.8-flash` from 58% to 69%.
 
 ![One Evergreen task and what it takes to pass](docs/assets/benchmark_card.svg)
 
@@ -22,19 +22,27 @@ Without that escalation the scenario scores 0, however polite the conversation w
 
 ## Results
 
-Initial 3-model strict-mode evaluation (`MODALITY_MODE=strict`, `k = 1` trial per workflow) across 6 representative workflows covering intake, policy binding, claim filing, lead routing, and multi-turn legal traps (`01`, `03`, `07`, `14`, `19`, `20` at `difficulty=natural`), alongside the 20-workflow calibration anchors:
+First full run, v0.8 (11 November 2026): all 20 workflows at `difficulty=natural`, 5 trials each on the realistic (messy) data, 1 trial each on the clean data as a control, strict mode (`MODALITY_MODE=strict`), 454 trials in total. Logs, the summary, and a SHA-256 manifest of every trial are in [`eval/results/v0.8/`](eval/results/v0.8/).
 
-| Model | Harness | Learning mechanism | `pass@1` | `pass^5` | Legal traps missed (3 system-caught / 7 judgment) | Said done, check failed | Records changed unasked | Drop, clean to messy | Cost per task |
+| Model | Harness | Learning mechanism | `pass@1` (95% CI) | `pass^5` | Legal traps missed (3 system-caught / 7 judgment) | Said done, check failed | Records changed unasked | Drop, clean to messy | Cost per task |
 | :--- | :--- | :--- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 | Scripted reference (`baseline-agent.ts`) | Reference runner | n/a | 100.0% | 100.0% | 0/3 sys · 0/7 judg | 0.0% | 0.0 | 0.0 pp | $0.000 |
 | Do-nothing baseline | Reference runner | n/a | 0.0% | 0.0% | n/a | 0.0% | 0.0 | 0.0 pp | $0.000 |
-| `gemini-3.8-flash` | Inspect + LangChain | None (zero-shot) | 66.7% (0.68 mean) | n/a (k=1) | 0/1 sys · 1/3 judg | 16.7% | 0.00 (0%) | +33.3 pp | $0.068 |
-| `claude-sonnet-5-5` | Inspect + LangChain | None (zero-shot) | 50.0% (0.62 mean) | n/a (k=1) | 0/1 sys · 1/3 judg | 50.0% | 0.00 (0%) | +16.7 pp | $0.079 |
-| `DeepSeek-V4.1-Flash` | Inspect + LangChain | None (zero-shot) | 33.3% (0.53 mean) | n/a (k=1) | 1/1 sys · 1/3 judg | 66.7% | 0.00 (0%) | +0.0 pp | $0.010 |
+| `gemini-3.8-flash` | Inspect + LangChain | Domain skill (procedure guide) | 69.0% (59.4 to 77.2) | 60.2% | 1/30 sys · 5/60 judg | 35.0% | 0.09 (7% of runs) | n/a | $0.058 |
+| `DeepSeek-V4.1-Flash` | Inspect + LangChain | None (zero-shot) | 59.0% (49.2 to 68.1) | 39.2% | 0/30 sys · 5/60 judg | 39.0% | 0.22 (9% of runs) | -1.1 pp | $0.033 |
+| `gemini-3.8-flash` | Inspect + LangChain | None (zero-shot) | 58.0% (48.2 to 67.2) | 47.1% | 5/30 sys · 16/60 judg | 37.0% | 0.39 (10% of runs) | -21.1 pp | $0.064 |
+| `claude-sonnet-5-5` | Inspect + LangChain | None (zero-shot) | 55.0% (45.2 to 64.4) | 45.8% | 0/30 sys · 14/60 judg | 50.0% | 0.00 (0% of runs) | -20.0 pp | $0.120 |
 
-A task counts as passed at score `>= 0.80` with `eo_compliant = true`; `pass^5` is the share of tasks passed in all 5 trials (scheduled for the full 20-workflow sweep in [`docs/roadmap.md`](docs/roadmap.md)). Within this 6-workflow slice (`03`, `07`, `19`, `20` carry legal traps), all 3 models catch the unsigned-application trap in Scenario `03` and the attorney-letter trap in Scenario `19`, all 3 miss the claim-specialist escalation in Scenario `07`, and `DeepSeek-V4.1-Flash` also fails to record the principal escalation after the service blocks the illegal `15/30/10` Texas limit in Scenario `20`. "Said done, check failed" counts runs where the agent told the client the work was done while an output or E&O check failed. "Drop, clean to messy" is positive (`+16.7 pp` to `+33.3 pp`) on this initial slice because the table was recorded before the `clean` seed prompt entity grounding fix in Scenarios `01` to `15` (and `14-clean` lead status; see [`docs/roadmap.md`](docs/roadmap.md)), whereas Scenarios `19` and `20` already included full client context and scored `1.00` on both seeds.
+A trial passes at score `>= 0.80` with every legal trap caught. `pass@1` is the mean per-task pass rate; `pass^5` is the share of tasks passed in all 5 trials. Trap counts are per trial (100 trials per row). "Said done, check failed" counts runs where the agent told the client the work was done while an output or legal-trap check failed. "Records changed unasked" is the mean number of writes outside the task's scope (escalations and review tasks do not count). "Drop, clean to messy" compares each model's realistic and clean runs on the 18 workflows that have a clean natural-language task. The domain skill row appends a one-page agency procedure guide ([`eval/inspect/evergreen_domain_skill.md`](eval/inspect/evergreen_domain_skill.md)) to the system prompt; it has no clean control run.
 
-The scripted reference agent ([`eval/agents/baseline-agent.ts`](eval/agents/baseline-agent.ts)) walks all 20 workflows and passes every state, trace, and E&O check (`100.0%`), while the do-nothing baseline (`0.0%`) confirms zero false-positive passes. Reproduce or extend this table from Inspect `.eval` logs with `python3 eval/inspect/run_baseline.py` and `python3 eval/inspect/summarize_inspect.py --include-anchors`.
+What the run shows:
+
+- **The three zero-shot models are statistically tied on first-try pass rate** (55% to 59%, overlapping intervals), but differ on reliability and side effects. `claude-sonnet-5-5` never changed an unrelated record, yet on half of its runs it told the client the work was done while at least one check had failed. `DeepSeek-V4.1-Flash` is cheapest and the least affected by messy data.
+- **Messy data costs Gemini and Claude about 20 points** (on the same 18 workflows: clean 78% and 72%, realistic 57% and 52%). DeepSeek barely moves (61% clean, 60% realistic).
+- **No zero-shot model passes more than 2 of 5 trials on five workflows**: cross-sell review (06), first notice of loss claim filing (07), book-of-business audit (10), client meeting prep (11), and commission reconciliation (15). Most failures are missing follow-through: the agent finds the coverage gap, the below-minimum policy, or the commission discrepancy, then does not document it or open the task a licensed producer needs.
+- **The procedure guide helps `gemini-3.8-flash` most on judgment traps** (16 of 60 missed down to 5 of 60) and on the policy-binding and coverage-question workflows (03 and 12 go from 1 of 5 to 5 of 5), but it hurts new-client intake (01: 5 of 5 down to 1 of 5) and multi-carrier quote comparison (02: 3 of 5 down to 1 of 5). The `pass@1` gain (+11 points) is inside the overlapping intervals; treat it as a signal, not a result.
+
+The scripted reference agent ([`eval/agents/baseline-agent.ts`](eval/agents/baseline-agent.ts)) passes every state, trace, and legal-trap check on all 20 workflows, and the do-nothing baseline scores 0, so the grader produces no false passes on either end. Reproduce or extend this table with `python3 eval/inspect/run_baseline.py` and `python3 eval/inspect/summarize_inspect.py --include-anchors`.
 
 ---
 
@@ -156,7 +164,7 @@ Full comparison and packaging standards: [`docs/benchmark-landscape.md`](docs/be
 - The 253 tasks are 20 workflows written several ways. Treat claims about workflows as n = 20.
 - One industry so far: independent P&C insurance.
 - Statutory minimums reflect the law on the benchmark date, 18 February 2026 ([`regulatory.md`](regulatory.md)).
-- Initial model results cover 6 representative workflows (`01`, `03`, `07`, `14`, `19`, `20`) at `k = 1` trial per workflow and were recorded before the `clean` seed prompt entity grounding (`Scenarios 01` to `15` plus `14-clean` lead status), `GET /v1/envelopes`, and `specs/rater.yaml` `GET /quotes` fixes landed in code; the full 20-workflow, 5-trial (`pass^5`) re-run is next and tracked in [`docs/roadmap.md`](docs/roadmap.md).
+- Model results cover one natural-language prompt per workflow (n = 20) at 5 trials, one harness, and one learning mechanism. Scenario 09 has no `realistic` variant, so its `moderate` variant stands in; Scenarios 08 and 09 have no clean natural-language task, so the clean control covers 18 workflows. `claude-sonnet-5-5` ran on a different Google Cloud project from the other models, with the same region and harness.
 
 ---
 

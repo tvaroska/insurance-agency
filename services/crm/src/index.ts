@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { join } from "path";
 import {
   correlationId,
   requestLogger,
@@ -13,6 +12,7 @@ import {
   type AuthVariables,
 } from "@evergreen/shared";
 import { prisma } from "./prisma";
+import { seedDatabase } from "./seed";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -54,13 +54,7 @@ app.route(
       return { campaign_enrollments_advanced: updated.count };
     },
     onReset: async (seedMode) => {
-      const seedScript = join(import.meta.dir, "seed.ts");
-      const proc = Bun.spawnSync(["bun", "run", seedScript], {
-        env: { ...process.env, SEED_MODE: seedMode },
-      });
-      if (proc.exitCode !== 0) {
-        throw new Error(`CRM seed reset failed: ${proc.stderr.toString()}`);
-      }
+      await seedDatabase(seedMode);
     },
   }),
 );
@@ -85,8 +79,11 @@ app.route("/v1", api);
 
 // ── Start server ─────────────────────────────────────────────────────
 const port = parseInt(process.env.PORT || "3002", 10);
-console.log(`CRM service listening on port ${port}`);
+if (import.meta.main) {
+  console.log(`CRM service listening on port ${port}`);
+}
 
+export { app, seedDatabase };
 export default {
   port,
   fetch: app.fetch,

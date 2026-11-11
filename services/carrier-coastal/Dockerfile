@@ -20,6 +20,18 @@ COPY services/carrier-coastal/package.json services/carrier-coastal/
 WORKDIR /app/services/carrier-coastal
 RUN bunx vite build --config vite.config.ts
 
+# Generate Prisma Client
+FROM base AS prisma-builder
+WORKDIR /app
+COPY --from=deps /app/node_modules node_modules
+COPY --from=deps /app/services/carrier-coastal/node_modules services/carrier-coastal/node_modules
+COPY services/carrier-coastal/package.json services/carrier-coastal/
+COPY services/carrier-coastal/prisma.config.ts services/carrier-coastal/
+COPY services/carrier-coastal/prisma services/carrier-coastal/prisma
+COPY services/carrier-coastal/src services/carrier-coastal/src
+WORKDIR /app/services/carrier-coastal
+RUN bunx prisma generate
+
 # Runtime
 FROM base AS runner
 WORKDIR /app
@@ -27,7 +39,9 @@ COPY --from=deps /app/node_modules node_modules
 COPY --from=deps /app/packages/shared/node_modules packages/shared/node_modules
 COPY --from=deps /app/services/carrier-coastal/node_modules services/carrier-coastal/node_modules
 COPY packages/shared packages/shared
-COPY services/carrier-coastal/src services/carrier-coastal/src
+COPY --from=prisma-builder /app/services/carrier-coastal/src services/carrier-coastal/src
+COPY services/carrier-coastal/prisma services/carrier-coastal/prisma
+COPY services/carrier-coastal/prisma.config.ts services/carrier-coastal/
 COPY services/carrier-coastal/package.json services/carrier-coastal/
 COPY services/carrier-coastal/tsconfig.json services/carrier-coastal/
 COPY --from=ui-builder /app/services/carrier-coastal/public services/carrier-coastal/public

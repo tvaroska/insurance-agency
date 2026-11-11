@@ -4,25 +4,20 @@ import {
   correlationId,
   jwtAuth,
   errorHandler,
-  createTestDatabase as _createTestDb,
   createTestPrismaClient,
   getTestDatabaseUrl,
+  insertSqliteRow,
   authHeader as _authHeader,
   type AppVariables,
 } from "@evergreen/shared";
-import * as schema from "../schema";
 import { PrismaClient } from "../generated/prisma/client";
 
-export { getTestDatabaseUrl };
+export { getTestDatabaseUrl, insertSqliteRow };
 
 export const TEST_SECRET = "test-secret-for-crm-tests";
 process.env.JWT_SECRET = TEST_SECRET;
 
 // ── Database helpers ──
-
-export function createTestDatabase() {
-  return _createTestDb(schema);
-}
 
 export function createTestPrisma() {
   const ctx = createTestPrismaClient(PrismaClient, "test-crm-");
@@ -34,7 +29,7 @@ export function createTables(sqlite: Database) {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS leads (
       lead_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
+      client_id TEXT,
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
       email TEXT NOT NULL,
@@ -115,7 +110,7 @@ export async function authHeader(scopes: string[]) {
 const now = new Date().toISOString();
 
 export function makeLead(
-  overrides: Partial<typeof schema.leads.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     lead_id: `lead_${Math.random().toString(36).slice(2, 10)}`,
@@ -138,7 +133,7 @@ export function makeLead(
 }
 
 export function makeCampaign(
-  overrides: Partial<typeof schema.campaigns.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     campaign_id: `camp_${Math.random().toString(36).slice(2, 10)}`,
@@ -152,7 +147,7 @@ export function makeCampaign(
 }
 
 export function makeEnrollment(
-  overrides: Partial<typeof schema.campaignEnrollments.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     enrollment_id: `enr_${Math.random().toString(36).slice(2, 10)}`,
@@ -167,7 +162,7 @@ export function makeEnrollment(
 }
 
 export function makeRetentionRisk(
-  overrides: Partial<typeof schema.retentionRisks.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     client_id: `CLI-${Math.random().toString(36).slice(2, 5)}`,

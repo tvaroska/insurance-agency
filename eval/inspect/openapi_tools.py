@@ -52,8 +52,14 @@ logger = logging.getLogger(__name__)
 
 
 def service_base_urls():
-    """Base URL per service: http://localhost:300X, overridden by the EVERGREEN_BASE_URLS JSON object."""
-    urls = {name: f"http://localhost:{port}" for name, port in SERVICE_PORTS.items()}
+    """Base URL per service: http://localhost:300X, shifted by EVERGREEN_BASE_PORT and overridden by EVERGREEN_BASE_URLS."""
+    base_port_raw = os.environ.get("EVERGREEN_BASE_PORT", "").strip()
+    try:
+        parsed_base = int(base_port_raw) if base_port_raw else 0
+    except ValueError:
+        parsed_base = 0
+    offset = (parsed_base - 3000) if parsed_base > 0 else 0
+    urls = {name: f"http://localhost:{port + offset}" for name, port in SERVICE_PORTS.items()}
     override = os.environ.get("EVERGREEN_BASE_URLS")
     if override:
         urls.update(json.loads(override))

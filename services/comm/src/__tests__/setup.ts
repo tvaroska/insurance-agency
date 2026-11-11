@@ -1,13 +1,11 @@
 import { Database } from "bun:sqlite";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { createTestPrismaClient, getTestDatabaseUrl } from "@evergreen/shared";
+import { createTestPrismaClient, getTestDatabaseUrl, insertSqliteRow } from "@evergreen/shared";
 import { mkdtempSync } from "fs";
 import { join } from "path";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
 
-export { getTestDatabaseUrl };
+export { getTestDatabaseUrl, insertSqliteRow };
 
 export function createTables(sqlite: Database) {
   sqlite.exec(`
@@ -69,11 +67,10 @@ export function createTestDb() {
   const sqlite = new Database(dbPath);
   sqlite.exec("PRAGMA journal_mode = WAL;");
   sqlite.exec("PRAGMA foreign_keys = ON;");
-  const db = drizzle(sqlite, { schema });
   createTables(sqlite);
   const adapter = new PrismaLibSql({ url: getTestDatabaseUrl(dbPath) });
   const prisma = new PrismaClient({ adapter });
-  return { sqlite, db, prisma };
+  return { sqlite, prisma };
 }
 
 // ── Entity factories ──
@@ -81,7 +78,7 @@ export function createTestDb() {
 const now = new Date().toISOString();
 
 export function makeMessage(
-  overrides: Partial<typeof schema.messages.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     message_id: `msg_${Math.random().toString(36).slice(2, 10)}`,
@@ -107,7 +104,7 @@ export function makeMessage(
 }
 
 export function makePhoneMessage(
-  overrides: Partial<typeof schema.messages.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return makeMessage({
     channel: "phone",
@@ -126,7 +123,7 @@ export function makePhoneMessage(
 }
 
 export function makeWebhook(
-  overrides: Partial<typeof schema.webhooks.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     webhook_id: `whk_${Math.random().toString(36).slice(2, 10)}`,

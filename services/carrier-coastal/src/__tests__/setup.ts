@@ -4,28 +4,23 @@ import {
   correlationId,
   jwtAuth,
   errorHandler,
-  createTestDatabase as _createTestDb,
   createTestPrismaClient,
   getTestDatabaseUrl,
+  insertSqliteRow,
   authHeader as _authHeader,
   type AppVariables,
 } from "@evergreen/shared";
-import * as schema from "../schema";
 import { PrismaClient } from "../generated/prisma/client";
 import { quickQuoteRouter } from "../routes/quickquote";
 import { customizeRouter } from "../routes/customize";
 import { idCardsRouter } from "../routes/idcards";
 
-export { getTestDatabaseUrl };
+export { getTestDatabaseUrl, insertSqliteRow };
 
 export const TEST_SECRET = "test-secret-for-carrier-coastal-tests";
 process.env.JWT_SECRET = TEST_SECRET;
 
 // ── Database helpers ──
-
-export function createTestDatabase() {
-  return _createTestDb(schema);
-}
 
 export function createTestPrisma() {
   const ctx = createTestPrismaClient(PrismaClient, "test-carrier-coastal-");
@@ -120,7 +115,7 @@ export async function authHeader(scopes: string[]) {
 
 const now = new Date().toISOString();
 
-export function makeQuote(overrides: Partial<typeof schema.quotes.$inferInsert> = {}) {
+export function makeQuote(overrides: Record<string, any> = {}) {
   return {
     quote_id: `QT-${Math.random().toString(36).slice(2, 8)}-CSTL`,
     request_id: "QR-001",
@@ -148,7 +143,7 @@ export function makeQuote(overrides: Partial<typeof schema.quotes.$inferInsert> 
   };
 }
 
-export function makePolicy(overrides: Partial<typeof schema.policies.$inferInsert> = {}) {
+export function makePolicy(overrides: Record<string, any> = {}) {
   return {
     policy_id: `POL-${Math.random().toString(36).slice(2, 8)}`,
     client_id: "CLI-001",

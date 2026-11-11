@@ -61,9 +61,12 @@ const commTrace = serviceTrace("comm", [
 ]);
 
 describe("eval/collect-trace.ts", () => {
-  test("resolveBaseUrls overrides defaultBaseUrls() from EVERGREEN_BASE_URLS", () => {
-    expect(resolveBaseUrls(undefined)).toEqual(defaultBaseUrls());
-    const urls = resolveBaseUrls(JSON.stringify({ ams: "http://ams:3000", comm: "http://comm:3004" }));
+  test("resolveBaseUrls overrides defaultBaseUrls() from EVERGREEN_BASE_PORT and EVERGREEN_BASE_URLS", () => {
+    expect(resolveBaseUrls(undefined, undefined)).toEqual(defaultBaseUrls(undefined));
+    const shifted = resolveBaseUrls(undefined, "4200");
+    expect(shifted.ams).toBe("http://localhost:4200");
+    expect(shifted.claims).toBe("http://localhost:4207");
+    const urls = resolveBaseUrls(JSON.stringify({ ams: "http://ams:3000", comm: "http://comm:3004" }), undefined);
     expect(urls.ams).toBe("http://ams:3000");
     expect(urls.comm).toBe("http://comm:3004");
     expect(urls.crm).toBe("http://localhost:3002");

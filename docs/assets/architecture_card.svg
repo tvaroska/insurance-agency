@@ -23,7 +23,7 @@
   <rect x="20" y="20" width="1560" height="104" rx="12" fill="#0F172A"/>
   <rect x="20" y="90" width="1560" height="34" fill="#0F172A"/>
   <text x="56" y="66" class="font title" fill="#FFFFFF">EVERGREEN BROKERAGE ARCHITECTURE</text>
-  <text x="56" y="96" class="font subtitle" fill="#94A3B8">Governed AI Insurance Agency · 8 Microservices &amp; 35 Tables · Three Lines of Defense</text>
+  <text x="56" y="96" class="font subtitle" fill="#94A3B8">Governed AI Insurance Agency · 8 Microservices &amp; 32 Tables · Three Lines of Defense</text>
 
   <!-- Top Right Color Legend Pills -->
   <rect x="960" y="48" width="188" height="44" rx="8" fill="#1E293B" stroke="#38BDF8" stroke-width="1.5"/>
@@ -51,7 +51,7 @@
   <text x="140" y="194" class="mono step-tag" fill="#0C4A6E">MULTI-MODAL INTAKE</text>
 
   <text x="80" y="262" class="font box-title" fill="#0F172A">Producer &amp; Client Requests</text>
-  <text x="80" y="288" class="font box-sub" fill="#475569">11-person agency scaling from $20M to $38.5M premium</text>
+  <text x="80" y="288" class="font box-sub" fill="#475569">Modeled 11-person agency ($20M to $38.5M premium)</text>
 
   <rect x="80" y="314" width="392" height="52" rx="8" fill="#FFFFFF" stroke="#7DD3FC" stroke-width="1.5"/>
   <text x="100" y="345" class="font pill-title" fill="#0369A1">5 Hero Journeys + 20 Benchmark Scenarios</text>
@@ -73,7 +73,7 @@
   <text x="664" y="194" class="mono step-tag" fill="#1E3A8A">3-STAGE EXECUTION ENGINE</text>
 
   <text x="604" y="262" class="font box-title" fill="#0F172A">Compiled Code vs. AI Skill</text>
-  <text x="604" y="288" class="font box-sub" fill="#334155">78% of routine CSR servicing runs at $0 token cost</text>
+  <text x="604" y="288" class="font box-sub" fill="#334155">Modeled: 78% routine CSR work compiled to $0 code</text>
 
   <rect x="604" y="314" width="188" height="116" rx="8" fill="#ECFDF5" stroke="#34D399" stroke-width="2"/>
   <text x="622" y="344" class="font pill-title" fill="#047857">Stage 3: Compiled</text>
@@ -131,7 +131,7 @@
   <text x="1188" y="602" class="mono step-tag" fill="#065F46">8-SERVICE BROKERAGE CORE</text>
 
   <text x="1128" y="670" class="font box-title" fill="#0F172A">REST, MCP &amp; Carrier Portals</text>
-  <text x="1128" y="696" class="font box-sub" fill="#334155">35 SQLite/Postgres tables with &lt;100ms sim reset</text>
+  <text x="1128" y="696" class="font box-sub" fill="#334155">32 SQLite tables with &lt;100ms sim reset</text>
 
   <rect x="1128" y="722" width="392" height="52" rx="8" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.5"/>
   <text x="1148" y="753" class="font pill-title" fill="#065F46">AMS · Rater · CRM · ECM ACORD 25 PDF · Claims</text>
@@ -178,7 +178,7 @@
   <text x="80" y="607" class="mono step-num" fill="#6D28D9">06</text>
   <text x="140" y="602" class="mono step-tag" fill="#4C1D95">3RD-LINE STATE-DIFF &amp; GYM</text>
 
-  <text x="80" y="670" class="font box-title" fill="#0F172A">35-Table Diff &amp; Calibration</text>
+  <text x="80" y="670" class="font box-title" fill="#0F172A">32-Table Diff &amp; Calibration</text>
   <text x="80" y="696" class="font box-sub" fill="#334155">Primary-key snapshot grading &amp; benchmark adapters</text>
 
   <rect x="80" y="722" width="392" height="52" rx="8" fill="#FFFFFF" stroke="#C4B5FD" stroke-width="1.5"/>

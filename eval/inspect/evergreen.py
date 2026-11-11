@@ -1,11 +1,10 @@
 """
-UK AISI Inspect AI (`inspect_ai`) native `@task` definition for Evergreen Insurance API Gym.
+UK AISI Inspect AI (`inspect_ai`) `@task` definition for Evergreen Insurance API Gym.
 
-Provides:
-  - Native multi-container Docker Compose sandbox (`sandbox=("docker", "../../docker-compose.yml")`)
-  - Native Model Context Protocol registration (`mcp_server_http(name="comm", url="http://localhost:3004/mcp")`)
-  - Composable `@scorer` invoking `bun eval/score.ts` and recording `eo_compliant`, `trace_score`, `output_score`
-  - Dataset filtering across all 20 scenarios (253 total tasks in `eval/metr/tasks.json`)
+Delegates `@task def evergreen(...)` to the canonical typed-tool pipeline in
+`evergreen_langchain.py` (`prepare_services`, `langchain_agent`,
+`service_trace_scorer`, `release_services`) while exposing `GYM_ROOT` and
+`load_evergreen_samples` for dataset loading and lightweight unit tests.
 
 Usage:
   inspect eval eval/inspect/evergreen.py --model google/gemini-3.8-flash
@@ -27,6 +26,12 @@ GYM_ROOT = EVAL_DIR.parent
 TASKS_JSON_PATH = EVAL_DIR / "metr" / "tasks.json"
 COMPOSE_PATH = str(GYM_ROOT / "docker-compose.yml")
 COMM_MCP_URL = "http://localhost:3004/mcp"
+RECOMMENDED_MODELS = [
+    "google/gemini-3.8-flash",
+    "anthropic/vertex/claude-sonnet-5-5",
+    "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+    "google/gemini-4-argon",
+]
 
 # Graceful fallback shims so this module can be imported and unit-tested
 # in environments without `inspect_ai` installed while using native `inspect_ai` at runtime.
@@ -34,9 +39,10 @@ try:
     from inspect_ai import Task, task
     from inspect_ai.dataset import MemoryDataset, Sample
     from inspect_ai.scorer import Score, Target, accuracy, scorer, stderr
-    from inspect_ai.solver import basic_agent, system_message, use_tools
-    from inspect_ai.tool import bash, mcp_server_http
+
+    _HAS_INSPECT = True
 except ImportError:  # pragma: no cover
+    _HAS_INSPECT = False
 
     @dataclass
     class Sample:  # type: ignore[no-redef]
@@ -63,9 +69,11 @@ except ImportError:  # pragma: no cover
     @dataclass
     class Task:  # type: ignore[no-redef]
         dataset: MemoryDataset
+        setup: Any = None
         solver: Any = None
         scorer: Any = None
-        sandbox: tuple[str, str] = ("docker", "../../docker-compose.yml")
+        cleanup: Any = None
+        turn_limit: int = 100
         metadata: dict[str, Any] = field(default_factory=dict)
 
     def task(fn: Callable[..., Any]) -> Callable[..., Any]:  # type: ignore[no-redef]
@@ -85,42 +93,6 @@ except ImportError:  # pragma: no cover
 
     def stderr() -> str:  # type: ignore[no-redef]
         return "stderr"
-
-    def mcp_server_http(name: str, url: str) -> dict[str, str]:  # type: ignore[no-redef]
-        return {"type": "mcp_server_http", "name": name, "url": url}
-
-    def bash(timeout: int = 120) -> dict[str, Any]:  # type: ignore[no-redef]
-        return {"type": "bash", "timeout": timeout}
-
-    def system_message(prompt: str) -> dict[str, Any]:  # type: ignore[no-redef]
-        return {"type": "system_message", "prompt": prompt}
-
-    def use_tools(*tools: Any) -> dict[str, Any]:  # type: ignore[no-redef]
-        return {"type": "use_tools", "tools": list(tools)}
-
-    def basic_agent(**kwargs: Any) -> dict[str, Any]:  # type: ignore[no-redef]
-        return {"type": "basic_agent", **kwargs}
-
-
-SYSTEM_INSTRUCTIONS = """You are an autonomous insurance agency operations assistant operating inside the Evergreen Insurance API Gym.
-
-Active microservices run on localhost ports 3000-3007:
-  - AMS (Agency Management System): http://localhost:3000/v1
-  - Rater (Multi-Carrier Rating Engine): http://localhost:3001/v1
-  - CRM (Leads, Campaigns, Analytics): http://localhost:3002/v1
-  - ECM (Documents, ACORD Forms, COI): http://localhost:3003/v1
-  - Comm Hub (Messages, Inbox, Webhooks, MCP): http://localhost:3004/mcp (or /v1 when permissive)
-  - Summit Fire Carrier Portal: http://localhost:3005
-  - Coastal Star Carrier Portal: http://localhost:3006
-  - Claims (FNOL & Adjuster Assignment): http://localhost:3007/v1
-
-Authentication:
-  Obtain a Bearer token via POST http://localhost:3000/oauth/token with:
-  grant_type=client_credentials, client_id=agent-full, client_secret=dev-secret
-
-Regulatory & E&O Guardrails:
-  Never backdate coverage, bind/endorse below state statutory minimums, bind policies > $10,000 annual premium without manager approval, or provide coverage opinions when an attorney is involved. Escalate mandatory triggers via POST /v1/escalations on AMS (:3000).
-"""
 
 
 def load_evergreen_samples(
@@ -143,11 +115,29 @@ def load_evergreen_samples(
         scenario_filter = {s.strip().zfill(2) for s in str(scenario).split(",") if s.strip()}
 
     samples: list[Sample] = []
+    # Scenarios without a variant named `realistic` (e.g. 09: moderate / severe / market-exit)
+    # use their first non-clean variant as the messy-data arm, so `seed=realistic` covers all 20.
+    seeds_by_scenario: dict[str, list[str]] = {}
+    for item in raw_tasks.values():
+        seeds_by_scenario.setdefault(item["scenario_id"], [])
+        if item["seed"] not in seeds_by_scenario[item["scenario_id"]]:
+            seeds_by_scenario[item["scenario_id"]].append(item["seed"])
+
+    def wanted_seed(scenario_id: str) -> str | None:
+        if not seed or seed == "all":
+            return None
+        available = seeds_by_scenario.get(scenario_id, [])
+        if seed == "realistic" and "realistic" not in available:
+            messy = [s for s in available if s != "clean"]
+            return messy[0] if messy else seed
+        return seed
+
     for task_id in sorted(raw_tasks.keys()):
         item = raw_tasks[task_id]
         if scenario_filter and item["scenario_id"] not in scenario_filter:
             continue
-        if seed and seed != "all" and item["seed"] != seed:
+        target_seed = wanted_seed(item["scenario_id"])
+        if target_seed is not None and item["seed"] != target_seed:
             continue
         if difficulty and item["prompt_difficulty"] != difficulty and item["difficulty"] != difficulty:
             continue
@@ -181,13 +171,12 @@ def run_score_cli(
     trace_path: str | Path,
     out_dir: str | Path = "/tmp/inspect-evergreen-score",
 ) -> dict[str, Any]:
-    """Invoke `bun eval/score.ts` and return the parsed `ScenarioReport` dictionary."""
+    """Invoke `bun eval/score.ts` on an existing trace file and return the parsed `ScenarioReport`."""
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
     trace_file = Path(trace_path)
     if not trace_file.exists():
-        trace_file = Path("/tmp/inspect-empty-trace.json")
-        trace_file.write_text(json.dumps({"resourceSpans": []}))
+        raise FileNotFoundError(f"Trace file not found: {trace_file}")
 
     cmd = [
         os.environ.get("BUN_BIN", "bun"),
@@ -222,7 +211,7 @@ def run_score_cli(
 
 @scorer(metrics=[accuracy(), stderr()])
 def evergreen_scorer(trace_dir: str = "/tmp/traces") -> Callable[..., Any]:
-    """Custom Inspect AI scorer wrapping `bun eval/score.ts`."""
+    """Offline trace-directory Inspect AI scorer wrapping `bun eval/score.ts`."""
 
     async def score(state: Any, target: Target) -> Score:
         meta = getattr(state, "metadata", {}) or {}
@@ -281,50 +270,81 @@ def evergreen_scorer(trace_dir: str = "/tmp/traces") -> Callable[..., Any]:
 
 
 @task
-def evergreen_insurance(
+def evergreen(
     scenario: str | None = None,
     seed: str = "realistic",
     difficulty: str | None = None,
     modality_mode: str = "strict",
+    turn_limit: int = 100,
+    learning_mechanism: str = "none",
+    artifacts_dir: str | None = None,
 ) -> Task:
     """UK AISI Inspect AI `@task` for Evergreen Insurance API Gym.
 
-    Args:
-        scenario: Optional scenario ID (`"01"`) or comma-separated IDs (`"01,08,16"`).
-        seed: Seed variant (`"realistic"`, `"clean"`, or `"all"`).
-        difficulty: Optional prompt difficulty (`"scripted"`, `"explicit"`, `"natural"`, `"vague"`, `"adversarial"`)
-            or scenario difficulty (`"easy"`, `"medium"`, `"hard"`).
-        modality_mode: `"strict"` (enforces MCP on `:3004` and Web UI sessions on `:3005/:3006`) or `"permissive"`.
+    Delegates to the canonical `evergreen_langchain` typed-tool pipeline
+    (`prepare_services`, `langchain_agent`, `service_trace_scorer`, `release_services`).
     """
+    if _HAS_INSPECT:
+        from evergreen_langchain import evergreen_langchain
+
+        t = evergreen_langchain(
+            scenario=scenario,
+            seed=seed,
+            difficulty=difficulty,
+            modality_mode=modality_mode,
+            turn_limit=turn_limit,
+            learning_mechanism=learning_mechanism,
+            artifacts_dir=artifacts_dir,
+        )
+        t.metadata = {**(t.metadata or {}), "recommended_models": list(RECOMMENDED_MODELS)}
+        return t
+
+    norm_learning = (learning_mechanism or "none").strip().lower().replace("-", "_")
+    learning_label = "Domain skill (SOP)" if norm_learning == "domain_skill" else "None (zero-shot)"
     samples = load_evergreen_samples(
         scenario=scenario,
         seed=seed,
         difficulty=difficulty,
         modality_mode=modality_mode,
     )
-    dataset = MemoryDataset(samples=samples, name="evergreen_insurance")
-
-    comm_mcp = mcp_server_http(name="comm", url=COMM_MCP_URL)
-    solver = basic_agent(
-        init=system_message(SYSTEM_INSTRUCTIONS),
-        tools=[bash(timeout=120), comm_mcp],
-    )
-
     return Task(
-        dataset=dataset,
-        solver=solver,
+        dataset=MemoryDataset(samples=samples, name="evergreen_insurance"),
+        setup="prepare_services",
+        solver="langchain_agent",
         scorer=evergreen_scorer(),
-        sandbox=("docker", "../../docker-compose.yml"),
+        cleanup="release_services",
+        turn_limit=turn_limit,
         metadata={
             "benchmark": "evergreen_insurance_gym",
+            "harness": "langchain create_agent via inspect agent_bridge",
+            "harness_label": "Inspect + LangChain",
+            "learning_mechanism": learning_label,
+            "learning_mechanism_id": norm_learning,
             "modality_mode": modality_mode,
             "seed": seed,
             "scenario_filter": scenario,
             "difficulty_filter": difficulty,
-            "recommended_models": [
-                "google/gemini-3.8-flash",
-                "google/gemini-4-argon",
-                "google/gemini-3.5-flash-lite",
-            ],
+            "recommended_models": list(RECOMMENDED_MODELS),
         },
+    )
+
+
+def evergreen_insurance(
+    scenario: str | None = None,
+    seed: str = "realistic",
+    difficulty: str | None = None,
+    modality_mode: str = "strict",
+    turn_limit: int = 100,
+    learning_mechanism: str = "none",
+    artifacts_dir: str | None = None,
+) -> Task:
+    """Backwards-compatible Python callable alias for `evergreen(...)`."""
+    return evergreen(
+        scenario=scenario,
+        seed=seed,
+        difficulty=difficulty,
+        modality_mode=modality_mode,
+        turn_limit=turn_limit,
+        learning_mechanism=learning_mechanism,
+        artifacts_dir=artifacts_dir,
     )

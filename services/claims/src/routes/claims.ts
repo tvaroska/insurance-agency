@@ -104,9 +104,30 @@ async function addTimelineEvent(opts: {
   });
 }
 
+// ── Helper: normalize alternate FNOL field names ──
+
+function normalizeFnolBody(body: Record<string, unknown>): Record<string, unknown> {
+  if (body.loss_type !== undefined && body.claim_type === undefined) {
+    body.claim_type = body.loss_type;
+  }
+  if (body.description !== undefined && body.loss_description === undefined) {
+    body.loss_description = body.description;
+  }
+  if (body.estimated_loss !== undefined && body.reserve_amount === undefined) {
+    body.reserve_amount = body.estimated_loss;
+  }
+  return body;
+}
+
 // ── Helper: create FNOL claim from validated body ──
 
-async function createFnolClaim(body: Record<string, unknown>) {
+async function createFnolClaim(rawBody: Record<string, unknown>) {
+  const body = normalizeFnolBody(rawBody);
+  const adjusterId =
+    typeof body.adjuster_id === "string" && body.adjuster_id.trim()
+      ? body.adjuster_id.trim()
+      : null;
+
   throwIfErrors([
     checkRequired("policy_id", body.policy_id),
     checkRequired("client_id", body.client_id),
@@ -126,6 +147,9 @@ async function createFnolClaim(body: Record<string, unknown>) {
     body.loss_location
       ? checkMaxLength("loss_location", body.loss_location as string, 500)
       : null,
+    body.reserve_amount !== undefined && body.reserve_amount !== null
+      ? checkRange("reserve_amount", body.reserve_amount as number, { min: 0 })
+      : null,
   ]);
 
   // Validate loss_date is not in the future
@@ -138,6 +162,25 @@ async function createFnolClaim(body: Record<string, unknown>) {
         code: "out_of_range",
       },
     ]);
+  }
+
+  // Validate optional adjuster_id references an active adjuster
+  if (adjusterId) {
+    const adjuster = await prisma.adjuster.findUnique({
+      where: { adjuster_id: adjusterId },
+    });
+    if (!adjuster) {
+      throw notFoundError("adjuster");
+    }
+    if (!adjuster.active) {
+      throw validationError([
+        {
+          field: "adjuster_id",
+          message: "Adjuster is not active.",
+          code: "invalid_enum",
+        },
+      ]);
+    }
   }
 
   const now = new Date().toISOString();
@@ -153,9 +196,10 @@ async function createFnolClaim(body: Record<string, unknown>) {
     reported_date: today,
     loss_description: body.loss_description as string,
     loss_location: (body.loss_location as string) ?? null,
-    reserve_amount: null,
+    reserve_amount:
+      typeof body.reserve_amount === "number" ? body.reserve_amount : null,
     settlement_amount: null,
-    adjuster_id: null,
+    adjuster_id: adjusterId,
     notes: (body.notes as string) ?? null,
     created_at: now,
     updated_at: now,
@@ -178,15 +222,6 @@ async function createFnolClaim(body: Record<string, unknown>) {
 
 claimsRouter.post("/", requireScopes("claims:write"), async (c) => {
   const body = await c.req.json();
-
-  // Normalize alternate field names
-  if (body.loss_type !== undefined && body.claim_type === undefined) {
-    body.claim_type = body.loss_type;
-  }
-  if (body.description !== undefined && body.loss_description === undefined) {
-    body.loss_description = body.description;
-  }
-
   const result = await createFnolClaim(body);
   return c.json(result, 201);
 });

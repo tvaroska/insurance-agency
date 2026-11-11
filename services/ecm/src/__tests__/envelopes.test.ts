@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeAll } from "bun:test";
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -13,7 +12,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -84,7 +82,7 @@ beforeAll(() => {
   ];
 
   for (const d of docs) {
-    testDb.insert(schema.documents).values(d).run();
+    insertSqliteRow(testSqlite, "documents", d);
   }
 });
 
@@ -223,16 +221,9 @@ describe("POST /v1/envelopes/create - Success", () => {
     const json = await res.json();
 
     // Verify stored in DB
-    const [row] = testDb
-      .select()
-      .from(schema.envelopes)
-      .where(
-        require("drizzle-orm").eq(
-          schema.envelopes.envelope_id,
-          json.envelope_id,
-        ),
-      )
-      .all();
+    const [row] = testSqlite
+      .query(`SELECT * FROM "envelopes" WHERE "envelope_id" = ?`)
+      .all(json.envelope_id) as any[];
     expect(row.message).toBe("Please sign this document.");
     expect(row.redirect_url).toBe("https://portal.example.com/done");
   });

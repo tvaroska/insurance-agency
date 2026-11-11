@@ -1,0 +1,114 @@
+[
+  {
+    "model": "google/gemini-3.8-flash",
+    "model_label": "`gemini-3.8-flash`",
+    "harness": "Inspect + LangChain",
+    "learning_mechanism": "Domain skill (SOP)",
+    "tasks_count": 20,
+    "trials_count": 100,
+    "mean_score": 0.814,
+    "pass_at_1": 0.69,
+    "pass_hat_5": 0.6016,
+    "system_traps_missed": 1,
+    "system_traps_total": 30,
+    "judgment_traps_missed": 5,
+    "judgment_traps_total": 60,
+    "said_done_failed_rate": 0.35,
+    "unasked_mutation_rate": 0.07,
+    "mean_unasked_mutations": 0.09,
+    "drop_clean_to_messy_pp": null,
+    "mean_cost_usd": 0.0581,
+    "pass_at_1_ci95": [
+      0.5937,
+      0.7722
+    ],
+    "pass_hat_5_ci95": [
+      0.4016,
+      0.8011
+    ]
+  },
+  {
+    "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+    "model_label": "`DeepSeek-V4.1-Flash`",
+    "harness": "Inspect + LangChain",
+    "learning_mechanism": "None (zero-shot)",
+    "tasks_count": 20,
+    "trials_count": 100,
+    "mean_score": 0.7757,
+    "pass_at_1": 0.59,
+    "pass_hat_5": 0.3917,
+    "system_traps_missed": 0,
+    "system_traps_total": 30,
+    "judgment_traps_missed": 5,
+    "judgment_traps_total": 60,
+    "said_done_failed_rate": 0.39,
+    "unasked_mutation_rate": 0.09,
+    "mean_unasked_mutations": 0.22,
+    "drop_clean_to_messy_pp": -1.1,
+    "mean_cost_usd": 0.033,
+    "pass_at_1_ci95": [
+      0.492,
+      0.6813
+    ],
+    "pass_hat_5_ci95": [
+      0.1956,
+      0.604
+    ]
+  },
+  {
+    "model": "google/gemini-3.8-flash",
+    "model_label": "`gemini-3.8-flash`",
+    "harness": "Inspect + LangChain",
+    "learning_mechanism": "None (zero-shot)",
+    "tasks_count": 20,
+    "trials_count": 100,
+    "mean_score": 0.7055,
+    "pass_at_1": 0.58,
+    "pass_hat_5": 0.4713,
+    "system_traps_missed": 5,
+    "system_traps_total": 30,
+    "judgment_traps_missed": 16,
+    "judgment_traps_total": 60,
+    "said_done_failed_rate": 0.37,
+    "unasked_mutation_rate": 0.1,
+    "mean_unasked_mutations": 0.39,
+    "drop_clean_to_messy_pp": -21.1,
+    "mean_cost_usd": 0.0643,
+    "pass_at_1_ci95": [
+      0.4821,
+      0.672
+    ],
+    "pass_hat_5_ci95": [
+      0.256,
+      0.6781
+    ]
+  },
+  {
+    "model": "anthropic/vertex/claude-sonnet-5-5",
+    "model_label": "`claude-sonnet-5-5`",
+    "harness": "Inspect + LangChain",
+    "learning_mechanism": "None (zero-shot)",
+    "tasks_count": 20,
+    "trials_count": 100,
+    "mean_score": 0.6927,
+    "pass_at_1": 0.55,
+    "pass_hat_5": 0.4583,
+    "system_traps_missed": 0,
+    "system_traps_total": 30,
+    "judgment_traps_missed": 14,
+    "judgment_traps_total": 60,
+    "said_done_failed_rate": 0.5,
+    "unasked_mutation_rate": 0.0,
+    "mean_unasked_mutations": 0.0,
+    "drop_clean_to_messy_pp": -20.0,
+    "mean_cost_usd": 0.1201,
+    "pass_at_1_ci95": [
+      0.4524,
+      0.6439
+    ],
+    "pass_hat_5_ci95": [
+      0.2554,
+      0.6617
+    ]
+  }
+]

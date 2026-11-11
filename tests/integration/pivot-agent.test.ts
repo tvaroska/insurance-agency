@@ -2,16 +2,16 @@
  * Integration Test: The Pivot Agent (Cross-Sell)
  *
  * A client calls about a claim; the agent detects a cross-sell opportunity.
- * Flow: Comm → AMS → AMS → CRM → Comm → CRM
+ * Flow: Comm (HTTP /mcp JSON-RPC) → AMS → AMS → CRM → Comm (HTTP /mcp) → CRM
  */
 import { describe, expect, test, beforeAll } from "bun:test";
 import {
   amsApp,
   crmApp,
-  comm,
+  commApp,
   authHeader,
-  handleGetTranscript,
-  handleSendMessage,
+  callCommMcpJsonRpc,
+  callCommMcpTool,
   seedAmsClient,
   seedAmsPolicy,
   seedCommMessage,
@@ -23,9 +23,8 @@ let clientId: string;
 let leadId: string;
 let campaignId: string;
 
-beforeAll(() => {
-  // Seed: client with auto policy but no life insurance
-  const client = seedAmsClient({
+beforeAll(async () => {
+  const client = await seedAmsClient({
     id: "CLI-011",
     first_name: "Carlos",
     last_name: "Gutierrez",
@@ -33,15 +32,14 @@ beforeAll(() => {
   });
   clientId = client.id;
 
-  seedAmsPolicy({
+  await seedAmsPolicy({
     policy_id: "POL-AUTO-011",
     client_id: clientId,
     carrier_code: "PROG",
     policy_type: "personal_auto",
   });
 
-  // Seed call transcript mentioning "new baby" → life insurance opportunity
-  seedCommMessage({
+  await seedCommMessage({
     message_id: "MSG-CALL-003",
     client_id: clientId,
     channel: "phone",
@@ -61,8 +59,7 @@ beforeAll(() => {
     to_addr: "800-555-EVER",
   });
 
-  // Seed lead and campaign for CRM steps
-  const lead = seedCrmLead({
+  const lead = await seedCrmLead({
     lead_id: "lead_pivot_011",
     client_id: clientId,
     first_name: "Carlos",
@@ -73,7 +70,7 @@ beforeAll(() => {
   });
   leadId = lead.lead_id;
 
-  const campaign = seedCrmCampaign({
+  const campaign = await seedCrmCampaign({
     campaign_id: "camp_life_pivot_2026",
     name: "Life Insurance Pivot",
     type: "nurture",
@@ -83,11 +80,31 @@ beforeAll(() => {
 });
 
 describe("Pivot Agent (Cross-Sell) — end-to-end", () => {
-  test("Step 1: Get call transcript from Comm Hub", async () => {
-    const result = await handleGetTranscript({ call_id: "CALL-003" }, comm.db);
+  test("Step 0: MCP initialize & tools/list succeed over HTTP /mcp while strict mode blocks direct REST", async () => {
+    const initResult = await callCommMcpJsonRpc("initialize", {
+      protocolVersion: "2025-06-18",
+      capabilities: {},
+      clientInfo: { name: "integration-test", version: "1.0.0" },
+    });
+    expect(initResult.serverInfo?.name).toBe("evergreen-comm");
+
+    const listResult = await callCommMcpJsonRpc("tools/list");
+    const toolNames = (listResult.tools ?? []).map((t: any) => t.name);
+    expect(toolNames).toContain("get_transcript");
+    expect(toolNames).toContain("send_message");
+    expect(toolNames).toContain("get_inbox");
+
+    // Under MODALITY_MODE=strict, direct REST access without X-Eval-Scorer is blocked (403)
+    const headers = await authHeader(["comm:messages:read"]);
+    const restRes = await commApp.request("/v1/messages/inbox", { headers });
+    expect(restRes.status).toBe(403);
+  });
+
+  test("Step 1: Get call transcript from Comm Hub via HTTP /mcp JSON-RPC", async () => {
+    const result = await callCommMcpTool("get_transcript", { call_id: "CALL-003" });
     expect(result.isError).toBeUndefined();
 
-    const data = JSON.parse(result.content[0].text as string);
+    const data = JSON.parse(result.content[0].text);
     expect(data.call_id).toBe("CALL-003");
     expect(data.client_id).toBe(clientId);
     expect(data.sentiment).toBe("positive");
@@ -117,7 +134,6 @@ describe("Pivot Agent (Cross-Sell) — end-to-end", () => {
     const body = await res.json();
     expect(body.data.length).toBeGreaterThanOrEqual(1);
 
-    // Verify client has auto but no life policy
     const policyTypes = body.data.map((p: any) => p.policy_type);
     expect(policyTypes).toContain("personal_auto");
     expect(policyTypes).not.toContain("life");
@@ -141,20 +157,17 @@ describe("Pivot Agent (Cross-Sell) — end-to-end", () => {
     expect(body.client_id).toBe(clientId);
   });
 
-  test("Step 5: Send personalized cross-sell email via Comm Hub", async () => {
-    const result = await handleSendMessage(
-      {
-        to: "carlos.gutierrez@email.com",
-        channel: "email",
-        subject: "Protect your growing family — Life Insurance options",
-        body: "Congratulations on your new baby! We noticed you don't currently have life insurance. Here are some options to protect your family.",
-        client_id: clientId,
-      },
-      comm.db,
-    );
+  test("Step 5: Send personalized cross-sell email via Comm Hub HTTP /mcp JSON-RPC", async () => {
+    const result = await callCommMcpTool("send_message", {
+      to: "carlos.gutierrez@email.com",
+      channel: "email",
+      subject: "Protect your growing family — Life Insurance options",
+      body: "Congratulations on your new baby! We noticed you don't currently have life insurance. Here are some options to protect your family.",
+      client_id: clientId,
+    });
     expect(result.isError).toBeUndefined();
 
-    const data = JSON.parse(result.content[0].text as string);
+    const data = JSON.parse(result.content[0].text);
     expect(data.message_id).toBeTruthy();
     expect(data.status).toBe("queued");
     expect(data.channel).toBe("email");

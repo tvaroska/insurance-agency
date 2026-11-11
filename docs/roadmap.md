@@ -109,7 +109,7 @@ Goals:
 - 20-scenario playable baseline trajectories (`eval/agents/baseline-agent.ts`) and 3-Stage Agent-to-Code evolution runner (`eval/evolution-showcase.ts`)
 - Self-contained GM3 Light Executive HTML Scorecard (`docs/executive-scorecard.html`) and Executive Story Spine (`design/story.md`, `EXECUTIVE-BRIEF.md`)
 
-### v0.7.0: Benchmark Framing & First Leaderboard (current)
+### v0.7.0: Benchmark Framing & First Leaderboard (done)
 
 - Done: `README.md` reframed as an agent benchmark for small-business work outside coding (one worked task, the 20 workflows, scoring, harness adapters, comparison, limitations); the product narrative and modeled economics stay in `design/story.md` and `EXECUTIVE-BRIEF.md`
 - Done: benchmark card hero (`docs/assets/benchmark_card.svg`)
@@ -141,3 +141,20 @@ Goals:
 - Next: expand `Cost per task` into full **Cost per Validated Outcome (`CPVO`)** alongside `bq-eval` — keep raw `Cost per task` in the Results table as the baseline entry point, add `Cost per Validated Outcome` (dividing total spend across all 4 FinOps buckets by runs that pass deterministic `60%` DB state diff + `40%` OTLP trace + hard E&O gate $\times$ Rogan-Gladen calibrated communication rubric $\hat{\theta}_{\text{RG}}$), and export real Inspect `.eval` OTLP traces and 32-table SQLite state-diff verdicts across all 8 services directly into `bq-eval`
 - Next: replace the hero card with a receipt from a real failing run (what the agent told the client vs. what changed in the 8 systems), picked by a fixed rule. The services already reject 15/30/10 in Texas with HTTP 422, so the receipt must show the missed escalation or a false "done", or use a judgment-only trap such as Scenario 19 (attorney mention)
 - Next: replace the projected Stage 2 skill target rates in `eval/evolution-showcase.ts` and `services/ams/src/routes/workbench.ts` (which now report the measured `v0.7` Stage 1 baseline of `33.3%–66.7%` `pass@1` / `16.7%–66.7%` false-completion rate and the measured `100.0%` 20-workflow Stage 3 reference verifier anchor alongside projected Stage 2 skill targets) with measured 5-trial Stage 2 skill runs (`pass^5`)
+
+### v0.8.0: Harness Hardening & First Full Sweep (current)
+
+- Done (2026-11-11, `ADR-006`): `/showcase-panel` R1 to R3 hardening. Scorer crash on `specs/ast.rules.yaml` fixed; in-process reset with `EVERGREEN_DATA_DIR`; tracked service `.db` files removed; E&O firewall escalation bypass closed (rater bind returns 422, state minimums never waivable, escalations must match client, policy and reason); scorer secret, portal bootstrap cookie and `/mcp` JWT under strict mode; `collateralPolicy` on all 52 variants; Drizzle, PG and K8s removed; 120-item rubric gold set (`eval/calibration/`, Gwet AC2 0.93, deterministic checker TPR 0.967 / TNR 0.90); `validate-harness` 52/52
+- Done (2026-11-11): a first consolidated sweep exposed scorer and runner defects; it was run once as-is, set aside, and all findings were fixed in one pass before the published run:
+  1. Collateral scoring flagged correct escalations: escalations, escalation events and review tasks are now exempt from policy scope and from `maxTotalMutations`, book-wide scenarios (04, 10, 15) set `governanceAnyClient`, and the penalty is 0.1 per unasked write capped at 0.5
+  2. Scenario 12 realistic was tagged `CLI-012` while Rosa Jimenez is `CLI-018` in the seed; dual-name prompts in Scenarios 12 and 13 were removed; Scenario 08 now allows the address-change endorsements on Priya Patel's two policies
+  3. Receipt bundles now include the learning mechanism in their path, so arms never overwrite each other
+  4. `seed=realistic` falls back to a scenario's first messy variant (09 uses `moderate`); variants without a case at the requested difficulty are skipped (08 and 09 have no clean natural task)
+  5. "Drop, clean to messy" compares an arm only with its own clean runs, on the scenarios both seeds cover
+  6. `run_baseline.py` collects job failures and still summarizes; stack data dirs are keyed by port so parallel runners do not collide
+  7. A pre-sweep pilot gate (1 trial per workflow on every arm) is now required before a production sweep (`AGENTS.md`)
+- Done (2026-11-11): published v0.8 run (`eval/results/v0.8/`, 454 trials: 20 workflows x 5 trials realistic for 4 arms, 18 workflows x 1 trial clean for the 3 zero-shot arms; `claude-sonnet-5-5` on Vertex project `coding007`). Results table in `README.md`, `docs/assets/benchmark_card.svg`, `docs/executive-scorecard.html`, `eval/evolution-showcase.ts` and the workbench. Replay bundles (trace, before/after snapshots, report, `sha256sums.txt`) are stored outside git at `gs://btvaroska/insurance-agency/results/v0.8/artifacts/`; `replay-manifest.json` in the repo carries every trial's hashes and paths
+- Next: improve the five workflows where no zero-shot model passes more than 2 of 5 trials (06, 07, 10, 11, 15); most failures are missing follow-through (documenting the gap or opening the producer task)
+- Next: investigate why the domain skill guide hurts Scenario 01 intake (5 of 5 down to 1 of 5) and 02 quote comparison, then run a domain skill clean control so its row gets a clean-to-messy drop
+- Next: run more than one natural prompt per workflow or more trials so the zero-shot models can be separated (their `pass@1` intervals overlap)
+- Next: add a clean natural-language case for Scenario 08 and a clean variant for Scenario 09 so the control covers all 20 workflows

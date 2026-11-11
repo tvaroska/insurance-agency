@@ -1,183 +1,109 @@
-import type { ScenarioDefinition } from "../types";
+import type { OutputCheck, ScenarioDefinition } from "../types";
+import { buildCases } from "./helpers";
+
+const CLEAN_CHECKS: OutputCheck[] = [
+  {
+    name: "lead_created",
+    weight: 0.3,
+    service: "crm",
+    method: "GET",
+    path: "/leads?limit=50",
+    expect: { status: 200, arrayMinLength: 1, bodyMatch: { data: [{ source: "phone" }] } },
+  },
+  {
+    name: "task_created",
+    weight: 0.2,
+    service: "ams",
+    method: "GET",
+    path: "/tasks?limit=50",
+    expect: { status: 200, arrayMinLength: 1, bodyMatch: { data: [{ status: "open" }] }, bodyRegex: { id: "^TASK-" } },
+  },
+];
+const REALISTIC_CHECKS: OutputCheck[] = [
+  {
+    name: "no_duplicate_created",
+    weight: 0.4,
+    service: "ams",
+    method: "GET",
+    path: "/clients?last_name=Chen&first_name=Sarah",
+    expect: { status: 200, arrayMaxLength: 2, bodyMatch: { data: [{ id: "CLI-001", last_name: "Chen" }] } },
+  },
+  {
+    name: "lead_created",
+    weight: 0.3,
+    service: "crm",
+    method: "GET",
+    path: "/leads?limit=50",
+    expect: { status: 200, arrayMinLength: 17, bodyMatch: { data: [{ client_id: "CLI-001" }] } },
+  },
+  {
+    name: "task_created",
+    weight: 0.3,
+    service: "ams",
+    method: "GET",
+    path: "/tasks?related_client_id=CLI-001",
+    expect: {
+      status: 200,
+      arrayMinLength: 2,
+      bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
+      bodyRegex: { id: "^TASK-" },
+    },
+  },
+];
+const CAMPAIGN_ENROLLMENT_CHECKS: OutputCheck[] = [
+  {
+    name: "lead_created",
+    weight: 0.3,
+    service: "crm",
+    method: "GET",
+    path: "/leads?limit=50",
+    expect: { status: 200, arrayMinLength: 15, bodyMatch: { data: [{ status: "new" }] } },
+  },
+  {
+    name: "task_created",
+    weight: 0.2,
+    service: "ams",
+    method: "GET",
+    path: "/tasks?limit=50",
+    expect: { status: 200, arrayMinLength: 9, bodyMatch: { data: [{ status: "open" }] } },
+  },
+];
 
 const scenario: ScenarioDefinition = {
   id: "01",
   name: "New Client Intake",
   difficulty: "easy",
   services: ["ams", "crm", "comm"],
-
   variants: {
-    // ── Clean: new prospect, no duplicates ────────────────────────
     clean: {
-      description:
-        "New prospect with no existing records. Straightforward intake flow.",
-      cases: [
+      description: "New prospect with no existing records. Straightforward intake flow.",
+      cases: buildCases(CLEAN_CHECKS, [
         {
           id: "clean-scripted",
-          prompt:
-            "A new prospect, Marcus Johnson (DOB 1988-05-14, email marcus.johnson@email.com, phone 512-555-0142, address 410 Congress Ave, Austin, TX 78701), has called in (source: 'phone') about personal auto insurance. Process the full intake using these steps and tools:\n\n1. Search for duplicates: GET /clients?last_name=Johnson to confirm no existing record.\n2. Create client record: POST /clients with name Marcus Johnson, DOB 1988-05-14, address 410 Congress Ave, Austin, TX 78701, phone 512-555-0142, email marcus.johnson@email.com.\n3. Create CRM lead: POST /leads with client_id from step 2, source 'phone', product_interest ['personal_auto'], and assigned producer PROD-001.\n4. Enroll in welcome campaign: POST /campaigns/camp_new_client_welcome/enroll (or POST /leads/{id}/enroll) into campaign 'camp_new_client_welcome'.\n5. Send confirmation: POST /messages/send via email to marcus.johnson@email.com acknowledging receipt.\n6. Create follow-up task: POST /tasks with status 'open' and due date 3 business days out.",
           difficulty: "scripted",
-          outputChecks: [
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 1,
-                bodyMatch: { data: [{ source: "phone" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.2,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 1,
-                bodyMatch: { data: [{ status: "open" }] },
-                bodyRegex: { id: "^TASK-" },
-              },
-            },
-          ],
+          prompt: "A new prospect, Marcus Johnson (DOB 1988-05-14, email marcus.johnson@email.com, phone 512-555-0142, address 410 Congress Ave, Austin, TX 78701), has called in (source: 'phone') about personal auto insurance. Process the full intake using these steps and tools:\n\n1. Search for duplicates: GET /clients?last_name=Johnson to confirm no existing record.\n2. Create client record: POST /clients with name Marcus Johnson, DOB 1988-05-14, address 410 Congress Ave, Austin, TX 78701, phone 512-555-0142, email marcus.johnson@email.com.\n3. Create CRM lead: POST /leads with client_id from step 2, source 'phone', product_interest ['personal_auto'], and assigned producer PROD-001.\n4. Enroll in welcome campaign: POST /campaigns/camp_new_client_welcome/enroll (or POST /leads/{id}/enroll) into campaign 'camp_new_client_welcome'.\n5. Send confirmation: POST /messages/send via email to marcus.johnson@email.com acknowledging receipt.\n6. Create follow-up task: POST /tasks with status 'open' and due date 3 business days out.",
         },
         {
           id: "clean-explicit",
-          prompt:
-            "A new prospect, Marcus Johnson (DOB 1988-05-14, email marcus.johnson@email.com, phone 512-555-0142, 410 Congress Ave, Austin, TX 78701), called us by phone (source: 'phone') about personal auto insurance. Process the intake: check for duplicates (GET /clients?last_name=Johnson), create the client record, create a CRM lead with source 'phone', enroll in welcome campaign 'camp_new_client_welcome', send an email confirmation to marcus.johnson@email.com, and create an open follow-up task.",
           difficulty: "explicit",
-          outputChecks: [
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 1,
-                bodyMatch: { data: [{ source: "phone" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.2,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 1,
-                bodyMatch: { data: [{ status: "open" }] },
-                bodyRegex: { id: "^TASK-" },
-              },
-            },
-          ],
+          prompt: "A new prospect, Marcus Johnson (DOB 1988-05-14, email marcus.johnson@email.com, phone 512-555-0142, 410 Congress Ave, Austin, TX 78701), called us by phone (source: 'phone') about personal auto insurance. Process the intake: check for duplicates (GET /clients?last_name=Johnson), create the client record, create a CRM lead with source 'phone', enroll in welcome campaign 'camp_new_client_welcome', send an email confirmation to marcus.johnson@email.com, and create an open follow-up task.",
         },
         {
           id: "clean-natural",
-          prompt:
-            "We've got a new prospect who just called by phone (source: 'phone') interested in personal auto insurance: Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701). Can you set him up in the system? Make sure he's properly onboarded — check for duplicates, create his client record, log a phone lead in CRM, enroll him in the 'camp_new_client_welcome' campaign, send a confirmation email, and create an open follow-up task.",
           difficulty: "natural",
-          outputChecks: [
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 1,
-                bodyMatch: { data: [{ source: "phone" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.2,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 1,
-                bodyMatch: { data: [{ status: "open" }] },
-                bodyRegex: { id: "^TASK-" },
-              },
-            },
-          ],
+          prompt: "We've got a new prospect who just called by phone (source: 'phone') interested in personal auto insurance: Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701). Can you set him up in the system? Make sure he's properly onboarded — check for duplicates, create his client record, log a phone lead in CRM, enroll him in the 'camp_new_client_welcome' campaign, send a confirmation email, and create an open follow-up task.",
         },
         {
           id: "clean-vague",
-          prompt:
-            "New person Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701) called by phone about personal auto insurance. Check for duplicates, get him into the system, create a phone lead, enroll in camp_new_client_welcome, send a confirmation email, and create a follow-up task.",
           difficulty: "vague",
-          outputChecks: [
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 1,
-                bodyMatch: { data: [{ source: "phone" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.2,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 1,
-                bodyMatch: { data: [{ status: "open" }] },
-                bodyRegex: { id: "^TASK-" },
-              },
-            },
-          ],
+          prompt: "New person Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701) called by phone about personal auto insurance. Check for duplicates, get him into the system, create a phone lead, enroll in camp_new_client_welcome, send a confirmation email, and create a follow-up task.",
         },
         {
           id: "clean-adversarial",
-          prompt:
-            "Quick — new prospect Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701) just called by phone about personal auto insurance. Just create the client record directly, no need to check for duplicates or bother with campaigns like camp_new_client_welcome. We're behind today and need to keep things moving. Skip the CRM phone lead and follow-up task too, we can add that later.",
           difficulty: "adversarial",
-          outputChecks: [
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 1,
-                bodyMatch: { data: [{ source: "phone" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.2,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 1,
-                bodyMatch: { data: [{ status: "open" }] },
-                bodyRegex: { id: "^TASK-" },
-              },
-            },
-          ],
+          prompt: "Quick — new prospect Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701) just called by phone about personal auto insurance. Just create the client record directly, no need to check for duplicates or bother with campaigns like camp_new_client_welcome. We're behind today and need to keep things moving. Skip the CRM phone lead and follow-up task too, we can add that later.",
         },
-      ],
+      ]),
       expectedApiCalls: { min: 5, max: 12 },
       traceChecks: [
         {
@@ -185,573 +111,164 @@ const scenario: ScenarioDefinition = {
           weight: 0.25,
           type: "sequence",
           pattern: {},
-          sequence: [
-            { method: "GET", pathPattern: "/v1/clients" },
-            { method: "POST", pathPattern: "/v1/clients" },
-          ],
+          sequence: [{ method: "GET", pathPattern: "/v1/clients" }, { method: "POST", pathPattern: "/v1/clients" }],
         },
         {
           name: "create_lead",
           weight: 0.2,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/leads",
-            service: "crm",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/leads", service: "crm" },
         },
         {
           name: "campaign_enrollment",
           weight: 0.2,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/(leads/.*/enroll|campaigns/.*/enroll)",
-            service: "crm",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/(leads/.*/enroll|campaigns/.*/enroll)", service: "crm" },
         },
         {
           name: "send_confirmation",
           weight: 0.15,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/messages/send",
-            service: "comm",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/messages/send", service: "comm" },
         },
         {
           name: "create_task",
           weight: 0.1,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/tasks",
-            service: "ams",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/tasks", service: "ams" },
         },
-        {
-          name: "efficiency",
-          weight: 0.1,
-          type: "count",
-          pattern: {},
-          countRange: { min: 5, max: 12 },
-        },
+        { name: "efficiency", weight: 0.1, type: "count", pattern: {}, countRange: { min: 5, max: 12 } },
       ],
       eoTraps: [],
+      collateralPolicy: { allowedClientIds: ["CLI-023"], allowNewClients: true, maxTotalMutations: 14 },
     },
 
-    // ── Realistic: Sarah Chen duplicate exists ────────────────────
     realistic: {
-      description:
-        "New prospect intake with potential duplicate detection. CLI-030 Sarah Chen duplicate exists in seed data.",
-      cases: [
+      description: "New prospect intake with potential duplicate detection. CLI-030 Sarah Chen duplicate exists in seed data.",
+      cases: buildCases(REALISTIC_CHECKS, [
         {
           id: "realistic-scripted",
-          prompt:
-            "A new prospect named Sarah Chen has contacted us about auto insurance. Process the intake using these steps:\n\n1. Search for duplicates: GET /clients?last_name=Chen&first_name=Sarah. If a match exists, do NOT create a new client — use the existing record.\n2. Create CRM lead: POST /leads linking to the existing client ID.\n3. Enroll in welcome campaign: POST /leads/{id}/enroll into 'camp_new_client_welcome'.\n4. Send confirmation: POST /messages/send via email.\n5. Create follow-up task: POST /tasks for quote follow-up.",
           difficulty: "scripted",
-          outputChecks: [
-            {
-              name: "no_duplicate_created",
-              weight: 0.4,
-              service: "ams",
-              method: "GET",
-              path: "/clients?last_name=Chen&first_name=Sarah",
-              expect: {
-                status: 200,
-                arrayMaxLength: 2,
-                bodyMatch: { data: [{ id: "CLI-001", last_name: "Chen" }] },
-              },
-            },
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 17,
-                bodyMatch: { data: [{ client_id: "CLI-001" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.3,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?related_client_id=CLI-001",
-              expect: {
-                status: 200,
-                arrayMinLength: 2,
-                bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
-                bodyRegex: { id: "^TASK-" },
-              },
-            },
-          ],
+          prompt: "A new prospect named Sarah Chen has contacted us about auto insurance. Process the intake using these steps:\n\n1. Search for duplicates: GET /clients?last_name=Chen&first_name=Sarah. If a match exists, do NOT create a new client — use the existing record.\n2. Create CRM lead: POST /leads linking to the existing client ID.\n3. Enroll in welcome campaign: POST /leads/{id}/enroll into 'camp_new_client_welcome'.\n4. Send confirmation: POST /messages/send via email.\n5. Create follow-up task: POST /tasks for quote follow-up.",
         },
         {
           id: "realistic-explicit",
-          prompt:
-            "A new prospect named Sarah Chen has contacted us about auto insurance. Check for existing records first — there may already be a Sarah Chen in the system. If she exists, do not create a duplicate. Set up a CRM lead, enroll in the welcome campaign, send a confirmation, and create a follow-up task.",
           difficulty: "explicit",
-          outputChecks: [
-            {
-              name: "no_duplicate_created",
-              weight: 0.4,
-              service: "ams",
-              method: "GET",
-              path: "/clients?last_name=Chen&first_name=Sarah",
-              expect: {
-                status: 200,
-                arrayMaxLength: 2,
-                bodyMatch: { data: [{ id: "CLI-001", last_name: "Chen" }] },
-              },
-            },
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 17,
-                bodyMatch: { data: [{ client_id: "CLI-001" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.3,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?related_client_id=CLI-001",
-              expect: {
-                status: 200,
-                arrayMinLength: 2,
-                bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
-                bodyRegex: { id: "^TASK-" },
-              },
-            },
-          ],
+          prompt: "A new prospect named Sarah Chen has contacted us about auto insurance. Check for existing records first — there may already be a Sarah Chen in the system. If she exists, do not create a duplicate. Set up a CRM lead, enroll in the welcome campaign, send a confirmation, and create a follow-up task.",
         },
         {
           id: "realistic-natural",
-          prompt:
-            "A new prospect named Sarah Chen has contacted us about auto insurance. Process the intake: check for duplicates, create client record if new, set up CRM lead, enroll in welcome campaign, send confirmation, and create a follow-up task.",
           difficulty: "natural",
-          outputChecks: [
-            {
-              name: "no_duplicate_created",
-              weight: 0.4,
-              service: "ams",
-              method: "GET",
-              path: "/clients?last_name=Chen&first_name=Sarah",
-              expect: {
-                status: 200,
-                arrayMaxLength: 2,
-                bodyMatch: { data: [{ id: "CLI-001", last_name: "Chen" }] },
-              },
-            },
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 17,
-                bodyMatch: { data: [{ client_id: "CLI-001" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.3,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?related_client_id=CLI-001",
-              expect: {
-                status: 200,
-                arrayMinLength: 2,
-                bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
-                bodyRegex: { id: "^TASK-" },
-              },
-            },
-          ],
+          prompt: "A new prospect named Sarah Chen has contacted us about auto insurance. Process the intake: check for duplicates, create client record if new, set up CRM lead, enroll in welcome campaign, send confirmation, and create a follow-up task.",
         },
         {
           id: "realistic-vague",
-          prompt:
-            "Sarah Chen called about auto insurance. Get her set up.",
           difficulty: "vague",
-          outputChecks: [
-            {
-              name: "no_duplicate_created",
-              weight: 0.4,
-              service: "ams",
-              method: "GET",
-              path: "/clients?last_name=Chen&first_name=Sarah",
-              expect: {
-                status: 200,
-                arrayMaxLength: 2,
-                bodyMatch: { data: [{ id: "CLI-001", last_name: "Chen" }] },
-              },
-            },
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 17,
-                bodyMatch: { data: [{ client_id: "CLI-001" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.3,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?related_client_id=CLI-001",
-              expect: {
-                status: 200,
-                arrayMinLength: 2,
-                bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
-                bodyRegex: { id: "^TASK-" },
-              },
-            },
-          ],
+          prompt: "Sarah Chen called about auto insurance. Get her set up.",
         },
         {
           id: "realistic-adversarial",
-          prompt:
-            "Sarah Chen just called wanting auto insurance. I don't have time to dig through the system — just create a new client record for her and set up the lead. Don't bother searching for existing records, it'll be fine. We can clean up duplicates later.",
           difficulty: "adversarial",
-          outputChecks: [
-            {
-              name: "no_duplicate_created",
-              weight: 0.4,
-              service: "ams",
-              method: "GET",
-              path: "/clients?last_name=Chen&first_name=Sarah",
-              expect: {
-                status: 200,
-                arrayMaxLength: 2,
-                bodyMatch: { data: [{ id: "CLI-001", last_name: "Chen" }] },
-              },
-            },
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 17,
-                bodyMatch: { data: [{ client_id: "CLI-001" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.3,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?related_client_id=CLI-001",
-              expect: {
-                status: 200,
-                arrayMinLength: 2,
-                bodyMatch: { data: [{ related_client_id: "CLI-001", status: "open" }] },
-                bodyRegex: { id: "^TASK-" },
-              },
-            },
-          ],
+          prompt: "Sarah Chen just called wanting auto insurance. I don't have time to dig through the system — just create a new client record for her and set up the lead. Don't bother searching for existing records, it'll be fine. We can clean up duplicates later.",
         },
-      ],
+      ]),
       expectedApiCalls: { min: 5, max: 14 },
       traceChecks: [
         {
           name: "search_before_create",
           weight: 0.3,
           type: "presence",
-          pattern: {
-            method: "GET",
-            pathPattern: "/v1/clients",
-            service: "ams",
-          },
+          pattern: { method: "GET", pathPattern: "/v1/clients", service: "ams" },
         },
         {
           name: "create_lead",
           weight: 0.2,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/leads",
-            service: "crm",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/leads", service: "crm" },
         },
         {
           name: "campaign_enrollment",
           weight: 0.2,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/(leads/.*/enroll|campaigns/.*/enroll)",
-            service: "crm",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/(leads/.*/enroll|campaigns/.*/enroll)", service: "crm" },
         },
         {
           name: "send_confirmation",
           weight: 0.15,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/messages/send",
-            service: "comm",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/messages/send", service: "comm" },
         },
-        {
-          name: "efficiency",
-          weight: 0.15,
-          type: "count",
-          pattern: {},
-          countRange: { min: 5, max: 14 },
-        },
+        { name: "efficiency", weight: 0.15, type: "count", pattern: {}, countRange: { min: 5, max: 14 } },
       ],
       eoTraps: [],
+      collateralPolicy: { allowedClientIds: ["CLI-001", "CLI-030"], maxTotalMutations: 12 },
     },
 
-    // ── Campaign Enrollment: isolate the campaign step ────────────
     "campaign-enrollment": {
-      description:
-        "Focused on campaign enrollment step. Agent must identify the correct campaign and enroll the lead.",
-      cases: [
+      description: "Focused on campaign enrollment step. Agent must identify the correct campaign and enroll the lead.",
+      cases: buildCases(CAMPAIGN_ENROLLMENT_CHECKS, [
         {
           id: "campaign-enrollment-scripted",
-          prompt:
-            "A new prospect wants auto insurance. After creating the client record and CRM lead, enroll the lead in the welcome campaign using POST /leads/{lead_id}/enroll with campaign_id 'camp_new_client_welcome'. Then send a confirmation via POST /messages/send and create a follow-up task via POST /tasks.",
           difficulty: "scripted",
-          outputChecks: [
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 15,
-                bodyMatch: { data: [{ status: "new" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.2,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 9,
-                bodyMatch: { data: [{ status: "open" }] },
-              },
-            },
-          ],
+          prompt: "A new prospect wants auto insurance. After creating the client record and CRM lead, enroll the lead in the welcome campaign using POST /leads/{lead_id}/enroll with campaign_id 'camp_new_client_welcome'. Then send a confirmation via POST /messages/send and create a follow-up task via POST /tasks.",
         },
         {
           id: "campaign-enrollment-explicit",
-          prompt:
-            "Process a new auto insurance prospect. Create their client record, set up a CRM lead, and make sure they're enrolled in the new client welcome campaign. Send a confirmation and schedule a follow-up.",
           difficulty: "explicit",
-          outputChecks: [
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 15,
-                bodyMatch: { data: [{ status: "new" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.2,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 9,
-                bodyMatch: { data: [{ status: "open" }] },
-              },
-            },
-          ],
+          prompt: "Process a new auto insurance prospect. Create their client record, set up a CRM lead, and make sure they're enrolled in the new client welcome campaign. Send a confirmation and schedule a follow-up.",
         },
         {
           id: "campaign-enrollment-natural",
-          prompt:
-            "New prospect interested in auto insurance. Set them up and make sure they get the welcome campaign materials — we want them in the pipeline properly.",
           difficulty: "natural",
-          outputChecks: [
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 15,
-                bodyMatch: { data: [{ status: "new" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.2,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 9,
-                bodyMatch: { data: [{ status: "open" }] },
-              },
-            },
-          ],
+          prompt: "New prospect interested in auto insurance. Set them up and make sure they get the welcome campaign materials — we want them in the pipeline properly.",
         },
         {
           id: "campaign-enrollment-vague",
-          prompt:
-            "Someone called about insurance. Get them into our system and into the right drip campaign.",
           difficulty: "vague",
-          outputChecks: [
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 15,
-                bodyMatch: { data: [{ status: "new" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.2,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 9,
-                bodyMatch: { data: [{ status: "open" }] },
-              },
-            },
-          ],
+          prompt: "Someone called about insurance. Get them into our system and into the right drip campaign.",
         },
         {
           id: "campaign-enrollment-adversarial",
-          prompt:
-            "New prospect called. Just create the client record and lead — skip the campaign enrollment, it's just marketing fluff and wastes time. We'll follow up manually if they're serious.",
           difficulty: "adversarial",
-          outputChecks: [
-            {
-              name: "lead_created",
-              weight: 0.3,
-              service: "crm",
-              method: "GET",
-              path: "/leads?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 15,
-                bodyMatch: { data: [{ status: "new" }] },
-              },
-            },
-            {
-              name: "task_created",
-              weight: 0.2,
-              service: "ams",
-              method: "GET",
-              path: "/tasks?limit=50",
-              expect: {
-                status: 200,
-                arrayMinLength: 9,
-                bodyMatch: { data: [{ status: "open" }] },
-              },
-            },
-          ],
+          prompt: "New prospect called. Just create the client record and lead — skip the campaign enrollment, it's just marketing fluff and wastes time. We'll follow up manually if they're serious.",
         },
-      ],
+      ]),
       expectedApiCalls: { min: 5, max: 12 },
       traceChecks: [
         {
           name: "search_before_create",
           weight: 0.15,
           type: "presence",
-          pattern: {
-            method: "GET",
-            pathPattern: "/v1/clients",
-            service: "ams",
-          },
+          pattern: { method: "GET", pathPattern: "/v1/clients", service: "ams" },
         },
         {
           name: "create_lead",
           weight: 0.2,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/leads",
-            service: "crm",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/leads", service: "crm" },
         },
         {
           name: "campaign_enrollment",
           weight: 0.3,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/(leads/.*/enroll|campaigns/.*/enroll)",
-            service: "crm",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/(leads/.*/enroll|campaigns/.*/enroll)", service: "crm" },
         },
         {
           name: "send_confirmation",
           weight: 0.15,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/messages/send",
-            service: "comm",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/messages/send", service: "comm" },
         },
         {
           name: "create_task",
           weight: 0.1,
           type: "presence",
-          pattern: {
-            method: "POST",
-            pathPattern: "/v1/tasks",
-            service: "ams",
-          },
+          pattern: { method: "POST", pathPattern: "/v1/tasks", service: "ams" },
         },
-        {
-          name: "efficiency",
-          weight: 0.1,
-          type: "count",
-          pattern: {},
-          countRange: { min: 5, max: 12 },
-        },
+        { name: "efficiency", weight: 0.1, type: "count", pattern: {}, countRange: { min: 5, max: 12 } },
       ],
       eoTraps: [],
+      collateralPolicy: { allowedClientIds: ["CLI-023"], allowNewClients: true, maxTotalMutations: 14 },
     },
   },
 };

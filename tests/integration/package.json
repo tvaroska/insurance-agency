@@ -8,7 +8,6 @@
   "dependencies": {
     "@evergreen/shared": "workspace:*",
     "hono": "^4.7.5",
-    "drizzle-orm": "^0.40.1",
     "@modelcontextprotocol/sdk": "^1.11.0"
   }
 }

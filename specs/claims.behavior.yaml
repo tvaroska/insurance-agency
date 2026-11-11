@@ -8,7 +8,7 @@ version: "1.0.0"
 service: claims
 port: 3007
 openapi_contract: ./claims.yaml
-schema_contract: ../services/claims/src/schema.ts
+schema_contract: ../services/claims/prisma/schema.prisma
 disposable_adapters:
   - services/claims/src/routes/claims.ts
   - services/claims/src/routes/adjusters.ts

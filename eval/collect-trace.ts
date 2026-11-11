@@ -3,16 +3,18 @@ import { mkdir, writeFile } from "fs/promises";
 import { dirname, resolve } from "path";
 
 import type { OtlpSpan, OtlpTrace, ResourceSpan, ScopeSpan } from "./types";
-import { defaultBaseUrls } from "./evaluators/output";
+import { defaultBaseUrls, scorerHeaders } from "./evaluators/output";
 
 // Collects the service-side request logs (GET /sim/trace on every service) into one
 // OTLP JSON trace that `bun eval/score.ts --traces <file>` accepts.
 
-/** defaultBaseUrls(), with any services overridden by the EVERGREEN_BASE_URLS JSON object. */
+/** defaultBaseUrls(), with optional EVERGREEN_BASE_PORT offset and EVERGREEN_BASE_URLS JSON overrides. */
 export function resolveBaseUrls(
   overrides: string | undefined = process.env.EVERGREEN_BASE_URLS,
+  basePort: string | undefined = process.env.EVERGREEN_BASE_PORT,
 ): Record<string, string> {
-  if (!overrides) return defaultBaseUrls();
+  const base = defaultBaseUrls(basePort);
+  if (!overrides) return base;
   let parsed: unknown;
   try {
     parsed = JSON.parse(overrides);
@@ -27,7 +29,7 @@ export function resolveBaseUrls(
   ) {
     throw new Error("EVERGREEN_BASE_URLS must be a JSON object of service name to base URL");
   }
-  return { ...defaultBaseUrls(), ...(parsed as Record<string, string>) };
+  return { ...base, ...(parsed as Record<string, string>) };
 }
 
 /**
@@ -74,7 +76,7 @@ export async function collectTrace(
       const url = `${baseUrl}/sim/trace`;
       let res: Response;
       try {
-        res = await fetchImpl(url);
+        res = await fetchImpl(url, { headers: scorerHeaders() });
       } catch (err) {
         throw new Error(`${service}: GET ${url} failed: ${err instanceof Error ? err.message : err}`);
       }

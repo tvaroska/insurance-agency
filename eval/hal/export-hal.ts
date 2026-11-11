@@ -22,6 +22,8 @@ export const MODEL_PRICING_USD_PER_1M: Record<string, ModelPricing> = {
   "gemini-3.8-flash": { inputCostPer1MUsd: 0.15, outputCostPer1MUsd: 0.6 },
   "gemini-4-argon": { inputCostPer1MUsd: 1.25, outputCostPer1MUsd: 5.0 },
   "gemini-3.5-flash-lite": { inputCostPer1MUsd: 0.075, outputCostPer1MUsd: 0.3 },
+  "claude-sonnet-5-5": { inputCostPer1MUsd: 3.0, outputCostPer1MUsd: 15.0 },
+  "deepseek-v4.1-flash": { inputCostPer1MUsd: 0.14, outputCostPer1MUsd: 0.28 },
 };
 
 export interface TaskTelemetryUsage {
@@ -122,8 +124,10 @@ export function extractUsageFromOtlpTrace(
   trace: OtlpTrace,
   modelName = "gemini-3.8-flash",
 ): TaskTelemetryUsage {
+  const normalizedModel = modelName.trim().toLowerCase();
   const pricing =
     MODEL_PRICING_USD_PER_1M[modelName] ??
+    MODEL_PRICING_USD_PER_1M[normalizedModel] ??
     MODEL_PRICING_USD_PER_1M["gemini-3.8-flash"];
 
   let inputTokens = 0;
@@ -210,9 +214,11 @@ export function buildHalResults(
 ): HalUploadPayload {
   const modelName = options.modelName ?? "gemini-3.8-flash";
   const agentName = options.agentName ?? "google-adk";
-  const passThreshold = options.passThreshold ?? 0.7;
+  const passThreshold = options.passThreshold ?? 0.8;
+  const normalizedModel = modelName.trim().toLowerCase();
   const pricing =
     MODEL_PRICING_USD_PER_1M[modelName] ??
+    MODEL_PRICING_USD_PER_1M[normalizedModel] ??
     MODEL_PRICING_USD_PER_1M["gemini-3.8-flash"];
 
   const taskResults: Record<string, HalTaskResult> = {};

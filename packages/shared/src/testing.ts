@@ -1,5 +1,4 @@
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync, rmSync } from "fs";
 import { join } from "path";
@@ -63,14 +62,23 @@ export function createTestPrismaClient<T>(
 }
 
 /**
- * Creates an in-memory SQLite database with Drizzle ORM for testing.
- * Pass your service's schema module to get typed query access.
+ * Inserts a single fixture row directly into a bun:sqlite table, normalizing JS booleans
+ * to 0/1 and quoting column identifiers (such as `"limit"`).
  */
-export function createTestDatabase<T extends Record<string, unknown>>(schema: T) {
-  const sqlite = new Database(":memory:");
-  sqlite.exec("PRAGMA foreign_keys = ON;");
-  const db = drizzle(sqlite, { schema });
-  return { sqlite, db };
+export function insertSqliteRow(
+  sqlite: Database,
+  table: string,
+  row: Record<string, unknown>,
+): void {
+  const entries = Object.entries(row).filter(([, v]) => v !== undefined);
+  const cols = entries.map(([k]) => `"${k.replace(/"/g, '""')}"`).join(", ");
+  const placeholders = entries.map(() => "?").join(", ");
+  const values = entries.map(([, v]) =>
+    typeof v === "boolean" ? (v ? 1 : 0) : (v ?? null),
+  );
+  sqlite
+    .prepare(`INSERT INTO "${table}" (${cols}) VALUES (${placeholders})`)
+    .run(...(values as any[]));
 }
 
 /**

@@ -1,7 +1,6 @@
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -12,7 +11,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -72,7 +70,7 @@ beforeAll(() => {
     }),
   ];
   for (const q of quoteRows) {
-    testDb.insert(schema.quotes).values(q).run();
+    insertSqliteRow(testSqlite, "quotes", q);
   }
 
   // Seed test policies
@@ -80,7 +78,7 @@ beforeAll(() => {
     makePolicy({ policy_id: "POL-EXISTING" }),
   ];
   for (const p of policyRows) {
-    testDb.insert(schema.policies).values(p).run();
+    insertSqliteRow(testSqlite, "policies", p);
   }
 });
 

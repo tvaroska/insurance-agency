@@ -1,7 +1,6 @@
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -12,7 +11,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -27,45 +25,30 @@ const app = createTestApp({ carriers: carriersRouter });
 beforeAll(() => {
   createTables(testSqlite);
 
-  testDb
-    .insert(schema.carriers)
-    .values(
-      makeCarrier({
+  insertSqliteRow(testSqlite, "carriers", makeCarrier({
         carrier_code: "ERIE",
         carrier_name: "Erie Basin Mutual",
         states: JSON.stringify(["IL", "IN", "OH", "PA"]),
         policy_types: JSON.stringify(["personal_auto", "homeowners"]),
         risk_categories: JSON.stringify(["preferred", "standard"]),
         appetite_level: "high",
-      }),
-    )
-    .run();
-  testDb
-    .insert(schema.carriers)
-    .values(
-      makeCarrier({
+      }),);
+  insertSqliteRow(testSqlite, "carriers", makeCarrier({
         carrier_code: "NTNW",
         carrier_name: "National Shield",
         states: JSON.stringify(["IL", "OH", "TX", "FL"]),
         policy_types: JSON.stringify(["personal_auto", "bop", "workers_comp"]),
         risk_categories: JSON.stringify(["standard", "non_standard"]),
         appetite_level: "medium",
-      }),
-    )
-    .run();
-  testDb
-    .insert(schema.carriers)
-    .values(
-      makeCarrier({
+      }),);
+  insertSqliteRow(testSqlite, "carriers", makeCarrier({
         carrier_code: "CSTL",
         carrier_name: "Coastal Star",
         states: JSON.stringify(["IL", "IN", "CA", "NY"]),
         policy_types: JSON.stringify(["personal_auto", "homeowners", "umbrella"]),
         risk_categories: JSON.stringify(["preferred", "standard", "non_standard"]),
         appetite_level: "high",
-      }),
-    )
-    .run();
+      }),);
 });
 
 function getAppetite(query: string, headers: Record<string, string>) {

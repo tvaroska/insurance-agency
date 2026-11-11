@@ -1,9 +1,6 @@
 import { prisma } from "./prisma";
 import { join } from "path";
 
-const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
-const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
-
 interface SeedCoverage {
   type: string;
   limit?: string | number | null;
@@ -56,8 +53,8 @@ interface SeedCarrier {
   state_restrictions: string[];
 }
 
-async function loadJson<T>(filename: string): Promise<T> {
-  const path = join(SEED_DIR, filename);
+async function loadJson<T>(seedDir: string, filename: string): Promise<T> {
+  const path = join(seedDir, filename);
   const file = Bun.file(path);
   return file.json() as Promise<T>;
 }
@@ -110,23 +107,30 @@ async function createTables() {
   )`);
 }
 
-async function seed() {
-  console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
-  console.log("Creating tables...");
+export async function seedDatabase(
+  seedMode = process.env.SEED_MODE || "realistic",
+): Promise<void> {
+  const seedFolder = seedMode === "clean" ? "seed-clean" : "seed";
+  const seedDir = join(import.meta.dir, "..", "..", "..", "data", seedFolder);
+  const verbose = import.meta.main;
+
+  if (verbose) {
+    console.log(`Seed mode: ${seedFolder} (seedMode=${seedMode})`);
+    console.log("Creating tables...");
+  }
   await createTables();
 
-  console.log("Loading seed data...");
   const [quotesData, carriersData] = await Promise.all([
-    loadJson<SeedQuoteRequest[]>("quotes.json"),
-    loadJson<SeedCarrier[]>("carriers.json"),
+    loadJson<SeedQuoteRequest[]>(seedDir, "quotes.json"),
+    loadJson<SeedCarrier[]>(seedDir, "carriers.json"),
   ]);
 
-  console.log(
-    `Loaded: ${quotesData.length} quote requests, ${carriersData.length} carriers`,
-  );
+  if (verbose) {
+    console.log(
+      `Loaded: ${quotesData.length} quote requests, ${carriersData.length} carriers`,
+    );
+  }
 
-  // Insert carriers
-  console.log("Seeding carriers...");
   await prisma.carrier.createMany({
     data: carriersData.map((c) => ({
       carrier_code: c.carrier_code,
@@ -145,22 +149,17 @@ async function seed() {
     })),
   });
 
-  // Insert quote requests + carrier quotes
-  console.log("Seeding quote requests and carrier quotes...");
-  let totalQuotes = 0;
-
-  for (const q of quotesData) {
-    const riskData: Record<string, unknown> = {
-      requested_coverages: q.requested_coverages,
-    };
-    if (q.drivers) riskData.drivers = q.drivers;
-    if (q.vehicles) riskData.vehicles = q.vehicles;
-    if (q.property) riskData.property = q.property;
-    if (q.business) riskData.business = q.business;
-    if (q.missing_fields) riskData.missing_fields = q.missing_fields;
-
-    await prisma.quoteRequest.create({
-      data: {
+  await prisma.quoteRequest.createMany({
+    data: quotesData.map((q) => {
+      const riskData: Record<string, unknown> = {
+        requested_coverages: q.requested_coverages,
+      };
+      if (q.drivers) riskData.drivers = q.drivers;
+      if (q.vehicles) riskData.vehicles = q.vehicles;
+      if (q.property) riskData.property = q.property;
+      if (q.business) riskData.business = q.business;
+      if (q.missing_fields) riskData.missing_fields = q.missing_fields;
+      return {
         request_id: q.request_id,
         client_id: q.client_id,
         policy_type: q.policy_type,
@@ -171,47 +170,47 @@ async function seed() {
         expires_at: q.expires_at ?? null,
         risk_data: JSON.stringify(riskData),
         created_at: q.submitted_at,
-      },
-    });
+      };
+    }),
+  });
 
-    for (const r of q.results) {
-      const quoteId = r.quote_id ?? `${q.request_id}-${r.carrier_code}-declined`;
-
-      await prisma.carrierQuote.create({
-        data: {
-          quote_id: quoteId,
-          request_id: q.request_id,
-          carrier_code: r.carrier_code,
-          carrier_name: r.carrier_name,
-          status: r.status,
-          premium_annual: r.premium_annual ?? null,
-          premium_monthly: r.premium_monthly ?? null,
-          coverages: JSON.stringify(r.coverages),
-          deductibles: JSON.stringify(r.deductibles),
-          decline_reason: r.decline_reason ?? null,
-          valid_until: r.valid_until ?? null,
-          bound_at: r.status === "bound" ? q.submitted_at : null,
-          created_at: q.submitted_at,
-        },
-      });
-      totalQuotes++;
-    }
+  const allCarrierQuotes = quotesData.flatMap((q) =>
+    q.results.map((r) => ({
+      quote_id: r.quote_id ?? `${q.request_id}-${r.carrier_code}-declined`,
+      request_id: q.request_id,
+      carrier_code: r.carrier_code,
+      carrier_name: r.carrier_name,
+      status: r.status,
+      premium_annual: r.premium_annual ?? null,
+      premium_monthly: r.premium_monthly ?? null,
+      coverages: JSON.stringify(r.coverages),
+      deductibles: JSON.stringify(r.deductibles),
+      decline_reason: r.decline_reason ?? null,
+      valid_until: r.valid_until ?? null,
+      bound_at: r.status === "bound" ? q.submitted_at : null,
+      created_at: q.submitted_at,
+    })),
+  );
+  if (allCarrierQuotes.length > 0) {
+    await prisma.carrierQuote.createMany({ data: allCarrierQuotes });
   }
 
-  // Verify counts
-  const counts = {
-    carriers: await prisma.carrier.count(),
-    quote_requests: await prisma.quoteRequest.count(),
-    carrier_quotes: await prisma.carrierQuote.count(),
-  };
-
-  console.log("\nSeed complete:");
-  for (const [table, count] of Object.entries(counts)) {
-    console.log(`  ${table}: ${count} rows`);
+  if (verbose) {
+    const counts = {
+      carriers: await prisma.carrier.count(),
+      quote_requests: await prisma.quoteRequest.count(),
+      carrier_quotes: await prisma.carrierQuote.count(),
+    };
+    console.log("\nSeed complete:");
+    for (const [table, count] of Object.entries(counts)) {
+      console.log(`  ${table}: ${count} rows`);
+    }
   }
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  seedDatabase().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}

@@ -359,19 +359,21 @@ leadsRouter.post(
     }
 
     // Check for duplicate enrollment
-    const clientId = lead.client_id;
-    const existingEnrollment = await prisma.campaignEnrollment.findFirst({
-      where: {
-        campaign_id: body.campaign_id,
-        client_id: clientId,
-      },
-      select: { enrollment_id: true },
-    });
+    const clientId = lead.client_id ?? "";
+    if (clientId !== "") {
+      const existingEnrollment = await prisma.campaignEnrollment.findFirst({
+        where: {
+          campaign_id: body.campaign_id,
+          client_id: clientId,
+        },
+        select: { enrollment_id: true },
+      });
 
-    if (existingEnrollment) {
-      throw conflictError(
-        `Client ${clientId} is already enrolled in campaign ${body.campaign_id}.`,
-      );
+      if (existingEnrollment) {
+        throw conflictError(
+          `Client ${clientId} is already enrolled in campaign ${body.campaign_id}.`,
+        );
+      }
     }
 
     // Create enrollment

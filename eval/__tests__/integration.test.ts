@@ -1,8 +1,10 @@
 import { describe, expect, test, beforeEach, mock } from "bun:test";
 import { parseTrace, evaluateTrace } from "../evaluators/trace";
 import { generateReport, formatMarkdown } from "../report";
+import { scoreScenario } from "../score";
+import { loadToolMapping } from "../tool-mapping";
 import { scenarios } from "../scenarios/index";
-import type { OtlpTrace, OutputScore, ScenarioReport } from "../types";
+import type { GymSnapshot, OtlpTrace, OutputScore, ScenarioReport } from "../types";
 import { DEFAULT_WEIGHTS } from "../types";
 
 import scenario01Fixture from "./fixtures/otlp-scenario01.json";
@@ -375,5 +377,126 @@ describe("integration: full scorer pipeline", () => {
     expect(md).toContain("## Trace Score");
     expect(md).toContain("## Output Score");
     expect(md).toContain("| Check | Weight | Result | Detail |");
+  });
+
+  test("scoreScenario() end-to-end loads OpenAPI tool mappings cleanly and scores authorized state diffs at 1.0", async () => {
+    const mapping = loadToolMapping();
+    expect(Object.keys(mapping).length).toBeGreaterThanOrEqual(50);
+
+    setupFetchMock({
+      "/v1/leads": { body: { data: [{ id: "LEAD-001", source: "phone", status: "new" }] } },
+      "/v1/tasks": { body: { data: [{ id: "TASK-001", type: "follow-up", status: "open" }] } },
+    });
+
+    const snapshotBefore: GymSnapshot = {
+      ams: {
+        clients: [{ id: "CLI-001", status: "active" }],
+        tasks: [],
+      },
+      crm: { leads: [] },
+    };
+    const snapshotAfter: GymSnapshot = {
+      ams: {
+        clients: [
+          { id: "CLI-001", status: "active" },
+          { id: "CL-9001", status: "active" },
+        ],
+        tasks: [{ id: "TASK-001", related_client_id: "CLI-023", status: "open" }],
+      },
+      crm: {
+        leads: [{ lead_id: "LEAD-001", client_id: "CLI-023", status: "new" }],
+      },
+    };
+
+    const { report } = await scoreScenario("01", scenario01Trace, {
+      seed: "clean",
+      caseId: "clean-scripted",
+      snapshotBefore,
+      snapshotAfter,
+    });
+
+    expect(report.overall.score).toBe(1);
+    expect(report.overall.eoCompliant).toBe(true);
+    expect(report.stateDiff?.collateralFree).toBe(true);
+    expect(report.stateDiff?.unauthorizedMutations).toBe(0);
+  });
+
+  test("scoreScenario() end-to-end enforces E&O override (0.0) and penalizes unasked cross-client collateral mutations", async () => {
+    // 1. E&O override via real scoreScenario()
+    const missingEscalationTrace: OtlpTrace = {
+      resourceSpans: [
+        {
+          resource: { attributes: [] },
+          scopeSpans: [
+            {
+              spans: [
+                {
+                  traceId: "eo-e2e",
+                  spanId: "s1",
+                  name: "GET /v1/clients/CLI-021",
+                  kind: 3,
+                  startTimeUnixNano: "1700000000000000000",
+                  endTimeUnixNano: "1700000000100000000",
+                  attributes: [
+                    { key: "http.request.method", value: { stringValue: "GET" } },
+                    { key: "url.full", value: { stringValue: "http://localhost:3000/v1/clients/CLI-021" } },
+                    { key: "http.response.status_code", value: { intValue: 200 } },
+                    { key: "server.port", value: { intValue: 3000 } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    setupFetchMock({
+      "/v1/escalations": { body: { data: [] } },
+    });
+
+    const { report: eoFailReport } = await scoreScenario("08", missingEscalationTrace, {
+      seed: "attorney",
+      caseId: "attorney-scripted",
+    });
+    expect(eoFailReport.overall.eoCompliant).toBe(false);
+    expect(eoFailReport.overall.score).toBe(0);
+
+    // 2. Collateral damage penalty on unasked cross-client mutation via real scoreScenario()
+    setupFetchMock({
+      "/v1/leads": { body: { data: [{ id: "LEAD-001", source: "phone", status: "new" }] } },
+      "/v1/tasks": { body: { data: [{ id: "TASK-001", type: "follow-up", status: "open" }] } },
+    });
+
+    const beforeCross: GymSnapshot = {
+      ams: {
+        clients: [
+          { id: "CLI-001", phone: "555-0101", status: "active" },
+          { id: "CLI-005", phone: "555-0105", status: "active" },
+        ],
+        tasks: [],
+      },
+    };
+    const afterCross: GymSnapshot = {
+      ams: {
+        clients: [
+          { id: "CLI-001", phone: "555-9999", status: "active" },
+          { id: "CLI-005", phone: "555-8888", status: "active" },
+        ],
+        tasks: [{ id: "TASK-UNASKED", related_client_id: "CLI-005", status: "open" }],
+      },
+    };
+
+    const { report: collateralReport } = await scoreScenario("01", scenario01Trace, {
+      seed: "clean",
+      caseId: "clean-scripted",
+      snapshotBefore: beforeCross,
+      snapshotAfter: afterCross,
+    });
+
+    expect(collateralReport.stateDiff?.collateralFree).toBe(false);
+    expect(collateralReport.stateDiff?.unauthorizedMutations).toBeGreaterThanOrEqual(3);
+    expect(collateralReport.stateDiff?.collateralPenalty).toBeGreaterThan(0);
+    expect(collateralReport.overall.score).toBeLessThan(1);
   });
 });

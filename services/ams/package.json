@@ -17,9 +17,5 @@
     "@prisma/client": "^7.8.0",
     "hono": "^4.7.4",
     "prisma": "^7.8.0"
-  },
-  "devDependencies": {
-    "drizzle-kit": "^0.30.5",
-    "drizzle-orm": "^0.45.1"
   }
 }

@@ -64,14 +64,19 @@ beforeEach(async () => {
 });
 
 describe("defaultBaseUrls", () => {
-  test("returns PORT_SERVICE_MAP as localhost URLs", () => {
-    const urls = defaultBaseUrls();
+  test("returns PORT_SERVICE_MAP as localhost URLs and honors EVERGREEN_BASE_PORT", () => {
+    const urls = defaultBaseUrls(undefined);
     expect(urls.ams).toBe("http://localhost:3000");
     expect(urls.rater).toBe("http://localhost:3001");
     expect(urls.crm).toBe("http://localhost:3002");
     expect(urls.ecm).toBe("http://localhost:3003");
     expect(urls.comm).toBe("http://localhost:3004");
     expect(urls.claims).toBe("http://localhost:3007");
+
+    const shifted = defaultBaseUrls("4100");
+    expect(shifted.ams).toBe("http://localhost:4100");
+    expect(shifted.rater).toBe("http://localhost:4101");
+    expect(shifted.claims).toBe("http://localhost:4107");
   });
 });
 
@@ -121,6 +126,33 @@ describe("evaluateOutput", () => {
       for (const call of fetchMock.mock.calls) {
         const init = (call as unknown[])[1] as { headers?: Record<string, string> } | undefined;
         expect(init?.headers?.["X-Eval-Scorer"]).toBe("true");
+      }
+    });
+
+    test("attaches X-Evergreen-Scorer-Secret when EVERGREEN_SCORER_SECRET is set", async () => {
+      const prevSecret = process.env.EVERGREEN_SCORER_SECRET;
+      process.env.EVERGREEN_SCORER_SECRET = "s3cr3t-test-token";
+      try {
+        const fetchMock = mockFetch({
+          "/v1/clients": { body: [] },
+        });
+        globalThis.fetch = fetchMock as typeof fetch;
+
+        await evaluateOutput([makeCheck()], {
+          ams: "http://localhost:3900",
+        });
+
+        for (const call of fetchMock.mock.calls) {
+          const init = (call as unknown[])[1] as { headers?: Record<string, string> } | undefined;
+          expect(init?.headers?.["X-Eval-Scorer"]).toBe("true");
+          expect(init?.headers?.["X-Evergreen-Scorer-Secret"]).toBe("s3cr3t-test-token");
+        }
+      } finally {
+        if (prevSecret === undefined) {
+          delete process.env.EVERGREEN_SCORER_SECRET;
+        } else {
+          process.env.EVERGREEN_SCORER_SECRET = prevSecret;
+        }
       }
     });
   });

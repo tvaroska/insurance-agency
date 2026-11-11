@@ -114,6 +114,7 @@ export interface ResourceSpan {
 }
 
 export interface ScopeSpan {
+  scope?: { name: string; version?: string };
   spans: OtlpSpan[];
 }
 
@@ -193,11 +194,20 @@ export interface StateDiffResult {
 export interface CollateralPolicy {
   allowedClientIds?: string[];
   allowedPolicyIds?: string[];
+  allowNewClients?: boolean;
+  allowNewPolicies?: boolean;
   allowDeletions?: boolean;
   allowedDeletionTables?: string[];
   maxInsertedPerTable?: number;
   maxTotalMutations?: number;
   penaltyPerMutation?: number;
+  /** Upper bound on the collateral score reduction (default 0.5). */
+  maxPenalty?: number;
+  /**
+   * Book-wide tasks (audits, reconciliations): escalations and review tasks may
+   * reference any client. Insurance-record writes are still scoped.
+   */
+  governanceAnyClient?: boolean;
 }
 
 export interface CollateralFinding {
@@ -332,7 +342,7 @@ export interface RubricEvaluationSummary {
   debiasedScore: number;
   judgeModel: string;
   verdicts: RubricVerdict[];
-  calibration: RoganGladenSummary;
+  calibration?: RoganGladenSummary;
 }
 
 // Report structure

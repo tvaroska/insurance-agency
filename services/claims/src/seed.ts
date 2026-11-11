@@ -1,9 +1,6 @@
 import { prisma } from "./prisma";
 import { join } from "path";
 
-const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
-const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
-
 interface SeedAdjuster {
   adjuster_id: string;
   first_name: string;
@@ -34,8 +31,8 @@ interface SeedClaim {
   updated_at: string;
 }
 
-async function loadJson<T>(filename: string): Promise<T> {
-  const path = join(SEED_DIR, filename);
+async function loadJson<T>(seedDir: string, filename: string): Promise<T> {
+  const path = join(seedDir, filename);
   const file = Bun.file(path);
   return file.json() as Promise<T>;
 }
@@ -98,23 +95,30 @@ async function createTables() {
   )`);
 }
 
-async function seed() {
-  console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
-  console.log("Creating tables...");
+export async function seedDatabase(
+  seedMode = process.env.SEED_MODE || "realistic",
+): Promise<void> {
+  const seedFolder = seedMode === "clean" ? "seed-clean" : "seed";
+  const seedDir = join(import.meta.dir, "..", "..", "..", "data", seedFolder);
+  const verbose = import.meta.main;
+
+  if (verbose) {
+    console.log(`Seed mode: ${seedFolder} (seedMode=${seedMode})`);
+    console.log("Creating tables...");
+  }
   await createTables();
 
-  console.log("Loading seed data...");
   const [adjustersData, claimsData] = await Promise.all([
-    loadJson<SeedAdjuster[]>("adjusters.json"),
-    loadJson<SeedClaim[]>("claims.json"),
+    loadJson<SeedAdjuster[]>(seedDir, "adjusters.json"),
+    loadJson<SeedClaim[]>(seedDir, "claims.json"),
   ]);
 
-  console.log(
-    `Loaded: ${adjustersData.length} adjusters, ${claimsData.length} claims`,
-  );
+  if (verbose) {
+    console.log(
+      `Loaded: ${adjustersData.length} adjusters, ${claimsData.length} claims`,
+    );
+  }
 
-  // Insert adjusters first (claims reference them)
-  console.log("Seeding adjusters...");
   await prisma.adjuster.createMany({
     data: adjustersData.map((a) => ({
       adjuster_id: a.adjuster_id,
@@ -129,8 +133,6 @@ async function seed() {
     })),
   });
 
-  // Insert claims
-  console.log("Seeding claims...");
   await prisma.claim.createMany({
     data: claimsData.map((c) => ({
       claim_id: c.claim_id,
@@ -151,21 +153,23 @@ async function seed() {
     })),
   });
 
-  // Verify counts
-  const counts = {
-    adjusters: await prisma.adjuster.count(),
-    claims: await prisma.claim.count(),
-    claim_documents: await prisma.claimDocument.count(),
-    claim_timeline: await prisma.claimTimeline.count(),
-  };
-
-  console.log("\nSeed complete:");
-  for (const [table, count] of Object.entries(counts)) {
-    console.log(`  ${table}: ${count} rows`);
+  if (verbose) {
+    const counts = {
+      adjusters: await prisma.adjuster.count(),
+      claims: await prisma.claim.count(),
+      claim_documents: await prisma.claimDocument.count(),
+      claim_timeline: await prisma.claimTimeline.count(),
+    };
+    console.log("\nSeed complete:");
+    for (const [table, count] of Object.entries(counts)) {
+      console.log(`  ${table}: ${count} rows`);
+    }
   }
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  seedDatabase().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}

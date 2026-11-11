@@ -3,13 +3,16 @@ import {
   BINARY_SCALE_STEPS,
   CONTRADICTION_AWARE_4PT_STEPS,
   DEFAULT_JUDGE_MODEL,
+  DETERMINISTIC_JUDGE_MODEL,
   FOUR_POINT_GROUNDEDNESS_STEPS,
   PII_PERTURBATION_BINARY_STEPS,
   agreementAtK,
   buildAtomicJudgePrompt,
   computeRairRsr,
+  createVertexJudgeFn,
   effectivePanelSize,
   evaluateRubrics,
+  loadCalibrationReceipt,
   negativeFlipRate,
   passHatK,
   roganGladenDebiasedPassRate,
@@ -17,6 +20,7 @@ import {
   scanRawPiiLeakage,
   validateAtomicRubric,
 } from "../evaluators/rubric";
+import { runJudgeCalibration } from "../calibration/calibrate-judge";
 import type { RubricCriterion } from "../types";
 import { scenarios } from "../scenarios";
 
@@ -205,8 +209,11 @@ describe("Tier-2 Atomic Rubric, Rogan-Gladen & EVAL-P01..P10 Calibration", () =>
       prefetchedPayloads,
     });
     expect(detResult.score).toBe(1);
+    expect(detResult.debiasedScore).toBe(1);
+    expect(detResult.judgeModel).toBe(DETERMINISTIC_JUDGE_MODEL);
+    expect(detResult.calibration).toBeUndefined();
     expect(detResult.verdicts).toHaveLength(2);
-    expect(detResult.verdicts.every((v) => v.passed && v.judgeModel === "deterministic-fallback")).toBe(
+    expect(detResult.verdicts.every((v) => v.passed && v.judgeModel === "deterministic-rule")).toBe(
       true,
     );
 
@@ -221,7 +228,79 @@ describe("Tier-2 Atomic Rubric, Rogan-Gladen & EVAL-P01..P10 Calibration", () =>
     });
     expect(llmResult.judgeModel).toBe(DEFAULT_JUDGE_MODEL);
     expect(llmResult.score).toBe(1);
+    expect(llmResult.calibration).toBeDefined();
+    expect(llmResult.calibration?.nCalibrationPos).toBe(60);
+    expect(llmResult.calibration?.nCalibrationNeg).toBe(60);
     expect(llmResult.verdicts.every((v) => v.judgeModel === DEFAULT_JUDGE_MODEL)).toBe(true);
+  });
+
+  test("120-item gold calibration benchmark achieves Gwet AC2 >= 0.85 and produces empirical TPR/TNR receipt", async () => {
+    const receipt = await runJudgeCalibration();
+    expect(receipt.totalItems).toBe(120);
+    expect(receipt.criteriaCount).toBe(10);
+    expect(receipt.interRaterReliability.gwetsAc2).toBeGreaterThanOrEqual(0.85);
+    expect(receipt.interRaterReliability.krippendorffAlpha).toBeGreaterThanOrEqual(0.8);
+    expect(receipt.interRaterReliability.passesIrrGate).toBe(true);
+    expect(receipt.confusionMatrix.total).toBe(120);
+    expect(receipt.confusionMatrix.nPos).toBe(60);
+    expect(receipt.confusionMatrix.nNeg).toBe(60);
+    expect(receipt.confusionMatrix.youdenJ).toBeGreaterThan(0.75);
+
+    const loaded = loadCalibrationReceipt();
+    expect(loaded.tprSensitivity).toBeCloseTo(receipt.confusionMatrix.tprSensitivity, 4);
+    expect(loaded.tnrSpecificity).toBeCloseTo(receipt.confusionMatrix.tnrSpecificity, 4);
+  });
+
+  test("createVertexJudgeFn calls Vertex AI generateContent REST endpoint and enforces Commit-First reasoning_trace", async () => {
+    let seenUrl = "";
+    let seenAuth = "";
+    const vertexJudge = createVertexJudgeFn({
+      projectId: "evergreen-eval-proj",
+      location: "us-central1",
+      accessToken: "fake-vertex-access-token",
+      fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        seenUrl = String(input);
+        seenAuth = (init?.headers as Record<string, string>)?.Authorization ?? "";
+        return new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        reasoning_trace: "Cited Summit $1,120 and Coastal $1,180 accurately.",
+                        score: 1.0,
+                        passed: true,
+                      }),
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }) as typeof fetch,
+    });
+
+    const dummyCriterion: RubricCriterion = {
+      id: "vertex_test",
+      name: "Vertex Test",
+      question: "Does the candidate cite carrier rates accurately?",
+      weight: 1,
+      service: "comm",
+      path: "/messages",
+      field: "body",
+    };
+
+    const verdict = await vertexJudge("Judge prompt", dummyCriterion, "gemini-4-argon");
+    expect(seenUrl).toContain(
+      "https://us-central1-aiplatform.googleapis.com/v1/projects/evergreen-eval-proj/locations/us-central1/publishers/google/models/gemini-4-argon:generateContent",
+    );
+    expect(seenAuth).toBe("Bearer fake-vertex-access-token");
+    expect(verdict.passed).toBe(true);
+    expect(verdict.score).toBe(1.0);
   });
 
   test("all scenario rubricChecks across scenarios 02, 05, 11, 12, 15, and 16-20 pass 7-rule validation", () => {

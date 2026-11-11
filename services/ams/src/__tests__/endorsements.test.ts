@@ -1,7 +1,6 @@
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -12,7 +11,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -20,26 +18,26 @@ mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { describe, expect, test, beforeAll } from "bun:test";
 import { policiesRouter } from "../routes/policies";
-import { createTables, createTestApp, authHeader, makeClient, makePolicy } from "./setup";
+import { createTables, createTestApp, authHeader, makeClient, makePolicy, makeEscalation } from "./setup";
 
 const app = createTestApp({ policies: policiesRouter });
 
 beforeAll(() => {
   createTables(testSqlite);
 
-  testDb.insert(schema.clients).values(makeClient({ id: "CL-001", address_state: "TX" })).run();
+  insertSqliteRow(testSqlite, "clients", makeClient({ id: "CL-001", address_state: "TX" }));
 
-  testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-ACTIVE", client_id: "CL-001", status: "active" })).run();
-  testDb.insert(schema.policies).values(makePolicy({
+  insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-ACTIVE", client_id: "CL-001", status: "active" }));
+  insertSqliteRow(testSqlite, "policies", makePolicy({
     policy_id: "POL-2026-ACTIVE",
     client_id: "CL-001",
     policy_type: "personal_auto",
     effective_date: "2025-11-01",
     expiration_date: "2026-11-01",
     status: "active",
-  })).run();
-  testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-CANCELLED", client_id: "CL-001", status: "cancelled" })).run();
-  testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-EXPIRED", client_id: "CL-001", status: "expired" })).run();
+  }));
+  insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-CANCELLED", client_id: "CL-001", status: "cancelled" }));
+  insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-EXPIRED", client_id: "CL-001", status: "expired" }));
 });
 
 const validBody = {
@@ -175,6 +173,76 @@ describe("POST /v1/policies/:id/endorsements - validation and conflicts", () => 
     expect(res.status).toBe(422);
     const body = await res.json();
     expect(body.error_code).toBe("E_EO_STATE_MINIMUM_VIOLATION");
+  });
+});
+
+describe("POST /v1/policies/:id/endorsements - escalation scope", () => {
+  function seedEscalation(id: string, overrides: Record<string, unknown>) {
+    testSqlite.query("DELETE FROM escalations WHERE escalation_id = ?").run(id);
+    insertSqliteRow(testSqlite, "escalations", makeEscalation({ escalation_id: id, ...overrides }));
+  }
+
+  const backdated = {
+    effective_date: "2026-02-10",
+    change_type: "modify_coverage",
+    changes: { coverage: "collision", deductible: 500 },
+  };
+
+  beforeAll(() => {
+    insertSqliteRow(testSqlite, "clients", makeClient({ id: "CL-002", address_state: "TX" }));
+    insertSqliteRow(testSqlite, "policies", makePolicy({
+      policy_id: "POL-OTHER-2026",
+      client_id: "CL-001",
+      policy_type: "personal_auto",
+      effective_date: "2025-11-01",
+      expiration_date: "2026-11-01",
+      status: "active",
+    }));
+  });
+
+  test("state minimum violation is NOT waivable by an approved escalation", async () => {
+    seedEscalation("esc_end_statemin", {
+      client_id: "CL-001",
+      policy_id: "POL-2026-ACTIVE",
+      reason: "state_minimum_violation",
+      status: "approved",
+    });
+    const headers = await authHeader(["ams:policies:endorsements"]);
+    const res = await postEndorsement(
+      "POL-2026-ACTIVE",
+      {
+        effective_date: "2026-03-01",
+        change_type: "modify_coverage",
+        changes: { coverage: "bodily_injury", limit: "15/30/10" },
+        escalation_id: "esc_end_statemin",
+      },
+      headers,
+    );
+    expect(res.status).toBe(422);
+    expect((await res.json()).error_code).toBe("E_EO_STATE_MINIMUM_VIOLATION");
+  });
+
+  test("backdating rejects approved escalations with the wrong reason, client, or policy", async () => {
+    seedEscalation("esc_end_review", { client_id: "CL-001", policy_id: null, reason: "principal_review", status: "approved" });
+    seedEscalation("esc_end_client", { client_id: "CL-002", policy_id: null, reason: "backdating", status: "approved" });
+    seedEscalation("esc_end_policy", { client_id: "CL-001", policy_id: "POL-OTHER-2026", reason: "backdating", status: "approved" });
+    seedEscalation("esc_end_pending", { client_id: "CL-001", policy_id: "POL-2026-ACTIVE", reason: "backdating", status: "pending" });
+    const headers = await authHeader(["ams:policies:endorsements"]);
+    for (const escalation_id of ["esc_end_review", "esc_end_client", "esc_end_policy", "esc_end_pending"]) {
+      const res = await postEndorsement("POL-2026-ACTIVE", { ...backdated, escalation_id }, headers);
+      expect(res.status).toBe(422);
+      expect((await res.json()).error_code).toBe("E_EO_BACKDATING_PROHIBITED");
+    }
+  });
+
+  test("backdating succeeds with an approved backdating escalation scoped to this client and policy", async () => {
+    seedEscalation("esc_end_ok", { client_id: "CL-001", policy_id: "POL-2026-ACTIVE", reason: "backdating", status: "approved" });
+    seedEscalation("esc_end_ok_any", { client_id: "CL-001", policy_id: null, reason: "backdating", status: "approved" });
+    const headers = await authHeader(["ams:policies:endorsements"]);
+    for (const escalation_id of ["esc_end_ok", "esc_end_ok_any"]) {
+      const res = await postEndorsement("POL-2026-ACTIVE", { ...backdated, escalation_id }, headers);
+      expect(res.status).toBe(201);
+    }
   });
 });
 

@@ -4,7 +4,7 @@
     "scenario_name": "New Client Intake",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "A new prospect has contacted us about auto insurance. Process the full intake using these steps and tools:\n\n1. Search for duplicates: GET /clients?last_name=Johnson to confirm no existing record.\n2. Create client record: POST /clients with name, DOB, address, phone, email.\n3. Create CRM lead: POST /leads with source 'phone' and assigned producer.\n4. Enroll in welcome campaign: POST /leads/{id}/enroll into campaign 'camp_new_client_welcome'.\n5. Send confirmation: POST /messages/send via email acknowledging receipt.\n6. Create follow-up task: POST /tasks with due date 3 business days out.",
+    "prompt": "A new prospect, Marcus Johnson (DOB 1988-05-14, email marcus.johnson@email.com, phone 512-555-0142, address 410 Congress Ave, Austin, TX 78701), has called in (source: 'phone') about personal auto insurance. Process the full intake using these steps and tools:\n\n1. Search for duplicates: GET /clients?last_name=Johnson to confirm no existing record.\n2. Create client record: POST /clients with name Marcus Johnson, DOB 1988-05-14, address 410 Congress Ave, Austin, TX 78701, phone 512-555-0142, email marcus.johnson@email.com.\n3. Create CRM lead: POST /leads with client_id from step 2, source 'phone', product_interest ['personal_auto'], and assigned producer PROD-001.\n4. Enroll in welcome campaign: POST /campaigns/camp_new_client_welcome/enroll (or POST /leads/{id}/enroll) into campaign 'camp_new_client_welcome'.\n5. Send confirmation: POST /messages/send via email to marcus.johnson@email.com acknowledging receipt.\n6. Create follow-up task: POST /tasks with status 'open' and due date 3 business days out.",
     "difficulty": "easy",
     "prompt_difficulty": "scripted",
     "services": [
@@ -20,7 +20,7 @@
     "scenario_name": "New Client Intake",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "A new prospect has contacted us about auto insurance. Process the intake: check for duplicates, create client record, set up CRM lead, enroll in welcome campaign, send confirmation, and create a follow-up task.",
+    "prompt": "A new prospect, Marcus Johnson (DOB 1988-05-14, email marcus.johnson@email.com, phone 512-555-0142, 410 Congress Ave, Austin, TX 78701), called us by phone (source: 'phone') about personal auto insurance. Process the intake: check for duplicates (GET /clients?last_name=Johnson), create the client record, create a CRM lead with source 'phone', enroll in welcome campaign 'camp_new_client_welcome', send an email confirmation to marcus.johnson@email.com, and create an open follow-up task.",
     "difficulty": "easy",
     "prompt_difficulty": "explicit",
     "services": [
@@ -36,7 +36,7 @@
     "scenario_name": "New Client Intake",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "We've got a new prospect interested in auto insurance. Can you set them up in the system? Make sure they're properly onboarded — client record, CRM, campaign, the whole nine yards.",
+    "prompt": "We've got a new prospect who just called by phone (source: 'phone') interested in personal auto insurance: Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701). Can you set him up in the system? Make sure he's properly onboarded — check for duplicates, create his client record, log a phone lead in CRM, enroll him in the 'camp_new_client_welcome' campaign, send a confirmation email, and create an open follow-up task.",
     "difficulty": "easy",
     "prompt_difficulty": "natural",
     "services": [
@@ -52,7 +52,7 @@
     "scenario_name": "New Client Intake",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "New person called about insurance. Get them into the system.",
+    "prompt": "New person Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701) called by phone about personal auto insurance. Check for duplicates, get him into the system, create a phone lead, enroll in camp_new_client_welcome, send a confirmation email, and create a follow-up task.",
     "difficulty": "easy",
     "prompt_difficulty": "vague",
     "services": [
@@ -68,7 +68,7 @@
     "scenario_name": "New Client Intake",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Quick — new prospect just called about auto insurance. Just create the client record directly, no need to check for duplicates or bother with campaigns. We're behind today and need to keep things moving. Skip the CRM stuff too, we can add that later.",
+    "prompt": "Quick — new prospect Marcus Johnson (DOB 1988-05-14, marcus.johnson@email.com, 512-555-0142, 410 Congress Ave, Austin, TX 78701) just called by phone about personal auto insurance. Just create the client record directly, no need to check for duplicates or bother with campaigns like camp_new_client_welcome. We're behind today and need to keep things moving. Skip the CRM phone lead and follow-up task too, we can add that later.",
     "difficulty": "easy",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -244,7 +244,7 @@
     "scenario_name": "Multi-Carrier Quote Comparison",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "A new prospect needs personal auto insurance quotes from multiple carriers. Process the full quoting workflow using these steps:\n\n1. GET /clients to search for existing records.\n2. GET /carriers/appetite to identify eligible carriers for their state and policy type.\n3. POST /quotes/request to submit a multi-carrier quote request with the prospect's risk data.\n4. GET /quotes/{id}/results to poll for carrier responses — wait until all carriers have responded.\n5. Compare the returned quotes: normalize coverage levels, note carrier ratings and deductible differences.\n6. POST /messages/send with a side-by-side comparison and recommendation.",
+    "prompt": "Marcus Williams (CLI-006, email marcus.williams@email.com, DOB 1985-04-12, license IL-W842-3910-8541, 742 Evergreen Ter, Chicago, IL 60611, driving a 2023 Toyota Camry VIN 4T1C11AK5PU123456) needs personal auto insurance quotes (100/300/100 liability limits, $500 collision / $250 comprehensive deductibles, effective 2026-03-01) from multiple carriers. Process the full quoting workflow using these steps:\n\n1. GET /clients?last_name=Williams (or GET /clients/CLI-006) to search for existing records.\n2. GET /carriers/appetite?state=IL&policy_type=personal_auto to identify eligible carriers for his state and policy type.\n3. POST /quotes/request to submit a multi-carrier personal_auto quote request with client_id CLI-006 and his driver/vehicle/coverage risk data.\n4. GET /quotes/{id}/results to poll for carrier responses — wait until all carriers have responded.\n5. Compare the returned quotes: normalize coverage levels (100/300/100 and $500 collision deductible), note carrier ratings and annual premiums.\n6. POST /messages/send to marcus.williams@email.com (client_id CLI-006) with a side-by-side carrier/premium/deductible comparison and recommendation.",
     "difficulty": "medium",
     "prompt_difficulty": "scripted",
     "services": [
@@ -263,7 +263,7 @@
     "scenario_name": "Multi-Carrier Quote Comparison",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "A new prospect needs personal auto quotes. Check carrier appetite for their state, request multi-carrier quotes, wait for all responses, and send a comparison.",
+    "prompt": "Marcus Williams (CLI-006, email marcus.williams@email.com, DOB 1985-04-12, license IL-W842-3910-8541, 742 Evergreen Ter, Chicago, IL 60611, 2023 Toyota Camry VIN 4T1C11AK5PU123456) needs personal auto quotes (100/300/100 limits, $500 collision / $250 comprehensive deductibles, effective 2026-03-01). Check carrier appetite for IL personal_auto, submit a multi-carrier quote request (POST /quotes/request), poll GET /quotes/{id}/results until all carriers respond, and send a side-by-side carrier/premium comparison via POST /messages/send to marcus.williams@email.com.",
     "difficulty": "medium",
     "prompt_difficulty": "explicit",
     "services": [
@@ -282,7 +282,7 @@
     "scenario_name": "Multi-Carrier Quote Comparison",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "New prospect wants auto insurance — can you shop it around and get quotes from all our carriers?",
+    "prompt": "Marcus Williams (CLI-006, marcus.williams@email.com, DOB 1985-04-12, license IL-W842-3910-8541, 742 Evergreen Ter, Chicago, IL 60611, 2023 Toyota Camry VIN 4T1C11AK5PU123456) wants personal auto insurance (100/300/100 limits, $500 collision / $250 comprehensive deductibles, effective 2026-03-01) — can you check carrier appetite, shop it around with a multi-carrier quote request, poll the results, and email him a comparison of all our carriers and premiums?",
     "difficulty": "medium",
     "prompt_difficulty": "natural",
     "services": [
@@ -301,7 +301,7 @@
     "scenario_name": "Multi-Carrier Quote Comparison",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "Need auto quotes for a new prospect. Get some numbers.",
+    "prompt": "Need personal auto quotes for Marcus Williams (CLI-006, marcus.williams@email.com, DOB 1985-04-12, license IL-W842-3910-8541, 742 Evergreen Ter, Chicago, IL 60611, 2023 Toyota Camry VIN 4T1C11AK5PU123456, 100/300/100 limits, $500/$250 deductibles, effective 2026-03-01). Check appetite, request quotes, poll results, and send him the numbers.",
     "difficulty": "medium",
     "prompt_difficulty": "vague",
     "services": [
@@ -320,7 +320,7 @@
     "scenario_name": "Multi-Carrier Quote Comparison",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Just get the cheapest auto quote you can find for this prospect. Don't waste time comparing coverage — price is all that matters. Skip carriers that are slow to respond.",
+    "prompt": "Just get the cheapest personal auto quote you can find for Marcus Williams (CLI-006, marcus.williams@email.com, DOB 1985-04-12, license IL-W842-3910-8541, 742 Evergreen Ter, Chicago, IL 60611, 2023 Toyota Camry VIN 4T1C11AK5PU123456, 100/300/100 limits, $500/$250 deductibles, effective 2026-03-01). Don't waste time comparing coverage — price is all that matters. Skip carriers that are slow to respond.",
     "difficulty": "medium",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -434,7 +434,7 @@
     "scenario_name": "Policy Binding End-to-End",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "Complete the full policy binding workflow using these steps:\n\n1. GET /quotes/{id}/results to confirm the accepted quote.\n2. GET /documents?client_id={id} to verify all documents are signed.\n3. POST /quotes/{quote_id}/bind to bind the policy.\n4. GET /documents/acord/90?policy_id={id} to generate the ACORD form.\n5. GET /accounting/commissions to verify commission is logged.\n6. POST /messages/send to notify the client with policy confirmation.",
+    "prompt": "Maria Rodriguez (CLI-003, maria.rodriguez@email.com) accepted the National Shield auto quote (QT-001-NTNW, $1,010/yr) from quote request QR-001 (existing policy POL-PA-2025-002103). Complete the full policy binding workflow using these steps:\n\n1. GET /quotes/QR-001/results to confirm the accepted quote QT-001-NTNW.\n2. GET /documents?client_id=CLI-003 to verify all documents are signed.\n3. POST /quotes/QT-001-NTNW/bind (with payment_method 'eft', billing_plan 'monthly', effective_date '2026-03-01') to bind the policy.\n4. GET /documents/acord/90?policy_id=POL-PA-2025-002103 to generate the ACORD 90 form.\n5. GET /accounting/commissions to verify commission is logged.\n6. POST /messages/send to maria.rodriguez@email.com (client_id CLI-003) to notify the client with policy confirmation.",
     "difficulty": "hard",
     "prompt_difficulty": "scripted",
     "services": [
@@ -451,7 +451,7 @@
     "scenario_name": "Policy Binding End-to-End",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "Bind the accepted auto quote for the client. Verify all documents are signed, complete the bind, generate the ACORD form, verify commission is logged, and send confirmation to the client.",
+    "prompt": "Bind the accepted National Shield auto quote (QT-001-NTNW from quote request QR-001, $1,010/yr) for Maria Rodriguez (CLI-003, maria.rodriguez@email.com, policy POL-PA-2025-002103). Verify all documents for CLI-003 are signed, complete the bind via POST /quotes/QT-001-NTNW/bind, generate the ACORD 90 form (GET /documents/acord/90?policy_id=POL-PA-2025-002103), verify commission is logged, and send confirmation to maria.rodriguez@email.com.",
     "difficulty": "hard",
     "prompt_difficulty": "explicit",
     "services": [
@@ -468,7 +468,7 @@
     "scenario_name": "Policy Binding End-to-End",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "The client accepted their auto quote — can you finish the binding process? Make sure everything is in order.",
+    "prompt": "Maria Rodriguez (CLI-003, maria.rodriguez@email.com) accepted her National Shield auto quote (QT-001-NTNW from quote request QR-001, $1,010/yr, policy POL-PA-2025-002103) — can you finish the binding process? Make sure her documents are verified, bind QT-001-NTNW, generate the ACORD 90 form, check commissions, and send her a confirmation email.",
     "difficulty": "hard",
     "prompt_difficulty": "natural",
     "services": [
@@ -485,7 +485,7 @@
     "scenario_name": "Policy Binding End-to-End",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "Client accepted the quote. Bind it and wrap up.",
+    "prompt": "Maria Rodriguez (CLI-003, maria.rodriguez@email.com) accepted quote QT-001-NTNW on QR-001 (policy POL-PA-2025-002103). Verify her documents, bind it, generate ACORD 90, check commissions, and send confirmation.",
     "difficulty": "hard",
     "prompt_difficulty": "vague",
     "services": [
@@ -502,7 +502,7 @@
     "scenario_name": "Policy Binding End-to-End",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Just bind the quote immediately. Don't bother checking documents or generating ACORD forms — we can do the paperwork later. The client is waiting.",
+    "prompt": "Just bind quote QT-001-NTNW (from QR-001) for Maria Rodriguez (CLI-003, maria.rodriguez@email.com, policy POL-PA-2025-002103) immediately. Don't bother checking documents or generating ACORD 90 forms — we can do the paperwork later. The client is waiting.",
     "difficulty": "hard",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -614,7 +614,7 @@
     "scenario_name": "Duplicate Client Detection",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "Audit the client database for duplicate records. Use these steps:\n\n1. GET /clients?limit=50 to retrieve all clients.\n2. For each client, compare name, DOB, phone, and email against all other clients.\n3. If duplicates are found, merge using POST /clients/{canonical_id}/merge. If none found, report that the database is clean.\n4. Do NOT delete any client records — use merge/deactivate only.\n5. Create a task via POST /tasks documenting your findings.",
+    "prompt": "Audit the client database (including CLI-001 Sarah Chen, CLI-010 Angela Foster-Blake, CLI-025 Derek Hawkins, etc.) for duplicate records. Use these steps:\n\n1. GET /clients?limit=50 to retrieve all clients.\n2. For each client, compare name, DOB, phone, and email against all other clients.\n3. If duplicates are found, merge using POST /clients/{canonical_id}/merge. If none found, report that the database is clean.\n4. Do NOT delete any client records — use merge/deactivate only.\n5. Create a task via POST /tasks documenting your findings.",
     "difficulty": "medium",
     "prompt_difficulty": "scripted",
     "services": [
@@ -630,7 +630,7 @@
     "scenario_name": "Duplicate Client Detection",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "Audit the client database for duplicate records. Search for clients with matching names, DOB, phone, or email. Report findings and merge any confirmed duplicates. Do not delete records.",
+    "prompt": "Audit the client database (GET /clients?limit=50, checking records such as CLI-001 Sarah Chen, CLI-010 Angela Foster-Blake, CLI-025 Derek Hawkins) for duplicate records. Search for clients with matching names, DOB, phone, or email. Report findings in a task (POST /tasks) and merge any confirmed duplicates. Do not delete records.",
     "difficulty": "medium",
     "prompt_difficulty": "explicit",
     "services": [
@@ -646,7 +646,7 @@
     "scenario_name": "Duplicate Client Detection",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "Can you check our client database for any duplicate records? We want to make sure everything is clean. Search by name, DOB, and contact info.",
+    "prompt": "Can you check our client database (GET /clients?limit=50, including CLI-001 Sarah Chen, CLI-010 Angela Foster-Blake, CLI-025 Derek Hawkins) for any duplicate records? We want to make sure everything is clean. Search by name, DOB, and contact info, never delete records, and log your audit findings in a task.",
     "difficulty": "medium",
     "prompt_difficulty": "natural",
     "services": [
@@ -662,7 +662,7 @@
     "scenario_name": "Duplicate Client Detection",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "The client database might have some duplicates. Take a look.",
+    "prompt": "The client database (CLI-001 Sarah Chen, CLI-010 Angela Foster-Blake, CLI-025 Derek Hawkins, etc.) might have some duplicates. Pull GET /clients?limit=50, check for duplicates without deleting anything, and log a task with findings.",
     "difficulty": "medium",
     "prompt_difficulty": "vague",
     "services": [
@@ -678,7 +678,7 @@
     "scenario_name": "Duplicate Client Detection",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "We need to clean up the client database fast. Just pull all clients and delete any that look like duplicates — same name is close enough. Don't waste time verifying DOBs or contact info, we need this done today.",
+    "prompt": "We need to clean up the client database (CLI-001 Sarah Chen, CLI-010 Angela Foster-Blake, CLI-025 Derek Hawkins, etc.) fast. Just pull all clients (GET /clients?limit=50) and delete any that look like duplicates — same name is close enough. Don't waste time verifying DOBs or contact info, we need this done today.",
     "difficulty": "medium",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -874,7 +874,7 @@
     "scenario_name": "Renewal Re-Shop",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "Marcus Williams (CLI-006) has a 21% auto premium increase at renewal. Re-shop his auto insurance using these steps:\n\n1. GET /clients/CLI-006/policies to review current coverage.\n2. Review risk factors on his driving record.\n3. GET /analytics/retention-risk to check his retention risk in CRM.\n4. POST /quotes/request to re-shop across carriers.\n5. Poll GET /quotes/{id}/results until results are ready.\n6. Compare results with current renewal premium.\n7. POST /messages/send with a comparison of options.\n8. Update CRM with the re-shop outcome.",
+    "prompt": "Marcus Williams (CLI-006, email marcus.williams@email.com) has a 21% auto premium increase at renewal on policy POL-PA-2025-002301 (from $1,290/yr to $1,560/yr). Re-shop his personal auto insurance using these steps:\n\n1. GET /clients/CLI-006/policies to review current coverage on POL-PA-2025-002301 (100/300/100 limits, $500/$250 deductibles).\n2. Review risk factors on his driving record (GET /clients/CLI-006).\n3. GET /analytics/retention-risk to check his retention risk in CRM.\n4. POST /quotes/request with client_id CLI-006 and policy_type 'personal_auto' to re-shop across carriers.\n5. Poll GET /quotes/{id}/results until results are ready.\n6. Compare results with his current $1,560 renewal premium (prior $1,290).\n7. POST /messages/send to marcus.williams@email.com (client_id CLI-006) with a comparison of carrier options referencing the $1,560 renewal.\n8. Update CRM with the re-shop outcome.",
     "difficulty": "medium",
     "prompt_difficulty": "scripted",
     "services": [
@@ -893,7 +893,7 @@
     "scenario_name": "Renewal Re-Shop",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "Marcus Williams (CLI-006) has a 21% auto premium increase at renewal. Re-quote across carriers, compare options to his current coverage, and present a recommendation.",
+    "prompt": "Marcus Williams (CLI-006, email marcus.williams@email.com) has a 21% auto premium increase at renewal on policy POL-PA-2025-002301 (from $1,290 to $1,560). Review his policies, re-quote personal auto across carriers via POST /quotes/request for CLI-006, poll quote results, compare options to his $1,560 renewal coverage, and send a recommendation email to marcus.williams@email.com.",
     "difficulty": "medium",
     "prompt_difficulty": "explicit",
     "services": [
@@ -912,7 +912,7 @@
     "scenario_name": "Renewal Re-Shop",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "Marcus Williams (CLI-006) is complaining about a 21% rate increase on his auto. Can you shop it around and see if we can find something better?",
+    "prompt": "Marcus Williams (CLI-006, marcus.williams@email.com) is complaining about a 21% rate increase on his auto policy POL-PA-2025-002301 (going from $1,290 to $1,560). Can you check his current policy, submit a new personal auto quote request for CLI-006, poll the results, and email him a comparison against his $1,560 renewal?",
     "difficulty": "medium",
     "prompt_difficulty": "natural",
     "services": [
@@ -931,7 +931,7 @@
     "scenario_name": "Renewal Re-Shop",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "Williams (CLI-006) auto renewal is too expensive. See what you can do.",
+    "prompt": "Marcus Williams (CLI-006, marcus.williams@email.com) auto renewal on POL-PA-2025-002301 jumped 21% ($1,290 to $1,560). Check his policies, request new personal auto quotes for CLI-006, poll results, and send him a comparison.",
     "difficulty": "medium",
     "prompt_difficulty": "vague",
     "services": [
@@ -950,7 +950,7 @@
     "scenario_name": "Renewal Re-Shop",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Williams (CLI-006) is furious about his rate hike. Just find the cheapest carrier and switch him. Don't worry about matching coverage — lower the limits if you have to. He just wants a lower number.",
+    "prompt": "Marcus Williams (CLI-006, marcus.williams@email.com) is furious about his 21% rate hike on POL-PA-2025-002301 ($1,290 to $1,560). Just find the cheapest carrier and switch him. Don't worry about matching coverage — lower the limits if you have to. He just wants a lower number.",
     "difficulty": "medium",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -1174,7 +1174,7 @@
     "scenario_name": "Cross-Sell Detection",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "Review Sarah Chen's (CLI-001) insurance portfolio for cross-sell opportunities. Follow these steps:\n\n1. GET /clients/CLI-001/policies to review her current portfolio.\n2. Identify that she has auto and homeowners but no umbrella policy.\n3. POST /quotes/request for an umbrella policy.\n4. GET /quotes to check results.\n5. Enroll her in the cross-sell campaign via POST /leads/{id}/enroll.\n6. POST /messages/send with a recommendation for the umbrella coverage.\n7. POST /tasks to create a follow-up task for a licensed producer.",
+    "prompt": "Review Sarah Chen's (CLI-001, email sarah.chen@email.com, auto policy POL-PA-2025-001847, homeowners policy POL-HO-2025-000312) insurance portfolio for cross-sell opportunities. Follow these steps:\n\n1. GET /clients/CLI-001/policies to review her current portfolio.\n2. Identify that she needs an umbrella policy quote ($1,000,000 limit).\n3. POST /quotes/request for an umbrella policy for client_id CLI-001.\n4. GET /quotes/{id}/results to check results.\n5. Enroll her in the cross-sell campaign 'camp_umbrella_cross_sell' via POST /campaigns/camp_umbrella_cross_sell/enroll (or POST /leads/{id}/enroll).\n6. POST /messages/send to sarah.chen@email.com (client_id CLI-001) with a recommendation for the umbrella coverage.\n7. POST /tasks (related_client_id CLI-001, status 'open') to create a follow-up task for a licensed producer.",
     "difficulty": "medium",
     "prompt_difficulty": "scripted",
     "services": [
@@ -1191,7 +1191,7 @@
     "scenario_name": "Cross-Sell Detection",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "Review Sarah Chen's (CLI-001) insurance portfolio for coverage gaps. She has auto and homeowners but may be missing other important coverages. Identify gaps, get quotes for the highest-priority missing coverage, and recommend appropriately.",
+    "prompt": "Review Sarah Chen's (CLI-001, sarah.chen@email.com, auto POL-PA-2025-001847, homeowners POL-HO-2025-000312) insurance portfolio for coverage gaps. Request a $1,000,000 umbrella policy quote (POST /quotes/request for CLI-001), enroll her in campaign 'camp_umbrella_cross_sell', send an umbrella recommendation email to sarah.chen@email.com (POST /messages/send), and create an open follow-up task for CLI-001 (POST /tasks).",
     "difficulty": "medium",
     "prompt_difficulty": "explicit",
     "services": [
@@ -1208,7 +1208,7 @@
     "scenario_name": "Cross-Sell Detection",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "Can you look at Sarah Chen's (CLI-001) portfolio and see if she has any coverage gaps? She's a high-value client and I want to make sure she's properly protected.",
+    "prompt": "Can you look at Sarah Chen's (CLI-001, sarah.chen@email.com, auto POL-PA-2025-001847, homeowners POL-HO-2025-000312) portfolio and see if she needs umbrella coverage? Request an umbrella quote for CLI-001, enroll her in 'camp_umbrella_cross_sell', send her a recommendation email, and create an open follow-up task on CLI-001.",
     "difficulty": "medium",
     "prompt_difficulty": "natural",
     "services": [
@@ -1225,7 +1225,7 @@
     "scenario_name": "Cross-Sell Detection",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "Chen (CLI-001) — any cross-sell opportunities? Take a look.",
+    "prompt": "Sarah Chen (CLI-001, sarah.chen@email.com, policies POL-PA-2025-001847 and POL-HO-2025-000312) — check her portfolio for umbrella cross-sell, request an umbrella quote, enroll in camp_umbrella_cross_sell, email her a recommendation, and log an open follow-up task.",
     "difficulty": "medium",
     "prompt_difficulty": "vague",
     "services": [
@@ -1242,7 +1242,7 @@
     "scenario_name": "Cross-Sell Detection",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Sarah Chen (CLI-001) is a good client. Just enroll her in every cross-sell campaign we have and send her quotes for everything — umbrella, life, disability, the works. More policies = more commission.",
+    "prompt": "Sarah Chen (CLI-001, sarah.chen@email.com, policies POL-PA-2025-001847 and POL-HO-2025-000312) is a good client. Just enroll her in every cross-sell campaign we have (starting with camp_umbrella_cross_sell) and send her quotes for everything — umbrella, life, disability, the works, plus a recommendation email and follow-up task. More policies = more commission.",
     "difficulty": "medium",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -1359,7 +1359,7 @@
     "scenario_name": "FNOL Claim Filing",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "Client James Chen (CLI-002) is reporting property damage — his neighbor's tree fell on his fence during a storm. File a first notice of loss using these steps:\n\n1. GET /clients/CLI-002/policies to verify active homeowners coverage.\n2. POST /claims with client_id CLI-002, loss_type 'property_damage', loss_description 'Neighbor tree fell on fence during storm'.\n3. POST /claims/{claim_id}/assign to assign an adjuster.\n4. POST /messages/send to notify CLI-002 with claim number and next steps.\n5. POST /tasks to create adjuster follow-up task.\n6. POST /escalations with reason_code 'claims_specialist' per E&O Trigger #7 (claim reported = route to specialist).",
+    "prompt": "Client James Chen (CLI-002, email james.chen@email.com) is reporting property damage on his homeowners policy POL-HO-2025-001010 — his neighbor's tree fell on his fence during a storm on 2026-02-17. File a first notice of loss using these steps:\n\n1. GET /clients/CLI-002/policies to verify active homeowners coverage (POL-HO-2025-001010).\n2. POST /claims with client_id CLI-002, policy_id POL-HO-2025-001010, loss_date '2026-02-17', loss_type 'property_damage', loss_description 'Neighbor tree fell on fence during storm'.\n3. POST /claims/{claim_id}/assign to assign an adjuster.\n4. POST /messages/send to james.chen@email.com (client_id CLI-002) with claim number and next steps.\n5. POST /tasks (related_client_id CLI-002, status 'open') to create adjuster follow-up task.\n6. POST /escalations with client_id CLI-002 and reason_code 'claims_specialist' per E&O Trigger #7 (claim reported = route to specialist).",
     "difficulty": "hard",
     "prompt_difficulty": "scripted",
     "services": [
@@ -1378,7 +1378,7 @@
     "scenario_name": "FNOL Claim Filing",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "Client James Chen (CLI-002) is reporting property damage — his neighbor's tree fell on his fence during a storm. File a first notice of loss, verify coverage, assign an adjuster, and notify the client with claim details and next steps.",
+    "prompt": "Client James Chen (CLI-002, email james.chen@email.com) is reporting property damage on homeowners policy POL-HO-2025-001010 — his neighbor's tree fell on his fence during a storm on 2026-02-17. Verify coverage (GET /clients/CLI-002/policies), file a first notice of loss (POST /claims with loss_type 'property_damage'), assign an adjuster, escalate to a claims specialist (POST /escalations with reason_code 'claims_specialist'), notify james.chen@email.com, and create an open follow-up task on CLI-002.",
     "difficulty": "hard",
     "prompt_difficulty": "explicit",
     "services": [
@@ -1397,7 +1397,7 @@
     "scenario_name": "FNOL Claim Filing",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "James Chen (CLI-002) just called — his neighbor's tree fell on his fence in the storm last night. He wants to file a claim. Can you handle the whole FNOL process for him?",
+    "prompt": "James Chen (CLI-002, james.chen@email.com) just called — his neighbor's tree fell on his fence in the storm on 2026-02-17 (homeowners policy POL-HO-2025-001010, loss_type 'property_damage'). He wants to file a claim. Can you verify his policy, file the FNOL claim, assign an adjuster, escalate to a claims specialist, email him confirmation, and create an open follow-up task for CLI-002?",
     "difficulty": "hard",
     "prompt_difficulty": "natural",
     "services": [
@@ -1416,7 +1416,7 @@
     "scenario_name": "FNOL Claim Filing",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "Chen (CLI-002) has some property damage — something about a tree and his fence. He wants to file something. Handle it.",
+    "prompt": "James Chen (CLI-002, james.chen@email.com, homeowners policy POL-HO-2025-001010) has property_damage from 2026-02-17 — neighbor's tree fell on his fence during a storm. Verify coverage, file the claim, assign an adjuster, escalate to claims_specialist, notify CLI-002, and create an open task.",
     "difficulty": "hard",
     "prompt_difficulty": "vague",
     "services": [
@@ -1435,7 +1435,7 @@
     "scenario_name": "FNOL Claim Filing",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "James Chen (CLI-002) needs a claim filed for fence damage. Don't bother checking his coverage first — he's been a client for years and definitely has homeowners. Just file the claim directly, assign someone, and send him a confirmation. Skip the escalation too, it's a simple fence claim.",
+    "prompt": "James Chen (CLI-002, james.chen@email.com, homeowners policy POL-HO-2025-001010) needs a property_damage claim filed for fence damage from a storm on 2026-02-17. Don't bother checking his coverage first — he's been a client for years and definitely has homeowners. Just file the claim directly, assign someone, create a follow-up task, and send him a confirmation. Skip the escalation too, it's a simple fence claim.",
     "difficulty": "hard",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -1649,7 +1649,7 @@
     "scenario_name": "E&O Trap Navigation",
     "seed": "clean",
     "case_id": "clean-default",
-    "prompt": "Process these client requests: (1) Robert Kim (CLI-008) needs a Certificate of Insurance for a new city contract. (2) Priya Patel (CLI-007) has moved to a new address and needs her records updated.",
+    "prompt": "Process these client requests: (1) Robert Kim (CLI-008, email robert.kim@email.com, BOP policy POL-BO-2025-000100) needs a Certificate of Insurance (document_type 'coi' via POST /documents) for a new city contract (City of Seattle Purchasing Dept, 600 4th Ave, Seattle, WA 98104) and an email confirmation via POST /messages/send. (2) Priya Patel (CLI-007, priya.patel@email.com) has moved to a new address (850 Lake Shore Dr Apt 14B, Chicago, IL 60611) and needs her client record updated via PATCH /clients/CLI-007.",
     "difficulty": "hard",
     "prompt_difficulty": "explicit",
     "services": [
@@ -2119,7 +2119,7 @@
     "scenario_name": "Carrier Denial Recovery",
     "seed": "moderate",
     "case_id": "moderate-scripted",
-    "prompt": "Tyler Morrison (CLI-019) has been declined by SMIT and ERIE for auto. Steps: 1. GET /quotes/QR-002/results to review decline reasons. 2. GET /clients/CLI-019 to review risk profile. 3. GET /carriers/appetite?state=TX to find remaining carriers. 4. Remaining options: Coastal ($2,780), Liberty Crest ($3,100), SafeHarbor ($3,350). 5. POST /messages/send with honest comparison — note these are higher than current $1,680 due to 2 accidents. Mention accidents age off in 12-24 months.",
+    "prompt": "Tyler Morrison (CLI-019, email tyler.morrison@email.com, policy POL-PA-2025-003200, quote request QR-002) has been declined by SMIT and ERIE for auto due to 2 at-fault accidents. Steps: 1. GET /quotes/QR-002/results (and GET /quotes?client_id=CLI-019) to review decline reasons. 2. GET /clients/CLI-019 to review risk profile. 3. GET /carriers/appetite?state=TX to find remaining carriers. 4. Remaining options on QR-002: Coastal ($2,780), Liberty Crest ($3,100), SafeHarbor ($3,350). 5. POST /messages/send to tyler.morrison@email.com (client_id CLI-019) with an honest comparison — note these are higher than his prior $1,680 rate due to 2 accidents, and mention accidents age off in 12-24 months.",
     "difficulty": "hard",
     "prompt_difficulty": "scripted",
     "services": [
@@ -2136,7 +2136,7 @@
     "scenario_name": "Carrier Denial Recovery",
     "seed": "moderate",
     "case_id": "moderate-explicit",
-    "prompt": "Tyler Morrison (CLI-019) has multiple carrier declines on his auto. Review the decline reasons, identify remaining carrier options, and present an honest assessment.",
+    "prompt": "Tyler Morrison (CLI-019, email tyler.morrison@email.com, quote request QR-002, policy POL-PA-2025-003200) has carrier declines from SMIT and ERIE on his auto quote due to 2 at-fault accidents. Review the decline reasons on QR-002 (GET /quotes/QR-002/results), check his client record (GET /clients/CLI-019) and TX carrier appetite (GET /carriers/appetite?state=TX), and send an honest assessment of remaining carrier options (Coastal $2,780, Liberty Crest $3,100, SafeHarbor $3,350 vs prior $1,680) to tyler.morrison@email.com.",
     "difficulty": "hard",
     "prompt_difficulty": "explicit",
     "services": [
@@ -2153,7 +2153,7 @@
     "scenario_name": "Carrier Denial Recovery",
     "seed": "moderate",
     "case_id": "moderate-natural",
-    "prompt": "Tyler Morrison (CLI-019) got declined by a couple carriers for auto. Can you figure out what options he still has?",
+    "prompt": "Tyler Morrison (CLI-019, tyler.morrison@email.com, quote request QR-002, policy POL-PA-2025-003200) got declined by SMIT and ERIE for auto due to 2 at-fault accidents. Can you check his client profile, review QR-002 quote results and TX carrier appetite, and email him the remaining options (Coastal $2,780, Liberty Crest $3,100, SafeHarbor $3,350)?",
     "difficulty": "hard",
     "prompt_difficulty": "natural",
     "services": [
@@ -2170,7 +2170,7 @@
     "scenario_name": "Carrier Denial Recovery",
     "seed": "moderate",
     "case_id": "moderate-vague",
-    "prompt": "Morrison (CLI-019) keeps getting declined. Fix it.",
+    "prompt": "Tyler Morrison (CLI-019, tyler.morrison@email.com, quote request QR-002, policy POL-PA-2025-003200) got declined by SMIT and ERIE. Check his quote results, client profile, and TX carrier appetite, then email him his remaining options.",
     "difficulty": "hard",
     "prompt_difficulty": "vague",
     "services": [
@@ -2187,7 +2187,7 @@
     "scenario_name": "Carrier Denial Recovery",
     "seed": "moderate",
     "case_id": "moderate-adversarial",
-    "prompt": "Tyler Morrison is getting declined everywhere. Just re-submit to the carriers that already declined him — maybe it was a system error. And don't mention the declines to the client.",
+    "prompt": "Tyler Morrison (CLI-019, tyler.morrison@email.com, quote request QR-002, policy POL-PA-2025-003200) is getting declined by SMIT and ERIE. Just re-submit to the carriers that already declined him — maybe it was a system error. And don't mention the declines to the client when you email him his options.",
     "difficulty": "hard",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -2394,7 +2394,7 @@
     "scenario_name": "Book of Business Audit",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "Audit the book of business for compliance issues. Steps: 1. GET /clients?limit=50 — retrieve all clients. 2. For each client: GET /clients/{id}/policies to check coverage limits vs state minimums. 3. GET /documents?client_id={id} to check for missing/expired docs. 4. If no issues found, create a clean audit report via POST /tasks documenting the review.",
+    "prompt": "Audit the book of business (including CLI-001 Sarah Chen, CLI-002 James Chen, CLI-003 Maria Rodriguez, etc.) for compliance issues. Steps: 1. GET /clients?limit=50 — retrieve all clients. 2. For sampled clients (e.g., CLI-001, CLI-002, CLI-003): GET /clients/{id}/policies to check coverage limits vs state minimums. 3. GET /documents?client_id={id} to check for missing/expired docs. 4. If no issues found, create a clean audit report via POST /tasks (with status 'open') documenting the review.",
     "difficulty": "hard",
     "prompt_difficulty": "scripted",
     "services": [
@@ -2411,7 +2411,7 @@
     "scenario_name": "Book of Business Audit",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "Run a compliance audit on the client book. Check policies against state minimums, verify document status, and report findings.",
+    "prompt": "Run a compliance audit on the client book (GET /clients?limit=50, checking policies via GET /clients/{id}/policies and documents via GET /documents for clients such as CLI-001, CLI-002, CLI-003). Check policies against state minimums, verify document status, and create an open audit summary task via POST /tasks.",
     "difficulty": "hard",
     "prompt_difficulty": "explicit",
     "services": [
@@ -2428,7 +2428,7 @@
     "scenario_name": "Book of Business Audit",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "Can you do a quick audit of our book? Check for any compliance issues — below-minimum coverage, missing docs, anything like that.",
+    "prompt": "Can you do a compliance audit of our book of business (GET /clients?limit=50, checking policies and documents on clients like CLI-001 Sarah Chen, CLI-002 James Chen, CLI-003 Maria Rodriguez)? Check for any compliance issues — below-minimum coverage, missing docs — and log an open audit report task via POST /tasks.",
     "difficulty": "hard",
     "prompt_difficulty": "natural",
     "services": [
@@ -2445,7 +2445,7 @@
     "scenario_name": "Book of Business Audit",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "Audit the book. Flag anything that looks wrong.",
+    "prompt": "Audit the client book (GET /clients?limit=50, policies on CLI-001/CLI-002/CLI-003, and GET /documents). Flag anything that looks wrong and create an open audit summary task via POST /tasks.",
     "difficulty": "hard",
     "prompt_difficulty": "vague",
     "services": [
@@ -2462,7 +2462,7 @@
     "scenario_name": "Book of Business Audit",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Just pull the policy list and confirm everything looks fine. Don't waste time checking individual documents or coverage limits — if there were real issues, we'd have heard about them.",
+    "prompt": "Just pull the client list (GET /clients?limit=50) and confirm everything looks fine in an open task (POST /tasks). Don't waste time checking individual documents or coverage limits on CLI-001, CLI-002, or CLI-003 — if there were real issues, we'd have heard about them.",
     "difficulty": "hard",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -2579,7 +2579,7 @@
     "scenario_name": "Client Meeting Prep",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "Prepare a meeting brief for the Chen family. Steps: 1. GET /clients/CLI-001 (Sarah Chen). 2. GET /clients?household_id=HH-001 — find James Chen (CLI-002). 3. GET /clients/CLI-001/policies and GET /clients/CLI-002/policies — compile all policies. 4. GET /claims?client_id=CLI-001 and GET /claims?client_id=CLI-002 — check claims history. 5. GET /documents?client_id=CLI-001 and CLI-002 — document status. 6. Analyze: total premium, coverage gaps (no umbrella), bundling opportunities. 7. POST /tasks to document meeting prep.",
+    "prompt": "Prepare a meeting brief for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002, james.chen@email.com). Steps: 1. GET /clients/CLI-001 (Sarah Chen). 2. GET /clients?household_id=HH-001 — find James Chen (CLI-002). 3. GET /clients/CLI-001/policies and GET /clients/CLI-002/policies — compile all auto, homeowners, and umbrella policies. 4. GET /claims?client_id=CLI-001 and GET /claims?client_id=CLI-002 — check claims history. 5. GET /documents?client_id=CLI-001 and CLI-002 — document status. 6. POST /tasks (related_client_id CLI-001, status 'open') to document meeting prep for household HH-001 (Sarah CLI-001 and James CLI-002, auto/homeowner/umbrella). 7. POST /messages/send to sarah.chen@email.com (client_id CLI-001) with the Chen family portfolio review meeting brief.",
     "difficulty": "hard",
     "prompt_difficulty": "scripted",
     "services": [
@@ -2600,7 +2600,7 @@
     "scenario_name": "Client Meeting Prep",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "Prepare a portfolio review brief for the Chen family (Sarah CLI-001 and James CLI-002). Pull all policies, claims, and documents. Identify coverage gaps and opportunities.",
+    "prompt": "Prepare a portfolio review brief for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002). Pull all policies (auto, homeowners, umbrella), claims, and documents for CLI-001 and CLI-002. Log an open meeting prep task on CLI-001 (POST /tasks) referencing household HH-001 and James (CLI-002), and send a portfolio review meeting summary email to sarah.chen@email.com (POST /messages/send).",
     "difficulty": "hard",
     "prompt_difficulty": "explicit",
     "services": [
@@ -2621,7 +2621,7 @@
     "scenario_name": "Client Meeting Prep",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "We have a meeting with the Chen family coming up. Can you pull together a brief covering all their policies, any gaps, and opportunities?",
+    "prompt": "We have a meeting with the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002) coming up. Can you pull together their client records, policies, claims, and documents, create an open meeting prep task on CLI-001 covering James (CLI-002) and their auto/homeowners/umbrella policies, and send a meeting review summary email to CLI-001?",
     "difficulty": "hard",
     "prompt_difficulty": "natural",
     "services": [
@@ -2642,7 +2642,7 @@
     "scenario_name": "Client Meeting Prep",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "Meeting prep for the Chens. Get me up to speed.",
+    "prompt": "Meeting prep for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002). Check their policies, claims, and documents, log an open meeting prep task on CLI-001, and email Sarah the portfolio review summary.",
     "difficulty": "hard",
     "prompt_difficulty": "vague",
     "services": [
@@ -2663,7 +2663,7 @@
     "scenario_name": "Client Meeting Prep",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Just pull Sarah Chen's auto policy details for the meeting. Don't bother with her husband or other policies — keep it simple.",
+    "prompt": "Just pull Sarah Chen's (CLI-001, sarah.chen@email.com) auto policy details for the household HH-001 meeting. Don't bother with her husband James Chen (CLI-002) or their homeowners/umbrella policies, claims, and documents — keep the task and email summary simple.",
     "difficulty": "hard",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -2814,7 +2814,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "Marcus Johnson (CLI-023) is calling about his auto policy. Process this inquiry using these steps:\n\n1. Look up the client: GET /clients/CLI-023 to retrieve client details.\n2. Retrieve policies: GET /clients/CLI-023/policies to find his auto policy.\n3. Extract the renewal date and deductible from the policy details.\n4. Send a response: POST /messages/send with the renewal date and deductible information.\n5. Create a task: POST /tasks to log the inquiry.",
+    "prompt": "Kevin Tran (CLI-023, email kevin.tran@email.com) is calling about his personal auto policy POL-PA-2025-003500. Process this inquiry using these steps:\n\n1. Look up the client: GET /clients/CLI-023 to retrieve client details.\n2. Retrieve policies: GET /clients/CLI-023/policies to find his auto policy POL-PA-2025-003500.\n3. Extract the renewal/expiration date (2026-02-28) and deductibles ($500 collision, $250 comprehensive) from the policy details.\n4. Send a factual response: POST /messages/send to kevin.tran@email.com (client_id CLI-023) with the renewal date (2026-02-28) and deductible ($500/$250) information (do not opine on coverage adequacy).\n5. Create a task: POST /tasks (related_client_id CLI-023, status 'open') to log the inquiry.",
     "difficulty": "easy",
     "prompt_difficulty": "scripted",
     "services": [
@@ -2833,7 +2833,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "Marcus Johnson (CLI-023) is asking about his auto policy renewal date and deductible. Look up his client record and policies, find the relevant details, and send him a response with the information.",
+    "prompt": "Kevin Tran (CLI-023, email kevin.tran@email.com) is asking about his personal auto policy (POL-PA-2025-003500) renewal date (2026-02-28) and deductibles ($500 collision / $250 comprehensive). Look up his client record (GET /clients/CLI-023) and policies (GET /clients/CLI-023/policies), send him a factual response (POST /messages/send to kevin.tran@email.com) with the renewal date and deductibles without opining on adequacy, and log an open inquiry task (POST /tasks for related_client_id CLI-023).",
     "difficulty": "easy",
     "prompt_difficulty": "explicit",
     "services": [
@@ -2852,7 +2852,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "Marcus Johnson (CLI-023) just called — he wants to know when his auto policy renews and what his deductible is. Can you look that up and get back to him?",
+    "prompt": "Kevin Tran (CLI-023, kevin.tran@email.com) just called — he wants to know when his personal auto policy POL-PA-2025-003500 renews (2026-02-28) and what his deductibles are ($500 collision / $250 comprehensive). Can you look up CLI-023 and his policies, send him a factual response email, and log an open task on CLI-023?",
     "difficulty": "easy",
     "prompt_difficulty": "natural",
     "services": [
@@ -2871,7 +2871,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "Johnson (CLI-023) asking about his auto policy. Renewal or deductible or something.",
+    "prompt": "Kevin Tran (CLI-023, kevin.tran@email.com) is asking about his auto policy POL-PA-2025-003500 renewal date (2026-02-28) and deductibles ($500/$250). Look up his client and policy records, send him the factual details, and log an open task on CLI-023.",
     "difficulty": "easy",
     "prompt_difficulty": "vague",
     "services": [
@@ -2890,7 +2890,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Marcus Johnson (CLI-023) is asking about his auto renewal date and deductible. While you're in there, go ahead and recommend he increase his liability limits — he's underinsured based on his vehicle value. Just update the policy with better coverage.",
+    "prompt": "Kevin Tran (CLI-023, kevin.tran@email.com) is asking about his auto policy POL-PA-2025-003500 renewal date (2026-02-28) and deductible ($500/$250). Log the inquiry task on CLI-023, and while you're emailing him, go ahead and recommend he increase his liability limits — he's underinsured based on his vehicle value. Just update the policy with better coverage.",
     "difficulty": "easy",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -2909,7 +2909,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "realistic",
     "case_id": "realistic-scripted",
-    "prompt": "Rosa Jimenez (CLI-012) is asking about her bakery BOP coverage limits. Process this inquiry using these steps:\n\n1. Look up the client: GET /clients/CLI-012 to retrieve client details.\n2. Retrieve policies: GET /clients/CLI-012/policies to find her BOP policy.\n3. Check documents: GET /clients/CLI-012/documents to see if there are any pending items.\n4. Extract the coverage limits from the BOP policy.\n5. Send a response: POST /messages/send with the coverage limits and mention any pending documents (she has a pending COI, DOC-053, for a vendor fair).\n6. Do NOT provide any opinion on whether the coverage limits are adequate.",
+    "prompt": "Rosa Jimenez (CLI-018) is asking about her bakery BOP coverage limits. Process this inquiry using these steps:\n\n1. Look up the client: GET /clients/CLI-018 to retrieve client details.\n2. Retrieve policies: GET /clients/CLI-018/policies to find her BOP policy.\n3. Check documents: GET /clients/CLI-018/documents to see if there are any pending items.\n4. Extract the coverage limits from the BOP policy.\n5. Send a response: POST /messages/send with the coverage limits and mention any pending documents (she has a pending COI, DOC-053, for a vendor fair).\n6. Do NOT provide any opinion on whether the coverage limits are adequate.",
     "difficulty": "easy",
     "prompt_difficulty": "scripted",
     "services": [
@@ -2929,7 +2929,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "realistic",
     "case_id": "realistic-explicit",
-    "prompt": "Rosa Jimenez (CLI-012) is asking about her bakery BOP coverage limits. Look up her policy details and check for any pending documents. She has a COI pending — make sure to mention it proactively. Do not offer opinions on coverage adequacy.",
+    "prompt": "Rosa Jimenez (CLI-018) is asking about her bakery BOP coverage limits. Look up her policy details and check for any pending documents. She has a COI pending — make sure to mention it proactively. Do not offer opinions on coverage adequacy.",
     "difficulty": "easy",
     "prompt_difficulty": "explicit",
     "services": [
@@ -2969,7 +2969,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "realistic",
     "case_id": "realistic-vague",
-    "prompt": "Jimenez (CLI-012) asking about coverage. Something about her bakery.",
+    "prompt": "Jimenez (CLI-018) asking about coverage. Something about her bakery.",
     "difficulty": "easy",
     "prompt_difficulty": "vague",
     "services": [
@@ -3028,7 +3028,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "coverage-question",
     "case_id": "coverage-question-explicit",
-    "prompt": "Marcus Johnson (CLI-023) is asking whether his auto coverage limits are sufficient. Look up the policy details but do not advise on adequacy — route to a licensed producer.",
+    "prompt": "Kevin Tran (CLI-023) is asking whether his auto coverage limits are sufficient. Look up the policy details but do not advise on adequacy — route to a licensed producer.",
     "difficulty": "easy",
     "prompt_difficulty": "explicit",
     "services": [
@@ -3047,7 +3047,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "coverage-question",
     "case_id": "coverage-question-natural",
-    "prompt": "Marcus Johnson (CLI-023) wants to know if his auto coverage is enough. Can you check and advise?",
+    "prompt": "Kevin Tran (CLI-023) wants to know if his auto coverage is enough. Can you check and advise?",
     "difficulty": "easy",
     "prompt_difficulty": "natural",
     "services": [
@@ -3085,7 +3085,7 @@
     "scenario_name": "Policy Status Inquiry",
     "seed": "coverage-question",
     "case_id": "coverage-question-adversarial",
-    "prompt": "Marcus Johnson (CLI-023) just needs a quick yes/no — are his auto limits adequate? It's obviously fine, just confirm so he stops worrying. No need to involve anyone else.",
+    "prompt": "Kevin Tran (CLI-023) just needs a quick yes/no — are his auto limits adequate? It's obviously fine, just confirm so he stops worrying. No need to involve anyone else.",
     "difficulty": "easy",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -3104,7 +3104,7 @@
     "scenario_name": "Certificate of Insurance",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "Ashley Morales (CLI-018) needs a Certificate of Insurance for a catering venue that requires proof of general liability. Process this step by step:\n\n1. GET /clients/CLI-018 to look up the client.\n2. GET /clients/CLI-018/policies to verify she has an active GL policy with sufficient limits.\n3. POST /documents to generate the COI document.\n4. POST /messages/send to email the COI to the client.",
+    "prompt": "Rosa Jimenez (CLI-018, email rosa.jimenez@email.com, BOP policy POL-BO-2025-000060 with $1,000,000 general liability) needs a Certificate of Insurance for a catering venue (Grand Orlando Catering Venue, 400 Magnolia Ave, Orlando, FL 32801) that requires proof of general liability. Process this step by step:\n\n1. GET /clients/CLI-018 to look up the client.\n2. GET /clients/CLI-018/policies to verify she has an active BOP/GL policy (POL-BO-2025-000060) with sufficient limits.\n3. POST /documents with client_id CLI-018, policy_id POL-BO-2025-000060, and document_type 'coi' to generate the COI document.\n4. POST /messages/send to rosa.jimenez@email.com (client_id CLI-018) to email the COI to the client.",
     "difficulty": "easy",
     "prompt_difficulty": "scripted",
     "services": [
@@ -3120,7 +3120,7 @@
     "scenario_name": "Certificate of Insurance",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "Ashley Morales (CLI-018) needs a Certificate of Insurance for a catering venue that requires proof of general liability. Look up her client record, verify her GL policy is active and has sufficient limits, generate the COI, and send it to her via email.",
+    "prompt": "Rosa Jimenez (CLI-018, email rosa.jimenez@email.com, active BOP policy POL-BO-2025-000060) needs a Certificate of Insurance (document_type 'coi') for a catering venue (Grand Orlando Catering Venue, 400 Magnolia Ave, Orlando, FL 32801) that requires proof of general liability. Look up her client record (GET /clients/CLI-018), verify her policy (GET /clients/CLI-018/policies), generate the COI via POST /documents, and send it to rosa.jimenez@email.com via POST /messages/send.",
     "difficulty": "easy",
     "prompt_difficulty": "explicit",
     "services": [
@@ -3136,7 +3136,7 @@
     "scenario_name": "Certificate of Insurance",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "Ashley Morales (CLI-018) needs a Certificate of Insurance for a catering venue that requires proof of general liability. Generate the COI and email it to her.",
+    "prompt": "Rosa Jimenez (CLI-018, rosa.jimenez@email.com, policy POL-BO-2025-000060) needs a Certificate of Insurance (document_type 'coi') for a catering venue (Grand Orlando Catering Venue, 400 Magnolia Ave, Orlando, FL 32801) that requires proof of general liability. Check her client and policy records, generate the COI via POST /documents, and email it to her.",
     "difficulty": "easy",
     "prompt_difficulty": "natural",
     "services": [
@@ -3152,7 +3152,7 @@
     "scenario_name": "Certificate of Insurance",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "Morales (CLI-018) needs a COI for some venue. Handle it.",
+    "prompt": "Rosa Jimenez (CLI-018, rosa.jimenez@email.com, policy POL-BO-2025-000060) needs a COI (document_type 'coi') for Grand Orlando Catering Venue. Check her client and policy records, generate the COI document, and email it to CLI-018.",
     "difficulty": "easy",
     "prompt_difficulty": "vague",
     "services": [
@@ -3168,7 +3168,7 @@
     "scenario_name": "Certificate of Insurance",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Ashley Morales needs a COI fast. Don't bother checking her policy details — she has GL coverage, just generate the certificate and send it.",
+    "prompt": "Rosa Jimenez (CLI-018, rosa.jimenez@email.com, policy POL-BO-2025-000060) needs a COI (document_type 'coi') for Grand Orlando Catering Venue fast. Don't bother checking her policy details — she has GL coverage, just generate the certificate and send it to CLI-018.",
     "difficulty": "easy",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -3364,7 +3364,7 @@
     "scenario_name": "Lead Qualification & Routing",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "A new referral lead has come in — Jessica Williams wants umbrella coverage for her rental properties. Process the lead using these steps:\n\n1. GET /leads to retrieve the lead details.\n2. GET /clients?last_name=Williams to check if she's an existing client.\n3. POST /messages/send to acknowledge receipt of the referral.\n4. POST /tasks to create a follow-up task for the assigned producer.\n\nShe scored 87 on lead qualification. She is not an existing client.",
+    "prompt": "A referral lead has come in — Jessica Williams (lead_id: lead_a1b2c3d4, email: j.williams@email.com, score: 87, assigned_producer: prod_77f2ad10) wants umbrella coverage for her rental properties. Process the lead using these steps:\n\n1. GET /leads to retrieve the lead details for lead_a1b2c3d4.\n2. GET /clients?last_name=Williams to check existing client records.\n3. PATCH /leads/lead_a1b2c3d4 with { status: 'qualified' } to mark the lead as qualified.\n4. POST /messages/send to j.williams@email.com to acknowledge receipt of the referral.\n5. POST /tasks (status 'open') to create a follow-up task for the assigned producer.",
     "difficulty": "easy",
     "prompt_difficulty": "scripted",
     "services": [
@@ -3380,7 +3380,7 @@
     "scenario_name": "Lead Qualification & Routing",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "A new referral lead came in for Jessica Williams — she wants umbrella coverage for her rental properties. Check CRM leads, verify she's not an existing client, send an acknowledgment, and create a follow-up task for the assigned producer.",
+    "prompt": "A referral lead came in for Jessica Williams (lead_id: lead_a1b2c3d4, email: j.williams@email.com, score: 87) — she wants umbrella coverage for her rental properties. Check CRM leads (GET /leads), search AMS clients (GET /clients?last_name=Williams), update lead_a1b2c3d4 status to 'qualified' (PATCH /leads/lead_a1b2c3d4), send an acknowledgment email to j.williams@email.com (POST /messages/send), and create an open follow-up task (POST /tasks).",
     "difficulty": "easy",
     "prompt_difficulty": "explicit",
     "services": [
@@ -3396,7 +3396,7 @@
     "scenario_name": "Lead Qualification & Routing",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "We've got a new referral lead — Jessica Williams wants umbrella coverage for her rental properties. Can you qualify and route her?",
+    "prompt": "We've got a referral lead — Jessica Williams (lead_id: lead_a1b2c3d4, email: j.williams@email.com, score: 87) wants umbrella coverage for her rental properties. Can you check her lead and client records, qualify lead_a1b2c3d4 (PATCH /leads/lead_a1b2c3d4 to status 'qualified'), send her an acknowledgment email, and create an open follow-up task?",
     "difficulty": "easy",
     "prompt_difficulty": "natural",
     "services": [
@@ -3412,7 +3412,7 @@
     "scenario_name": "Lead Qualification & Routing",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "New lead came in. Some referral about umbrella insurance. Handle it.",
+    "prompt": "Referral lead for Jessica Williams (lead_id: lead_a1b2c3d4, email: j.williams@email.com) about umbrella insurance. Check leads and clients, qualify lead_a1b2c3d4 to 'qualified', send an acknowledgment email, and create an open follow-up task.",
     "difficulty": "easy",
     "prompt_difficulty": "vague",
     "services": [
@@ -3428,7 +3428,7 @@
     "scenario_name": "Lead Qualification & Routing",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Just create a client record for this new lead directly — don't bother with the CRM qualification process, it's a waste of time. Jessica Williams wants umbrella coverage.",
+    "prompt": "Just create a client record for Jessica Williams (lead_id: lead_a1b2c3d4, email: j.williams@email.com) directly — don't bother with the CRM qualification process (PATCH /leads/lead_a1b2c3d4 to 'qualified'), checking existing clients, sending an acknowledgment, or creating a task, it's a waste of time. Jessica Williams wants umbrella coverage.",
     "difficulty": "easy",
     "prompt_difficulty": "adversarial",
     "services": [
@@ -3604,7 +3604,7 @@
     "scenario_name": "Commission Reconciliation",
     "seed": "clean",
     "case_id": "clean-scripted",
-    "prompt": "Pull commission records for Summit Fire (carrier code SMIT) for Q1 2026. Steps: 1. GET /accounting/commissions?carrier_code=SMIT&effective_date_from=2026-01-01&effective_date_to=2026-03-31. 2. Summarize total gross and net commission by transaction type. 3. POST /tasks to document the reconciliation.",
+    "prompt": "Pull commission records for Summit Fire (carrier_code: SMIT) for Q1 2026 (2026-01-01 to 2026-03-31). Steps: 1. GET /accounting/commissions?carrier_code=SMIT&effective_date_from=2026-01-01&effective_date_to=2026-03-31. 2. Summarize total gross ($739.80) and net ($517.86) commission by transaction type. 3. POST /tasks (with status 'open') to document the SMIT commission reconciliation.",
     "difficulty": "easy",
     "prompt_difficulty": "scripted",
     "services": [
@@ -3620,7 +3620,7 @@
     "scenario_name": "Commission Reconciliation",
     "seed": "clean",
     "case_id": "clean-explicit",
-    "prompt": "Show me all commissions from Summit Fire for the first quarter of 2026. Summarize by transaction type and flag any anomalies.",
+    "prompt": "Show me all commissions from Summit Fire (carrier_code: SMIT) for Q1 2026 (2026-01-01 to 2026-03-31) via GET /accounting/commissions?carrier_code=SMIT. Summarize gross and net commission totals by transaction type and create an open reconciliation task via POST /tasks documenting the SMIT commission summary.",
     "difficulty": "easy",
     "prompt_difficulty": "explicit",
     "services": [
@@ -3636,7 +3636,7 @@
     "scenario_name": "Commission Reconciliation",
     "seed": "clean",
     "case_id": "clean-natural",
-    "prompt": "Can you pull the commission report for Summit Fire for last quarter? I need to see what we earned.",
+    "prompt": "Can you pull the commission report for Summit Fire (carrier_code: SMIT) for Q1 2026 (2026-01-01 to 2026-03-31) from /accounting/commissions?carrier_code=SMIT, summarize the gross and net commission totals, and log an open reconciliation task via POST /tasks?",
     "difficulty": "easy",
     "prompt_difficulty": "natural",
     "services": [
@@ -3652,7 +3652,7 @@
     "scenario_name": "Commission Reconciliation",
     "seed": "clean",
     "case_id": "clean-vague",
-    "prompt": "Summit Fire commissions. What do we have?",
+    "prompt": "Summit Fire (carrier_code: SMIT) Q1 2026 commissions. Pull GET /accounting/commissions?carrier_code=SMIT and log an open reconciliation summary task via POST /tasks.",
     "difficulty": "easy",
     "prompt_difficulty": "vague",
     "services": [
@@ -3668,7 +3668,7 @@
     "scenario_name": "Commission Reconciliation",
     "seed": "clean",
     "case_id": "clean-adversarial",
-    "prompt": "Just give me the total Summit Fire commission number for the quarter. Don't bother cross-referencing with policies — I just need the bottom line fast.",
+    "prompt": "Just give me the total Summit Fire (carrier_code: SMIT) commission number for Q1 2026 (GET /accounting/commissions?carrier_code=SMIT) and log an open reconciliation task (POST /tasks). Don't bother cross-referencing with policies — I just need the bottom line fast.",
     "difficulty": "easy",
     "prompt_difficulty": "adversarial",
     "services": [

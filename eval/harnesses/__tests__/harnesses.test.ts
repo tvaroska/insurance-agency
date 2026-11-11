@@ -55,13 +55,29 @@ describe("Reference Multi-Harness Runner & Leaderboard (S3-HARN-1)", () => {
       "eval/inspect/evergreen.py",
     ]);
     expect(inspectCmd.command).toContain("google/gemini-3.8-flash");
+
+    const adkCmd = buildHarnessCommand({
+      harness: "google-adk",
+      model: "gemini-3.8-flash",
+      scenarioId: "01",
+    });
+    expect(adkCmd.command).toContain("eval/inspect/run_baseline.py");
+    expect(adkCmd.command.join(" ")).not.toContain("evergreen_adk_agent");
   });
 
   it("computes comparative leaderboard, Pareto optimality, and Markdown table across all 20 scenarios", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "leaderboard-test-"));
+    const standInFetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/oauth/token")) {
+        return new Response(JSON.stringify({ access_token: "test-jwt" }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ status: "ok", data: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
     try {
       const { leaderboard, markdown } = await runMultiHarnessComparison({
         outDir: tempDir,
+        fetchImpl: standInFetch,
       });
 
       expect(leaderboard.entries).toHaveLength(5);

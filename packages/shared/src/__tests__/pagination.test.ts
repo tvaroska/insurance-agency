@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { HTTPException } from "hono/http-exception";
-import { int, text, sqliteTable } from "drizzle-orm/sqlite-core";
 import {
-  applyCursorPagination,
+  applyPrismaCursorPagination,
   decodeCursor,
   encodeCursor,
   paginatedResponse,
@@ -178,69 +177,68 @@ describe("paginatedResponse", () => {
   });
 });
 
-// ── applyCursorPagination ───────────────────────────────────────────
+// ── applyPrismaCursorPagination ─────────────────────────────────────
 
-const testTable = sqliteTable("test", {
-  id: text("id").primaryKey(),
-  score: int("score").notNull(),
-  name: text("name").notNull(),
-});
-
-describe("applyCursorPagination", () => {
-  test("returns limit+1 and no WHERE on first page", () => {
-    const result = applyCursorPagination({
+describe("applyPrismaCursorPagination", () => {
+  test("returns take=limit+1 and no WHERE on first page", () => {
+    const result = applyPrismaCursorPagination({
       cursor: undefined,
       limit: 25,
-      orderBy: [{ column: testTable.id, direction: "asc" }],
+      orderBy: [{ field: "id", direction: "asc" }],
     });
     expect(result.where).toBeUndefined();
-    expect(result.limit).toBe(26);
-    expect(result.orderBy).toHaveLength(1);
+    expect(result.take).toBe(26);
+    expect(result.orderBy).toEqual([{ id: "asc" }]);
   });
 
   test("returns WHERE condition for single-field asc cursor", () => {
     const cursor = encodeCursor({ id: "item-5" });
-    const result = applyCursorPagination({
+    const result = applyPrismaCursorPagination({
       cursor,
       limit: 10,
-      orderBy: [{ column: testTable.id, direction: "asc" }],
+      orderBy: [{ field: "id", direction: "asc" }],
     });
-    expect(result.where).toBeDefined();
-    expect(result.limit).toBe(11);
+    expect(result.where).toEqual({ id: { gt: "item-5" } });
+    expect(result.take).toBe(11);
   });
 
   test("returns WHERE condition for single-field desc cursor", () => {
     const cursor = encodeCursor({ score: 80 });
-    const result = applyCursorPagination({
+    const result = applyPrismaCursorPagination({
       cursor,
       limit: 10,
-      orderBy: [{ column: testTable.score, direction: "desc", cursorKey: "score" }],
+      orderBy: [{ field: "score", direction: "desc", cursorKey: "score" }],
     });
-    expect(result.where).toBeDefined();
-    expect(result.limit).toBe(11);
+    expect(result.where).toEqual({ score: { lt: 80 } });
+    expect(result.take).toBe(11);
   });
 
   test("builds compound WHERE for multi-field cursor", () => {
     const cursor = encodeCursor({ score: 74, id: "lead_1" });
-    const result = applyCursorPagination({
+    const result = applyPrismaCursorPagination({
       cursor,
       limit: 25,
       orderBy: [
-        { column: testTable.score, direction: "desc", cursorKey: "score" },
-        { column: testTable.id, direction: "asc", cursorKey: "id" },
+        { field: "score", direction: "desc", cursorKey: "score" },
+        { field: "id", direction: "asc", cursorKey: "id" },
       ],
     });
-    expect(result.where).toBeDefined();
+    expect(result.where).toEqual({
+      OR: [
+        { score: { lt: 74 } },
+        { AND: [{ score: 74 }, { id: { gt: "lead_1" } }] },
+      ],
+    });
     expect(result.orderBy).toHaveLength(2);
-    expect(result.limit).toBe(26);
+    expect(result.take).toBe(26);
   });
 
   test("throws on invalid cursor", () => {
     expect(() =>
-      applyCursorPagination({
+      applyPrismaCursorPagination({
         cursor: "bad!!!",
         limit: 10,
-        orderBy: [{ column: testTable.id, direction: "asc" }],
+        orderBy: [{ field: "id", direction: "asc" }],
       }),
     ).toThrow(HTTPException);
   });
@@ -248,24 +246,24 @@ describe("applyCursorPagination", () => {
   test("throws when cursor is missing expected field", () => {
     const cursor = encodeCursor({ id: "abc" });
     expect(() =>
-      applyCursorPagination({
+      applyPrismaCursorPagination({
         cursor,
         limit: 10,
         orderBy: [
-          { column: testTable.score, direction: "desc", cursorKey: "score" },
-          { column: testTable.id, direction: "asc", cursorKey: "id" },
+          { field: "score", direction: "desc", cursorKey: "score" },
+          { field: "id", direction: "asc", cursorKey: "id" },
         ],
       }),
     ).toThrow(HTTPException);
   });
 
-  test("uses cursorKey override instead of column name", () => {
+  test("uses cursorKey override instead of field name", () => {
     const cursor = encodeCursor({ s: 74 });
-    const result = applyCursorPagination({
+    const result = applyPrismaCursorPagination({
       cursor,
       limit: 10,
-      orderBy: [{ column: testTable.score, direction: "desc", cursorKey: "s" }],
+      orderBy: [{ field: "score", direction: "desc", cursorKey: "s" }],
     });
-    expect(result.where).toBeDefined();
+    expect(result.where).toEqual({ score: { lt: 74 } });
   });
 });

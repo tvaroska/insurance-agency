@@ -5,6 +5,8 @@ import {
   chaosMiddleware,
   strictModalityGuard,
   portalSessionEndpoint,
+  portalBootstrapMiddleware,
+  resetPortalSessions,
   getSimulatedNow,
   advanceSimulatedClock,
   resetSimulatedClock,
@@ -16,14 +18,27 @@ import {
 
 function portalApp() {
   const app = new Hono();
+  app.use("*", portalBootstrapMiddleware("carrier-summit"));
+  app.get("/", (c) => c.html("<html><body>Summit Portal</body></html>"));
   app.route("/", portalSessionEndpoint("carrier-summit"));
   app.use("/v1/summit/*", strictModalityGuard("web-portal"));
   app.get("/v1/summit/quotes", (c) => c.json({ data: ["Q-1"] }));
   return app;
 }
 
+async function fetchBootstrapCookie(app: Hono): Promise<string> {
+  const rootRes = await app.request("/");
+  expect(rootRes.status).toBe(200);
+  const setCookie = rootRes.headers.get("set-cookie") ?? "";
+  expect(setCookie).toContain("evergreen_portal_boot_carrier-summit=");
+  return setCookie.split(";")[0];
+}
+
 async function issueToken(app: Hono): Promise<string> {
-  const res = await app.request("/auth/portal-session");
+  const cookie = await fetchBootstrapCookie(app);
+  const res = await app.request("/auth/portal-session", {
+    headers: { Cookie: cookie },
+  });
   expect(res.status).toBe(200);
   const body = await res.json();
   expect(body.session_token).toStartWith("portal_sess_carrier-summit_");
@@ -39,18 +54,22 @@ async function expectModalityViolation(res: Response) {
 describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
   const originalModality = process.env.MODALITY_MODE;
   const originalTestDbUrl = process.env.TEST_DATABASE_URL;
+  const originalScorerSecret = process.env.EVERGREEN_SCORER_SECRET;
 
   beforeEach(() => {
     resetSimulatedClock();
     resetChaosConfig();
+    resetPortalSessions();
     delete process.env.MODALITY_MODE;
     delete process.env.TEST_DATABASE_URL;
+    delete process.env.EVERGREEN_SCORER_SECRET;
   });
 
   afterEach(() => {
     setSystemTime();
     resetSimulatedClock();
     resetChaosConfig();
+    resetPortalSessions();
     if (originalModality !== undefined) {
       process.env.MODALITY_MODE = originalModality;
     } else {
@@ -60,6 +79,11 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
       process.env.TEST_DATABASE_URL = originalTestDbUrl;
     } else {
       delete process.env.TEST_DATABASE_URL;
+    }
+    if (originalScorerSecret !== undefined) {
+      process.env.EVERGREEN_SCORER_SECRET = originalScorerSecret;
+    } else {
+      delete process.env.EVERGREEN_SCORER_SECRET;
     }
   });
 
@@ -214,7 +238,7 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     expect(getChaosConfig().enabled).toBe(false);
   });
 
-  test("strictModalityGuard('mcp') blocks REST in strict mode unless X-Eval-Scorer: true", async () => {
+  test("strictModalityGuard('mcp') blocks REST in strict mode unless authorized X-Eval-Scorer: true", async () => {
     const app = new Hono();
     app.use("/v1/*", strictModalityGuard("mcp"));
     app.get("/v1/messages", (c) => c.json({ data: [] }));
@@ -230,11 +254,45 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     const blockedBody = await blockedRes.json();
     expect(blockedBody.error_code).toBe("MODALITY_VIOLATION");
 
-    // X-Eval-Scorer: true bypasses strict guard
+    // X-Eval-Scorer: true bypasses strict guard when EVERGREEN_SCORER_SECRET is unset
     const scorerRes = await app.request("/v1/messages", {
       headers: { "X-Eval-Scorer": "true" },
     });
     expect(scorerRes.status).toBe(200);
+
+    // When EVERGREEN_SCORER_SECRET is configured, forged X-Eval-Scorer without secret is blocked
+    process.env.EVERGREEN_SCORER_SECRET = "s3cr3t-scorer-key";
+    const forgedScorerRes = await app.request("/v1/messages", {
+      headers: { "X-Eval-Scorer": "true" },
+    });
+    expect(forgedScorerRes.status).toBe(403);
+
+    const authorizedScorerRes = await app.request("/v1/messages", {
+      headers: {
+        "X-Eval-Scorer": "true",
+        "X-Evergreen-Scorer-Secret": "s3cr3t-scorer-key",
+      },
+    });
+    expect(authorizedScorerRes.status).toBe(200);
+  });
+
+  test("portalSessionEndpoint requires portal bootstrap cookie in strict mode", async () => {
+    const app = portalApp();
+    process.env.MODALITY_MODE = "strict";
+
+    // Direct headless call to /auth/portal-session without loading GET / fails with 403 PORTAL_BOOTSTRAP_REQUIRED
+    const directRes = await app.request("/auth/portal-session");
+    expect(directRes.status).toBe(403);
+    expect((await directRes.json()).error_code).toBe("PORTAL_BOOTSTRAP_REQUIRED");
+
+    // Forged bootstrap cookie is rejected
+    const forgedBootRes = await app.request("/auth/portal-session", {
+      headers: {
+        Cookie: "evergreen_portal_boot_carrier-summit=00000000-0000-4000-8000-000000000000",
+      },
+    });
+    expect(forgedBootRes.status).toBe(403);
+    expect((await forgedBootRes.json()).error_code).toBe("PORTAL_BOOTSTRAP_REQUIRED");
   });
 
   test("strictModalityGuard('web-portal') accepts an issued X-Portal-Session in strict mode", async () => {
@@ -302,7 +360,7 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     await expectModalityViolation(await app.request("/v1/summit/quotes", { headers }));
   });
 
-  test("POST /sim/reset clears issued portal session tokens so pre-reset tokens are rejected", async () => {
+  test("POST /sim/reset clears issued portal session and bootstrap tokens so pre-reset tokens are rejected", async () => {
     const app = portalApp();
     app.route(
       "/sim",
@@ -314,7 +372,11 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     );
 
     process.env.MODALITY_MODE = "strict";
-    const token = await issueToken(app);
+    const bootCookie = await fetchBootstrapCookie(app);
+    const sessRes = await app.request("/auth/portal-session", {
+      headers: { Cookie: bootCookie },
+    });
+    const { session_token: token } = await sessRes.json();
     const headers = { "X-Portal-Session": token };
 
     // Token works before reset
@@ -328,8 +390,13 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     });
     expect(resetRes.status).toBe(200);
 
-    // Pre-reset token is now rejected by strictModalityGuard
+    // Pre-reset token and bootstrap cookie are now rejected
     await expectModalityViolation(await app.request("/v1/summit/quotes", { headers }));
+    const postResetBoot = await app.request("/auth/portal-session", {
+      headers: { Cookie: bootCookie },
+    });
+    expect(postResetBoot.status).toBe(403);
+    expect((await postResetBoot.json()).error_code).toBe("PORTAL_BOOTSTRAP_REQUIRED");
   });
 
   test("createTestPrismaClient and getTestDatabaseUrl support TEST_DATABASE_URL", async () => {

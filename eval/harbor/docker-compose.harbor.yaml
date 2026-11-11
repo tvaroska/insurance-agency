@@ -1,5 +1,6 @@
 # Harbor / Terminal-Bench 2.0 Docker Compose Topology for Evergreen Insurance API Gym
 # Extends the root 8-microservice stack with an isolated Harbor agent workspace container.
+# Answer keys (eval/scenarios/, eval/agents/baseline-agent.ts) are never mounted into /workspace.
 
 include:
   - ../../docker-compose.yml
@@ -11,12 +12,12 @@ services:
     network_mode: "host"
     environment:
       - SEED_MODE=${SEED_MODE:-realistic}
-      - MODALITY_MODE=${MODALITY_MODE:-permissive}
+      - MODALITY_MODE=${MODALITY_MODE:-strict}
       - OTEL_TRACES_PATH=/workspace/traces/trace.json
-      - EVERGREEN_GYM_ROOT=/workspace
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash}
     volumes:
-      - ../../:/workspace
+      - ../../specs:/workspace/specs:ro
+      - harbor-traces:/workspace/traces
     depends_on:
       ams:
         condition: service_healthy
@@ -35,3 +36,6 @@ services:
       claims:
         condition: service_healthy
     command: ["sleep", "infinity"]
+
+volumes:
+  harbor-traces:

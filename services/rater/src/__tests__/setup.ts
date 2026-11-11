@@ -4,25 +4,20 @@ import {
   correlationId,
   jwtAuth,
   errorHandler,
-  createTestDatabase as _createTestDb,
   createTestPrismaClient,
   getTestDatabaseUrl,
+  insertSqliteRow,
   authHeader as _authHeader,
   type AppVariables,
 } from "@evergreen/shared";
-import * as schema from "../schema";
 import { PrismaClient } from "../generated/prisma/client";
 
-export { getTestDatabaseUrl };
+export { getTestDatabaseUrl, insertSqliteRow };
 
 export const TEST_SECRET = "test-secret-for-rater-tests";
 process.env.JWT_SECRET = TEST_SECRET;
 
 // ── Database helpers ──
-
-export function createTestDatabase() {
-  return _createTestDb(schema);
-}
 
 export function createTestPrisma() {
   const ctx = createTestPrismaClient(PrismaClient, "test-rater-");
@@ -109,7 +104,7 @@ export async function authHeader(scopes: string[]) {
 const now = new Date().toISOString();
 
 export function makeQuoteRequest(
-  overrides: Partial<typeof schema.quoteRequests.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     request_id: `QR-${Math.random().toString(36).slice(2, 8)}`,
@@ -131,7 +126,7 @@ export function makeQuoteRequest(
 }
 
 export function makeCarrierQuote(
-  overrides: Partial<typeof schema.carrierQuotes.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     quote_id: `QT-${Math.random().toString(36).slice(2, 8)}`,
@@ -154,7 +149,7 @@ export function makeCarrierQuote(
 }
 
 export function makeCarrier(
-  overrides: Partial<typeof schema.carriers.$inferInsert> = {},
+  overrides: Record<string, any> = {},
 ) {
   return {
     carrier_code: "CSTL",

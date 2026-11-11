@@ -231,13 +231,32 @@ class EvergreenGymEnv:
         }
         return obs, reward, False, truncated, info
 
+    def _service_port(self, service_or_port: str | int) -> int:
+        base_port = int(os.environ.get("EVERGREEN_BASE_PORT", "3000"))
+        canonical = (
+            service_or_port
+            if isinstance(service_or_port, int)
+            else SERVICE_PORT_MAP.get(service_or_port, 3000)
+        )
+        return base_port + (canonical - 3000)
+
+    def _scorer_headers(self) -> dict[str, str]:
+        headers = {"X-Eval-Scorer": "true"}
+        secret = os.environ.get("EVERGREEN_SCORER_SECRET")
+        if secret:
+            headers["X-Evergreen-Scorer-Secret"] = secret
+        return headers
+
     def snapshot(self, services: list[str] | None = None) -> dict[str, Any]:
         """Query `GET /sim/snapshot` across all (or specified) microservices."""
         targets = services or list(SERVICE_PORT_MAP.keys())
         snapshots: dict[str, Any] = {}
+        headers = self._scorer_headers()
         for svc in targets:
-            port = SERVICE_PORT_MAP[svc]
-            _, payload = self._request_json("GET", f"{self.host}:{port}/sim/snapshot")
+            port = self._service_port(svc)
+            _, payload = self._request_json(
+                "GET", f"{self.host}:{port}/sim/snapshot", None, headers
+            )
             snapshots[svc] = payload
         return snapshots
 

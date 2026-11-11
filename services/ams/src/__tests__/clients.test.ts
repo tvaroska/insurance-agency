@@ -1,7 +1,6 @@
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -12,7 +11,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -45,7 +43,7 @@ beforeEach(() => {
   ];
 
   for (const row of clientRows) {
-    testDb.insert(schema.clients).values(row).run();
+    insertSqliteRow(testSqlite, "clients", row);
   }
 });
 
@@ -437,9 +435,9 @@ describe("POST /v1/clients/:id/merge - validation", () => {
 describe("POST /v1/clients/:id/merge - success", () => {
   test("merges clients with policies and tasks", async () => {
     // Seed policies and tasks for source client
-    testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-M1", client_id: "CL-002" })).run();
-    testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-M2", client_id: "CL-002" })).run();
-    testDb.insert(schema.tasks).values(makeTask({ id: "TASK-M1", related_client_id: "CL-002" })).run();
+    insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-M1", client_id: "CL-002" }));
+    insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-M2", client_id: "CL-002" }));
+    insertSqliteRow(testSqlite, "tasks", makeTask({ id: "TASK-M1", related_client_id: "CL-002" }));
 
     const headers = await authHeader(["ams:clients:write"]);
     const res = await mergeClient("CL-001", { source_client_id: "CL-002" }, headers);
@@ -510,9 +508,9 @@ describe("GET /v1/clients/household/:household_id - success", () => {
 
   test("computes policy counts and premiums per member", async () => {
     // Seed policies for HH-001 members
-    testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-H1", client_id: "CL-001", premium_current: 1200, policy_type: "personal_auto" })).run();
-    testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-H2", client_id: "CL-001", premium_current: 800, policy_type: "homeowners" })).run();
-    testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-H3", client_id: "CL-002", premium_current: 500, policy_type: "personal_auto" })).run();
+    insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-H1", client_id: "CL-001", premium_current: 1200, policy_type: "personal_auto" }));
+    insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-H2", client_id: "CL-001", premium_current: 800, policy_type: "homeowners" }));
+    insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-H3", client_id: "CL-002", premium_current: 500, policy_type: "personal_auto" }));
 
     const res = await app.request("/v1/clients/household/HH-001", {
       headers: await authHeader(["ams:clients:read"]),
@@ -533,7 +531,7 @@ describe("GET /v1/clients/household/:household_id - success", () => {
   });
 
   test("identifies coverage gaps", async () => {
-    testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-H4", client_id: "CL-001", policy_type: "personal_auto" })).run();
+    insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-H4", client_id: "CL-001", policy_type: "personal_auto" }));
 
     const res = await app.request("/v1/clients/household/HH-001", {
       headers: await authHeader(["ams:clients:read"]),
@@ -558,8 +556,8 @@ describe("GET /v1/clients/household/:household_id - success", () => {
   });
 
   test("returns coverage_types as sorted array", async () => {
-    testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-H5", client_id: "CL-001", policy_type: "homeowners" })).run();
-    testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-H6", client_id: "CL-001", policy_type: "personal_auto" })).run();
+    insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-H5", client_id: "CL-001", policy_type: "homeowners" }));
+    insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-H6", client_id: "CL-001", policy_type: "personal_auto" }));
 
     const res = await app.request("/v1/clients/household/HH-001", {
       headers: await authHeader(["ams:clients:read"]),
@@ -613,7 +611,7 @@ describe("POST /v1/clients/:id/merge - response shape", () => {
 describe("POST /v1/clients/:id/merge - policies and tasks re-parenting", () => {
   test("merged policies are accessible under target client", async () => {
     // Seed a policy for CL-003
-    testDb.insert(schema.policies).values(makePolicy({ policy_id: "POL-MERGE-1", client_id: "CL-003" })).run();
+    insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-MERGE-1", client_id: "CL-003" }));
 
     const headers = await authHeader(["ams:clients:write"]);
     const res = await mergeClient("CL-001", { source_client_id: "CL-003" }, headers);

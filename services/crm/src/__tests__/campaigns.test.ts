@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeAll } from "bun:test";
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -13,7 +12,6 @@ const dbPath = join(tmpDir, "test.db");
 const testSqlite = new Database(dbPath);
 testSqlite.exec("PRAGMA journal_mode = WAL;");
 testSqlite.exec("PRAGMA foreign_keys = ON;");
-const testDb = drizzle(testSqlite, { schema });
 
 const testAdapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const testPrisma = new PrismaClient({ adapter: testAdapter });
@@ -45,17 +43,15 @@ beforeAll(() => {
   ];
 
   for (const c of campaigns) {
-    testDb.insert(schema.campaigns).values(c).run();
+    insertSqliteRow(testSqlite, "campaigns", c);
   }
 
   // Add an existing enrollment to test duplicate detection
-  testDb.insert(schema.campaignEnrollments)
-    .values(makeEnrollment({
+  insertSqliteRow(testSqlite, "campaign_enrollments", makeEnrollment({
       enrollment_id: "enr_existing",
       campaign_id: "camp_active_1",
       client_id: "CLI-EXISTING",
-    }))
-    .run();
+    }));
 });
 
 // ── Auth tests ──
@@ -147,7 +143,7 @@ describe("POST /v1/campaigns/:id/enroll - Success", () => {
     }, headers);
 
     // Verify by trying to detect count via a second enrollment
-    const row = testDb.select().from(schema.campaigns).all()
+    const row = (testSqlite.query(`SELECT * FROM "campaigns"`).all() as any[])
       .find((c: any) => c.campaign_id === "camp_active_1");
     expect(row!.enrolled_count).toBeGreaterThanOrEqual(12);
   });
@@ -162,7 +158,7 @@ describe("POST /v1/campaigns/:id/enroll - Success", () => {
     expect(res.status).toBe(201);
 
     // Verify metadata stored in DB
-    const enrollment = testDb.select().from(schema.campaignEnrollments).all()
+    const enrollment = (testSqlite.query(`SELECT * FROM "campaign_enrollments"`).all() as any[])
       .find((e: any) => e.client_id === "CLI-META-001");
     expect(enrollment).toBeTruthy();
     const parsed = JSON.parse(enrollment!.metadata!);

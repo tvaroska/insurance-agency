@@ -1,9 +1,21 @@
 import type { OutputCheck, OutputScore } from "../types";
 import { PORT_SERVICE_MAP } from "../types";
 
-// ── Auth ────────────────────────────────────────────────────────────
+// ── Auth & Scorer Headers ───────────────────────────────────────────
+
+export function scorerHeaders(
+  extra: Record<string, string> = {},
+): Record<string, string> {
+  const secret = process.env.EVERGREEN_SCORER_SECRET;
+  return {
+    "X-Eval-Scorer": "true",
+    ...(secret ? { "X-Evergreen-Scorer-Secret": secret } : {}),
+    ...extra,
+  };
+}
 
 interface TokenCache {
+  baseUrl: string;
   token: string;
   expiresAt: number;
 }
@@ -11,16 +23,19 @@ interface TokenCache {
 let cachedToken: TokenCache | null = null;
 
 async function acquireToken(baseUrl: string): Promise<string> {
-  if (cachedToken && cachedToken.expiresAt > Date.now()) {
+  if (
+    cachedToken &&
+    cachedToken.baseUrl === baseUrl &&
+    cachedToken.expiresAt > Date.now()
+  ) {
     return cachedToken.token;
   }
 
   const res = await fetch(`${baseUrl}/oauth/token`, {
     method: "POST",
-    headers: {
+    headers: scorerHeaders({
       "Content-Type": "application/json",
-      "X-Eval-Scorer": "true",
-    },
+    }),
     body: JSON.stringify({
       grant_type: "client_credentials",
       client_id: "agent-readonly",
@@ -34,6 +49,7 @@ async function acquireToken(baseUrl: string): Promise<string> {
 
   const data = (await res.json()) as { access_token: string; expires_in: number };
   cachedToken = {
+    baseUrl,
     token: data.access_token,
     expiresAt: Date.now() + (data.expires_in - 30) * 1000,
   };
@@ -42,10 +58,21 @@ async function acquireToken(baseUrl: string): Promise<string> {
 
 // ── Base URL resolution ─────────────────────────────────────────────
 
-export function defaultBaseUrls(): Record<string, string> {
+export function defaultBaseUrls(
+  basePortEnv: string | undefined = process.env.EVERGREEN_BASE_PORT,
+): Record<string, string> {
+  const parsedBase =
+    basePortEnv !== undefined && basePortEnv.trim() !== ""
+      ? Number.parseInt(basePortEnv, 10)
+      : Number.NaN;
+  const useOffset = Number.isInteger(parsedBase) && parsedBase > 0;
   const urls: Record<string, string> = {};
   for (const [port, service] of Object.entries(PORT_SERVICE_MAP)) {
-    urls[service] = `http://localhost:${port}`;
+    const numericPort = Number(port);
+    const effectivePort = useOffset
+      ? parsedBase + (numericPort - 3000)
+      : numericPort;
+    urls[service] = `http://localhost:${effectivePort}`;
   }
   return urls;
 }
@@ -233,10 +260,9 @@ export async function evaluateOutput(
 
     try {
       const res = await fetch(`${serviceUrl}/v1${check.path}`, {
-        headers: {
+        headers: scorerHeaders({
           Authorization: `Bearer ${token}`,
-          "X-Eval-Scorer": "true",
-        },
+        }),
       });
 
       // Status check

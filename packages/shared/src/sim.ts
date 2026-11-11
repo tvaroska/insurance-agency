@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { createErrorResponse } from "./errors";
+import { isAuthorizedScorerOrInternal } from "./request-log";
 
 // ── Simulated Clock State ───────────────────────────────────────────
 
@@ -148,7 +149,7 @@ export function chaosMiddleware() {
   });
 }
 
-// ── Strict 3-Modality Enforcement (S3-MOD-1) ────────────────────────
+// ── Strict 3-Modality Enforcement & Portal Bootstrap Cookie ─────────
 
 export type EnforcedModality = "mcp" | "web-portal";
 
@@ -158,6 +159,88 @@ const PORTAL_SESSION_TTL_SECONDS = 3600;
 // runs in its own process, so a token only works on the service that issued it.
 // Expiry follows the wall clock so /sim/time-travel does not end open sessions.
 const issuedPortalSessions = new Map<string, number>();
+
+// Issued portal bootstrap cookie tokens (`evergreen_portal_boot_${serviceName}=<uuid>`).
+const issuedPortalBootstraps = new Map<string, { serviceName: string; expiresAt: number }>();
+
+export function portalBootstrapCookieName(serviceName: string): string {
+  return `evergreen_portal_boot_${serviceName}`;
+}
+
+/**
+ * Issues a fresh portal bootstrap cookie (`Set-Cookie` value) when a browser loads
+ * the carrier portal HTML (`GET /` or `/index.html`).
+ */
+export function issuePortalBootstrapCookie(serviceName: string): string {
+  const now = Date.now();
+  for (const [token, entry] of issuedPortalBootstraps) {
+    if (entry.expiresAt <= now) issuedPortalBootstraps.delete(token);
+  }
+  const bootId = crypto.randomUUID();
+  issuedPortalBootstraps.set(bootId, {
+    serviceName,
+    expiresAt: now + PORTAL_SESSION_TTL_SECONDS * 1000,
+  });
+  return `${portalBootstrapCookieName(serviceName)}=${bootId}; HttpOnly; SameSite=Strict; Path=/`;
+}
+
+function hasValidPortalBootstrapCookie(
+  serviceName: string,
+  cookieHeader: string | undefined,
+): boolean {
+  if (!cookieHeader) return false;
+  const expectedName = portalBootstrapCookieName(serviceName);
+  const now = Date.now();
+
+  for (const part of cookieHeader.split(";")) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx <= 0) continue;
+    const name = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim();
+    if (name !== expectedName || !val) continue;
+
+    const entry = issuedPortalBootstraps.get(val);
+    if (!entry) continue;
+    if (entry.expiresAt <= now) {
+      issuedPortalBootstraps.delete(val);
+      continue;
+    }
+    if (entry.serviceName === serviceName) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Middleware attaching `Set-Cookie: evergreen_portal_boot_${serviceName}=<uuid>`
+ * when serving `GET /` or `GET /index.html` on carrier web portals.
+ */
+export function portalBootstrapMiddleware(serviceName: string) {
+  return createMiddleware(async (c, next) => {
+    await next();
+    if (
+      c.req.method === "GET" &&
+      (c.req.path === "/" || c.req.path === "/index.html")
+    ) {
+      const setCookie = issuePortalBootstrapCookie(serviceName);
+      try {
+        c.res.headers.append("Set-Cookie", setCookie);
+      } catch {
+        const headers = new Headers(c.res.headers);
+        headers.append("Set-Cookie", setCookie);
+        c.res = new Response(c.res.body, {
+          status: c.res.status,
+          statusText: c.res.statusText,
+          headers,
+        });
+      }
+    }
+  });
+}
 
 function issuePortalSession(serviceName: string): string {
   const now = Date.now();
@@ -181,15 +264,16 @@ function isActivePortalSession(token: string | undefined): boolean {
 }
 
 /**
- * Clears all issued portal session tokens (e.g., on `/sim/reset`).
+ * Clears all issued portal session and bootstrap tokens (e.g., on `/sim/reset`).
  */
 export function resetPortalSessions(): void {
   issuedPortalSessions.clear();
+  issuedPortalBootstraps.clear();
 }
 
 /**
  * Middleware enforcing strict modality access (`MODALITY_MODE=strict`).
- * - Always allows requests with header `X-Eval-Scorer: true`.
+ * - Allows authorized evaluation scorer queries (`X-Eval-Scorer: true` + `EVERGREEN_SCORER_SECRET` when configured).
  * - For `mcp`: blocks direct `/v1/*` REST bypass calls with 403 `MODALITY_VIOLATION`.
  * - For `web-portal`: requires an unexpired `X-Portal-Session` token issued by
  *   `/auth/portal-session`, blocking headless REST API bypass calls with 403 `MODALITY_VIOLATION`.
@@ -202,9 +286,13 @@ export function strictModalityGuard(modality: EnforcedModality) {
       return;
     }
 
-    // Always allow evaluation scorer queries
+    // Allow authorized evaluation scorer queries
     const evalScorer = c.req.header("X-Eval-Scorer");
-    if (evalScorer && evalScorer.toLowerCase() === "true") {
+    if (
+      evalScorer &&
+      evalScorer.toLowerCase() === "true" &&
+      isAuthorizedScorerOrInternal(c.req.raw.headers, "scorer")
+    ) {
       await next();
       return;
     }
@@ -245,11 +333,28 @@ export function strictModalityGuard(modality: EnforcedModality) {
 /**
  * Creates the `/auth/portal-session` endpoint for React carrier portals. Each
  * issued token is recorded so `strictModalityGuard("web-portal")` can accept it
- * until it expires.
+ * until it expires. Under `MODALITY_MODE=strict`, requires a valid issued
+ * `evergreen_portal_boot_${serviceName}` cookie from loading `GET /` first.
  */
 export function portalSessionEndpoint(serviceName: string) {
   const router = new Hono();
   router.get("/auth/portal-session", (c) => {
+    const mode = (process.env.MODALITY_MODE || "permissive").toLowerCase();
+    if (mode === "strict") {
+      const cookieHeader = c.req.header("Cookie");
+      if (!hasValidPortalBootstrapCookie(serviceName, cookieHeader)) {
+        const correlationId = (c as any).get?.("correlationId") ?? crypto.randomUUID();
+        return c.json(
+          createErrorResponse(
+            "PORTAL_BOOTSTRAP_REQUIRED",
+            `MODALITY_MODE=strict requires loading the ${serviceName} web portal root (GET /) in a browser session before requesting /auth/portal-session.`,
+            { correlationId },
+          ),
+          403,
+        );
+      }
+    }
+
     return c.json({
       session_token: issuePortalSession(serviceName),
       service: serviceName,
@@ -290,6 +395,9 @@ export interface SimRouterOptions {
  */
 export function createSimRouter(options: SimRouterOptions) {
   const router = new Hono();
+  // Serializes /sim/reset per service so overlapping resets (e.g. a harness retry while a
+  // previous reset is still running) never interleave DROP/CREATE/INSERT and hit P2002.
+  let resetChain: Promise<void> = Promise.resolve();
 
   // GET /sim/snapshot
   router.get("/snapshot", async (c) => {
@@ -323,13 +431,16 @@ export function createSimRouter(options: SimRouterOptions) {
     }
 
     const seedMode = body.seed_mode || process.env.SEED_MODE || "realistic";
-    resetChaosConfig();
-    resetSimulatedClock();
-    issuedPortalSessions.clear();
-
-    if (options.onReset) {
-      await options.onReset(seedMode);
-    }
+    const run = resetChain.then(async () => {
+      resetChaosConfig();
+      resetSimulatedClock();
+      resetPortalSessions();
+      if (options.onReset) {
+        await options.onReset(seedMode);
+      }
+    });
+    resetChain = run.catch(() => undefined);
+    await run;
 
     return c.json({
       status: "reset",

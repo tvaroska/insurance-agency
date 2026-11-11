@@ -1,16 +1,12 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { createTestDb, makeWebhook } from "./setup";
-
-let testDb: ReturnType<typeof createTestDb>["db"];
 let testSqlite: Database;
 let testPrisma: ReturnType<typeof createTestDb>["prisma"];
 
 beforeEach(() => {
   const created = createTestDb();
-  testDb = created.db;
   testSqlite = created.sqlite;
   testPrisma = created.prisma;
 });
@@ -45,9 +41,9 @@ describe("manage_webhook - subscribe", () => {
       },
       testPrisma,
     );
-    const rows = testDb.select().from(schema.webhooks).all();
+    const rows = (testSqlite.query(`SELECT * FROM "webhooks"`).all() as any[]);
     expect(rows.length).toBe(1);
-    expect(rows[0].active).toBe(true);
+    expect(rows[0].active).toBe(1);
   });
 
   test("returns error when url is missing", async () => {
@@ -86,7 +82,7 @@ describe("manage_webhook - subscribe", () => {
 describe("manage_webhook - unsubscribe", () => {
   test("removes an existing webhook", async () => {
     const webhook = makeWebhook({ webhook_id: "whk_to_delete" });
-    testDb.insert(schema.webhooks).values(webhook).run();
+    insertSqliteRow(testSqlite, "webhooks", webhook);
 
     const result = await handleManageWebhook(
       { action: "unsubscribe", webhook_id: "whk_to_delete" },
@@ -97,7 +93,7 @@ describe("manage_webhook - unsubscribe", () => {
     expect(parsed.deleted).toBe(true);
     expect(parsed.webhook_id).toBe("whk_to_delete");
 
-    const rows = testDb.select().from(schema.webhooks).all();
+    const rows = (testSqlite.query(`SELECT * FROM "webhooks"`).all() as any[]);
     expect(rows.length).toBe(0);
   });
 

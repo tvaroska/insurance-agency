@@ -1,5 +1,6 @@
-import { resolve } from "path";
-import { existsSync } from "fs";
+import { join, resolve } from "path";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
 
 export interface ShowcaseServiceConfig {
   name: string;
@@ -79,6 +80,11 @@ export const SHOWCASE_SERVICES: ShowcaseServiceConfig[] = [
 
 const rootDir = resolve(import.meta.dir, "..");
 
+const REQUIRED_PORTAL_UI_FILES = [
+  "services/carrier-summit/public/index.html",
+  "services/carrier-coastal/public/index.html",
+];
+
 export function verifyShowcaseReadiness(): {
   ready: boolean;
   checkedServices: number;
@@ -91,6 +97,11 @@ export function verifyShowcaseReadiness(): {
     if (!existsSync(ep)) missingFiles.push(svc.entrypoint);
     if (!existsSync(seed)) missingFiles.push(svc.seedScript);
   }
+  for (const portalFile of REQUIRED_PORTAL_UI_FILES) {
+    if (!existsSync(resolve(rootDir, portalFile))) {
+      missingFiles.push(portalFile);
+    }
+  }
   return {
     ready: missingFiles.length === 0,
     checkedServices: SHOWCASE_SERVICES.length,
@@ -98,13 +109,34 @@ export function verifyShowcaseReadiness(): {
   };
 }
 
+function readFlagValue(argv: string[], flag: string): string | undefined {
+  const idx = argv.indexOf(flag);
+  if (idx >= 0 && idx + 1 < argv.length) {
+    return argv[idx + 1];
+  }
+  const eqPrefix = `${flag}=`;
+  const match = argv.find((a) => a.startsWith(eqPrefix));
+  return match ? match.slice(eqPrefix.length) : undefined;
+}
+
 if (import.meta.main) {
-  const args = new Set(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  const args = new Set(argv);
   const checkOnly = args.has("--check") || args.has("--dry-run");
   const seedMode = process.env.SEED_MODE || "realistic";
   const modalityMode = args.has("--strict")
     ? "strict"
     : process.env.MODALITY_MODE || "permissive";
+
+  const basePortRaw = readFlagValue(argv, "--base-port") ?? process.env.EVERGREEN_BASE_PORT;
+  const basePort = basePortRaw ? parseInt(basePortRaw, 10) : 3000;
+  if (!Number.isInteger(basePort) || basePort < 1024 || basePort > 65500) {
+    console.error(`Invalid --base-port value: ${basePortRaw}`);
+    process.exit(1);
+  }
+
+  const dataDirArg = readFlagValue(argv, "--data-dir") ?? process.env.EVERGREEN_DATA_DIR;
+  const inPlaceDb = args.has("--in-place-db");
 
   const readiness = verifyShowcaseReadiness();
   if (!readiness.ready) {
@@ -112,56 +144,92 @@ if (import.meta.main) {
     process.exit(1);
   }
 
+  const runtimeServices = SHOWCASE_SERVICES.map((svc, idx) => ({
+    ...svc,
+    port: basePort + idx,
+  }));
+
   console.log("================================================================================");
   console.log("  EVERGREEN INSURANCE PARTNERS — EXECUTIVE OPERATIONS & GOVERNANCE SHOWCASE");
   console.log("================================================================================");
-  for (const svc of SHOWCASE_SERVICES) {
+  for (const svc of runtimeServices) {
     console.log(
       `  [http://localhost:${svc.port}] ${svc.name.padEnd(16)} — ${svc.role}`,
     );
   }
   console.log("--------------------------------------------------------------------------------");
-  console.log("  Executive Workbench:  http://localhost:3000/");
-  console.log("  Summit Portal UI:     http://localhost:3005/");
-  console.log("  Coastal Portal UI:    http://localhost:3006/");
+  console.log(`  Executive Workbench:  http://localhost:${basePort}/`);
+  console.log(`  Summit Portal UI:     http://localhost:${basePort + 5}/`);
+  console.log(`  Coastal Portal UI:    http://localhost:${basePort + 6}/`);
   console.log("  Executive Scorecard:  docs/executive-scorecard.html");
   console.log("================================================================================");
 
   if (checkOnly) {
     console.log(
-      `Showcase preflight check passed (${readiness.checkedServices}/8 services verified).`,
+      `Showcase preflight check passed (${readiness.checkedServices}/8 services + 2 portal UIs verified).`,
     );
     process.exit(0);
   }
 
-  // Seed all 8 services with realistic data if requested
+  let ephemeralDataDir: string | null = null;
+  let effectiveDataDir: string | undefined;
+  if (dataDirArg) {
+    effectiveDataDir = resolve(dataDirArg);
+    mkdirSync(effectiveDataDir, { recursive: true });
+  } else if (!inPlaceDb) {
+    ephemeralDataDir = mkdtempSync(join(tmpdir(), "evergreen-showcase-"));
+    effectiveDataDir = ephemeralDataDir;
+  }
+
   const jwtSecret = process.env.JWT_SECRET ?? "dev-secret";
+  const sharedStackEnv: Record<string, string | undefined> = {
+    ...process.env,
+    SEED_MODE: seedMode,
+    MODALITY_MODE: modalityMode,
+    JWT_SECRET: jwtSecret,
+    EVERGREEN_BASE_PORT: String(basePort),
+    ...(effectiveDataDir ? { EVERGREEN_DATA_DIR: effectiveDataDir } : {}),
+    AMS_BASE_URL: `http://localhost:${basePort}`,
+    AMS_URL: `http://localhost:${basePort}`,
+    RATER_BASE_URL: `http://localhost:${basePort + 1}`,
+    CRM_BASE_URL: `http://localhost:${basePort + 2}`,
+    ECM_BASE_URL: `http://localhost:${basePort + 3}`,
+    ECM_URL: `http://localhost:${basePort + 3}`,
+    COMM_BASE_URL: `http://localhost:${basePort + 4}`,
+    SUMMIT_BASE_URL: `http://localhost:${basePort + 5}`,
+    COASTAL_BASE_URL: `http://localhost:${basePort + 6}`,
+    CLAIMS_BASE_URL: `http://localhost:${basePort + 7}`,
+    CLAIMS_URL: `http://localhost:${basePort + 7}`,
+  };
+
   if (!args.has("--no-seed")) {
-    console.log(`Seeding all 8 services (SEED_MODE=${seedMode})...`);
-    for (const svc of SHOWCASE_SERVICES) {
+    console.log(
+      `Seeding all 8 services (SEED_MODE=${seedMode}${effectiveDataDir ? `, EVERGREEN_DATA_DIR=${effectiveDataDir}` : ""})...`,
+    );
+    for (const svc of runtimeServices) {
       const proc = Bun.spawnSync([process.execPath, "run", resolve(rootDir, svc.seedScript)], {
         cwd: resolve(rootDir, svc.dir),
-        env: { ...process.env, SEED_MODE: seedMode, JWT_SECRET: jwtSecret },
+        env: sharedStackEnv,
       });
       if (proc.exitCode !== 0) {
         console.error(
           `Seed for ${svc.name} failed with exit code ${proc.exitCode}:\n${proc.stderr.toString()}`,
         );
+        if (ephemeralDataDir) {
+          rmSync(ephemeralDataDir, { recursive: true, force: true });
+        }
         process.exit(1);
       }
     }
   }
 
   // Launch all 8 services
-  const children = SHOWCASE_SERVICES.map((svc) =>
+  const children = runtimeServices.map((svc) =>
     Bun.spawn([process.execPath, "run", resolve(rootDir, svc.entrypoint)], {
       cwd: resolve(rootDir, svc.dir),
       env: {
-        ...process.env,
+        ...sharedStackEnv,
         PORT: String(svc.port),
-        SEED_MODE: seedMode,
-        MODALITY_MODE: modalityMode,
-        JWT_SECRET: jwtSecret,
       },
       stdout: "inherit",
       stderr: "inherit",
@@ -173,6 +241,13 @@ if (import.meta.main) {
     for (const child of children) {
       try {
         child.kill();
+      } catch {
+        // ignore
+      }
+    }
+    if (ephemeralDataDir) {
+      try {
+        rmSync(ephemeralDataDir, { recursive: true, force: true });
       } catch {
         // ignore
       }

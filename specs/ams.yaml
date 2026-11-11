@@ -1481,9 +1481,43 @@ paths:
           $ref: "#/components/responses/500InternalServerError"
 
   # -------------------------------------------------------------------------
-  # PATCH /clients/{id}
+  # GET & PATCH /clients/{id}
   # -------------------------------------------------------------------------
   /clients/{id}:
+    get:
+      operationId: getClient
+      summary: Get a client by ID
+      description: |
+        Retrieve a single client record by its unique identifier.
+      tags:
+        - Clients
+      security:
+        - oauth2:
+            - ams:clients:read
+      parameters:
+        - name: id
+          in: path
+          description: Client identifier.
+          required: true
+          schema:
+            type: string
+          example: "CLI-001"
+      responses:
+        "200":
+          description: Client record retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+        "500":
+          $ref: "#/components/responses/500InternalServerError"
+
     patch:
       operationId: updateClient
       summary: Update a client

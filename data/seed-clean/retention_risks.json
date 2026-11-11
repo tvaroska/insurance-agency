@@ -1,7 +1,7 @@
 [
   {
     "client_id": "CLI-002",
-    "client_name": "James O'Brien",
+    "client_name": "James Chen",
     "risk_score": 88,
     "rate_increase_pct": 18.2,
     "months_since_contact": 11,
@@ -12,7 +12,7 @@
   },
   {
     "client_id": "CLI-004",
-    "client_name": "Patricia Kowalski",
+    "client_name": "David Thompson",
     "risk_score": 82,
     "rate_increase_pct": 14.5,
     "months_since_contact": 9,
@@ -23,7 +23,7 @@
   },
   {
     "client_id": "CLI-006",
-    "client_name": "William Nguyen",
+    "client_name": "Marcus Williams",
     "risk_score": 75,
     "rate_increase_pct": 10.8,
     "months_since_contact": 7,
@@ -34,7 +34,7 @@
   },
   {
     "client_id": "CLI-007",
-    "client_name": "Jennifer Davis",
+    "client_name": "Priya Patel",
     "risk_score": 71,
     "rate_increase_pct": 8.2,
     "months_since_contact": 6,
@@ -45,7 +45,7 @@
   },
   {
     "client_id": "CLI-009",
-    "client_name": "Thomas Anderson",
+    "client_name": "Jennifer Kim",
     "risk_score": 68,
     "rate_increase_pct": 12.1,
     "months_since_contact": 5,
@@ -56,7 +56,7 @@
   },
   {
     "client_id": "CLI-011",
-    "client_name": "Maria Santos",
+    "client_name": "Carlos Gutierrez",
     "risk_score": 64,
     "rate_increase_pct": 6.5,
     "months_since_contact": 8,
@@ -67,7 +67,7 @@
   },
   {
     "client_id": "CLI-015",
-    "client_name": "Karen Mitchell",
+    "client_name": "George Papadopoulos",
     "risk_score": 58,
     "rate_increase_pct": 5.3,
     "months_since_contact": 4,
@@ -78,7 +78,7 @@
   },
   {
     "client_id": "CLI-019",
-    "client_name": "Steven Clark",
+    "client_name": "Tyler Morrison",
     "risk_score": 53,
     "rate_increase_pct": 4.1,
     "months_since_contact": 3,
@@ -89,7 +89,7 @@
   },
   {
     "client_id": "CLI-021",
-    "client_name": "Nancy White",
+    "client_name": "Brian Lawson",
     "risk_score": 45,
     "rate_increase_pct": 2.8,
     "months_since_contact": 2,
@@ -100,7 +100,7 @@
   },
   {
     "client_id": "CLI-023",
-    "client_name": "Richard Taylor",
+    "client_name": "Kevin Tran",
     "risk_score": 38,
     "rate_increase_pct": 1.5,
     "months_since_contact": 1,

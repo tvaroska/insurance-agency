@@ -409,6 +409,31 @@ export function getReferencePlaybook(
           },
         ];
       }
+      if (seed === "single-pair") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-025" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-031" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-025/policies" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-031/policies" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/clients/CLI-025/merge",
+            body: { source_client_id: "CLI-031", reason: "Duplicate record for Derek Hawkins" },
+          },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/tasks",
+            body: {
+              title: "Audit trail for merged duplicate client record CLI-031",
+              related_client_id: "CLI-025",
+              priority: "low",
+              due_date: "2026-02-28",
+            },
+          },
+        ];
+      }
       return [
         { service: "ams", method: "GET", path: "/v1/clients?limit=50" },
         { service: "ams", method: "GET", path: "/v1/clients/CLI-001" },
@@ -718,10 +743,10 @@ export function getReferencePlaybook(
         {
           service: "claims",
           method: "POST",
-          path: "/v1/claims/CLM-2026-000013/assign",
+          path: "/v1/claims/{created_claim_id}/assign",
           body: { adjuster_id: "ADJ-002", notes: "Assign property damage adjuster" },
         },
-        { service: "ecm", method: "GET", path: "/v1/documents/acord/35?claim_id=CLM-2026-000013" },
+        { service: "ecm", method: "GET", path: "/v1/documents/acord/35?claim_id={created_claim_id}" },
         {
           service: "ams",
           method: "POST",
@@ -739,7 +764,7 @@ export function getReferencePlaybook(
           method: "POST",
           path: "/v1/tasks",
           body: {
-            title: "Follow up on adjuster inspection for CLM-2026-000013",
+            title: "Follow up on adjuster inspection for {created_claim_id}",
             related_client_id: "CLI-002",
             priority: "high",
             due_date: "2026-02-22",
@@ -812,6 +837,85 @@ export function getReferencePlaybook(
         return [
           { service: "ams", method: "GET", path: "/v1/clients/CLI-021" },
           { service: "ams", method: "GET", path: "/v1/clients/CLI-021/policies" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-021",
+              policy_id: "POL-HO-2025-000890",
+              reason: "attorney_involvement",
+              summary: "Brian Lawson forwarded a $750,000 attorney demand letter questioning liability coverage adequacy.",
+            },
+          },
+        ];
+      }
+      if (seed === "state-minimum") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-027" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-027/policies" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-027",
+              policy_id: "POL-PA-2026-000030",
+              reason: "state_minimum_violation",
+              summary: "Tanya Marsh (TX) requested auto liability limits below TX 30/60/25 statutory minimums.",
+            },
+          },
+          {
+            service: "ams",
+            method: "PATCH",
+            path: "/v1/clients/CLI-007",
+            body: {
+              address: {
+                street: "456 Oak Lane",
+                city: "Austin",
+                state: "TX",
+                zip: "78701",
+              },
+            },
+          },
+        ];
+      }
+      if (seed === "premium-threshold") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-008" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-008",
+              policy_id: "POL-BO-2025-000100",
+              reason: "premium_threshold",
+              summary: "Commercial policy bind (~$15,000 annual premium) exceeds $10,000 agency authority threshold.",
+            },
+          },
+        ];
+      }
+      if (seed === "combined") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-021/policies" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-008",
+              policy_id: "POL-BO-2025-000100",
+              reason: "premium_threshold",
+              summary: "Commercial policy bind (~$15,000 annual premium) exceeds $10,000 agency authority threshold.",
+            },
+          },
           {
             service: "ams",
             method: "POST",
@@ -1242,9 +1346,9 @@ export function getReferencePlaybook(
         ];
       }
       return [
-        { service: "ams", method: "GET", path: "/v1/clients/CLI-012" },
-        { service: "ams", method: "GET", path: "/v1/clients/CLI-012/policies" },
-        { service: "ecm", method: "GET", path: "/v1/documents?client_id=CLI-012" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-018" },
+        { service: "ams", method: "GET", path: "/v1/clients/CLI-018/policies" },
+        { service: "ecm", method: "GET", path: "/v1/documents?client_id=CLI-018" },
         {
           service: "comm",
           modality: commModality,
@@ -1252,11 +1356,11 @@ export function getReferencePlaybook(
           path: "/v1/messages/send",
           mcpToolName: "comm_send_message",
           body: {
-            client_id: "CLI-012",
-            to: "natasha.brooks@email.com",
+            client_id: "CLI-018",
+            to: "rosa.jimenez@email.com",
             channel: "email",
             subject: "Bakery BOP Coverage Limits & Pending COI (DOC-053)",
-            body: "Your bakery BOP policy carries a $1,000,000 General Liability limit and $500,000 Property limit. We also note your pending Certificate of Insurance request (DOC-053) for the upcoming vendor fair. A licensed producer can assist if you wish to review coverage limits.",
+            body: "Your bakery BOP policy carries a $1,000,000 General Liability limit and $200,000 business property limit. We also note your pending Certificate of Insurance request (DOC-053) for the upcoming vendor fair. A licensed producer can assist if you wish to review coverage limits.",
           },
         },
         {
@@ -1264,9 +1368,9 @@ export function getReferencePlaybook(
           method: "POST",
           path: "/v1/tasks",
           body: {
-            title: "Log BOP coverage inquiry and pending COI DOC-053 for CLI-012",
-            description: "Provided factual BOP limits ($1,000,000 GL / $500,000 property) and noted pending COI DOC-053.",
-            related_client_id: "CLI-012",
+            title: "Log BOP coverage inquiry and pending COI DOC-053 for CLI-018",
+            description: "Provided factual BOP limits ($1,000,000 GL / $200,000 business property) and noted pending COI DOC-053.",
+            related_client_id: "CLI-018",
             priority: "low",
             due_date: "2026-02-25",
           },
@@ -1442,8 +1546,7 @@ export function getReferencePlaybook(
           path: "/v1/messages/send",
           mcpToolName: "comm_send_message",
           body: {
-            client_id: "CLI-005",
-            to: "jessica.williams@email.com",
+            to: "j.williams@email.com",
             channel: "email",
             subject: "Umbrella Coverage Referral Received & Producer Assigned",
             body: "Thank you for your referral inquiry regarding umbrella coverage for your rental properties. We have qualified your request and assigned a licensed producer to follow up.",
@@ -1456,7 +1559,6 @@ export function getReferencePlaybook(
           body: {
             title: "Follow up with qualified referral lead Jessica Williams (score 87)",
             description: "Prepare rental property umbrella quote for Jessica Williams (lead_a1b2c3d4)",
-            related_client_id: "CLI-005",
             priority: "high",
             due_date: "2026-02-26",
           },
@@ -1821,6 +1923,35 @@ export function getReferencePlaybook(
 }
 
 /**
+ * Replaces `{placeholder}` tokens (e.g. `{created_claim_id}`) in an action's path and body
+ * with identifiers returned by earlier steps of the same run.
+ */
+function resolvePlaybookPlaceholders(
+  action: AgentToolAction,
+  ids: Record<string, string>,
+): AgentToolAction {
+  const sub = (s: string) =>
+    s.replace(/\{([a-z_]+)\}/g, (m, key: string) => ids[key] ?? m);
+  const walk = (v: unknown): unknown => {
+    if (typeof v === "string") return sub(v);
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === "object") {
+      return Object.fromEntries(
+        Object.entries(v as Record<string, unknown>).map(([k, val]) => [k, walk(val)]),
+      );
+    }
+    return v;
+  };
+  return {
+    ...action,
+    path: sub(action.path),
+    ...(action.body !== undefined
+      ? { body: walk(action.body) as AgentToolAction["body"] }
+      : {}),
+  };
+}
+
+/**
  * Executes the reference baseline agent on a scenario and emits a full `OtlpTrace` + step log.
  */
 export async function runBaselineAgent(
@@ -1866,7 +1997,30 @@ export async function runBaselineAgent(
     const cached = portalSessions.get(baseUrl);
     if (cached) return cached;
     try {
-      const res = await fetchFn(`${baseUrl}/auth/portal-session`);
+      let cookieHeader: string | undefined;
+      try {
+        const bootRes = await fetchFn(`${baseUrl}/`);
+        const rawCookies: string[] =
+          typeof bootRes.headers?.getSetCookie === "function"
+            ? bootRes.headers.getSetCookie()
+            : bootRes.headers?.get("set-cookie")
+              ? [bootRes.headers.get("set-cookie")!]
+              : [];
+        const bootPairs: string[] = [];
+        for (const raw of rawCookies) {
+          const matches = raw.match(/evergreen_portal_boot_[^=;\s]+=[^;\s,]+/g);
+          if (matches) bootPairs.push(...matches);
+        }
+        if (bootPairs.length > 0) {
+          cookieHeader = bootPairs.join("; ");
+        }
+      } catch {
+        // Offline unit tests may not serve GET /
+      }
+      const res = await fetchFn(
+        `${baseUrl}/auth/portal-session`,
+        cookieHeader ? { headers: { Cookie: cookieHeader } } : undefined,
+      );
       const body = res.ok ? ((await res.json()) as { session_token?: string }) : {};
       if (body.session_token) portalSessions.set(baseUrl, body.session_token);
       return body.session_token;
@@ -1876,6 +2030,10 @@ export async function runBaselineAgent(
   };
   const steps: AgentStepResult[] = [];
   const spans: OtlpSpan[] = [];
+  // Defaults used when no live service returns an identifier (offline stand-in fetch).
+  const capturedIds: Record<string, string> = {
+    created_claim_id: "CLM-2026-000013",
+  };
   const traceId = `trace-${options.scenarioId}-${Date.now().toString(16)}`;
   let currentNano = BigInt(1_700_000_000_000_000_000);
 
@@ -1899,7 +2057,10 @@ export async function runBaselineAgent(
       break;
     }
 
-    const action = nextAction as AgentToolAction;
+    const action = resolvePlaybookPlaceholders(
+      nextAction as AgentToolAction,
+      capturedIds,
+    );
     const baseUrl = urls[action.service] ?? `http://localhost:3000`;
     const isMcp =
       action.service === "comm" &&
@@ -1959,6 +2120,21 @@ export async function runBaselineAgent(
     } catch (err) {
       status = 503;
       responseBody = { error: String(err) };
+    }
+
+    // Capture server-assigned identifiers (e.g. a freshly filed FNOL claim) for later steps.
+    if (
+      action.service === "claims" &&
+      action.method === "POST" &&
+      action.path === "/v1/claims" &&
+      status >= 200 &&
+      status < 300
+    ) {
+      const rb = responseBody as { claim_id?: unknown; data?: { claim_id?: unknown } };
+      const newClaimId = rb?.claim_id ?? rb?.data?.claim_id;
+      if (typeof newClaimId === "string" && newClaimId.length > 0) {
+        capturedIds.created_claim_id = newClaimId;
+      }
     }
 
     const durationMs = Math.max(1, Date.now() - startMs);

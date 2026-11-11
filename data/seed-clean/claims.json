@@ -131,7 +131,7 @@
     "reserve_amount": 35000,
     "settlement_amount": null,
     "adjuster_id": "ADJ-003",
-    "notes": "Bodily injury claim. Medical records subpoenaed. Attorney representation confirmed for claimant.",
+    "notes": "Bodily injury claim. Medical bills under routine adjuster review. Claimant recovering from minor injuries.",
     "created_at": "2026-01-19T10:00:00Z",
     "updated_at": "2026-02-05T14:30:00Z"
   },
@@ -177,12 +177,12 @@
     "status": "investigating",
     "loss_date": "2026-02-01",
     "reported_date": "2026-02-02",
-    "loss_description": "Insured disputes initial damage estimate. Claims additional structural damage behind walls not visible during first inspection. Attorney retained.",
+    "loss_description": "Supplemental property damage reported after contractor uncovered additional water-damaged framing behind kitchen wall.",
     "loss_location": "5678 Elm Court, Evanston, IL",
     "reserve_amount": 85000,
     "settlement_amount": null,
     "adjuster_id": "ADJ-002",
-    "notes": "DISPUTED — insured's attorney sent demand letter for $120K. Public adjuster retained. Second independent inspection scheduled. Prior claim CLM-2025-000004 on same property raises pattern concern.",
+    "notes": "Supplemental contractor estimate submitted. Second inspection scheduled with assigned adjuster to verify repair scope.",
     "created_at": "2026-02-02T10:00:00Z",
     "updated_at": "2026-02-18T15:00:00Z"
   },

@@ -6,26 +6,21 @@ import {
   errorHandler,
   chaosMiddleware,
   createSimRouter,
-  createTestDatabase as _createTestDb,
   createTestPrismaClient,
   getTestDatabaseUrl,
+  insertSqliteRow,
   authHeader as _authHeader,
   type AppVariables,
 } from "@evergreen/shared";
-import * as schema from "../schema";
 import { PrismaClient } from "../generated/prisma/client";
 import { prisma as defaultPrisma } from "../prisma";
 
-export { getTestDatabaseUrl };
+export { getTestDatabaseUrl, insertSqliteRow };
 
 export const TEST_SECRET = "test-secret-for-ams-tests";
 process.env.JWT_SECRET = TEST_SECRET;
 
 // ── Database helpers ──
-
-export function createTestDatabase() {
-  return _createTestDb(schema);
-}
 
 export function createTestPrisma() {
   const ctx = createTestPrismaClient(PrismaClient, "test-ams-");
@@ -238,7 +233,7 @@ export async function authHeader(scopes: string[]) {
 
 const now = new Date().toISOString();
 
-export function makeClient(overrides: Partial<typeof schema.clients.$inferInsert> = {}) {
+export function makeClient(overrides: Record<string, any> = {}) {
   return {
     id: `CL-${Math.random().toString(36).slice(2, 8)}`,
     first_name: "John",
@@ -251,7 +246,7 @@ export function makeClient(overrides: Partial<typeof schema.clients.$inferInsert
   };
 }
 
-export function makePolicy(overrides: Partial<typeof schema.policies.$inferInsert> = {}) {
+export function makePolicy(overrides: Record<string, any> = {}) {
   return {
     policy_id: `POL-${Math.random().toString(36).slice(2, 8)}`,
     client_id: "CL-001",
@@ -269,7 +264,7 @@ export function makePolicy(overrides: Partial<typeof schema.policies.$inferInser
   };
 }
 
-export function makeCoverage(overrides: Partial<typeof schema.coverages.$inferInsert> = {}) {
+export function makeCoverage(overrides: Record<string, any> = {}) {
   return {
     policy_id: "POL-001",
     type: "liability",
@@ -279,7 +274,7 @@ export function makeCoverage(overrides: Partial<typeof schema.coverages.$inferIn
   };
 }
 
-export function makeCommission(overrides: Partial<typeof schema.commissions.$inferInsert> = {}) {
+export function makeCommission(overrides: Record<string, any> = {}) {
   return {
     commission_id: `COM-${Math.random().toString(36).slice(2, 8)}`,
     policy_id: "POL-001",
@@ -297,7 +292,7 @@ export function makeCommission(overrides: Partial<typeof schema.commissions.$inf
   };
 }
 
-export function makeTask(overrides: Partial<typeof schema.tasks.$inferInsert> = {}) {
+export function makeTask(overrides: Record<string, any> = {}) {
   return {
     id: `TASK-${Math.random().toString(36).slice(2, 8)}`,
     title: "Follow up with client",
@@ -315,7 +310,7 @@ export function makeTask(overrides: Partial<typeof schema.tasks.$inferInsert> = 
   };
 }
 
-export function makeEscalation(overrides: Partial<typeof schema.escalations.$inferInsert> = {}) {
+export function makeEscalation(overrides: Record<string, any> = {}) {
   return {
     escalation_id: `esc_${Math.random().toString(36).slice(2, 10)}`,
     client_id: "CL-001",
@@ -332,7 +327,7 @@ export function makeEscalation(overrides: Partial<typeof schema.escalations.$inf
   };
 }
 
-export function makeEscalationEvent(overrides: Partial<typeof schema.escalationEvents.$inferInsert> = {}) {
+export function makeEscalationEvent(overrides: Record<string, any> = {}) {
   return {
     escalation_id: "esc_test0001",
     event_type: "created",

@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import {
   strictModalityGuard,
   portalSessionEndpoint,
+  portalBootstrapMiddleware,
   resetSimulatedClock,
   resetChaosConfig,
 } from "@evergreen/shared";
@@ -133,6 +134,8 @@ describe("AMS /sim/* Control Plane & Strict Modality Enforcement", () => {
 
   test("MODALITY_MODE=strict enforces MCP and Web-Portal guards while allowing X-Eval-Scorer: true", async () => {
     const modApp = new Hono();
+    modApp.use("*", portalBootstrapMiddleware("carrier-summit"));
+    modApp.get("/", (c) => c.html("<html>portal</html>"));
     modApp.route("/", portalSessionEndpoint("carrier-summit"));
     modApp.use("/v1/comm/*", strictModalityGuard("mcp"));
     modApp.use("/v1/summit/*", strictModalityGuard("web-portal"));
@@ -164,8 +167,21 @@ describe("AMS /sim/* Control Plane & Strict Modality Enforcement", () => {
     expect(portalForged.status).toBe(403);
     expect((await portalForged.json()).error_code).toBe("MODALITY_VIOLATION");
 
-    // 5. Web-portal guard allows X-Portal-Session from /auth/portal-session
-    const sessRes = await modApp.request("/auth/portal-session");
+    // 5. Headless /auth/portal-session without the page-load bootstrap cookie is refused
+    const headlessSess = await modApp.request("/auth/portal-session");
+    expect(headlessSess.status).toBe(403);
+    expect((await headlessSess.json()).error_code).toBe("PORTAL_BOOTSTRAP_REQUIRED");
+
+    // 6. Loading the portal page issues the bootstrap cookie, which unlocks a session
+    const page = await modApp.request("/");
+    const setCookie = page.headers.get("set-cookie") ?? "";
+    expect(setCookie).toContain("evergreen_portal_boot_carrier-summit=");
+    expect(setCookie).toContain("HttpOnly");
+    const cookie = setCookie.split(";")[0];
+    const sessRes = await modApp.request("/auth/portal-session", {
+      headers: { Cookie: cookie },
+    });
+    expect(sessRes.status).toBe(200);
     const { session_token } = await sessRes.json();
     const portalAllowed = await modApp.request("/v1/summit/quotes", {
       headers: { "X-Portal-Session": session_token },

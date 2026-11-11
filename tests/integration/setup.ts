@@ -1,538 +1,492 @@
-import { Hono } from "hono";
-import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import { mock } from "bun:test";
-import { mkdtempSync } from "fs";
+import { mkdtempSync, readFileSync, rmSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import {
-  correlationId,
-  jwtAuth,
-  errorHandler,
-  generateDevToken,
-  type CorrelationVariables,
-  type AuthVariables,
-} from "@evergreen/shared";
+import { generateDevToken } from "@evergreen/shared";
 
-type AppVariables = CorrelationVariables & AuthVariables;
-
-// ── K8s mode detection ──
-
-export const K8S_MODE = !!process.env.K8S_BASE_URL;
+/**
+ * Isolated Prisma + Real Hono App Integration Harness (`ADR-006`).
+ *
+ * - Eliminates Drizzle ORM, `bun:sqlite`, and `mock.module` overrides.
+ * - Configures an ephemeral `EVERGREEN_DATA_DIR` before importing the real
+ *   microservices (`ams`, `rater`, `crm`, `ecm`, `comm`) so every service
+ *   operates against its own isolated `<svc>.db` via Prisma 7 (`@prisma/adapter-libsql`).
+ * - Dispatches HTTP requests directly into each service's real `app.fetch`
+ *   pipeline under `MODALITY_MODE=strict`, including JSON-RPC 2.0 `POST /mcp`
+ *   calls on `comm` (`:3004`).
+ */
 
 export const TEST_SECRET = "integration-test-secret";
-if (!K8S_MODE) {
-  process.env.JWT_SECRET = TEST_SECRET;
-}
+export const INTEGRATION_DATA_DIR = mkdtempSync(join(tmpdir(), "evergreen-int-"));
 
-// ── K8s HTTP client (lazy import to avoid side effects in local mode) ──
-
-let createHttpClient: (servicePath: string) => { request: (path: string, init?: RequestInit) => Promise<Response> };
-let fetchOAuthToken: (scopes: string[]) => Promise<string>;
-
-if (K8S_MODE) {
-  const httpClient = await import("./http-client");
-  createHttpClient = httpClient.createHttpClient;
-  fetchOAuthToken = httpClient.fetchOAuthToken;
-}
-
-// ── Database helpers (local mode only) ──
-
-import * as amsSchema from "../../services/ams/src/schema";
-import * as raterSchema from "../../services/rater/src/schema";
-import * as crmSchema from "../../services/crm/src/schema";
-import * as ecmSchema from "../../services/ecm/src/schema";
-import * as commSchema from "../../services/comm/src/schema";
-import { PrismaClient as AmsPrismaClient } from "../../services/ams/src/generated/prisma/client";
-import { PrismaClient as RaterPrismaClient } from "../../services/rater/src/generated/prisma/client";
-import { PrismaClient as CrmPrismaClient } from "../../services/crm/src/generated/prisma/client";
-import { PrismaClient as EcmPrismaClient } from "../../services/ecm/src/generated/prisma/client";
-import { PrismaClient as CommPrismaClient } from "../../services/comm/src/generated/prisma/client";
-
-function createDb<T extends Record<string, unknown>, P>(
-  schema: T,
-  PrismaCtor: new (opts: any) => P,
-  prefix: string,
-) {
-  const tmpDir = mkdtempSync(join("/tmp", prefix));
-  const dbPath = join(tmpDir, "test.db");
-  const sqlite = new Database(dbPath);
-  sqlite.exec("PRAGMA journal_mode = WAL;");
-  sqlite.exec("PRAGMA foreign_keys = ON;");
-  const drizzleDb = drizzle(sqlite, { schema });
-  const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
-  const prisma = new PrismaCtor({ adapter });
-  return { sqlite, drizzleDb, prisma, db: drizzleDb };
-}
-
-// ── Create all 5 databases (local mode only, but schemas imported regardless) ──
-
-export const ams = K8S_MODE
-  ? ({ db: null, drizzleDb: null, prisma: null, sqlite: null } as any)
-  : createDb(amsSchema, AmsPrismaClient, "test-int-ams-");
-export const rater = K8S_MODE
-  ? ({ db: null, drizzleDb: null, prisma: null, sqlite: null } as any)
-  : createDb(raterSchema, RaterPrismaClient, "test-int-rater-");
-export const crm = K8S_MODE
-  ? ({ db: null, drizzleDb: null, prisma: null, sqlite: null } as any)
-  : createDb(crmSchema, CrmPrismaClient, "test-int-crm-");
-export const ecm = K8S_MODE
-  ? ({ db: null, drizzleDb: null, prisma: null, sqlite: null } as any)
-  : createDb(ecmSchema, EcmPrismaClient, "test-int-ecm-");
-const commCtx = K8S_MODE
-  ? ({ db: null, drizzleDb: null, prisma: null, sqlite: null } as any)
-  : createDb(commSchema, CommPrismaClient, "test-int-comm-");
-export const comm = K8S_MODE
-  ? commCtx
-  : { ...commCtx, db: commCtx.prisma };
-
-// ── Create tables (local mode only) ──
-
-function createAmsTables() {
-  ams.sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS clients (
-      id TEXT PRIMARY KEY,
-      first_name TEXT NOT NULL,
-      last_name TEXT NOT NULL,
-      dob TEXT,
-      email TEXT NOT NULL,
-      phone TEXT,
-      address_street TEXT,
-      address_city TEXT,
-      address_state TEXT,
-      address_zip TEXT,
-      driver_license_number TEXT,
-      occupation TEXT,
-      marital_status TEXT,
-      household_id TEXT,
-      preferred_contact_method TEXT,
-      preferred_contact_time TEXT,
-      status TEXT NOT NULL DEFAULT 'active',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS policies (
-      policy_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL REFERENCES clients(id),
-      carrier_code TEXT NOT NULL,
-      policy_type TEXT NOT NULL,
-      effective_date TEXT NOT NULL,
-      expiration_date TEXT NOT NULL,
-      premium_current REAL NOT NULL,
-      premium_prior REAL,
-      status TEXT NOT NULL DEFAULT 'active',
-      multi_policy_discount INTEGER DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS coverages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      policy_id TEXT NOT NULL REFERENCES policies(policy_id),
-      type TEXT NOT NULL,
-      "limit" TEXT,
-      deductible REAL
-    );
-    CREATE TABLE IF NOT EXISTS endorsements (
-      endorsement_id TEXT PRIMARY KEY,
-      policy_id TEXT NOT NULL REFERENCES policies(policy_id),
-      effective_date TEXT NOT NULL,
-      change_type TEXT NOT NULL,
-      changes TEXT NOT NULL,
-      premium_delta REAL,
-      status TEXT NOT NULL DEFAULT 'pending_review',
-      notes TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS commissions (
-      commission_id TEXT PRIMARY KEY,
-      policy_id TEXT NOT NULL REFERENCES policies(policy_id),
-      carrier_code TEXT NOT NULL,
-      transaction_type TEXT NOT NULL,
-      gross_amount REAL NOT NULL,
-      net_amount REAL NOT NULL,
-      commission_rate REAL NOT NULL,
-      effective_date TEXT NOT NULL,
-      payment_date TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      producer_id TEXT,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS tasks (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      description TEXT,
-      status TEXT NOT NULL DEFAULT 'open',
-      priority TEXT NOT NULL DEFAULT 'medium',
-      task_type TEXT,
-      assigned_to TEXT,
-      related_client_id TEXT,
-      related_policy_id TEXT,
-      due_date TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS escalations (
-      escalation_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
-      policy_id TEXT,
-      reason TEXT NOT NULL,
-      summary TEXT NOT NULL,
-      context TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      manager_response TEXT,
-      poll_count INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS escalation_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      escalation_id TEXT NOT NULL REFERENCES escalations(escalation_id),
-      event_type TEXT NOT NULL,
-      from_status TEXT,
-      to_status TEXT,
-      details TEXT,
-      created_at TEXT NOT NULL
-    );
-  `);
-}
-
-function createRaterTables() {
-  rater.sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS quote_requests (
-      request_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
-      policy_type TEXT NOT NULL,
-      effective_date TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      submitted_at TEXT NOT NULL,
-      completed_at TEXT,
-      expires_at TEXT,
-      risk_data TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS carrier_quotes (
-      quote_id TEXT PRIMARY KEY,
-      request_id TEXT NOT NULL REFERENCES quote_requests(request_id),
-      carrier_code TEXT NOT NULL,
-      carrier_name TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
-      premium_annual REAL,
-      premium_monthly REAL,
-      coverages TEXT NOT NULL DEFAULT '[]',
-      deductibles TEXT NOT NULL DEFAULT '{}',
-      decline_reason TEXT,
-      valid_until TEXT,
-      bound_at TEXT,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS carriers (
-      carrier_code TEXT PRIMARY KEY,
-      carrier_name TEXT NOT NULL,
-      states TEXT NOT NULL,
-      policy_types TEXT NOT NULL,
-      risk_categories TEXT NOT NULL,
-      appetite_level TEXT NOT NULL,
-      min_driver_age INTEGER,
-      max_vehicles INTEGER,
-      accepts_sr22 INTEGER DEFAULT 0,
-      surplus_lines_only INTEGER DEFAULT 0,
-      sr22_available INTEGER DEFAULT 0,
-      citizens_eligible INTEGER DEFAULT 0,
-      state_restrictions TEXT NOT NULL DEFAULT '[]'
-    );
-  `);
-}
-
-function createCrmTables() {
-  crm.sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS leads (
-      lead_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
-      first_name TEXT NOT NULL,
-      last_name TEXT NOT NULL,
-      email TEXT NOT NULL,
-      phone TEXT,
-      source TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'new',
-      score INTEGER NOT NULL DEFAULT 0,
-      assigned_producer TEXT,
-      tags TEXT NOT NULL DEFAULT '[]',
-      notes TEXT,
-      last_activity_date TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS campaigns (
-      campaign_id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      type TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'active',
-      enrolled_count INTEGER NOT NULL DEFAULT 0,
-      conversion_rate REAL NOT NULL DEFAULT 0
-    );
-    CREATE TABLE IF NOT EXISTS campaign_enrollments (
-      enrollment_id TEXT PRIMARY KEY,
-      campaign_id TEXT NOT NULL REFERENCES campaigns(campaign_id),
-      client_id TEXT NOT NULL,
-      trigger_reason TEXT,
-      metadata TEXT,
-      enrolled_at TEXT NOT NULL,
-      sequence_step INTEGER NOT NULL DEFAULT 1
-    );
-    CREATE TABLE IF NOT EXISTS retention_risks (
-      client_id TEXT PRIMARY KEY,
-      client_name TEXT NOT NULL,
-      risk_score INTEGER NOT NULL,
-      rate_increase_pct REAL,
-      months_since_contact INTEGER,
-      email_open_rate REAL,
-      policies_count INTEGER,
-      recommended_action TEXT,
-      assigned_producer TEXT
-    );
-  `);
-}
-
-function createEcmTables() {
-  ecm.sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS documents (
-      document_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
-      document_type TEXT NOT NULL,
-      filename TEXT NOT NULL,
-      mime_type TEXT NOT NULL,
-      file_size_bytes INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'uploaded',
-      upload_date TEXT NOT NULL,
-      signer_name TEXT,
-      signer_email TEXT,
-      signed_date TEXT,
-      expiration_date TEXT,
-      tags TEXT NOT NULL DEFAULT '[]'
-    );
-    CREATE TABLE IF NOT EXISTS envelopes (
-      envelope_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
-      document_ids TEXT NOT NULL DEFAULT '[]',
-      signers TEXT NOT NULL DEFAULT '[]',
-      status TEXT NOT NULL DEFAULT 'created',
-      message TEXT,
-      redirect_url TEXT,
-      created_at TEXT NOT NULL,
-      completed_at TEXT,
-      expiration_date TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS marketing_assets (
-      asset_id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      description TEXT,
-      category TEXT NOT NULL,
-      mime_type TEXT NOT NULL,
-      url TEXT NOT NULL,
-      version TEXT NOT NULL,
-      published_date TEXT NOT NULL
-    );
-  `);
-}
-
-function createCommTables() {
-  comm.sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS messages (
-      message_id TEXT PRIMARY KEY,
-      client_id TEXT NOT NULL,
-      direction TEXT NOT NULL,
-      channel TEXT NOT NULL,
-      subject TEXT,
-      body TEXT,
-      from_addr TEXT NOT NULL,
-      to_addr TEXT NOT NULL,
-      timestamp TEXT NOT NULL,
-      read INTEGER NOT NULL DEFAULT 0,
-      call_id TEXT,
-      duration_seconds INTEGER,
-      transcript TEXT,
-      sentiment TEXT,
-      topics TEXT NOT NULL DEFAULT '[]',
-      status TEXT NOT NULL DEFAULT 'delivered',
-      template_id TEXT,
-      attachments TEXT NOT NULL DEFAULT '[]'
-    );
-    CREATE TABLE IF NOT EXISTS webhooks (
-      webhook_id TEXT PRIMARY KEY,
-      url TEXT NOT NULL,
-      events TEXT NOT NULL DEFAULT '[]',
-      secret TEXT NOT NULL,
-      active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS webhook_deliveries (
-      delivery_id TEXT PRIMARY KEY,
-      webhook_id TEXT NOT NULL,
-      event_id TEXT NOT NULL,
-      event_type TEXT NOT NULL,
-      payload TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
-      attempts INTEGER NOT NULL DEFAULT 0,
-      last_attempt_at TEXT,
-      next_retry_at TEXT,
-      response_status INTEGER,
-      created_at TEXT NOT NULL
-    );
-  `);
-}
-
-// Initialize tables and mocks (local mode only)
-if (!K8S_MODE) {
-  createAmsTables();
-  createRaterTables();
-  createCrmTables();
-  createEcmTables();
-  createCommTables();
-
-  // ── Mock all service Prisma & DB modules ──
-  mock.module("../../services/ams/src/prisma", () => ({
-    prisma: ams.prisma,
-  }));
-  mock.module("../../services/rater/src/prisma", () => ({
-    prisma: rater.prisma,
-  }));
-  mock.module("../../services/crm/src/prisma", () => ({
-    prisma: crm.prisma,
-  }));
-  mock.module("../../services/ecm/src/prisma", () => ({
-    prisma: ecm.prisma,
-  }));
-  mock.module("../../services/comm/src/prisma", () => ({
-    prisma: comm.prisma,
-  }));
-  mock.module("../../services/ams/src/db", () => ({
-    db: ams.drizzleDb,
-    sqlite: ams.sqlite,
-  }));
-  mock.module("../../services/rater/src/db", () => ({
-    db: rater.drizzleDb,
-    sqlite: rater.sqlite,
-  }));
-  mock.module("../../services/crm/src/db", () => ({
-    db: crm.drizzleDb,
-    sqlite: crm.sqlite,
-  }));
-  mock.module("../../services/ecm/src/db", () => ({
-    db: ecm.drizzleDb,
-    sqlite: ecm.sqlite,
-  }));
-  mock.module("../../services/comm/src/db", () => ({
-    db: comm.drizzleDb,
-    sqlite: comm.sqlite,
-  }));
-}
-
-// ── Build Hono apps (local mode) or HTTP clients (K8s mode) ──
-
-const { clientsRouter } = await import("../../services/ams/src/routes/clients");
-const { policiesRouter } = await import("../../services/ams/src/routes/policies");
-const { accountingRouter } = await import("../../services/ams/src/routes/accounting");
-const { tasksRouter } = await import("../../services/ams/src/routes/tasks");
-
-const { quotesRouter } = await import("../../services/rater/src/routes/quotes");
-const { carriersRouter } = await import("../../services/rater/src/routes/carriers");
-
-const { leadsRouter } = await import("../../services/crm/src/routes/leads");
-const { campaignsRouter } = await import("../../services/crm/src/routes/campaigns");
-const { analyticsRouter } = await import("../../services/crm/src/routes/analytics");
-
-const { documentsRouter } = await import("../../services/ecm/src/routes/documents");
-const { envelopesRouter } = await import("../../services/ecm/src/routes/envelopes");
-const { assetsRouter } = await import("../../services/ecm/src/routes/assets");
-
-function buildApp(routes: Record<string, Hono<{ Variables: AppVariables }>>) {
-  const app = new Hono<{ Variables: AppVariables }>();
-  app.use("*", correlationId);
-  app.onError(errorHandler);
-
-  const api = new Hono<{ Variables: AppVariables }>();
-  api.use("*", jwtAuth);
-  for (const [path, router] of Object.entries(routes)) {
-    api.route(`/${path}`, router);
+process.on("exit", () => {
+  try {
+    rmSync(INTEGRATION_DATA_DIR, { recursive: true, force: true });
+  } catch {
+    // Ignore cleanup errors on process exit
   }
-  app.route("/v1", api);
-  return app;
+});
+
+delete process.env.DATABASE_URL;
+process.env.EVERGREEN_DATA_DIR = INTEGRATION_DATA_DIR;
+process.env.JWT_SECRET = TEST_SECRET;
+process.env.MODALITY_MODE = "strict";
+
+// If services/*/src/prisma.ts has not yet landed EVERGREEN_DATA_DIR support,
+// isolate via DATABASE_URL inside INTEGRATION_DATA_DIR so working-tree DBs are never touched.
+const amsPrismaSource = readFileSync(
+  join(import.meta.dir, "../../services/ams/src/prisma.ts"),
+  "utf-8",
+);
+if (!amsPrismaSource.includes("EVERGREEN_DATA_DIR")) {
+  process.env.DATABASE_URL = `file:${join(INTEGRATION_DATA_DIR, "integration.db")}`;
 }
 
-export const amsApp = K8S_MODE
-  ? createHttpClient!("ams")
-  : buildApp({
-      clients: clientsRouter,
-      policies: policiesRouter,
-      accounting: accountingRouter,
-      tasks: tasksRouter,
-    });
+const { prisma: amsPrisma } = await import("../../services/ams/src/prisma");
+const amsServer = (await import("../../services/ams/src/index")).default;
 
-export const raterApp = K8S_MODE
-  ? createHttpClient!("rater")
-  : buildApp({
-      quotes: quotesRouter,
-      carriers: carriersRouter,
-    });
+const { prisma: raterPrisma } = await import("../../services/rater/src/prisma");
+const raterServer = (await import("../../services/rater/src/index")).default;
 
-export const crmApp = K8S_MODE
-  ? createHttpClient!("crm")
-  : buildApp({
-      leads: leadsRouter,
-      campaigns: campaignsRouter,
-      analytics: analyticsRouter,
-    });
+const { prisma: crmPrisma } = await import("../../services/crm/src/prisma");
+const crmServer = (await import("../../services/crm/src/index")).default;
 
-export const ecmApp = K8S_MODE
-  ? createHttpClient!("ecm")
-  : buildApp({
-      documents: documentsRouter,
-      envelopes: envelopesRouter,
-      assets: assetsRouter,
-    });
+const { prisma: ecmPrisma } = await import("../../services/ecm/src/prisma");
+const ecmServer = (await import("../../services/ecm/src/index")).default;
 
-// ── Comm tool handlers (MCP tools — called directly, not via HTTP) ──
+const { prisma: commPrisma } = await import("../../services/comm/src/prisma");
+const commServer = (await import("../../services/comm/src/index")).default;
 
-export { handleGetTranscript } from "../../services/comm/src/tools/get_transcript";
-export { handleSendMessage } from "../../services/comm/src/tools/send_message";
-export { handleGetInbox } from "../../services/comm/src/tools/get_inbox";
+export interface ServiceTestApp {
+  request(
+    path: string,
+    init?: RequestInit & { headers?: Record<string, string> },
+  ): Promise<Response>;
+}
 
-// ── Auth helper ──
+function wrapServiceApp(
+  server: { fetch: (req: Request) => Response | Promise<Response> },
+  port: number,
+): ServiceTestApp {
+  return {
+    async request(path: string, init?: RequestInit): Promise<Response> {
+      const url =
+        path.startsWith("http://") || path.startsWith("https://")
+          ? path
+          : `http://localhost:${port}${path.startsWith("/") ? path : `/${path}`}`;
+      return await server.fetch(new Request(url, init));
+    },
+  };
+}
+
+export const amsApp = wrapServiceApp(amsServer, 3000);
+export const raterApp = wrapServiceApp(raterServer, 3001);
+export const crmApp = wrapServiceApp(crmServer, 3002);
+export const ecmApp = wrapServiceApp(ecmServer, 3003);
+export const commApp = wrapServiceApp(commServer, 3004);
+
+export const ams = { prisma: amsPrisma };
+export const rater = { prisma: raterPrisma };
+export const crm = { prisma: crmPrisma };
+export const ecm = { prisma: ecmPrisma };
+export const comm = { prisma: commPrisma };
+
+// ── Initialize empty SQLite tables on the isolated Prisma clients ────
+
+async function initIntegrationTables() {
+  // AMS tables
+  await amsPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS clients (
+    id TEXT PRIMARY KEY,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    dob TEXT,
+    email TEXT NOT NULL,
+    phone TEXT,
+    address_street TEXT,
+    address_city TEXT,
+    address_state TEXT,
+    address_zip TEXT,
+    driver_license_number TEXT,
+    occupation TEXT,
+    marital_status TEXT,
+    household_id TEXT,
+    preferred_contact_method TEXT,
+    preferred_contact_time TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await amsPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS policies (
+    policy_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL REFERENCES clients(id),
+    carrier_code TEXT NOT NULL,
+    policy_type TEXT NOT NULL,
+    effective_date TEXT NOT NULL,
+    expiration_date TEXT NOT NULL,
+    premium_current REAL NOT NULL,
+    premium_prior REAL,
+    status TEXT NOT NULL DEFAULT 'active',
+    multi_policy_discount INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await amsPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS coverages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    policy_id TEXT NOT NULL REFERENCES policies(policy_id),
+    type TEXT NOT NULL,
+    "limit" TEXT,
+    deductible REAL
+  )`);
+  await amsPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS endorsements (
+    endorsement_id TEXT PRIMARY KEY,
+    policy_id TEXT NOT NULL REFERENCES policies(policy_id),
+    effective_date TEXT NOT NULL,
+    change_type TEXT NOT NULL,
+    changes TEXT NOT NULL,
+    premium_delta REAL,
+    status TEXT NOT NULL DEFAULT 'pending_review',
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await amsPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS commissions (
+    commission_id TEXT PRIMARY KEY,
+    policy_id TEXT NOT NULL REFERENCES policies(policy_id),
+    carrier_code TEXT NOT NULL,
+    transaction_type TEXT NOT NULL,
+    gross_amount REAL NOT NULL,
+    net_amount REAL NOT NULL,
+    commission_rate REAL NOT NULL,
+    effective_date TEXT NOT NULL,
+    payment_date TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    producer_id TEXT,
+    created_at TEXT NOT NULL
+  )`);
+  await amsPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'open',
+    priority TEXT NOT NULL DEFAULT 'medium',
+    task_type TEXT,
+    assigned_to TEXT,
+    related_client_id TEXT,
+    related_policy_id TEXT,
+    due_date TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await amsPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS escalations (
+    escalation_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    policy_id TEXT,
+    reason TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    context TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    manager_response TEXT,
+    poll_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await amsPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS escalation_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    escalation_id TEXT NOT NULL REFERENCES escalations(escalation_id),
+    event_type TEXT NOT NULL,
+    from_status TEXT,
+    to_status TEXT,
+    details TEXT,
+    created_at TEXT NOT NULL
+  )`);
+
+  // Rater tables
+  await raterPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS quote_requests (
+    request_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    policy_type TEXT NOT NULL,
+    effective_date TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    submitted_at TEXT NOT NULL,
+    completed_at TEXT,
+    expires_at TEXT,
+    risk_data TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`);
+  await raterPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS carrier_quotes (
+    quote_id TEXT PRIMARY KEY,
+    request_id TEXT NOT NULL REFERENCES quote_requests(request_id),
+    carrier_code TEXT NOT NULL,
+    carrier_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    premium_annual REAL,
+    premium_monthly REAL,
+    coverages TEXT NOT NULL DEFAULT '[]',
+    deductibles TEXT NOT NULL DEFAULT '{}',
+    decline_reason TEXT,
+    valid_until TEXT,
+    bound_at TEXT,
+    created_at TEXT NOT NULL
+  )`);
+  await raterPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS carriers (
+    carrier_code TEXT PRIMARY KEY,
+    carrier_name TEXT NOT NULL,
+    states TEXT NOT NULL,
+    policy_types TEXT NOT NULL,
+    risk_categories TEXT NOT NULL,
+    appetite_level TEXT NOT NULL,
+    min_driver_age INTEGER,
+    max_vehicles INTEGER,
+    accepts_sr22 INTEGER DEFAULT 0,
+    surplus_lines_only INTEGER DEFAULT 0,
+    sr22_available INTEGER DEFAULT 0,
+    citizens_eligible INTEGER DEFAULT 0,
+    state_restrictions TEXT NOT NULL DEFAULT '[]'
+  )`);
+
+  // CRM tables (note: client_id nullable to support net-new prospect leads)
+  await crmPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS leads (
+    lead_id TEXT PRIMARY KEY,
+    client_id TEXT,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    source TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'new',
+    score INTEGER NOT NULL DEFAULT 0,
+    assigned_producer TEXT,
+    tags TEXT NOT NULL DEFAULT '[]',
+    notes TEXT,
+    last_activity_date TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await crmPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS campaigns (
+    campaign_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    enrolled_count INTEGER NOT NULL DEFAULT 0,
+    conversion_rate REAL NOT NULL DEFAULT 0
+  )`);
+  await crmPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS campaign_enrollments (
+    enrollment_id TEXT PRIMARY KEY,
+    campaign_id TEXT NOT NULL REFERENCES campaigns(campaign_id),
+    client_id TEXT NOT NULL,
+    trigger_reason TEXT,
+    metadata TEXT,
+    enrolled_at TEXT NOT NULL,
+    sequence_step INTEGER NOT NULL DEFAULT 1
+  )`);
+  await crmPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS retention_risks (
+    client_id TEXT PRIMARY KEY,
+    client_name TEXT NOT NULL,
+    risk_score INTEGER NOT NULL,
+    rate_increase_pct REAL,
+    months_since_contact INTEGER,
+    email_open_rate REAL,
+    policies_count INTEGER,
+    recommended_action TEXT,
+    assigned_producer TEXT
+  )`);
+
+  // ECM tables
+  await ecmPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS documents (
+    document_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    document_type TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    file_size_bytes INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'uploaded',
+    upload_date TEXT NOT NULL,
+    signer_name TEXT,
+    signer_email TEXT,
+    signed_date TEXT,
+    expiration_date TEXT,
+    tags TEXT NOT NULL DEFAULT '[]'
+  )`);
+  await ecmPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS envelopes (
+    envelope_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    document_ids TEXT NOT NULL DEFAULT '[]',
+    signers TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'created',
+    message TEXT,
+    redirect_url TEXT,
+    created_at TEXT NOT NULL,
+    completed_at TEXT,
+    expiration_date TEXT NOT NULL
+  )`);
+  await ecmPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS marketing_assets (
+    asset_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    category TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    url TEXT NOT NULL,
+    version TEXT NOT NULL,
+    published_date TEXT NOT NULL
+  )`);
+
+  // Comm tables
+  await commPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS messages (
+    message_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    direction TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    subject TEXT,
+    body TEXT,
+    from_addr TEXT NOT NULL,
+    to_addr TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    read INTEGER NOT NULL DEFAULT 0,
+    call_id TEXT,
+    duration_seconds INTEGER,
+    transcript TEXT,
+    sentiment TEXT,
+    topics TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'delivered',
+    template_id TEXT,
+    attachments TEXT NOT NULL DEFAULT '[]'
+  )`);
+  await commPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS webhooks (
+    webhook_id TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    events TEXT NOT NULL DEFAULT '[]',
+    secret TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL
+  )`);
+  await commPrisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS webhook_deliveries (
+    delivery_id TEXT PRIMARY KEY,
+    webhook_id TEXT NOT NULL,
+    event_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_attempt_at TEXT,
+    next_retry_at TEXT,
+    response_status INTEGER,
+    created_at TEXT NOT NULL
+  )`);
+}
+
+await initIntegrationTables();
+
+// ── Auth & HTTP MCP JSON-RPC helpers ─────────────────────────────────
 
 export async function authHeader(scopes: string[]) {
-  if (K8S_MODE) {
-    const token = await fetchOAuthToken!(scopes);
-    return { Authorization: `Bearer ${token}` };
-  }
   const token = await generateDevToken({ secret: TEST_SECRET, scopes });
   return { Authorization: `Bearer ${token}` };
 }
 
-// ── Seed helpers (no-ops in K8s mode — data seeded by init containers) ──
+let mcpRequestSeq = 1;
+
+export interface McpToolCallResult {
+  content: Array<{ type: string; text: string }>;
+  isError?: boolean;
+}
+
+export async function callCommMcpJsonRpc(
+  method: string,
+  params?: Record<string, unknown>,
+  scopes: string[] = [
+    "comm:messages:read",
+    "comm:messages:write",
+    "comm:calls:read",
+    "comm:webhooks:write",
+  ],
+): Promise<any> {
+  const headers = await authHeader(scopes);
+  const res = await commApp.request("/mcp", {
+    method: "POST",
+    headers: {
+      ...headers,
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: mcpRequestSeq++,
+      method,
+      ...(params !== undefined ? { params } : {}),
+    }),
+  });
+
+  const rawText = await res.text();
+  if (res.status !== 200) {
+    throw new Error(`Comm /mcp HTTP ${res.status}: ${rawText}`);
+  }
+
+  const contentType = res.headers.get("content-type") ?? "";
+  let envelope: any;
+  if (contentType.includes("text/event-stream")) {
+    const dataPayloads = rawText
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim())
+      .filter(Boolean);
+    envelope = JSON.parse(dataPayloads[dataPayloads.length - 1]);
+  } else {
+    envelope = JSON.parse(rawText);
+  }
+
+  if (envelope.error) {
+    throw new Error(`Comm /mcp JSON-RPC error: ${JSON.stringify(envelope.error)}`);
+  }
+  return envelope.result;
+}
+
+export async function callCommMcpTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  scopes?: string[],
+): Promise<McpToolCallResult> {
+  return (await callCommMcpJsonRpc(
+    "tools/call",
+    { name: toolName, arguments: args },
+    scopes,
+  )) as McpToolCallResult;
+}
+
+// ── Prisma-backed seed helpers ───────────────────────────────────────
 
 const now = new Date().toISOString();
 
-export function seedAmsClient(overrides: Partial<typeof amsSchema.clients.$inferInsert> = {}) {
-  if (K8S_MODE) return { id: "CLI-001", ...overrides };
+export async function seedAmsClient(overrides: Record<string, any> = {}) {
   const client = {
     id: "CLI-001",
     first_name: "John",
     last_name: "Smith",
+    dob: null,
     email: "john.smith@email.com",
     phone: "+1-312-555-0100",
+    address_street: null,
+    address_city: null,
     address_state: "IL",
+    address_zip: null,
+    driver_license_number: null,
+    occupation: null,
+    marital_status: null,
+    household_id: null,
+    preferred_contact_method: null,
+    preferred_contact_time: null,
     status: "active",
     created_at: now,
     updated_at: now,
     ...overrides,
   };
-  ams.db.insert(amsSchema.clients).values(client).run();
+  await amsPrisma.client.upsert({
+    where: { id: client.id },
+    update: client,
+    create: client,
+  });
   return client;
 }
 
-export function seedAmsPolicy(overrides: Partial<typeof amsSchema.policies.$inferInsert> = {}) {
-  if (K8S_MODE) return { policy_id: "POL-test", ...overrides };
+export async function seedAmsPolicy(overrides: Record<string, any> = {}) {
   const policy = {
     policy_id: `POL-${Math.random().toString(36).slice(2, 8)}`,
     client_id: "CLI-001",
@@ -548,12 +502,15 @@ export function seedAmsPolicy(overrides: Partial<typeof amsSchema.policies.$infe
     updated_at: now,
     ...overrides,
   };
-  ams.db.insert(amsSchema.policies).values(policy).run();
+  await amsPrisma.policy.upsert({
+    where: { policy_id: policy.policy_id },
+    update: policy,
+    create: policy,
+  });
   return policy;
 }
 
-export function seedRaterCarrier(overrides: Partial<typeof raterSchema.carriers.$inferInsert> = {}) {
-  if (K8S_MODE) return { carrier_code: "TRAV", ...overrides };
+export async function seedRaterCarrier(overrides: Record<string, any> = {}) {
   const carrier = {
     carrier_code: "TRAV",
     carrier_name: "Summit Fire & Casualty",
@@ -564,14 +521,21 @@ export function seedRaterCarrier(overrides: Partial<typeof raterSchema.carriers.
     min_driver_age: 16,
     max_vehicles: 6,
     accepts_sr22: false,
+    surplus_lines_only: false,
+    sr22_available: false,
+    citizens_eligible: false,
+    state_restrictions: "[]",
     ...overrides,
   };
-  rater.db.insert(raterSchema.carriers).values(carrier).run();
+  await raterPrisma.carrier.upsert({
+    where: { carrier_code: carrier.carrier_code },
+    update: carrier,
+    create: carrier,
+  });
   return carrier;
 }
 
-export function seedCrmLead(overrides: Partial<typeof crmSchema.leads.$inferInsert> = {}) {
-  if (K8S_MODE) return { lead_id: "lead_test", ...overrides };
+export async function seedCrmLead(overrides: Record<string, any> = {}) {
   const lead = {
     lead_id: `lead_${Math.random().toString(36).slice(2, 10)}`,
     client_id: "CLI-001",
@@ -590,12 +554,15 @@ export function seedCrmLead(overrides: Partial<typeof crmSchema.leads.$inferInse
     updated_at: now,
     ...overrides,
   };
-  crm.db.insert(crmSchema.leads).values(lead).run();
+  await crmPrisma.lead.upsert({
+    where: { lead_id: lead.lead_id },
+    update: lead as any,
+    create: lead as any,
+  });
   return lead;
 }
 
-export function seedCrmCampaign(overrides: Partial<typeof crmSchema.campaigns.$inferInsert> = {}) {
-  if (K8S_MODE) return { campaign_id: "camp_test", ...overrides };
+export async function seedCrmCampaign(overrides: Record<string, any> = {}) {
   const campaign = {
     campaign_id: `camp_${Math.random().toString(36).slice(2, 10)}`,
     name: "Test Campaign",
@@ -605,12 +572,15 @@ export function seedCrmCampaign(overrides: Partial<typeof crmSchema.campaigns.$i
     conversion_rate: 0,
     ...overrides,
   };
-  crm.db.insert(crmSchema.campaigns).values(campaign).run();
+  await crmPrisma.campaign.upsert({
+    where: { campaign_id: campaign.campaign_id },
+    update: campaign,
+    create: campaign,
+  });
   return campaign;
 }
 
-export function seedCrmRetentionRisk(overrides: Partial<typeof crmSchema.retentionRisks.$inferInsert> = {}) {
-  if (K8S_MODE) return { client_id: "CLI-001", ...overrides };
+export async function seedCrmRetentionRisk(overrides: Record<string, any> = {}) {
   const risk = {
     client_id: "CLI-001",
     client_name: "John Smith",
@@ -623,12 +593,15 @@ export function seedCrmRetentionRisk(overrides: Partial<typeof crmSchema.retenti
     assigned_producer: "prod_44e1bc90",
     ...overrides,
   };
-  crm.db.insert(crmSchema.retentionRisks).values(risk).run();
+  await crmPrisma.retentionRisk.upsert({
+    where: { client_id: risk.client_id },
+    update: risk,
+    create: risk,
+  });
   return risk;
 }
 
-export function seedEcmDocument(overrides: Partial<typeof ecmSchema.documents.$inferInsert> = {}) {
-  if (K8S_MODE) return { document_id: "doc_test", ...overrides };
+export async function seedEcmDocument(overrides: Record<string, any> = {}) {
   const doc = {
     document_id: `doc_${Math.random().toString(36).slice(2, 10)}`,
     client_id: "CLI-001",
@@ -645,12 +618,15 @@ export function seedEcmDocument(overrides: Partial<typeof ecmSchema.documents.$i
     tags: JSON.stringify([]),
     ...overrides,
   };
-  ecm.db.insert(ecmSchema.documents).values(doc).run();
+  await ecmPrisma.document.upsert({
+    where: { document_id: doc.document_id },
+    update: doc,
+    create: doc,
+  });
   return doc;
 }
 
-export function seedEcmAsset(overrides: Partial<typeof ecmSchema.marketingAssets.$inferInsert> = {}) {
-  if (K8S_MODE) return { asset_id: "asset_test", ...overrides };
+export async function seedEcmAsset(overrides: Record<string, any> = {}) {
   const asset = {
     asset_id: `asset_${Math.random().toString(36).slice(2, 10)}`,
     name: "Test Asset",
@@ -662,17 +638,20 @@ export function seedEcmAsset(overrides: Partial<typeof ecmSchema.marketingAssets
     published_date: now,
     ...overrides,
   };
-  ecm.db.insert(ecmSchema.marketingAssets).values(asset).run();
+  await ecmPrisma.marketingAsset.upsert({
+    where: { asset_id: asset.asset_id },
+    update: asset,
+    create: asset,
+  });
   return asset;
 }
 
-export function seedCommMessage(overrides: Partial<typeof commSchema.messages.$inferInsert> = {}) {
-  if (K8S_MODE) return { message_id: "msg_test", ...overrides };
+export async function seedCommMessage(overrides: Record<string, any> = {}) {
   const msg = {
     message_id: `msg_${Math.random().toString(36).slice(2, 10)}`,
     client_id: "CLI-001",
-    direction: "inbound" as const,
-    channel: "email" as const,
+    direction: "inbound",
+    channel: "email",
     subject: "Test",
     body: "Test body",
     from_addr: "test@example.com",
@@ -689,6 +668,10 @@ export function seedCommMessage(overrides: Partial<typeof commSchema.messages.$i
     attachments: "[]",
     ...overrides,
   };
-  comm.drizzleDb.insert(commSchema.messages).values(msg).run();
+  await commPrisma.message.upsert({
+    where: { message_id: msg.message_id },
+    update: msg,
+    create: msg,
+  });
   return msg;
 }

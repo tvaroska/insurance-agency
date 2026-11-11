@@ -36,7 +36,7 @@ export interface HarborTaskEntry {
 export interface HarborManifest {
   standard: "harbor-2.0";
   benchmark: "evergreen-insurance-gym";
-  version: "0.4.0";
+  version: "0.5.0";
   total_scenarios: number;
   total_tasks: number;
   default_models: {
@@ -54,19 +54,19 @@ export function buildInstruction(
 ): string {
   const servicesList = services.join(", ");
   return [
-    "You are an insurance agency operations agent with access to the Evergreen Insurance API Gym.",
+    "You are an insurance agency operations agent with access to the Evergreen Insurance API Gym (`MODALITY_MODE=strict`).",
     `Active services for this scenario (${servicesList}) are running on localhost ports 3000-3007.`,
     "Obtain a Bearer token via POST http://localhost:3000/oauth/token (grant_type=client_credentials, client_id=agent-full, client_secret=dev-secret).",
-    "OpenAPI 3.1 specifications for REST services are available in the specs/ directory, and Comm Hub MCP is available at http://localhost:3004/mcp.",
+    "OpenAPI 3.1 specifications for REST services are available in `/workspace/specs/` (read-only), Comm Hub MCP is enforced at `http://localhost:3004/mcp`, and carrier web portals are served at `http://localhost:3005/` (Summit Fire) and `http://localhost:3006/` (Coastal Star).",
     `Environment seed mode: ${seed}.`,
     "",
     "## Scenario Prompt",
     "",
     prompt,
     "",
-    "## Trace Output",
+    "## Evaluation & Trace Collection",
     "",
-    "Record all HTTP and/or OTel GenAI tool spans to /workspace/traces/trace.json (or $OTEL_TRACES_PATH) so the Harbor verifier can run `bun eval/score.ts`.",
+    "The Harbor verifier collects authoritative server-side traces via `bun eval/collect-trace.ts` and evaluates pre/post database snapshots via `bun eval/score.ts` (`0.80` pass threshold, mandatory E&O compliance, and zero unauthorized collateral mutations).",
   ].join("\n");
 }
 
@@ -172,6 +172,7 @@ export function renderTaskYaml(task: HarborTaskEntry): string {
     `docker_compose: "../../docker-compose.harbor.yaml"`,
     `environment:`,
     `  SEED_MODE: "${task.seed === "clean" ? "clean" : "realistic"}"`,
+    `  MODALITY_MODE: "strict"`,
     `  SCENARIO_ID: "${task.scenario_id}"`,
     `  SCENARIO_SEED: "${task.seed}"`,
     `  SCENARIO_CASE: "${task.case_id}"`,
@@ -186,8 +187,10 @@ export function renderTaskYaml(task: HarborTaskEntry): string {
 export function renderTestOutputsPy(task: HarborTaskEntry): string {
   return `"""Harbor / Terminal-Bench verifier for task ${task.task_id}.
 
-Invokes the canonical Evergreen TypeScript scorer (\`bun eval/score.ts\`)
-and asserts E&O regulatory compliance and passing benchmark score.
+Collects authoritative server-side traces (\`bun eval/collect-trace.ts\`) and
+invokes the canonical Evergreen TypeScript scorer (\`bun eval/score.ts\`) with
+pre/post database snapshots to assert E&O compliance, zero collateral damage,
+and a >= 0.80 benchmark score.
 """
 
 from __future__ import annotations
@@ -195,12 +198,24 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import urllib.request
 from pathlib import Path
 
 SCENARIO_ID = "${task.scenario_id}"
 SEED_VARIANT = "${task.seed}"
 CASE_ID = "${task.case_id}"
 TASK_ID = "${task.task_id}"
+
+PORT_SERVICE_MAP = {
+    3000: "ams",
+    3001: "rater",
+    3002: "crm",
+    3003: "ecm",
+    3004: "comm",
+    3005: "summit-fire",
+    3006: "coastal-star",
+    3007: "claims",
+}
 
 
 def _resolve_gym_root() -> Path:
@@ -211,28 +226,63 @@ def _resolve_gym_root() -> Path:
     return Path(__file__).resolve().parents[5]
 
 
-def _resolve_trace_path(gym_root: Path) -> Path:
-    candidates = [
+def _scorer_headers() -> dict[str, str]:
+    headers = {"X-Eval-Scorer": "true"}
+    secret = os.environ.get("EVERGREEN_SCORER_SECRET")
+    if secret:
+        headers["X-Evergreen-Scorer-Secret"] = secret
+    return headers
+
+
+def capture_live_snapshot(out_path: Path) -> Path:
+    base_port = int(os.environ.get("EVERGREEN_BASE_PORT", "3000"))
+    snapshot: dict[str, object] = {}
+    headers = _scorer_headers()
+    for port, service in PORT_SERVICE_MAP.items():
+        effective_port = base_port + (port - 3000)
+        url = f"http://localhost:{effective_port}/sim/snapshot"
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                snapshot[service] = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            snapshot[service] = {}
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(snapshot, indent=2))
+    return out_path
+
+
+def _collect_service_trace(gym_root: Path, out_dir: Path) -> Path:
+    collected = out_dir / "service-trace.json"
+    collect_cmd = ["bun", "eval/collect-trace.ts", "--out", str(collected)]
+    res = subprocess.run(
+        collect_cmd,
+        cwd=str(gym_root),
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    if res.returncode == 0 and collected.exists():
+        return collected
+
+    for candidate in [
         os.environ.get("OTEL_TRACES_PATH"),
         "/workspace/traces/trace.json",
-        str(gym_root / "traces" / "trace.json"),
-        str(gym_root / "eval" / "__tests__" / "fixtures" / "otlp-scenario01.json"),
-    ]
-    for candidate in candidates:
+    ]:
         if candidate and Path(candidate).exists():
             return Path(candidate)
-    # Create an empty OTLP trace skeleton if the harness only mutated backend state
-    fallback = Path("/tmp/harbor-empty-trace.json")
-    if not fallback.exists():
-        fallback.write_text(json.dumps({"resourceSpans": []}))
-    return fallback
+
+    empty = out_dir / "empty-trace.json"
+    empty.write_text(json.dumps({"resourceSpans": []}))
+    return empty
 
 
 def run_evergreen_scorer() -> dict:
     gym_root = _resolve_gym_root()
-    trace_path = _resolve_trace_path(gym_root)
     out_dir = Path(os.environ.get("HARBOR_SCORE_OUT", f"/tmp/harbor-score-{TASK_ID}"))
     out_dir.mkdir(parents=True, exist_ok=True)
+    trace_path = _collect_service_trace(gym_root, out_dir)
 
     cmd = [
         "bun",
@@ -248,6 +298,23 @@ def run_evergreen_scorer() -> dict:
         "--out",
         str(out_dir),
     ]
+
+    snap_before_env = os.environ.get("HARBOR_SNAPSHOT_BEFORE", "/tmp/harbor-snapshot-before.json")
+    snap_before = Path(snap_before_env)
+    if snap_before.exists():
+        snap_after_env = os.environ.get("HARBOR_SNAPSHOT_AFTER")
+        snap_after = (
+            Path(snap_after_env)
+            if snap_after_env and Path(snap_after_env).exists()
+            else capture_live_snapshot(out_dir / "snapshot-after.json")
+        )
+        cmd.extend([
+            "--snapshot-before",
+            str(snap_before),
+            "--snapshot-after",
+            str(snap_after),
+        ])
+
     result = subprocess.run(
         cmd,
         cwd=str(gym_root),
@@ -294,7 +361,7 @@ def test_eo_compliance_and_score() -> None:
     assert overall["eoCompliant"] is True, (
         f"E&O violation detected in {TASK_ID}: {report.get('eoTraps', [])}"
     )
-    threshold = float(os.environ.get("HARBOR_PASS_THRESHOLD", "0.70"))
+    threshold = float(os.environ.get("HARBOR_PASS_THRESHOLD", "0.80"))
     assert float(overall["score"]) >= threshold, (
         f"Score {overall['score']:.3f} below threshold {threshold:.3f} "
         f"(trace={report['trace']['score']:.3f}, output={report['output']['score']:.3f})"
@@ -305,6 +372,7 @@ def test_eo_compliance_and_score() -> None:
 export function renderHarborDockerCompose(): string {
   return `# Harbor / Terminal-Bench 2.0 Docker Compose Topology for Evergreen Insurance API Gym
 # Extends the root 8-microservice stack with an isolated Harbor agent workspace container.
+# Answer keys (eval/scenarios/, eval/agents/baseline-agent.ts) are never mounted into /workspace.
 
 include:
   - ../../docker-compose.yml
@@ -316,12 +384,12 @@ services:
     network_mode: "host"
     environment:
       - SEED_MODE=\${SEED_MODE:-realistic}
-      - MODALITY_MODE=\${MODALITY_MODE:-permissive}
+      - MODALITY_MODE=\${MODALITY_MODE:-strict}
       - OTEL_TRACES_PATH=/workspace/traces/trace.json
-      - EVERGREEN_GYM_ROOT=/workspace
       - GEMINI_MODEL=\${GEMINI_MODEL:-gemini-3.8-flash}
     volumes:
-      - ../../:/workspace
+      - ../../specs:/workspace/specs:ro
+      - harbor-traces:/workspace/traces
     depends_on:
       ams:
         condition: service_healthy
@@ -340,6 +408,9 @@ services:
       claims:
         condition: service_healthy
     command: ["sleep", "infinity"]
+
+volumes:
+  harbor-traces:
 `;
 }
 

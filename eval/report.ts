@@ -247,13 +247,17 @@ export function formatMarkdown(report: ScenarioReport): string {
     const rb = report.rubric;
     const cal = rb.calibration;
     lines.push(
-      `## Tier-2 Atomic Rubric: ${pct(rb.score)} (Rogan-Gladen Debiased: ${pct(rb.debiasedScore)})`,
+      cal
+        ? `## Tier-2 Atomic Rubric: ${pct(rb.score)} (Rogan-Gladen Debiased: ${pct(rb.debiasedScore)})`
+        : `## Tier-2 Atomic Rubric: ${pct(rb.score)}`,
     );
     lines.push("");
     lines.push(`- **Judge Model:** \`${rb.judgeModel}\``);
-    lines.push(
-      `- **Rogan-Gladen 95% CI:** [${pct(cal.ci95Lower)}, ${pct(cal.ci95Upper)}] (TPR=${cal.tprSensitivity.toFixed(2)}, TNR=${cal.tnrSpecificity.toFixed(2)}, Youden's J=${cal.youdenJ.toFixed(2)})`,
-    );
+    if (cal) {
+      lines.push(
+        `- **Rogan-Gladen 95% CI:** [${pct(cal.ci95Lower)}, ${pct(cal.ci95Upper)}] (TPR=${cal.tprSensitivity.toFixed(2)}, TNR=${cal.tnrSpecificity.toFixed(2)}, Youden's J=${cal.youdenJ.toFixed(2)})`,
+      );
+    }
     lines.push("");
     lines.push("| Criterion | Weight | Score | Result | Reasoning Trace |");
     lines.push("|-----------|--------|-------|--------|-----------------|");
@@ -287,25 +291,25 @@ export interface ExecutiveScenarioMatrixRow {
 
 export const EXECUTIVE_SCENARIO_MATRIX: ExecutiveScenarioMatrixRow[] = [
   { id: "01", executiveFunction: "Personal & Commercial Quoting", title: "New Client Intake & Multi-Carrier Auto Quote", modalities: "REST (AMS, Rater)", eoGuardrail: "State statutory liability floor check", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "02", executiveFunction: "1st-Line E&O & Endorsements", title: "Mid-Term Policy Endorsement & Vehicle Addition", modalities: "REST + MCP (AMS, Rater, Comm)", eoGuardrail: "Effective date & coverage continuity verification", stage3Handler: "privy:endorsement-guard", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "02", executiveFunction: "1st-Line E&O & Endorsements", title: "Mid-Term Policy Endorsement & Vehicle Addition", modalities: "REST + MCP (AMS, Rater, Comm)", eoGuardrail: "Effective date & coverage continuity verification", stage3Handler: "compiled:endorsement-guard", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
   { id: "03", executiveFunction: "Policy Binding & Underwriting", title: "End-to-End Policy Binding & Commission Ledger", modalities: "REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "Signed ACORD app + >$10K Principal cap", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
   { id: "04", executiveFunction: "Book-of-Business Audit", title: "Duplicate Client Detection & Household Entity Merge", modalities: "REST (AMS, CRM, ECM)", eoGuardrail: "Zero orphaned policies or loss of audit history", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "05", executiveFunction: "Retention & Remarketing", title: "Renewal Re-Shop & Rate-Spike (>20%) Remarketing", modalities: "REST + MCP (AMS, Rater, CRM, Comm)", eoGuardrail: "No coverage reduction without written consent", stage3Handler: "privy:renewal-monitor", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "05", executiveFunction: "Retention & Remarketing", title: "Renewal Re-Shop & Rate-Spike (>20%) Remarketing", modalities: "REST + MCP (AMS, Rater, CRM, Comm)", eoGuardrail: "No coverage reduction without written consent", stage3Handler: "compiled:renewal-monitor", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
   { id: "06", executiveFunction: "Growth & Cross-Sell", title: "Cross-Sell Detection & Coverage Gap Campaign", modalities: "REST + MCP (AMS, CRM, Rater, Comm)", eoGuardrail: "Underlying BI limit verification for Umbrella", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "07", executiveFunction: "Claims & SIU Advocacy", title: "FNOL Claim Filing, Coverage Verification & SIU Triage (:3007)", modalities: "REST + MCP (AMS, Claims, ECM, Comm)", eoGuardrail: "Zero coverage admission + attorney escalation", stage3Handler: "privy:claims-intake", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "08", executiveFunction: "1st-Line E&O & Endorsements", title: "E&O Trap Navigation & 10-State Statutory Minimum Firewall", modalities: "REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "HTTP 422 on state-min, backdating, or >$10K bind", stage3Handler: "privy:endorsement-guard", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "07", executiveFunction: "Claims & SIU Advocacy", title: "FNOL Claim Filing, Coverage Verification & SIU Triage (:3007)", modalities: "REST + MCP (AMS, Claims, ECM, Comm)", eoGuardrail: "Zero coverage admission + attorney escalation", stage3Handler: "compiled:claims-intake", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "08", executiveFunction: "1st-Line E&O & Endorsements", title: "E&O Trap Navigation & 10-State Statutory Minimum Firewall", modalities: "REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "HTTP 422 on state-min, backdating, or >$10K bind", stage3Handler: "compiled:endorsement-guard", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
   { id: "09", executiveFunction: "Legacy Carrier Web Portals", title: "Carrier Denial Recovery & Coastal Star Auto Portal (:3006)", modalities: "Browser Portal + REST + MCP (Coastal, Rater, AMS, Comm)", eoGuardrail: "MVR violation gate & non-standard re-quote", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "10", executiveFunction: "Book-of-Business Audit", title: "15-Anomaly Full Book-of-Business Compliance Audit", modalities: "REST + MCP (AMS, CRM, ECM, Claims, Comm)", eoGuardrail: "15/15 E&O, unsigned doc, and gap detection", stage3Handler: "privy:renewal-monitor", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "10", executiveFunction: "Book-of-Business Audit", title: "15-Anomaly Full Book-of-Business Compliance Audit", modalities: "REST + MCP (AMS, CRM, ECM, Claims, Comm)", eoGuardrail: "15/15 E&O, unsigned doc, and gap detection", stage3Handler: "compiled:renewal-monitor", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
   { id: "11", executiveFunction: "Growth & Cross-Sell", title: "Client Meeting Prep & Holistic Account Dossier", modalities: "REST + MCP (AMS, CRM, ECM, Claims, Comm)", eoGuardrail: "Open claim & unsigned document check before review", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "12", executiveFunction: "Commercial & Personal Servicing", title: "Policy Status, Endorsement & Billing Inquiry", modalities: "REST + MCP (AMS, ECM, Comm)", eoGuardrail: "Identity & active policy status verification", stage3Handler: "privy:cert-issuer", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "13", executiveFunction: "Commercial Servicing (COI)", title: "ACORD 25 Certificate of Insurance Generation & PDF Audit", modalities: "REST + MCP (AMS, ECM, Comm)", eoGuardrail: "Endorsement verification + real ACORD 25 PDF", stage3Handler: "privy:cert-issuer", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "12", executiveFunction: "Commercial & Personal Servicing", title: "Policy Status, Endorsement & Billing Inquiry", modalities: "REST + MCP (AMS, ECM, Comm)", eoGuardrail: "Identity & active policy status verification", stage3Handler: "compiled:coi-issuer", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "13", executiveFunction: "Commercial Servicing (COI)", title: "ACORD 25 Certificate of Insurance Generation & PDF Audit", modalities: "REST + MCP (AMS, ECM, Comm)", eoGuardrail: "Endorsement verification + real ACORD 25 PDF", stage3Handler: "compiled:coi-issuer", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
   { id: "14", executiveFunction: "Legacy Carrier Web Portals", title: "Lead Qualification & Summit Fire Commercial Portal (:3005)", modalities: "Browser Portal + REST + MCP (Summit, CRM, Rater, AMS)", eoGuardrail: "Commercial appetite & >$10K Principal cap", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
   { id: "15", executiveFunction: "Accounting & Operations", title: "Carrier Commission Statement Reconciliation & Variance Audit", modalities: "REST (AMS Accounting, Policies, Tasks)", eoGuardrail: "Immutable commission ledger reconciliation", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
   { id: "16", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Household Driver Swap & MVR Pivot", modalities: "Multi-Turn REST + MCP (AMS, Rater, Comm)", eoGuardrail: "Household driver disclosure & VIN verification", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "17", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Commercial COI Venue & Blanket AI Pivot", modalities: "Multi-Turn REST + MCP (AMS, ECM, Comm)", eoGuardrail: "Refuses unendorsed Blanket AI; escalates CG 20 10", stage3Handler: "privy:cert-issuer -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "18", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Endorsement Backdate Trap & Claim Pivot", modalities: "Multi-Turn REST + MCP (AMS, Claims, Comm)", eoGuardrail: "HTTP 422 on backdating after prior-loss disclosure", stage3Handler: "privy:endorsement-guard -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "19", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Claim Reversal & Third-Party Attorney Pivot", modalities: "Multi-Turn REST + MCP (AMS, Claims, Comm)", eoGuardrail: "Immediate Principal escalation on counsel notice", stage3Handler: "privy:claims-intake -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "20", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Quote Bind & Statutory Minimum Floor Pivot", modalities: "Multi-Turn REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "HTTP 422 hard block + statutory floor quote", stage3Handler: "privy:endorsement-guard -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "17", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Commercial COI Venue & Blanket AI Pivot", modalities: "Multi-Turn REST + MCP (AMS, ECM, Comm)", eoGuardrail: "Refuses unendorsed Blanket AI; escalates CG 20 10", stage3Handler: "compiled:coi-issuer -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "18", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Endorsement Backdate Trap & Claim Pivot", modalities: "Multi-Turn REST + MCP (AMS, Claims, Comm)", eoGuardrail: "HTTP 422 on backdating after prior-loss disclosure", stage3Handler: "compiled:endorsement-guard -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "19", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Claim Reversal & Third-Party Attorney Pivot", modalities: "Multi-Turn REST + MCP (AMS, Claims, Comm)", eoGuardrail: "Immediate Principal escalation on counsel notice", stage3Handler: "compiled:claims-intake -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "20", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Quote Bind & Statutory Minimum Floor Pivot", modalities: "Multi-Turn REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "HTTP 422 hard block + statutory floor quote", stage3Handler: "compiled:endorsement-guard -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
 ];
 
 export function formatExecutiveScorecardHtml(
@@ -573,7 +577,7 @@ export function formatExecutiveScorecardHtml(
 
     <section class="card">
       <h2>2. 3-Stage Agent-to-Code Evolution (Compounding Servicing Economics)</h2>
-      <p class="sub">Compares measured v0.7 zero-shot tool discovery against projected domain skill injection and $0-token compiled TypeScript execution with automatic Stage-2 Skill fallback on client pivots.</p>
+      <p class="sub">Compares the measured v0.8 run (20 workflows, 5 trials each, strict mode) of zero-shot agents and a domain skill procedure guide against $0-token compiled TypeScript execution with automatic Stage-2 Skill fallback on client pivots. Token and latency columns for Stages 1 and 2 are not measured.</p>
       <table>
         <thead>
           <tr>
@@ -588,25 +592,25 @@ export function formatExecutiveScorecardHtml(
         </thead>
         <tbody>
           <tr>
-            <td><strong>Stage 1: General Agent (Measured v0.7)</strong></td>
-            <td>Zero-shot tool discovery across 8 services (<code>gemini-3.8-flash</code> 66.7%, <code>claude-sonnet-5-5</code> 50.0%, <code>DeepSeek-V4.1-Flash</code> 33.3%)</td>
-            <td class="mono">6,500 tok</td>
-            <td class="mono">$0.010–$0.079</td>
-            <td class="mono">3,900 ms</td>
-            <td class="mono">33.3%–66.7% (0.53–0.68 mean)</td>
-            <td><span class="chip chip-warn">16.7%–66.7% false-done</span></td>
+            <td><strong>Stage 1: General Agent (Measured v0.8)</strong></td>
+            <td>Zero-shot tool discovery across 8 services (<code>DeepSeek-V4.1-Flash</code> 59.0%, <code>gemini-3.8-flash</code> 58.0%, <code>claude-sonnet-5-5</code> 55.0%)</td>
+            <td class="mono">n/a</td>
+            <td class="mono">$0.033–$0.120</td>
+            <td class="mono">n/a</td>
+            <td class="mono">55.0%–59.0%</td>
+            <td><span class="chip chip-warn">39.2%–47.1% pass^5 · 37%–50% false-done</span></td>
           </tr>
           <tr>
-            <td><strong>Stage 2: Domain Skill (Projected)</strong></td>
-            <td>Insurance playbook + 10-state statutory tables + portal sequences</td>
-            <td class="mono">2,700 tok</td>
-            <td class="mono">$0.0012</td>
-            <td class="mono">1,650 ms</td>
-            <td class="mono">97.0% (proj.)</td>
-            <td><span class="chip chip-info">85.9% (proj.)</span></td>
+            <td><strong>Stage 2: Domain Skill (Measured v0.8)</strong></td>
+            <td>One-page agency procedure guide appended to the prompt (<code>gemini-3.8-flash</code>)</td>
+            <td class="mono">n/a</td>
+            <td class="mono">$0.058</td>
+            <td class="mono">n/a</td>
+            <td class="mono">69.0%</td>
+            <td><span class="chip chip-info">60.2% pass^5 · 35% false-done</span></td>
           </tr>
           <tr>
-            <td><strong>Stage 3: Compiled Code (<code>privy:*</code>)</strong></td>
+            <td><strong>Stage 3: Compiled Code (<code>compiled:*</code>)</strong></td>
             <td>Deterministic TypeScript handlers + <code>FallbackToSkill</code> on pivots (Scenarios 17–20)</td>
             <td class="mono">0 tok (routine)</td>
             <td class="mono">$0.0000</td>

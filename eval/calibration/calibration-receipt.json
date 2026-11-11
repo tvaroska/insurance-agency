@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-11-11T00:44:38.693Z",
+  "benchmarkPath": "eval/calibration/rubric_gold_120.json",
+  "totalItems": 120,
+  "criteriaCount": 10,
+  "evaluatorMode": "deterministic-rule",
+  "judgeModel": "deterministic-rule",
+  "interRaterReliability": {
+    "rawPercentAgreement": 0.9667,
+    "gwetsAc2": 0.9333,
+    "krippendorffAlpha": 0.9336,
+    "passesIrrGate": true
+  },
+  "confusionMatrix": {
+    "tp": 58,
+    "fp": 6,
+    "tn": 54,
+    "fn": 2,
+    "nPos": 60,
+    "nNeg": 60,
+    "total": 120,
+    "tprSensitivity": 0.9667,
+    "tnrSpecificity": 0.9,
+    "youdenJ": 0.8667,
+    "accuracy": 0.9333,
+    "f1": 0.9355
+  },
+  "perPrincipleAccuracy": {
+    "EVAL-P01": {
+      "total": 12,
+      "correct": 11,
+      "accuracy": 0.9167
+    },
+    "EVAL-P02": {
+      "total": 12,
+      "correct": 11,
+      "accuracy": 0.9167
+    },
+    "EVAL-P03": {
+      "total": 12,
+      "correct": 11,
+      "accuracy": 0.9167
+    },
+    "EVAL-P04": {
+      "total": 12,
+      "correct": 11,
+      "accuracy": 0.9167
+    },
+    "EVAL-P05": {
+      "total": 12,
+      "correct": 11,
+      "accuracy": 0.9167
+    },
+    "EVAL-P06": {
+      "total": 12,
+      "correct": 12,
+      "accuracy": 1
+    },
+    "EVAL-P07": {
+      "total": 12,
+      "correct": 11,
+      "accuracy": 0.9167
+    },
+    "EVAL-P08": {
+      "total": 12,
+      "correct": 12,
+      "accuracy": 1
+    },
+    "EVAL-P09": {
+      "total": 12,
+      "correct": 11,
+      "accuracy": 0.9167
+    },
+    "EVAL-P10": {
+      "total": 12,
+      "correct": 11,
+      "accuracy": 0.9167
+    }
+  }
+}

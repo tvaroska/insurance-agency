@@ -1,9 +1,6 @@
 import { prisma } from "./prisma";
 import { join } from "path";
 
-const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
-const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
-
 interface SeedMessage {
   message_id: string;
   client_id: string;
@@ -22,8 +19,8 @@ interface SeedMessage {
   topics?: string[];
 }
 
-async function loadJson<T>(filename: string): Promise<T> {
-  const path = join(SEED_DIR, filename);
+async function loadJson<T>(seedDir: string, filename: string): Promise<T> {
+  const path = join(seedDir, filename);
   const file = Bun.file(path);
   return file.json() as Promise<T>;
 }
@@ -75,17 +72,24 @@ async function createTables() {
   )`);
 }
 
-async function seed() {
-  console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
-  console.log("Creating tables...");
+export async function seedDatabase(
+  seedMode = process.env.SEED_MODE || "realistic",
+): Promise<void> {
+  const seedFolder = seedMode === "clean" ? "seed-clean" : "seed";
+  const seedDir = join(import.meta.dir, "..", "..", "..", "data", seedFolder);
+  const verbose = import.meta.main;
+
+  if (verbose) {
+    console.log(`Seed mode: ${seedFolder} (seedMode=${seedMode})`);
+    console.log("Creating tables...");
+  }
   await createTables();
 
-  console.log("Loading seed data...");
-  const messagesData = await loadJson<SeedMessage[]>("communications.json");
-  console.log(`Loaded: ${messagesData.length} messages`);
+  const messagesData = await loadJson<SeedMessage[]>(seedDir, "communications.json");
+  if (verbose) {
+    console.log(`Loaded: ${messagesData.length} messages`);
+  }
 
-  // Insert messages (map from/to → from_addr/to_addr)
-  console.log("Seeding messages...");
   await prisma.message.createMany({
     data: messagesData.map((m) => ({
       message_id: m.message_id,
@@ -109,14 +113,16 @@ async function seed() {
     })),
   });
 
-  // Verify counts
-  const count = await prisma.message.count();
-
-  console.log("\nSeed complete:");
-  console.log(`  messages: ${count} rows`);
+  if (verbose) {
+    const count = await prisma.message.count();
+    console.log("\nSeed complete:");
+    console.log(`  messages: ${count} rows`);
+  }
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  seedDatabase().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}

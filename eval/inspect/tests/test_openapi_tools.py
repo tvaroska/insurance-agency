@@ -78,14 +78,14 @@ def test_one_tool_per_operation_named_by_operation_id():
     tools = build_rest_tools(FakeServices().client())
     expected = [op_id for service in REST_SERVICES for op_id in spec_operation_ids(service)]
 
-    assert len(tools) == len(expected) == 50
+    assert len(tools) == len(expected) == 56
     assert sorted(tool.name for tool in tools) == sorted(expected)
     assert len({tool.name for tool in tools}) == len(expected)
     assert Counter(op.service for op in load_operations()) == {
-        "ams": 18,
+        "ams": 19,
         "rater": 6,
         "crm": 9,
-        "ecm": 8,
+        "ecm": 13,
         "claims": 9,
     }
 
@@ -97,7 +97,7 @@ def test_tools_only_reach_the_five_rest_services():
     for tool, op in zip(build_rest_tools(services.client()), ops):
         call(tool, {name: "x" for name in op.path_params})
 
-    assert len(services.api_requests()) == len(ops) == 50
+    assert len(services.api_requests()) == len(ops) == 56
     assert {r.url.host for r in services.api_requests()} == {
         "ams.test",
         "rater.test",
@@ -248,8 +248,16 @@ def test_binary_responses_are_summarized():
 
 def test_base_urls_default_to_localhost_and_follow_env(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("EVERGREEN_BASE_URLS", raising=False)
+    monkeypatch.delenv("EVERGREEN_BASE_PORT", raising=False)
     assert service_base_urls()["ams"] == "http://localhost:3000"
     assert service_base_urls()["claims"] == "http://localhost:3007"
+
+    monkeypatch.setenv("EVERGREEN_BASE_PORT", "3200")
+    shifted = service_base_urls()
+    assert shifted["ams"] == "http://localhost:3200"
+    assert shifted["comm"] == "http://localhost:3204"
+    assert shifted["claims"] == "http://localhost:3207"
+    monkeypatch.delenv("EVERGREEN_BASE_PORT", raising=False)
 
     monkeypatch.setenv("EVERGREEN_BASE_URLS", json.dumps({"ams": "http://gym:9000/", "claims": "http://gym:9007"}))
     urls = service_base_urls()

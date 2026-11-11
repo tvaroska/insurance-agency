@@ -7,6 +7,7 @@
  */
 
 import { PORT_SERVICE_MAP } from "../types";
+import { scorerHeaders } from "../evaluators/output";
 
 export interface ServiceEndpoint {
   service: string;
@@ -14,16 +15,26 @@ export interface ServiceEndpoint {
   baseUrl: string;
 }
 
-export const SERVICE_ENDPOINTS: ServiceEndpoint[] = Object.entries(
-  PORT_SERVICE_MAP,
-).map(([portStr, service]) => {
-  const port = Number(portStr);
-  return {
-    service,
-    port,
-    baseUrl: `http://localhost:${port}`,
-  };
-});
+export function buildServiceEndpoints(
+  basePortEnv: string | undefined = process.env.EVERGREEN_BASE_PORT,
+): ServiceEndpoint[] {
+  const parsedBase =
+    basePortEnv !== undefined && basePortEnv.trim() !== ""
+      ? Number.parseInt(basePortEnv, 10)
+      : Number.NaN;
+  const useOffset = Number.isInteger(parsedBase) && parsedBase > 0;
+  return Object.entries(PORT_SERVICE_MAP).map(([portStr, service]) => {
+    const numericPort = Number(portStr);
+    const port = useOffset ? parsedBase + (numericPort - 3000) : numericPort;
+    return {
+      service,
+      port,
+      baseUrl: `http://localhost:${port}`,
+    };
+  });
+}
+
+export const SERVICE_ENDPOINTS: ServiceEndpoint[] = buildServiceEndpoints(undefined);
 
 export interface SimResetResponse {
   status: "reset";
@@ -77,7 +88,7 @@ export interface SimClientOptions {
 }
 
 function resolveTargets(options?: SimClientOptions): ServiceEndpoint[] {
-  const all = options?.endpoints ?? SERVICE_ENDPOINTS;
+  const all = options?.endpoints ?? buildServiceEndpoints();
   if (!options?.services || options.services.length === 0) {
     return all;
   }
@@ -128,7 +139,7 @@ export async function snapshotAllServices(
     targets.map(async (ep) => {
       const res = await fetchFn(`${ep.baseUrl}/sim/snapshot`, {
         method: "GET",
-        headers: { Accept: "application/json" },
+        headers: scorerHeaders({ Accept: "application/json" }),
       });
       if (!res.ok) {
         throw new Error(

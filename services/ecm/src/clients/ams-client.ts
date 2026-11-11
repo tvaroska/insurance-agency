@@ -1,6 +1,12 @@
-import { INTERNAL_REQUEST_HEADERS } from "@evergreen/shared";
+import { getInternalRequestHeaders } from "@evergreen/shared";
 
-const AMS_BASE_URL = process.env.AMS_URL ?? "http://localhost:3000";
+function getAmsBaseUrl(): string {
+  return (
+    process.env.AMS_BASE_URL ||
+    process.env.AMS_URL ||
+    "http://localhost:3000"
+  ).replace(/\/+$/, "");
+}
 
 export interface AmsClient {
   id: string;
@@ -30,8 +36,8 @@ export interface AmsPolicy {
 }
 
 export async function fetchClient(clientId: string, authToken: string): Promise<AmsClient> {
-  const res = await fetch(`${AMS_BASE_URL}/v1/clients/${clientId}`, {
-    headers: { Authorization: authToken, ...INTERNAL_REQUEST_HEADERS },
+  const res = await fetch(`${getAmsBaseUrl()}/v1/clients/${clientId}`, {
+    headers: { Authorization: authToken, ...getInternalRequestHeaders() },
   });
   if (!res.ok) {
     throw Object.assign(new Error(`AMS client lookup failed`), { status: res.status });
@@ -43,8 +49,8 @@ export async function fetchClientPolicies(
   clientId: string,
   authToken: string,
 ): Promise<AmsPolicy[]> {
-  const res = await fetch(`${AMS_BASE_URL}/v1/clients/${clientId}/policies?limit=100`, {
-    headers: { Authorization: authToken, ...INTERNAL_REQUEST_HEADERS },
+  const res = await fetch(`${getAmsBaseUrl()}/v1/clients/${clientId}/policies?limit=100`, {
+    headers: { Authorization: authToken, ...getInternalRequestHeaders() },
   });
   if (!res.ok) {
     throw Object.assign(new Error(`AMS policy lookup failed`), { status: res.status });
@@ -58,8 +64,8 @@ export async function fetchAllClients(authToken: string): Promise<AmsClient[]> {
   let cursor: string | null = null;
   do {
     const qs = cursor ? `?limit=100&cursor=${encodeURIComponent(cursor)}` : "?limit=100";
-    const res = await fetch(`${AMS_BASE_URL}/v1/clients${qs}`, {
-      headers: { Authorization: authToken, ...INTERNAL_REQUEST_HEADERS },
+    const res = await fetch(`${getAmsBaseUrl()}/v1/clients${qs}`, {
+      headers: { Authorization: authToken, ...getInternalRequestHeaders() },
     });
     if (!res.ok) {
       throw Object.assign(new Error(`AMS client list failed`), { status: res.status });

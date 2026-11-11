@@ -1,6 +1,7 @@
 # Google Cloud Build CI/CD pipeline for Evergreen Insurance Agency
 # Executes unit tests across packages/shared, all 8 microservices, eval,
-# K8s/Compose manifest verification, and TEST_DATABASE_URL test verification.
+# bidirectional OpenAPI route contracts, repo hygiene, Prisma integration tests,
+# showcase preflight, and 20-scenario end-to-end harness validation.
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -22,7 +23,7 @@ steps:
         bun run db:generate
 
   # ------------------------------------------------------------------------- #
-  # 2. Shared Package & Microservice Unit Tests (SQLite In-Memory)            #
+  # 2. Shared Package & Microservice Unit Tests                               #
   # ------------------------------------------------------------------------- #
   - id: unit-tests
     name: oven/bun:1
@@ -39,9 +40,9 @@ steps:
         done
 
   # ------------------------------------------------------------------------- #
-  # 3. Evaluation System & K8s/Compose Manifest Verification                  #
+  # 3. Evaluation System, OpenAPI Contracts, Hygiene & Integration Tests      #
   # ------------------------------------------------------------------------- #
-  - id: eval-and-manifest-tests
+  - id: eval-and-contract-tests
     name: oven/bun:1
     waitFor: ["install-deps"]
     entrypoint: bash
@@ -51,7 +52,7 @@ steps:
         set -euo pipefail
         bunx @ast-grep/cli scan --rule specs/ast.rules.yaml
         bun test eval/__tests__/ eval/*/__tests__/
-        echo "=== Running tests/*.test.ts (including tests/k8s-manifests.test.ts and tests/repo-hygiene.test.ts) ==="
+        echo "=== Running tests/*.test.ts (OpenAPI route contract & repo hygiene) ==="
         bun test tests/*.test.ts
         echo "=== Running tests/integration/*.test.ts ==="
         bun test tests/integration/*.test.ts
@@ -62,21 +63,17 @@ steps:
         fi
 
   # ------------------------------------------------------------------------- #
-  # 4. Database Test Execution via TEST_DATABASE_URL                          #
+  # 4. End-to-End 20-Scenario Harness & Showcase Preflight Validation         #
   # ------------------------------------------------------------------------- #
-  - id: test-database-url-suite
+  - id: harness-and-showcase-validation
     name: oven/bun:1
     waitFor: ["install-deps"]
     entrypoint: bash
-    env:
-      - TEST_DATABASE_URL=file::memory:?cache=shared
     args:
       - -c
       - |
         set -euo pipefail
-        for svc in ams rater crm ecm comm carrier-summit carrier-coastal claims; do
-          echo "=== Verifying TEST_DATABASE_URL test suite for services/${svc} ==="
-          (cd "services/${svc}" && TEST_DATABASE_URL="${TEST_DATABASE_URL}" bun test)
-        done
+        bun run showcase:check
+        bun eval/validate-harness.ts
 
 timeout: "600s"

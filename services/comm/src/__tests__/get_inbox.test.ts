@@ -1,11 +1,10 @@
 import { describe, expect, test, beforeAll } from "bun:test";
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { createTestDb, makeMessage, makePhoneMessage } from "./setup";
 
-const { sqlite: testSqlite, db: testDb, prisma: testPrisma } = createTestDb();
+const { sqlite: testSqlite, prisma: testPrisma } = createTestDb();
 mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { handleGetInbox } from "../tools/get_inbox";
@@ -78,7 +77,7 @@ beforeAll(() => {
   ];
 
   for (const m of msgs) {
-    testDb.insert(schema.messages).values(m).run();
+    insertSqliteRow(testSqlite, "messages", m);
   }
 });
 

@@ -8,7 +8,7 @@ COPY packages/shared/package.json packages/shared/
 COPY services/ams/package.json services/ams/
 RUN bun install
 
-# Build
+# Build & Runtime
 FROM base AS runner
 WORKDIR /app
 COPY --from=deps /app/node_modules node_modules
@@ -21,6 +21,7 @@ COPY data/seed-clean data/seed-clean
 COPY scripts/entrypoint.sh /app/entrypoint.sh
 
 WORKDIR /app/services/ams
+RUN bunx prisma generate
 
 EXPOSE 3000
 CMD ["/app/entrypoint.sh"]

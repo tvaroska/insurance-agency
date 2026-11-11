@@ -1,4 +1,3 @@
-import { and, asc, desc, gt, lt, eq, or, sql, type Column, type SQL } from "drizzle-orm";
 import type { PaginatedResponse, PaginationMeta, PaginationParams } from "./types";
 import { validationError } from "./errors";
 
@@ -77,73 +76,6 @@ export function requireValidCursor(
   }
 
   return decoded;
-}
-
-// ── Drizzle cursor-pagination helper ────────────────────────────────
-
-export interface CursorOrderSpec {
-  column: Column;
-  direction: "asc" | "desc";
-  /** Key name used in the cursor object. Defaults to the column name. */
-  cursorKey?: string;
-}
-
-export interface CursorPaginationResult {
-  /** WHERE condition to apply (undefined on first page). */
-  where: SQL | undefined;
-  /** ORDER BY columns to apply. */
-  orderBy: SQL[];
-  /** Limit to use in the query (limit + 1 for has_more detection). */
-  limit: number;
-}
-
-/**
- * Build Drizzle WHERE + ORDER BY clauses for cursor-based pagination.
- *
- * Uses tuple comparison semantics for multi-column cursors:
- * `(a, b) > (cursor_a, cursor_b)` is equivalent to
- * `a > cursor_a OR (a = cursor_a AND b > cursor_b)`.
- */
-export function applyCursorPagination(opts: {
-  cursor: string | undefined;
-  limit: number;
-  orderBy: CursorOrderSpec[];
-}): CursorPaginationResult {
-  const { cursor, limit, orderBy } = opts;
-
-  // Build ORDER BY
-  const orderBySql = orderBy.map((spec) =>
-    spec.direction === "asc" ? asc(spec.column) : desc(spec.column),
-  );
-
-  // No cursor → first page
-  if (!cursor) {
-    return { where: undefined, orderBy: orderBySql, limit: limit + 1 };
-  }
-
-  // Decode & validate cursor
-  const cursorKeys = orderBy.map((spec) => spec.cursorKey ?? spec.column.name);
-  const values = requireValidCursor(cursor, cursorKeys);
-
-  // Build tuple comparison: (a > v_a) OR (a = v_a AND b > v_b) OR ...
-  const conditions: SQL[] = [];
-  for (let i = 0; i < orderBy.length; i++) {
-    const eqParts: SQL[] = [];
-    for (let j = 0; j < i; j++) {
-      const key = cursorKeys[j];
-      eqParts.push(eq(orderBy[j].column, values![key]));
-    }
-    const key = cursorKeys[i];
-    const cmp = orderBy[i].direction === "asc"
-      ? gt(orderBy[i].column, values![key])
-      : lt(orderBy[i].column, values![key]);
-
-    conditions.push(eqParts.length > 0 ? and(...eqParts, cmp)! : cmp);
-  }
-
-  const where = conditions.length === 1 ? conditions[0] : or(...conditions);
-
-  return { where, orderBy: orderBySql, limit: limit + 1 };
 }
 
 // ── Prisma cursor-pagination helper ────────────────────────────────

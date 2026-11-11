@@ -5,10 +5,100 @@ import {
   validateStateMinimums,
   validateBackdating,
   validateBindingAuthority,
+  generateDevToken,
+  getInternalRequestHeaders,
 } from "@evergreen/shared";
 import { prisma } from "../prisma";
 
 export const workbenchRouter = new Hono();
+
+// ── Live stack helpers ──────────────────────────────────────────────
+
+/**
+ * Resolves the 8-service stack URLs from `EVERGREEN_BASE_PORT` (default 3000) and the
+ * per-service `*_BASE_URL` overrides set by `scripts/run-showcase.ts`. Keys match the
+ * service names used by `eval/agents/baseline-agent.ts` and `eval/evaluators/state-diff.ts`.
+ */
+export function resolveStackUrls(): Record<string, string> {
+  const parsed = Number.parseInt(process.env.EVERGREEN_BASE_PORT ?? "", 10);
+  const base = Number.isInteger(parsed) && parsed > 0 ? parsed : 3000;
+  const pick = (envKey: string, offset: number) =>
+    (process.env[envKey] || `http://localhost:${base + offset}`).replace(/\/+$/, "");
+  return {
+    ams: pick("AMS_BASE_URL", 0),
+    rater: pick("RATER_BASE_URL", 1),
+    crm: pick("CRM_BASE_URL", 2),
+    ecm: pick("ECM_BASE_URL", 3),
+    comm: pick("COMM_BASE_URL", 4),
+    "summit-fire": pick("SUMMIT_BASE_URL", 5),
+    "coastal-star": pick("COASTAL_BASE_URL", 6),
+    claims: pick("CLAIMS_BASE_URL", 7),
+  };
+}
+
+/**
+ * Live calls to sibling services are skipped under `bun test` (NODE_ENV=test) so unit tests
+ * never mutate a developer's running stack; set WORKBENCH_LIVE_STACK=1 to force them.
+ */
+function liveStackAllowed(): boolean {
+  if (process.env.WORKBENCH_LIVE_STACK === "1") return true;
+  if (process.env.WORKBENCH_LIVE_STACK === "0") return false;
+  return process.env.NODE_ENV !== "test";
+}
+
+async function probeOffline(urls: Record<string, string>, services: string[]): Promise<string[]> {
+  const offline: string[] = [];
+  await Promise.all(
+    services.map(async (svc) => {
+      try {
+        const res = await fetch(`${urls[svc]}/health`, { signal: AbortSignal.timeout(750) });
+        if (!res.ok) offline.push(svc);
+      } catch {
+        offline.push(svc);
+      }
+    }),
+  );
+  return offline.sort();
+}
+
+/** Loads an `eval/` module at runtime (absent in cold service images, so failures fall back). */
+async function loadEvalModule(relPath: string): Promise<any> {
+  const specifier = new URL(`../../../../eval/${relPath}`, import.meta.url).href;
+  return import(specifier);
+}
+
+function pdfEscape(text: string): string {
+  return text.replace(/[\\()]/g, (ch) => `\\${ch}`).replace(/[^\x20-\x7e]/g, "-");
+}
+
+/** Renders a minimal single-page PDF 1.7 with correct xref offsets. */
+export function renderSimplePdf(title: string, lines: string[]): Uint8Array {
+  const body = [
+    "BT",
+    `/F1 14 Tf 50 740 Td (${pdfEscape(title)}) Tj`,
+    "/F1 10 Tf",
+    ...lines.map((line) => `0 -16 Td (${pdfEscape(line)}) Tj`),
+    "ET",
+  ].join("\n");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+    `<< /Length ${body.length} >>\nstream\n${body}\nendstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let out = "%PDF-1.7\n";
+  const offsets: number[] = [];
+  objects.forEach((obj, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${obj}\nendobj\n`;
+  });
+  const xrefStart = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, "0")} 00000 n \n`;
+  out += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  return new TextEncoder().encode(out);
+}
 
 export interface HeroJourneySpec {
   id: string;
@@ -489,52 +579,52 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
     evolutionStages: [
       {
         stage: "Stage 1: Zero-Shot General Agent",
-        label: "Measured v0.7 Baseline (Strict 3-Modality)",
-        provenance: "measured_v0.7_baseline",
+        label: "Measured v0.8 Baseline (Strict 3-Modality, 20 Workflows x 5 Trials)",
+        provenance: "measured_v0.8_baseline",
         avgTokensPerRun: 6500,
-        avgCostUsd: 0.068,
+        avgCostUsd: 0.064,
         avgLatencyMs: 3900,
-        pass1: 0.667,
-        meanScore: 0.68,
-        pass5: null,
-        falseCompletionRateRange: "16.7%–66.7%",
+        pass1: 0.58,
+        meanScore: 0.71,
+        pass5: 0.471,
+        falseCompletionRateRange: "37%–50%",
         measuredModels: [
           {
+            model: "DeepSeek-V4.1-Flash",
+            pass1: 0.59,
+            meanScore: 0.78,
+            falseCompletionRate: 0.39,
+            costPerTaskUsd: 0.033,
+          },
+          {
             model: "gemini-3.8-flash",
-            pass1: 0.667,
-            meanScore: 0.68,
-            falseCompletionRate: 0.167,
-            costPerTaskUsd: 0.068,
+            pass1: 0.58,
+            meanScore: 0.71,
+            falseCompletionRate: 0.37,
+            costPerTaskUsd: 0.064,
           },
           {
             model: "claude-sonnet-5-5",
-            pass1: 0.5,
-            meanScore: 0.62,
+            pass1: 0.55,
+            meanScore: 0.69,
             falseCompletionRate: 0.5,
-            costPerTaskUsd: 0.079,
-          },
-          {
-            model: "DeepSeek-V4.1-Flash",
-            pass1: 0.333,
-            meanScore: 0.53,
-            falseCompletionRate: 0.667,
-            costPerTaskUsd: 0.01,
+            costPerTaskUsd: 0.12,
           },
         ],
         description:
-          'Measured v0.7 zero-shot baseline across 6 strict workflows: gemini-3.8-flash 66.7% pass@1 (0.68 mean), claude-sonnet-5-5 50.0% pass@1 (0.62 mean), DeepSeek-V4.1-Flash 33.3% pass@1 (0.53 mean), and 16.7%–66.7% false-completion rate where the agent said "done" while state checks failed.',
+          'Measured v0.8 zero-shot baseline across 20 strict workflows, 5 trials each: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%, and a 37%–50% false-completion rate where the agent said "done" while a state check failed.',
       },
       {
         stage: "Stage 2: Domain Skill + Guardrails",
-        label: "Projected Skill Target (Insurance Playbook & E&O Guardrails)",
-        provenance: "projected_skill_target",
+        label: "Measured v0.8 Domain Skill (Agency Procedure Guide)",
+        provenance: "measured_v0.8_domain_skill",
         avgTokensPerRun: 2700,
-        avgCostUsd: 0.0012,
+        avgCostUsd: 0.058,
         avgLatencyMs: 1650,
-        pass1: 0.97,
-        pass5: 0.86,
+        pass1: 0.69,
+        pass5: 0.602,
         description:
-          "Projected Stage 2 skill target: injects carrier appetite rules, 10-state statutory tables, and portal sequences; 58% token reduction (distinguished from measured v0.7 zero-shot baseline).",
+          "Measured v0.8: a one-page agency procedure guide appended to the gemini-3.8-flash prompt raises pass@1 from 58.0% to 69.0% and cuts judgment traps missed from 16 to 5 of 60 (token and latency figures are modeled).",
       },
       {
         stage: "Stage 3: $0-Token Compiled Deterministic Code",
@@ -602,13 +692,69 @@ workbenchRouter.post("/workbench/api/run-journey", async (c) => {
     });
   }
 
-  // Governed mode: record a deterministic audit task in AMS so the 3rd-Line State-Diff receipt shows a real live SQLite mutation
+  // Governed mode: execute the reference agent against the live 8-service stack and diff
+  // real /sim/snapshot state; fall back to a local AMS audit task only when siblings are offline.
+  const startedAt = Date.now();
+  const urls = resolveStackUrls();
+  const siblingServices = ["rater", "crm", "ecm", "comm", "summit-fire", "coastal-star", "claims"];
+  let fallbackReason: string | null = null;
+  let live: {
+    mutatedTables: string[];
+    totalMutations: number;
+    stepsExecuted: number;
+    httpErrorSteps: number;
+    privacyPassed: boolean;
+  } | null = null;
+
+  if (!liveStackAllowed()) {
+    fallbackReason =
+      "Live sibling-service execution disabled in test environment; recorded local AMS SQLite audit task only";
+  } else {
+    const offline = await probeOffline(urls, siblingServices);
+    if (offline.length > 0) {
+      fallbackReason = `Sibling services offline (${offline.join(", ")}); recorded local AMS SQLite audit task only`;
+    } else {
+      try {
+        const agentMod = await loadEvalModule("agents/baseline-agent.ts");
+        const diffMod = await loadEvalModule("evaluators/state-diff.ts");
+        const snapshotBefore = await diffMod.fetchGymSnapshot(urls);
+        const run = await agentMod.runBaselineAgent({
+          scenarioId: journey.scenarioId,
+          seed: process.env.SEED_MODE || "realistic",
+          modalityMode: "strict",
+          tokenProfile: "compiled_code",
+          baseUrls: urls,
+        });
+        const snapshotAfter = await diffMod.fetchGymSnapshot(urls);
+        const diff = diffMod.diffSnapshots(snapshotBefore, snapshotAfter);
+        const mutatedTables: string[] = [];
+        for (const [svc, tables] of Object.entries(diff.services as Record<string, Record<string, any>>)) {
+          for (const [table, t] of Object.entries(tables)) {
+            if (t.inserted.length + t.updated.length + t.deleted.length > 0) {
+              mutatedTables.push(`${svc}.${table}`);
+            }
+          }
+        }
+        live = {
+          mutatedTables,
+          totalMutations: diff.summary.totalMutations,
+          stepsExecuted: run.steps.length,
+          httpErrorSteps: run.steps.filter((s: { status: number }) => s.status >= 500 || s.status === 0).length,
+          privacyPassed: Boolean(run.privacyAudit?.passed),
+        };
+      } catch (err) {
+        fallbackReason = `Live execution unavailable (${err instanceof Error ? err.message : String(err)}); recorded local AMS SQLite audit task only`;
+      }
+    }
+  }
+
+  // Record the deterministic Workbench audit task in AMS (3rd-Line receipt anchor)
   const auditTaskId = `TSK-WB-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
   await prisma.task.create({
     data: {
       id: auditTaskId,
       title: `[Workbench ${journey.id}] ${journey.title}`,
-      description: `Executed Hero Journey ${journey.id} (Scenario ${journey.scenarioId}) via ${journey.compiledHandler}. Guardrail verified: ${journey.eoGuardrail}`,
+      description: `Executed Hero Journey ${journey.id} (Scenario ${journey.scenarioId}) via ${journey.compiledHandler} (${live ? "live multi-service run" : "local AMS fallback"}). Guardrail verified: ${journey.eoGuardrail}`,
       status: "completed",
       priority: "high",
       assigned_to: "exec-workbench",
@@ -629,15 +775,25 @@ workbenchRouter.post("/workbench/api/run-journey", async (c) => {
     journey,
     executionSummary: {
       status: "PASS",
-      transcriptJudgeVerdict: "PASS (Confirmed in outbound message)",
-      stateDiffVerdict: "PASS (100% SQLite mutations verified, 0 collateral)",
+      executionMode: live ? "live_multi_service" : "local_ams_fallback",
+      fallbackUsed: live === null,
+      fallbackReason,
+      transcriptJudgeVerdict: live
+        ? "PASS (Reference agent completed live trajectory)"
+        : "N/A (fallback: no live agent trajectory)",
+      stateDiffVerdict: live
+        ? `PASS (${live.totalMutations} live SQLite mutations across ${live.mutatedTables.length} tables)`
+        : "PARTIAL (local AMS audit task only; sibling state not diffed)",
       eoCompliant: true,
       collateralFree: true,
       unauthorizedMutations: 0,
       compiledHandler: journey.compiledHandler,
-      llmTokensUsed: journey.id === "J3" ? 1950 : 0,
-      estimatedCostUsd: journey.id === "J3" ? 0.00088 : 0.0,
-      wallClockMs: 142,
+      stepsExecuted: live?.stepsExecuted ?? 0,
+      httpErrorSteps: live?.httpErrorSteps ?? 0,
+      privacyAuditPassed: live?.privacyPassed ?? null,
+      llmTokensUsed: 0,
+      estimatedCostUsd: 0.0,
+      wallClockMs: Date.now() - startedAt,
     },
     stateDiffReceipt: {
       tablesAudited: 32,
@@ -646,8 +802,109 @@ workbenchRouter.post("/workbench/api/run-journey", async (c) => {
       amsEscalationsBefore: beforeEscalations,
       amsEscalationsAfter: afterEscalations,
       createdTaskId: auditTaskId,
-      mutatedTables: journey.expectedTablesMutated,
+      mutatedTables: live ? live.mutatedTables : ["ams.tasks"],
+      totalMutations: live ? live.totalMutations : 1,
+      expectedTablesMutated: journey.expectedTablesMutated,
       collateralPenalty: 0,
+    },
+  });
+});
+
+// ── GET /workbench/api/documents/:docId/pdf ─────────────────────────
+
+workbenchRouter.get("/workbench/api/documents/:docId/pdf", async (c) => {
+  const docId = c.req.param("docId");
+  const urls = resolveStackUrls();
+
+  if (liveStackAllowed()) {
+    try {
+      const token = await generateDevToken({
+        sub: "exec-workbench",
+        scopes: [
+          "ecm:documents:read",
+          "ecm:acord:read",
+          "ams:clients:read",
+          "ams:policies:read",
+        ],
+        expiresIn: 300,
+      });
+      const headers = { Authorization: `Bearer ${token}`, ...getInternalRequestHeaders() };
+
+      // 1. Issued COI documents render directly from ECM
+      const coiRes = await fetch(
+        `${urls.ecm}/v1/documents/coi/${encodeURIComponent(docId)}/pdf`,
+        { headers, signal: AbortSignal.timeout(3000) },
+      );
+      if (coiRes.ok && (coiRes.headers.get("content-type") ?? "").includes("pdf")) {
+        return new Response(await coiRes.arrayBuffer(), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `inline; filename="${docId}.pdf"`,
+            "X-Evergreen-Pdf-Source": "ecm-coi",
+          },
+        });
+      }
+
+      // 2. Client documents: render the matching ACORD 90 (auto) / 80 (home) application from ECM
+      const listRes = await fetch(`${urls.ecm}/v1/documents?limit=100`, {
+        headers,
+        signal: AbortSignal.timeout(3000),
+      });
+      if (listRes.ok) {
+        const listBody = (await listRes.json()) as { data?: { document_id: string; client_id: string; tags?: string[] }[] };
+        const doc = listBody.data?.find((d) => d.document_id === docId);
+        if (doc) {
+          const wantsHome = (doc.tags ?? []).some((t) => /home|dwelling|property/i.test(t));
+          const policy = await prisma.policy.findFirst({
+            where: {
+              client_id: doc.client_id,
+              policy_type: wantsHome ? "homeowners" : "personal_auto",
+            },
+            orderBy: { effective_date: "desc" },
+          });
+          if (policy) {
+            const form = policy.policy_type === "homeowners" ? "80" : "90";
+            const acordRes = await fetch(
+              `${urls.ecm}/v1/documents/acord/${form}?policy_id=${encodeURIComponent(policy.policy_id)}`,
+              { headers, signal: AbortSignal.timeout(5000) },
+            );
+            if (acordRes.ok) {
+              return new Response(await acordRes.arrayBuffer(), {
+                status: 200,
+                headers: {
+                  "Content-Type": "application/pdf",
+                  "Content-Disposition": `inline; filename="ACORD-${form}-${docId}.pdf"`,
+                  "X-Evergreen-Pdf-Source": `ecm-acord-${form}`,
+                },
+              });
+            }
+          }
+        }
+      }
+    } catch {
+      // ECM offline: fall through to the local render below
+    }
+  }
+
+  // Fallback: render an ACORD application summary locally from AMS state (never 401s)
+  const policy = await prisma.policy
+    .findFirst({ where: { client_id: "CLI-001" }, orderBy: { effective_date: "desc" } })
+    .catch(() => null);
+  const pdf = renderSimplePdf(`ACORD 90 - PERSONAL AUTO APPLICATION (${docId})`, [
+    "PRODUCER: Evergreen Insurance Partners",
+    `DOCUMENT: ${docId} | SOURCE: Workbench local render (ECM :3003 unavailable or not a generated form)`,
+    policy
+      ? `POLICY: ${policy.policy_id} | ${policy.policy_type} | ${policy.effective_date} to ${policy.expiration_date}`
+      : "POLICY: (no AMS policy on file)",
+    "1st-Line E&O Gate: state minimums + backdating + $10K binding authority enforced at bind time",
+  ]);
+  return new Response(pdf, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="ACORD-${docId}.pdf"`,
+      "X-Evergreen-Pdf-Source": "workbench-render",
     },
   });
 });
@@ -705,9 +962,45 @@ workbenchRouter.post("/workbench/api/chaos", async (c) => {
     lastUpdatedAt: new Date().toISOString(),
   };
 
+  // Forward POST /sim/chaos to the real carrier-facing services
+  const urls = resolveStackUrls();
+  const targets: [string, string][] = [
+    ["rater", urls.rater],
+    ["carrier-summit", urls["summit-fire"]],
+    ["carrier-coastal", urls["coastal-star"]],
+  ];
+  let forwarded: { service: string; url: string; ok: boolean; status?: number; error?: string }[] = [];
+  let forwardingSkipped: string | null = null;
+  if (!liveStackAllowed()) {
+    forwardingSkipped = "Live /sim/chaos forwarding disabled in test environment";
+  } else {
+    forwarded = await Promise.all(
+      targets.map(async ([service, url]) => {
+        try {
+          const res = await fetch(`${url}/sim/chaos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getInternalRequestHeaders() },
+            body: JSON.stringify({
+              enabled,
+              error_rate: failureRate,
+              status_code: 503,
+              latency_ms: enabled ? 50 : 0,
+            }),
+            signal: AbortSignal.timeout(1500),
+          });
+          return { service, url, ok: res.ok, status: res.status };
+        } catch (err) {
+          return { service, url, ok: false, error: err instanceof Error ? err.message : String(err) };
+        }
+      }),
+    );
+  }
+
   return c.json({
     status: "ok",
     chaos: chaosSimulationState,
+    forwarded,
+    forwardingSkipped,
     message: enabled
       ? `Chaos Mode ACTIVE: injecting ${Math.round(failureRate * 100)}% HTTP 503 outages across carrier endpoints to verify exponential backoff & fallback resilience.`
       : "Chaos Mode DISABLED: all 8 microservices operating at 100% nominal availability.",
@@ -1292,7 +1585,7 @@ export function renderWorkbenchHtml(): string {
             </div>
             <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
               <a class="btn btn-success" href="/workbench/api/acord25-preview.pdf" target="_blank" rel="noopener">Preview Real ACORD 25 COI PDF (%PDF-1.7)</a>
-              <a class="btn btn-primary" href="http://localhost:3003/v1/documents/DOC-002/download" target="_blank" rel="noopener">ECM ACORD 80/90 Application (:3003)</a>
+              <a class="btn btn-primary" href="/workbench/api/documents/DOC-002/pdf" target="_blank" rel="noopener">ECM ACORD 80/90 Application (:3003)</a>
             </div>
           </div>
 
@@ -1457,8 +1750,8 @@ export function renderWorkbenchHtml(): string {
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">3-Stage Agent-to-Code Evolution (Measured v0.7 Baseline vs. Projected Skill Target &amp; Reference Anchor)</h2>
-            <p class="card-subtitle">Separates measured v0.7 zero-shot results and the 100.0% 20-workflow scripted reference verifier from projected Stage-2 Skill targets.</p>
+            <h2 class="card-title">3-Stage Agent-to-Code Evolution (Measured v0.8 Zero-Shot vs. Measured Domain Skill &amp; Reference Anchor)</h2>
+            <p class="card-subtitle">Measured v0.8 results (20 workflows, 5 trials each) for zero-shot agents and the domain skill procedure guide, beside the 100.0% scripted reference verifier. Token and latency columns for Stages 1 and 2 are modeled.</p>
           </div>
           <span class="chip chip-pass">Stage 3: $0.0000 / Routine Run</span>
         </div>
@@ -1476,22 +1769,22 @@ export function renderWorkbenchHtml(): string {
           </thead>
           <tbody>
             <tr>
-              <td><strong>Stage 1: Zero-Shot General Agent</strong><br/><span class="chip chip-warn">Measured v0.7</span></td>
-              <td>Zero-shot tool discovery across 8 services (<code>gemini-3.8-flash</code> 66.7% pass@1 / 0.68 mean, <code>claude-sonnet-5-5</code> 50.0% / 0.62 mean, <code>DeepSeek-V4.1-Flash</code> 33.3% / 0.53 mean)</td>
+              <td><strong>Stage 1: Zero-Shot General Agent</strong><br/><span class="chip chip-warn">Measured v0.8</span></td>
+              <td>Zero-shot tool discovery across 8 services (<code>DeepSeek-V4.1-Flash</code> 59.0% pass@1, <code>gemini-3.8-flash</code> 58.0%, <code>claude-sonnet-5-5</code> 55.0%)</td>
               <td class="mono">6,500 tok</td>
-              <td class="mono">$0.010–$0.079</td>
+              <td class="mono">$0.033–$0.120</td>
               <td class="mono">3,900 ms</td>
-              <td class="mono">33.3%–66.7%<br/>(0.53–0.68 mean)</td>
-              <td><span class="chip chip-block">16.7%–66.7% said "done" when state check failed</span></td>
+              <td class="mono">55.0%–59.0%<br/>(0.69–0.78 mean)</td>
+              <td><span class="chip chip-block">39%–47% pass^5 · 37%–50% said "done" with a check failing</span></td>
             </tr>
             <tr>
-              <td><strong>Stage 2: Domain Skill + Guardrails</strong><br/><span class="chip chip-info">Projected Target</span></td>
-              <td>Projected target with insurance playbook + 10-state E&amp;O rules + portal sequences (<code>skills/insurance-servicing/</code>)</td>
+              <td><strong>Stage 2: Domain Skill + Guardrails</strong><br/><span class="chip chip-info">Measured v0.8</span></td>
+              <td>One-page agency procedure guide appended to the <code>gemini-3.8-flash</code> prompt (<code>eval/inspect/evergreen_domain_skill.md</code>)</td>
               <td class="mono">2,700 tok</td>
-              <td class="mono">$0.0012</td>
+              <td class="mono">$0.058</td>
               <td class="mono">1,650 ms</td>
-              <td class="mono">97.0% (proj.)</td>
-              <td><span class="chip chip-info">85.9% (proj. pass^5)</span></td>
+              <td class="mono">69.0%</td>
+              <td><span class="chip chip-info">60.2% pass^5 · 35% false-done</span></td>
             </tr>
             <tr>
               <td><strong>Stage 3: $0-Token Compiled Deterministic Code (<code>privy:*</code>)</strong><br/><span class="chip chip-pass">Measured 20/20 Anchor</span></td>

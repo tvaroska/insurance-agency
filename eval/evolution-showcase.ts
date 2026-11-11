@@ -1,12 +1,14 @@
 /**
  * 3-Stage Agent-to-Code Evolution Showcase (`eval/evolution-showcase.ts`).
  *
- * Demonstrates the operational and economic progression of insurance servicing workflows
- * on the Gemini platform:
- *   - Stage 1: General Agent (`gemini-3.8-flash` / `gemini-4-argon`) exploring raw OpenAPI + MCP tools
- *   - Stage 2: Guided Domain Skill (`skills/insurance-servicing/`) with SOPs & E&O guardrails
- *   - Stage 3: Compiled `$0`-Token Deterministic Code (`privy:*`) with automatic `FallbackToSkill`
- *     when mid-conversation pivots or E&O traps arise (Scenarios 17, 18, 19, 20).
+ * Compares measured vs. modeled operational economics across three execution stages:
+ *   - Stage 1 (Measured v0.8 Baseline): Zero-shot tool discovery across 8 services
+ *     (`gemini-3.8-flash`, `claude-sonnet-5-5`, `DeepSeek-V4.1-Flash` from `eval/results/v0.8/`)
+ *   - Stage 2 (Measured v0.8 Domain Skill): Guided domain SOP (`eval/inspect/evergreen_domain_skill.md`)
+ *     on `gemini-3.8-flash`; token and latency figures for Stages 1 and 2 remain modeled
+ *   - Stage 3 (Measured Scripted Verifier + Modeled Pivot Fallback): `$0`-token deterministic
+ *     TypeScript workflows (`compiled:*`) with automatic `FallbackToSkill` on multi-turn client pivots
+ *     (Scenarios 17, 18, 19, 20).
  */
 
 import { runBaselineAgent } from "./agents/baseline-agent";
@@ -22,10 +24,10 @@ export type EvolutionStageId =
 
 export interface CompiledWorkflowSpec {
   id:
-    | "privy:cert-issuer"
-    | "privy:claims-intake"
-    | "privy:renewal-monitor"
-    | "privy:endorsement-guard";
+    | "compiled:coi-issuer"
+    | "compiled:claims-intake"
+    | "compiled:renewal-monitor"
+    | "compiled:endorsement-guard";
   name: string;
   description: string;
   volumeSharePct: number;
@@ -36,7 +38,7 @@ export interface CompiledWorkflowSpec {
 
 export const COMPILED_WORKFLOW_SPECS: CompiledWorkflowSpec[] = [
   {
-    id: "privy:cert-issuer",
+    id: "compiled:coi-issuer",
     name: "COI Issuance & Contract Limit Verifier",
     description:
       "Verifies active commercial/auto policy status, checks stated GL/BOP limits against contract requirements, renders ACORD 25 PDF, and dispatches via MCP.",
@@ -47,7 +49,7 @@ export const COMPILED_WORKFLOW_SPECS: CompiledWorkflowSpec[] = [
       "Mid-conversation venue & BOP location pivot requiring $2M GL limit endorsement (Scenario 17)",
   },
   {
-    id: "privy:claims-intake",
+    id: "compiled:claims-intake",
     name: "FNOL Claims Triage & Adjuster Router",
     description:
       "Verifies active coverage on loss date, registers FNOL claim, generates ACORD 35 Loss Notice PDF, and assigns adjuster.",
@@ -58,7 +60,7 @@ export const COMPILED_WORKFLOW_SPECS: CompiledWorkflowSpec[] = [
       "Policy line reversal (Auto -> Commercial BOP) + $65,000 third-party attorney demand letter (Scenario 19)",
   },
   {
-    id: "privy:renewal-monitor",
+    id: "compiled:renewal-monitor",
     name: "Renewal Rate-Spike Scanner & Re-Shopper",
     description:
       "Detects >15% renewal rate hikes, queries multi-carrier appetite, normalizes split limits, and prepares retention comparison.",
@@ -69,7 +71,7 @@ export const COMPILED_WORKFLOW_SPECS: CompiledWorkflowSpec[] = [
       "Customer carrier switch + request to lower Texas auto limits to 15/30/10 below 30/60/25 statutory floor (Scenario 20)",
   },
   {
-    id: "privy:endorsement-guard",
+    id: "compiled:endorsement-guard",
     name: "Policy Endorsement & E&O Firewall Runner",
     description:
       "Validates endorsement effective dates and state statutory minimums before submitting policy modifications.",
@@ -82,8 +84,8 @@ export const COMPILED_WORKFLOW_SPECS: CompiledWorkflowSpec[] = [
 ];
 
 export type StageProvenance =
-  | "measured_v0.7_baseline"
-  | "projected_skill_target"
+  | "measured_v0.8_baseline"
+  | "measured_v0.8_domain_skill"
   | "measured_reference_verifier_with_projected_fallback";
 
 export interface MeasuredModelBaseline {
@@ -94,27 +96,27 @@ export interface MeasuredModelBaseline {
   costPerTaskUsd: number;
 }
 
-export const MEASURED_V07_STAGE1_MODELS: MeasuredModelBaseline[] = [
+export const MEASURED_V08_STAGE1_MODELS: MeasuredModelBaseline[] = [
+  {
+    model: "DeepSeek-V4.1-Flash",
+    pass1: 0.59,
+    meanScore: 0.78,
+    falseCompletionRate: 0.39,
+    costPerTaskUsd: 0.033,
+  },
   {
     model: "gemini-3.8-flash",
-    pass1: 0.667,
-    meanScore: 0.68,
-    falseCompletionRate: 0.167,
-    costPerTaskUsd: 0.068,
+    pass1: 0.58,
+    meanScore: 0.71,
+    falseCompletionRate: 0.37,
+    costPerTaskUsd: 0.064,
   },
   {
     model: "claude-sonnet-5-5",
-    pass1: 0.5,
-    meanScore: 0.62,
+    pass1: 0.55,
+    meanScore: 0.69,
     falseCompletionRate: 0.5,
-    costPerTaskUsd: 0.079,
-  },
-  {
-    model: "DeepSeek-V4.1-Flash",
-    pass1: 0.333,
-    meanScore: 0.53,
-    falseCompletionRate: 0.667,
-    costPerTaskUsd: 0.01,
+    costPerTaskUsd: 0.12,
   },
 ];
 
@@ -196,6 +198,7 @@ export interface EvolutionComparisonSummary {
 
 export interface AgencyRoiModel {
   agencyName: string;
+  provenance: "modeled_11_staff_agency_projection";
   staffCount: number;
   roles: { role: string; headcount: number; focus: string }[];
   baselineWrittenPremiumUsd: number;
@@ -215,6 +218,9 @@ export interface AgencyRoiModel {
   annualNetSavingsUsd: number;
 }
 
+/**
+ * Modeled 11-staff agency capacity & unit-economics projection referenced in `EXECUTIVE-BRIEF.md`.
+ */
 export function calculateAgencyRoi(overrides?: {
   staffCount?: number;
   baselineWrittenPremiumUsd?: number;
@@ -227,7 +233,6 @@ export function calculateAgencyRoi(overrides?: {
   const commissionRatePct = overrides?.commissionRatePct ?? 11.0;
   const automationCoveragePct = overrides?.automationCoveragePct ?? 78.0;
 
-  // Governed automation of 78% of routine servicing frees CSRs & producers to expand book capacity by 92.5%
   const capacityMultiplier = 1 + (automationCoveragePct / 78.0) * 0.925;
   const governedWrittenPremiumUsd = Math.round(
     baselineWrittenPremiumUsd * capacityMultiplier,
@@ -267,6 +272,7 @@ export function calculateAgencyRoi(overrides?: {
 
   return {
     agencyName: "Evergreen Insurance Partners",
+    provenance: "modeled_11_staff_agency_projection",
     staffCount,
     roles: [
       {
@@ -313,26 +319,15 @@ export function calculateAgencyRoi(overrides?: {
   };
 }
 
-const DEFAULT_OFFLINE_FETCH = (async (input: RequestInfo | URL) => {
-  const url = String(input);
-  if (url.endsWith("/oauth/token")) {
-    return new Response(JSON.stringify({ access_token: "showcase-jwt" }), {
-      status: 200,
-    });
-  }
-  return new Response(JSON.stringify({ status: "ok", data: [] }), {
-    status: 200,
-  });
-}) as unknown as typeof fetch;
-
 export async function runStageTrajectory(options: {
   stage: EvolutionStageId;
   workflow: CompiledWorkflowSpec;
   scenarioId: string;
   isPivotCase: boolean;
   fetchImpl?: typeof fetch;
+  baseUrls?: Record<string, string>;
 }): Promise<StageExecutionMetrics> {
-  const fetchFn = options.fetchImpl ?? DEFAULT_OFFLINE_FETCH;
+  const fetchFn = options.fetchImpl ?? globalThis.fetch;
   const scen = scenarios[options.scenarioId];
   const variant =
     scen?.variants.realistic ?? Object.values(scen?.variants ?? {})[0];
@@ -356,34 +351,32 @@ export async function runStageTrajectory(options: {
     modalityMode: "strict",
     tokenProfile,
     fetchImpl: fetchFn,
+    baseUrls: options.baseUrls,
   });
 
   const parsedCalls = parseTrace(runResult.trace);
-  const traceChecks = evaluateTrace(parsedCalls, variant?.traceChecks ?? []);
+  const traceChecks = evaluateTrace(variant?.traceChecks ?? [], parsedCalls);
+  const totalWeight = traceChecks.reduce((acc, c) => acc + c.weight, 0);
   const traceScore =
-    traceChecks.length > 0
+    totalWeight > 0
       ? traceChecks.reduce((acc, c) => acc + (c.passed ? c.weight : 0), 0) /
-        traceChecks.reduce((acc, c) => acc + c.weight, 0)
+        totalWeight
       : 1.0;
+
+  const eoTrapsCaught = (variant?.eoTraps ?? []).every((trap) =>
+    evaluateTrace([trap.check], parsedCalls).every((r) => r.passed),
+  );
 
   const econ = extractEconomicsMetrics(runResult.trace, parsedCalls, {
     score: traceScore,
     defaultModel: model,
   });
 
-  // Stage 1: measured v0.7 zero-shot baseline (gemini-3.8-flash 66.7% pass@1 / 0.68 mean,
-  // claude-sonnet-5-5 50.0% / 0.62 mean, DeepSeek-V4.1-Flash 33.3% / 0.53 mean; 16.7%–66.7% false-completion rate).
-  // Stage 2: projected domain-skill target (skills/insurance-servicing/).
-  // Stage 3: measured 100.0% scripted reference verifier (baseline-agent.ts) across all 20 workflows + projected FallbackToSkill on pivots.
   const pass1 =
     options.stage === "stage_1_general_agent"
-      ? options.isPivotCase
-        ? 0.5
-        : 0.667
+      ? 0.58
       : options.stage === "stage_2_domain_skill"
-        ? options.isPivotCase
-          ? 0.96
-          : 0.98
+        ? 0.69
         : isFallback
           ? 0.97
           : 1.0;
@@ -391,24 +384,24 @@ export async function runStageTrajectory(options: {
 
   const provenance: StageProvenance =
     options.stage === "stage_1_general_agent"
-      ? "measured_v0.7_baseline"
+      ? "measured_v0.8_baseline"
       : options.stage === "stage_2_domain_skill"
-        ? "projected_skill_target"
+        ? "measured_v0.8_domain_skill"
         : "measured_reference_verifier_with_projected_fallback";
 
   const estimatedCostUsd =
     tokenProfile === "compiled_code"
       ? 0
       : options.stage === "stage_1_general_agent"
-        ? Math.max(econ.estimatedCostUsd, 0.068)
-        : Math.max(econ.estimatedCostUsd, 0.014);
+        ? Math.max(econ.estimatedCostUsd, 0.064)
+        : Math.max(econ.estimatedCostUsd, 0.058);
 
   const cpvoUsd =
     Math.round((estimatedCostUsd / Math.max(pass1, 0.01)) * 10000) / 10000;
 
   const latencyMs =
     tokenProfile === "compiled_code"
-      ? 180
+      ? Math.max(1, econ.wallClockMs || 180)
       : options.stage === "stage_1_general_agent"
         ? 3_900
         : isFallback
@@ -419,11 +412,11 @@ export async function runStageTrajectory(options: {
     stage: options.stage,
     stageLabel:
       options.stage === "stage_1_general_agent"
-        ? "Stage 1: Zero-Shot General Agent (Measured v0.7 Baseline: gemini-3.8-flash 66.7% pass@1 / 0.68 mean, claude-sonnet-5-5 50.0% / 0.62, DeepSeek-V4.1-Flash 33.3% / 0.53)"
+        ? "Stage 1: Zero-Shot General Agent (Measured v0.8, 20 workflows x 5 trials: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%; 37%–50% false-completion rate)"
         : options.stage === "stage_2_domain_skill"
-          ? "Stage 2: Domain Skill + Guardrails (Projected Target: skills/insurance-servicing)"
+          ? "Stage 2: Domain Skill Procedure Guide (Measured v0.8: gemini-3.8-flash 69.0% pass@1, 60.2% pass^5; eval/inspect/evergreen_domain_skill.md)"
           : isFallback
-            ? "Stage 3: Compiled Code -> Projected FallbackToSkill"
+            ? "Stage 3: Compiled Code -> Projected FallbackToSkill (eval/inspect/evergreen_domain_skill.md)"
             : "Stage 3: $0-Token Compiled Deterministic Code (Measured 100.0% Scripted Reference Verifier)",
     provenance,
     scenarioId: options.scenarioId,
@@ -445,13 +438,14 @@ export async function runStageTrajectory(options: {
     latencyMs,
     pass1,
     pass5,
-    eoCompliant: runResult.privacyAudit.passed && traceScore >= 0.95,
+    eoCompliant: runResult.privacyAudit.passed && eoTrapsCaught && traceScore >= 0.95,
     traceScore: Math.round(traceScore * 1000) / 1000,
   };
 }
 
 export async function runEvolutionShowcase(options?: {
   fetchImpl?: typeof fetch;
+  baseUrls?: Record<string, string>;
 }): Promise<EvolutionComparisonSummary> {
   const workflows = [];
   for (const spec of COMPILED_WORKFLOW_SPECS) {
@@ -462,6 +456,7 @@ export async function runEvolutionShowcase(options?: {
         scenarioId: spec.routineScenarioId,
         isPivotCase: false,
         fetchImpl: options?.fetchImpl,
+        baseUrls: options?.baseUrls,
       }),
       runStageTrajectory({
         stage: "stage_2_domain_skill",
@@ -469,6 +464,7 @@ export async function runEvolutionShowcase(options?: {
         scenarioId: spec.routineScenarioId,
         isPivotCase: false,
         fetchImpl: options?.fetchImpl,
+        baseUrls: options?.baseUrls,
       }),
       runStageTrajectory({
         stage: "stage_3_compiled_code",
@@ -476,6 +472,7 @@ export async function runEvolutionShowcase(options?: {
         scenarioId: spec.routineScenarioId,
         isPivotCase: false,
         fetchImpl: options?.fetchImpl,
+        baseUrls: options?.baseUrls,
       }),
       runStageTrajectory({
         stage: "stage_1_general_agent",
@@ -483,6 +480,7 @@ export async function runEvolutionShowcase(options?: {
         scenarioId: spec.pivotScenarioId,
         isPivotCase: true,
         fetchImpl: options?.fetchImpl,
+        baseUrls: options?.baseUrls,
       }),
       runStageTrajectory({
         stage: "stage_2_domain_skill",
@@ -490,6 +488,7 @@ export async function runEvolutionShowcase(options?: {
         scenarioId: spec.pivotScenarioId,
         isPivotCase: true,
         fetchImpl: options?.fetchImpl,
+        baseUrls: options?.baseUrls,
       }),
       runStageTrajectory({
         stage: "stage_3_compiled_code",
@@ -497,6 +496,7 @@ export async function runEvolutionShowcase(options?: {
         scenarioId: spec.pivotScenarioId,
         isPivotCase: true,
         fetchImpl: options?.fetchImpl,
+        baseUrls: options?.baseUrls,
       }),
     ]);
 
@@ -514,27 +514,27 @@ export async function runEvolutionShowcase(options?: {
     stages: {
       stage1GeneralAgent: {
         label:
-          "Stage 1: Zero-Shot General Agent (Measured v0.7 Baseline: gemini-3.8-flash 66.7% pass@1 / 0.68 mean, claude-sonnet-5-5 50.0% / 0.62 mean, DeepSeek-V4.1-Flash 33.3% / 0.53 mean; 16.7%–66.7% false-completion rate)",
-        provenance: "measured_v0.7_baseline",
+          "Stage 1: Zero-Shot General Agent (Measured v0.8, 20 workflows x 5 trials: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%; 37%–50% false-completion rate)",
+        provenance: "measured_v0.8_baseline",
         avgTokens: 6500,
-        cpvoUsd: 0.0029,
+        cpvoUsd: 0.1103,
         avgLatencyMs: 3_900,
-        pass1: 0.667,
-        meanScore: 0.68,
-        pass5: passHatK(100, 67, 5),
+        pass1: 0.58,
+        meanScore: 0.71,
+        pass5: 0.471,
         eoComplianceRate: 0.75,
-        falseCompletionRateRange: "16.7%–66.7%",
-        measuredModels: MEASURED_V07_STAGE1_MODELS,
+        falseCompletionRateRange: "37%–50%",
+        measuredModels: MEASURED_V08_STAGE1_MODELS,
       },
       stage2DomainSkill: {
         label:
-          "Stage 2: Domain Skill + Guardrails (Projected Target: skills/insurance-servicing/)",
-        provenance: "projected_skill_target",
+          "Stage 2: Domain Skill Procedure Guide (Measured v0.8: gemini-3.8-flash 69.0% pass@1, 60.2% pass^5; eval/inspect/evergreen_domain_skill.md)",
+        provenance: "measured_v0.8_domain_skill",
         avgTokens: 2700,
-        cpvoUsd: 0.0012,
+        cpvoUsd: 0.0841,
         avgLatencyMs: 1_650,
-        pass1: 0.97,
-        pass5: passHatK(100, 97, 5),
+        pass1: 0.69,
+        pass5: 0.602,
         eoComplianceRate: 1.0,
       },
       stage3CompiledCode: {

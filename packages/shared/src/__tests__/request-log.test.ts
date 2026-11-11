@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
-import { createRequestLog, createSimRouter, type RequestLogOptions } from "../index";
+import {
+  createRequestLog,
+  createSimRouter,
+  getInternalRequestHeaders,
+  type RequestLogOptions,
+} from "../index";
 
 type Span = {
   traceId: string;
@@ -256,5 +261,26 @@ describe("Service-side request log (packages/shared/src/request-log.ts)", () => 
 
     expect(await spans(ams.app)).toHaveLength(1);
     expect(await spans(crm.app)).toEqual([]);
+  });
+
+  test("honors EVERGREEN_SCORER_SECRET on X-Evergreen-Internal requests", async () => {
+    const prevSecret = process.env.EVERGREEN_SCORER_SECRET;
+    process.env.EVERGREEN_SCORER_SECRET = "secret-internal-123";
+    try {
+      const { app } = createApp();
+      // Forged X-Evergreen-Internal without secret IS recorded in the trace
+      await app.request("/v1/clients", { headers: { "X-Evergreen-Internal": "1" } });
+      expect(await spans(app)).toHaveLength(1);
+
+      // Authorized internal call with matching secret is skipped
+      await app.request("/v1/clients", { headers: getInternalRequestHeaders() });
+      expect(await spans(app)).toHaveLength(1);
+    } finally {
+      if (prevSecret === undefined) {
+        delete process.env.EVERGREEN_SCORER_SECRET;
+      } else {
+        process.env.EVERGREEN_SCORER_SECRET = prevSecret;
+      }
+    }
   });
 });

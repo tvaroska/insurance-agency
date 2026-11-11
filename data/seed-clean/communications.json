@@ -489,16 +489,16 @@
     "client_id": "CLI-021",
     "direction": "inbound",
     "channel": "email",
-    "subject": "Concerned about our liability coverage",
-    "body": "Hi, we had an incident at a job site where a homeowner's child was injured. The homeowner's lawyer has sent us a demand letter for $750,000. I need to know if our general liability coverage is adequate. Our current limit is $2 million and I also have an umbrella. Is my coverage adequate for this situation? Please advise ASAP. Brian Lawson, Lawson Plumbing LLC",
+    "subject": "Certificate request for upcoming commercial project",
+    "body": "Hi, we are bidding on a municipal plumbing maintenance project next month and will need an updated certificate of insurance showing our current general liability and workers comp policies. Could you let me know if anything else is needed on file? Thanks, Brian Lawson, Lawson Plumbing LLC",
     "from": "brian.lawson@email.com",
     "to": "service@evergreen-ins.com",
     "timestamp": "2026-02-19T08:30:00Z",
-    "read": false,
+    "read": true,
     "topics": [
-      "lawsuit",
-      "coverage_adequacy",
-      "liability"
+      "coi_request",
+      "commercial",
+      "workers_comp"
     ]
   },
   {
@@ -507,13 +507,13 @@
     "direction": "inbound",
     "channel": "phone",
     "call_id": "CALL-011",
-    "duration_seconds": 720,
-    "transcript": "Agent: Evergreen Insurance, this is Amy.\nCaller: Hi Amy, it's Carlos Gutierrez. I need to talk to someone about my coverage. One of my guys, Miguel, got seriously hurt on the job last week. Fell off a ladder at a commercial property. He's in the hospital.\nAgent: I'm sorry to hear about Miguel. Are you filing a workers comp claim?\nCaller: Yes, and the property manager is saying we weren't supposed to be on ladders above 12 feet without special equipment. They're threatening to sue us too.\nAgent: That would potentially involve your general liability policy as well. I need to flag this for our commercial lines team right away.\nCaller: Can you help me understand what my GL covers in this situation? I want to make sure we handle this properly.\nAgent: Absolutely. Let me get you connected with our commercial claims team and our risk manager. This is a situation where we want to make sure you have the right support.\nCaller: I'm also worried about OSHA getting involved. Does my insurance cover OSHA fines?\nAgent: That's a great question. Typically, OSHA fines are not covered by standard policies, but your employment practices liability might provide defense cost coverage. Let me check your specific policy terms.\nCaller: OK, thanks Amy. Let's set up that meeting.",
-    "sentiment": "negative",
+    "duration_seconds": 420,
+    "transcript": "Agent: Evergreen Insurance, this is Amy.\nCaller: Hi Amy, it's Carlos Gutierrez. I wanted to confirm our safety training certificates were received for our commercial landscaping renewal.\nAgent: Hi Carlos, let me check your file. Yes, we received the crew safety documentation last week and attached it to your commercial account.\nCaller: Great, we're also scheduling equipment maintenance before spring contracts start.\nAgent: Wonderful. Let us know if you add any new vehicles or equipment so we can keep your schedule current.\nCaller: Will do, thanks Amy.",
+    "sentiment": "positive",
     "topics": [
-      "workers_comp_claim",
-      "lawsuit_threat",
-      "coverage_adequacy"
+      "commercial_renewal",
+      "safety_documentation",
+      "equipment_schedule"
     ],
     "timestamp": "2026-02-19T14:00:00Z"
   },
@@ -522,17 +522,15 @@
     "client_id": "CLI-025",
     "direction": "inbound",
     "channel": "email",
-    "subject": "Question about coverage for customer claim",
-    "body": "To whom it may concern, I received a demand letter from an attorney representing a customer who claims their vehicle was damaged due to faulty repair work at my shop. The demand is for $45,000 in vehicle damages plus $200,000 in personal injury. I need to understand what my general liability covers in this situation. My GL shows products/completed ops at $1M. Also, do I have garage keepers liability? I'd like to review my commercial coverage options. Derek Hawkins, Hawkins Auto Repair",
+    "subject": "Billing schedule question for commercial policies",
+    "body": "Hello, could you confirm whether my commercial BOP and general liability policies are set to monthly EFT billing for the upcoming March renewal? Thanks, Derek Hawkins, Hawkins Auto Repair",
     "from": "derek.hawkins@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2026-02-20T07:00:00Z",
-    "read": false,
+    "timestamp": "2026-02-18T07:00:00Z",
+    "read": true,
     "topics": [
-      "demand_letter",
-      "coverage_gap",
-      "completed_operations",
-      "garage_keepers"
+      "billing",
+      "commercial_renewal"
     ]
   },
   {
@@ -542,13 +540,11 @@
     "channel": "phone",
     "call_id": "CALL-012",
     "duration_seconds": 480,
-    "transcript": "Agent: Evergreen Insurance, Tom speaking.\nCaller: Tom, it's Robert Kim. I need to increase my limits. I just landed a contract with the city for commercial renovation work and they require $5 million in general liability. My current policy only has $2 million. Can we get that increased?\nAgent: Let me check, Robert. Your current GL with National Shield is $2 million per occurrence. Getting to $5 million may require an umbrella or excess liability policy on top of your current coverage.\nCaller: Whatever it takes. The contract is worth $1.2 million and I need the COI by Friday. Also, they want professional liability coverage. Do I have that?\nAgent: Let me check... I don't see a professional liability policy on your account currently.\nCaller: Well, I need it. The contract specifically requires it. Can we get it bound by Friday?\nAgent: That's a very tight timeline for a new professional liability policy. These typically require an application and underwriting review. Let me see what I can do.\nCaller: I really need this contract, Tom. Can you prioritize this?\nAgent: Absolutely, Robert. I'll start the application process right away and contact our carriers to expedite. Let me also look at excess liability options for the $5M requirement.",
-    "sentiment": "negative",
+    "transcript": "Agent: Evergreen Insurance, Tom speaking.\nCaller: Tom, it's Robert Kim. I just landed a contract with the city for commercial renovation work and wanted to confirm our certificate process.\nAgent: Congrats Robert! Your active BOP and general liability policies are in good standing. Whenever you have the certificate holder address from the city, send it over and we can issue the COI.\nCaller: Perfect, I'll email the city purchasing department details shortly.\nAgent: Sounds great, we'll turn it around right away.",
+    "sentiment": "positive",
     "topics": [
-      "coverage_increase",
-      "professional_liability",
-      "time_pressure",
-      "high_value_commercial"
+      "coi_request",
+      "commercial"
     ],
     "timestamp": "2026-02-18T09:00:00Z"
   },
@@ -557,16 +553,15 @@
     "client_id": "CLI-013",
     "direction": "inbound",
     "channel": "email",
-    "subject": "Question about my umbrella coverage",
-    "body": "Hello, I met with an estate planning attorney yesterday and she suggested I review my umbrella coverage. With my net worth and property holdings, she recommended at least $3-5 million in umbrella coverage. I currently have $1 million. I'd like to discuss increasing my umbrella limit. Can someone call me to go over the options and pricing? Thanks, William Okafor",
+    "subject": "Question about umbrella renewal options",
+    "body": "Hello, during my annual financial planning review I decided I'd like to look at pricing options for higher personal umbrella limits at my next renewal. Could someone call me next week to go over pricing tiers? Thanks, William Okafor",
     "from": "william.okafor@email.com",
     "to": "service@evergreen-ins.com",
     "timestamp": "2026-02-17T11:00:00Z",
-    "read": false,
+    "read": true,
     "topics": [
-      "umbrella_adequacy",
-      "coverage_adequacy",
-      "risk_assessment"
+      "umbrella",
+      "renewal_options"
     ]
   }
 ]

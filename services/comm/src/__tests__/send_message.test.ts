@@ -1,17 +1,13 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "../schema";
+import { insertSqliteRow } from "@evergreen/shared";
 import { createTestDb, makeWebhook } from "./setup";
-
-let testDb: ReturnType<typeof createTestDb>["db"];
 let testSqlite: Database;
 let testPrisma: ReturnType<typeof createTestDb>["prisma"];
 
 beforeEach(() => {
   const created = createTestDb();
-  testDb = created.db;
   testSqlite = created.sqlite;
   testPrisma = created.prisma;
 });
@@ -145,7 +141,7 @@ describe("send_message - success", () => {
       testPrisma,
     );
 
-    const rows = testDb.select().from(schema.messages).all();
+    const rows = (testSqlite.query(`SELECT * FROM "messages"`).all() as any[]);
     expect(rows.length).toBe(1);
     expect(rows[0].direction).toBe("outbound");
     expect(rows[0].status).toBe("queued");
@@ -156,14 +152,9 @@ describe("send_message - success", () => {
 describe("send_message - webhook trigger", () => {
   test("creates webhook delivery when webhook is subscribed", async () => {
     // Set up a webhook subscription
-    testDb
-      .insert(schema.webhooks)
-      .values(
-        makeWebhook({
+    insertSqliteRow(testSqlite, "webhooks", makeWebhook({
           events: JSON.stringify(["message.delivered"]),
-        }),
-      )
-      .run();
+        }),);
 
     await handleSendMessage(
       {
@@ -175,10 +166,7 @@ describe("send_message - webhook trigger", () => {
       testPrisma,
     );
 
-    const deliveries = testDb
-      .select()
-      .from(schema.webhookDeliveries)
-      .all();
+    const deliveries = (testSqlite.query(`SELECT * FROM "webhook_deliveries"`).all() as any[]);
     expect(deliveries.length).toBe(1);
     expect(deliveries[0].event_type).toBe("message.delivered");
     expect(deliveries[0].status).toBe("delivered");

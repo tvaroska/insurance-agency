@@ -1,9 +1,6 @@
 import { prisma } from "./prisma";
 import { join } from "path";
 
-const SEED_MODE = process.env.SEED_MODE === "clean" ? "seed-clean" : "seed";
-const SEED_DIR = join(import.meta.dir, "..", "..", "..", "data", SEED_MODE);
-
 interface SeedCoverage {
   type: string;
   limit?: string | number | null;
@@ -46,8 +43,8 @@ interface SeedPolicy {
   updated_at: string;
 }
 
-async function loadJson<T>(filename: string): Promise<T> {
-  const path = join(SEED_DIR, filename);
+async function loadJson<T>(seedDir: string, filename: string): Promise<T> {
+  const path = join(seedDir, filename);
   const file = Bun.file(path);
   return file.json() as Promise<T>;
 }
@@ -140,18 +137,24 @@ async function createTables() {
   )`);
 }
 
-async function seed() {
-  console.log(`Seed mode: ${SEED_MODE} (SEED_MODE=${process.env.SEED_MODE ?? "unset"})`);
-  console.log("Creating tables...");
+export async function seedDatabase(
+  seedMode = process.env.SEED_MODE || "realistic",
+): Promise<void> {
+  const seedFolder = seedMode === "clean" ? "seed-clean" : "seed";
+  const seedDir = join(import.meta.dir, "..", "..", "..", "data", seedFolder);
+  const verbose = import.meta.main;
+
+  if (verbose) {
+    console.log(`Seed mode: ${seedFolder} (seedMode=${seedMode})`);
+    console.log("Creating tables...");
+  }
   await createTables();
 
-  console.log("Loading seed data...");
   const [quoteRequests, allPolicies] = await Promise.all([
-    loadJson<SeedQuoteRequest[]>("quotes.json"),
-    loadJson<SeedPolicy[]>("policies.json"),
+    loadJson<SeedQuoteRequest[]>(seedDir, "quotes.json"),
+    loadJson<SeedPolicy[]>(seedDir, "policies.json"),
   ]);
 
-  // Extract Coastal Star quotes from quote requests
   const coastalQuotes: Array<{
     result: SeedQuoteResult;
     request: SeedQuoteRequest;
@@ -164,15 +167,14 @@ async function seed() {
     }
   }
 
-  // Filter Coastal Star policies
   const coastalPolicies = allPolicies.filter((p) => p.carrier_code === "CSTL");
 
-  console.log(
-    `Found: ${coastalQuotes.length} Coastal Star quotes, ${coastalPolicies.length} Coastal Star policies`,
-  );
+  if (verbose) {
+    console.log(
+      `Found: ${coastalQuotes.length} Coastal Star quotes, ${coastalPolicies.length} Coastal Star policies`,
+    );
+  }
 
-  // Insert policies first (quotes may reference them)
-  console.log("Seeding policies...");
   await prisma.policy.createMany({
     data: coastalPolicies.map((p) => ({
       policy_id: p.policy_id,
@@ -188,60 +190,62 @@ async function seed() {
     })),
   });
 
-  // Insert quotes with risk assessment data
-  console.log("Seeding quotes...");
-  for (const { result, request } of coastalQuotes) {
-    const score = computeRiskScore(result.quote_id);
-    const tier = riskTier(score);
-    const factors = generateRiskFactors(score);
-    const isBound = result.status === "bound";
+  if (coastalQuotes.length > 0) {
+    await prisma.quote.createMany({
+      data: coastalQuotes.map(({ result, request }) => {
+        const score = computeRiskScore(result.quote_id);
+        const tier = riskTier(score);
+        const factors = generateRiskFactors(score);
+        const isBound = result.status === "bound";
 
-    let linkedPolicyId: string | null = null;
-    if (isBound) {
-      const matchingPolicy = coastalPolicies.find(
-        (p) => p.client_id === request.client_id && p.status === "active",
-      );
-      linkedPolicyId = matchingPolicy?.policy_id ?? null;
-    }
+        let linkedPolicyId: string | null = null;
+        if (isBound) {
+          const matchingPolicy = coastalPolicies.find(
+            (p) => p.client_id === request.client_id && p.status === "active",
+          );
+          linkedPolicyId = matchingPolicy?.policy_id ?? null;
+        }
 
-    await prisma.quote.create({
-      data: {
-        quote_id: result.quote_id,
-        request_id: request.request_id,
-        client_id: request.client_id,
-        policy_type: request.policy_type,
-        premium_annual: result.premium_annual,
-        premium_monthly: result.premium_monthly,
-        coverages: JSON.stringify(result.coverages),
-        deductibles: JSON.stringify(result.deductibles),
-        status: isBound ? "bound" : "assessed",
-        decline_reason: result.decline_reason ?? null,
-        valid_until: result.valid_until ?? null,
-        submitted_at: request.submitted_at,
-        risk_score: score,
-        risk_tier: tier,
-        risk_factors: JSON.stringify(factors),
-        assessed_at: request.submitted_at,
-        bind_status: isBound ? "bound" : "unbound",
-        bound_at: isBound ? request.submitted_at : null,
-        policy_id: linkedPolicyId,
-      },
+        return {
+          quote_id: result.quote_id,
+          request_id: request.request_id,
+          client_id: request.client_id,
+          policy_type: request.policy_type,
+          premium_annual: result.premium_annual,
+          premium_monthly: result.premium_monthly,
+          coverages: JSON.stringify(result.coverages),
+          deductibles: JSON.stringify(result.deductibles),
+          status: isBound ? "bound" : "assessed",
+          decline_reason: result.decline_reason ?? null,
+          valid_until: result.valid_until ?? null,
+          submitted_at: request.submitted_at,
+          risk_score: score,
+          risk_tier: tier,
+          risk_factors: JSON.stringify(factors),
+          assessed_at: request.submitted_at,
+          bind_status: isBound ? "bound" : "unbound",
+          bound_at: isBound ? request.submitted_at : null,
+          policy_id: linkedPolicyId,
+        };
+      }),
     });
   }
 
-  // Verify counts
-  const counts = {
-    quotes: await prisma.quote.count(),
-    policies: await prisma.policy.count(),
-  };
-
-  console.log("\nSeed complete:");
-  for (const [table, count] of Object.entries(counts)) {
-    console.log(`  ${table}: ${count} rows`);
+  if (verbose) {
+    const counts = {
+      quotes: await prisma.quote.count(),
+      policies: await prisma.policy.count(),
+    };
+    console.log("\nSeed complete:");
+    for (const [table, count] of Object.entries(counts)) {
+      console.log(`  ${table}: ${count} rows`);
+    }
   }
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  seedDatabase().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}
