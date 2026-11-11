@@ -159,3 +159,18 @@ Goals:
 - Next: run more than one natural prompt per workflow or more trials so the zero-shot models can be separated (their `pass@1` intervals overlap)
 - Next: add a clean natural-language case for Scenario 08 and a clean variant for Scenario 09 so the control covers all 20 workflows
 - Done (2026-11-11): "Cost per task" now uses Vertex AI list prices calibrated against the Cloud Billing export (per 1M tokens: `gemini-3.8-flash` 1.50 input / 7.50 output / 0.15 cached; `DeepSeek-V4.1-Flash` 0.30 / 1.20 / 0.03; `claude-sonnet-5-5` 2.00 / 10.00 / 0.10 cached read / 2.50 cache write). The old table was about 7 times low for Gemini and 2 times low for DeepSeek and ignored Claude cache writes. Recomputed first-sweep cost matched the billed amount within 0.5%. At list price the v0.8 day cost about $216 (first sweep $77, pilot $28, published run $111)
+
+### arXiv Paper (planned, not started)
+
+Assessment (2026-11-11): the v0.8 run is enough for an honest single-domain benchmark paper. A second business is the stronger version but should not block v1; add it as v2 or a follow-up paper.
+
+- What already carries a paper: a new environment (8 separate systems over REST, MCP, and browser-only portals; legal traps the systems do not catch; grading on what changed in every database, not on the transcript), a real experiment (454 trials, 4 arms, confidence intervals, clean-versus-messy control, procedure-guide comparison, billing-calibrated cost), and reproducibility (scripted reference 100%, do-nothing 0%, 120-item rubric gold set, per-trial replay hashes)
+- Strengthen before drafting (likely reviewer attacks):
+  1. Models are statistically tied at n = 20 (one natural prompt per workflow). Run the natural, vague, and adversarial tiers at 5 trials each (300 trials per arm, about $310 list / $180 net at calibrated rates) to separate models and add a difficulty curve; the full 253 prompts x 3 trials is about $790 list
+  2. Grader validity: the collateral rules were tightened after the first sweep. Disclose this and back it with a blind hand audit of about 60 trials (human verdict versus grader verdict)
+  3. Error taxonomy: most failures are missing follow-through (finding the coverage gap, below-minimum policy, or commission discrepancy, then not documenting it or opening the producer task). Classify all failures from the saved receipts
+  4. Generalization: one business cannot carry "benchmarking knowledge work" as a general claim. Frame v1 as one worked domain ("a first step"); a second business turns the paper into a framework shown on two domains
+- Second business option: small (4 to 5 systems, about 10 workflows), for example a bookkeeping practice with a browser-only tax portal, reusing the harness, state-diff grader, collateral policy, and Inspect pipeline. Estimate 3 to 6 weeks with agent help
+- Gates, start in parallel either way: an arXiv endorser in the target category (first-time submitters need one unless they have an institutional email and an existing paper there), and employer publication approval (which approval process covers this repo is not yet recorded)
+- Suggested shape: cs.AI with cs.SE cross-list, 8 to 10 pages (problem, environment, grading, v0.8 plus the wider run, failure analysis, limitations)
+- Open decision: (a) wider sweep and hand audit, then draft; (b) draft from v0.8 now; or (c) build the second business first. Recommended: (a), with the gates in parallel and the second business after v1 is posted
