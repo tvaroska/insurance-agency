@@ -97,7 +97,7 @@ Requirements and acceptance criteria organized by feature area.
 
 ### Requirements
 
-- Standardized runner scripts under `eval/harnesses/` to execute the 20 benchmark scenarios (253 task cases) against multiple agent harnesses (Google ADK, Claude Code, OpenHands, LangGraph, Inspect AI / METR) in both `--mode=precomputed` and `--mode=live`
+- Standardized runner scripts under `eval/harnesses/` to execute the 20 benchmark scenarios (259 task cases) against multiple agent harnesses (Google ADK, Claude Code, OpenHands, LangGraph, Inspect AI / METR) in both `--mode=precomputed` and `--mode=live`
 - Automated gym reset (`POST /sim/reset` or `docker compose down && up`) between scenario runs
 - Aggregator CLI that compiles per-scenario reports into a comparative matrix: Overall Score, E&O Compliance Rate, Modality Coverage, Mean API Calls, Mean Token Cost ($), and p50/p95 Latency
 
@@ -110,7 +110,7 @@ Requirements and acceptance criteria organized by feature area.
 
 ### Requirements
 
-- Exporter script (`eval/harbor/export-harbor.ts`) generates Harbor-compatible task directories (`task.yaml`, `docker-compose.yaml` reference, and `tests/test_outputs.py`) for all 20 scenarios (253 task cases)
+- Exporter script (`eval/harbor/export-harbor.ts`) generates Harbor-compatible task directories (`task.yaml`, `docker-compose.yaml` reference, and `tests/test_outputs.py`) for all 20 scenarios (259 task cases)
 - Agent container in Harbor connects to the 8 gym microservices on the shared Docker Compose network, with `SEED_MODE` configured per variant
 - `tests/test_outputs.py` runs `bun eval/score.ts` against the agent's exported OTLP trace file and live service state, asserting overall score and E&O compliance
 - Compatible out-of-the-box with `harbor run` across built-in harnesses (Claude Code, OpenHands, Codex CLI, Goose, Aider)

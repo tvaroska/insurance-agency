@@ -35,7 +35,7 @@ print(json.dumps({
 }))
 `);
 
-    expect(info.total_samples).toBe(253);
+    expect(info.total_samples).toBe(259);
     expect(info.has_setup).toBe(true);
     expect(info.has_solver).toBe(true);
     expect(info.has_scorer).toBe(true);

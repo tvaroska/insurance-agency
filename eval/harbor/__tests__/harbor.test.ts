@@ -11,13 +11,13 @@ import {
 } from "../export-harbor";
 
 describe("Harbor / Terminal-Bench 2.0 Exporter (S2-INTOP-1)", () => {
-  it("builds a complete manifest covering all 20 scenarios and 253 tasks", () => {
+  it("builds a complete manifest covering all 20 scenarios and 259 tasks", () => {
     const manifest = buildHarborManifest();
 
     expect(manifest.standard).toBe("harbor-2.0");
     expect(manifest.benchmark).toBe("evergreen-insurance-gym");
     expect(manifest.total_scenarios).toBe(20);
-    expect(manifest.total_tasks).toBe(253);
+    expect(manifest.total_tasks).toBe(259);
     expect(manifest.default_models.workhorse).toBe("gemini-3.8-flash");
     expect(manifest.default_models.reasoning).toBe("gemini-4-argon");
     expect(manifest.default_models.fast).toBe("gemini-3.5-flash-lite");

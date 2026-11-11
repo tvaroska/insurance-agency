@@ -1,6 +1,6 @@
 # Harbor / Terminal-Bench 2.0 Adapter (`eval/harbor/`)
 
-Packages the **20 Evergreen Insurance API Gym scenarios** (253 total task cases across seed variants and 5 prompt difficulty tiers) into the [**Harbor / Terminal-Bench 2.0**](https://harborframework.com) task standard (`task.yaml` + `docker-compose.harbor.yaml` + `tests/test_outputs.py`).
+Packages the **20 Evergreen Insurance API Gym scenarios** (259 total task cases across seed variants and 5 prompt difficulty tiers) into the [**Harbor / Terminal-Bench 2.0**](https://harborframework.com) task standard (`task.yaml` + `docker-compose.harbor.yaml` + `tests/test_outputs.py`).
 
 This enables zero-code benchmarking of container and CLI-based agent harnesses (**Claude Code, OpenHands, Codex CLI, Goose, Aider**) directly against the 8 Evergreen microservices.
 
@@ -12,13 +12,13 @@ This enables zero-code benchmarking of container and CLI-based agent harnesses (
 eval/harbor/
 ├── export-harbor.ts             # Generates tasks-manifest.json, compose, and task directories
 ├── docker-compose.harbor.yaml   # Shared 8-service + harbor-agent container topology
-├── tasks-manifest.json          # Full catalog of all 253 task cases across 20 scenarios
+├── tasks-manifest.json          # Full catalog of all 259 task cases across 20 scenarios
 ├── tasks/
 │   ├── 01-realistic-natural/
 │   │   ├── task.yaml
 │   │   └── tests/
 │   │       └── test_outputs.py  # Invokes `bun eval/score.ts` and asserts E&O + score
-│   └── ... (01..20 representative tasks by default; all 253 with `--all`)
+│   └── ... (01..20 representative tasks by default; all 259 with `--all`)
 └── __tests__/
     └── harbor.test.ts
 ```
@@ -28,10 +28,10 @@ eval/harbor/
 ## 2. Generating Harbor Task Definitions
 
 ```bash
-# Export full manifest (253 tasks) + 20 representative scenario directories (<id>-realistic-natural):
+# Export full manifest (259 tasks) + 20 representative scenario directories (<id>-realistic-natural):
 bun eval/harbor/export-harbor.ts
 
-# Export all 253 task directories:
+# Export all 259 task directories:
 bun eval/harbor/export-harbor.ts --all
 
 # Export to a custom directory:

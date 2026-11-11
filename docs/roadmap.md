@@ -1,6 +1,6 @@
 # Evergreen Insurance Agency — Product Roadmap
 
-**Last Updated:** 2026-11-10
+**Last Updated:** 2026-11-11
 
 ## Strategic Overview
 
@@ -56,14 +56,13 @@ Goals:
 
 ### Infrastructure
 
-**Status:** Complete (v0.5.0)
+**Status:** Complete (v0.5.0; canonical SQLite isolation finalized in `ADR-006`)
 **Priority:** P1
 **Progress:** 100%
 
 Goals:
 - Drizzle → Prisma 7 migration across all 8 services + runtime startup seeding (`S2-DB-1..4`, done)
-- Prisma test helpers & `TEST_DATABASE_URL` PostgreSQL support + Cloud Build CI (`S2-TEST-1`, done)
-- Kubernetes manifests + CloudNativePG cluster & Docker Compose PG override (`S2-K8S-1..4`, `S2-COMPOSE-1`, done)
+- Canonical per-service SQLite (`EVERGREEN_DATA_DIR`) + `< 100ms` in-process `/sim/reset` + Cloud Build CI (`S2-TEST-1`, `ADR-006`, done; unverified K8s/CloudNativePG manifests retired in `ADR-006`)
 
 ---
 
@@ -136,29 +135,31 @@ Goals:
   - `specs/rater.yaml`: added `GET /quotes` (`listQuotes` with `client_id`, `policy_type`, `status`, `carrier_code`, `limit`, `cursor` query parameters) matching `services/rater/src/routes/quotes.ts` (`lines 77–131`) and Scenario `03`'s `verify_quote` check (`GET /v1/quotes`), so OpenAPI-driven agents can discover existing quote request IDs (`QR-001`) on unscripted prompts without guessing
   - `services/ecm/src/routes/envelopes.ts` & `specs/ecm.yaml`: implemented `GET /v1/envelopes` (`client_id`, `status`, `limit` query filters) so `03-realistic`'s `signature_requested` `outputCheck` (`GET /envelopes?client_id=CLI-003&limit=50`) returns `200` with created envelopes
   - `eval/scenarios/01..15` & `data/seed-clean/leads.json`: grounded `clean` variant prompts (`scripted` through `adversarial`) across Scenarios `01`–`15` with concrete `seed-clean` client/quote/claim/lead identifiers (matching Scenarios `16`–`20`) and aligned `14-clean` lead `lead_a1b2c3d4` (`Jessica Williams`) initial status to `"contacted"` so the `clean`-to-`realistic` control arm measures data messiness rather than missing entity names in `clean` prompts
-- Next (implementation phase): choose the learning mechanism (how an agent improves its prompts and **OpenAPI / MCP tool & parameter descriptions** between runs via trace-reflection / `GEPA` evolution over a train/holdout split with `0%` negative flips, encoding domain preconditions and E&O escalation triggers directly at the tool-selection boundary) and execute the full 20-workflow `pass^5` leaderboard re-run to fill the `README.md` Results table. Smallest useful run: the 3 models across one `vague`/`natural` task per workflow (n = 20), 5 trials each, realistic seed with `MODALITY_MODE=strict`, plus a control arm on the clean seed with REST shortcuts allowed. Report `pass@1`, `pass^5`, legal traps missed (3 system-caught vs. 7 judgment-only), runs where the agent said the work was done but the state check failed, records changed unasked, the clean-to-messy drop, and cost per task, with intervals for n = 20; take each model's tau2-bench rank from its public leaderboard
-- Next: measure the LLM judge's sensitivity and specificity on a hand-labeled sample; `roganGladenDebiasedPassRate` in `eval/evaluators/rubric.ts` defaults to 0.94 and 0.92 until then
+- Done (2026-11-11): executed the first full 20-workflow `pass^5` leaderboard sweep (`v0.8.0` below) and replaced projected Stage 2 skill target rates in `eval/evolution-showcase.ts`, `docs/executive-scorecard.html`, and `services/ams/src/routes/workbench.ts` with measured 5-trial `v0.8` Domain Skill results (`69.0%` `pass@1`, `60.2%` `pass^5`)
+- Done (2026-11-11): replaced `docs/assets/benchmark_card.svg` with a real failing-run receipt (`06-realistic-natural`, `claude-sonnet-5-5`, epoch 1) selected by a deterministic rule documented in [`docs/v08-failure-analysis.md`](v08-failure-analysis.md)
+- Next: implement an automated learning mechanism (how an agent improves its prompts and **OpenAPI / MCP tool & parameter descriptions** between runs via trace-reflection / `GEPA` evolution over a train/holdout split with `0%` negative flips, encoding domain preconditions and E&O escalation triggers directly at the tool-selection boundary; `evergreen_langchain.py` currently supports `"none"` and static `"domain_skill"`)
+- Next: measure live Vertex AI LLM judge (`gemini-4-argon`) sensitivity and specificity via `bun eval/calibration/calibrate-judge.ts --llm-judge` on the 120-item gold set (`eval/calibration/calibration-receipt.json` currently records the offline `"deterministic-rule"` checker at `TPR = 0.9667`, `TNR = 0.90`)
 - Next: expand `Cost per task` into full **Cost per Validated Outcome (`CPVO`)** alongside `bq-eval` — keep raw `Cost per task` in the Results table as the baseline entry point, add `Cost per Validated Outcome` (dividing total spend across all 4 FinOps buckets by runs that pass deterministic `60%` DB state diff + `40%` OTLP trace + hard E&O gate $\times$ Rogan-Gladen calibrated communication rubric $\hat{\theta}_{\text{RG}}$), and export real Inspect `.eval` OTLP traces and 32-table SQLite state-diff verdicts across all 8 services directly into `bq-eval`
-- Next: replace the hero card with a receipt from a real failing run (what the agent told the client vs. what changed in the 8 systems), picked by a fixed rule. The services already reject 15/30/10 in Texas with HTTP 422, so the receipt must show the missed escalation or a false "done", or use a judgment-only trap such as Scenario 19 (attorney mention)
-- Next: replace the projected Stage 2 skill target rates in `eval/evolution-showcase.ts` and `services/ams/src/routes/workbench.ts` (which now report the measured `v0.7` Stage 1 baseline of `33.3%–66.7%` `pass@1` / `16.7%–66.7%` false-completion rate and the measured `100.0%` 20-workflow Stage 3 reference verifier anchor alongside projected Stage 2 skill targets) with measured 5-trial Stage 2 skill runs (`pass^5`)
 
 ### v0.8.0: Harness Hardening & First Full Sweep (current)
 
-- Done (2026-11-11, `ADR-006`): `/showcase-panel` R1 to R3 hardening. Scorer crash on `specs/ast.rules.yaml` fixed; in-process reset with `EVERGREEN_DATA_DIR`; tracked service `.db` files removed; E&O firewall escalation bypass closed (rater bind returns 422, state minimums never waivable, escalations must match client, policy and reason); scorer secret, portal bootstrap cookie and `/mcp` JWT under strict mode; `collateralPolicy` on all 52 variants; Drizzle, PG and K8s removed; 120-item rubric gold set (`eval/calibration/`, Gwet AC2 0.93, deterministic checker TPR 0.967 / TNR 0.90); `validate-harness` 52/52
+- Done (2026-11-11, `ADR-006`): `/showcase-panel` R1 to R3 hardening. Scorer crash on `specs/ast.rules.yaml` fixed; in-process reset with `EVERGREEN_DATA_DIR`; tracked service `.db` files removed; E&O firewall escalation bypass closed (rater bind returns 422, state minimums never waivable, escalations must match client, policy and reason); scorer secret, portal bootstrap cookie and `/mcp` JWT under strict mode; `collateralPolicy` on all variants; Drizzle, PG and K8s removed; 120-item rubric gold set (`eval/calibration/`, Gwet AC2 0.93, deterministic checker TPR 0.967 / TNR 0.90); `validate-harness` 53/53 across 259 tasks
 - Done (2026-11-11): a first consolidated sweep exposed scorer and runner defects; it was run once as-is, set aside, and all findings were fixed in one pass before the published run:
   1. Collateral scoring flagged correct escalations: escalations, escalation events and review tasks are now exempt from policy scope and from `maxTotalMutations`, book-wide scenarios (04, 10, 15) set `governanceAnyClient`, and the penalty is 0.1 per unasked write capped at 0.5
   2. Scenario 12 realistic was tagged `CLI-012` while Rosa Jimenez is `CLI-018` in the seed; dual-name prompts in Scenarios 12 and 13 were removed; Scenario 08 now allows the address-change endorsements on Priya Patel's two policies
   3. Receipt bundles now include the learning mechanism in their path, so arms never overwrite each other
-  4. `seed=realistic` falls back to a scenario's first messy variant (09 uses `moderate`); variants without a case at the requested difficulty are skipped (08 and 09 have no clean natural task)
+  4. `seed=realistic` falls back to a scenario's first messy variant (09 uses `moderate`); variants without a case at the requested difficulty are skipped
   5. "Drop, clean to messy" compares an arm only with its own clean runs, on the scenarios both seeds cover
   6. `run_baseline.py` collects job failures and still summarizes; stack data dirs are keyed by port so parallel runners do not collide
   7. A pre-sweep pilot gate (1 trial per workflow on every arm) is now required before a production sweep (`AGENTS.md`)
 - Done (2026-11-11): published v0.8 run (`eval/results/v0.8/`, 454 trials: 20 workflows x 5 trials realistic for 4 arms, 18 workflows x 1 trial clean for the 3 zero-shot arms; `claude-sonnet-5-5` on Vertex project `coding007`). Results table in `README.md`, `docs/assets/benchmark_card.svg`, `docs/executive-scorecard.html`, `eval/evolution-showcase.ts` and the workbench. Replay bundles (trace, before/after snapshots, report, `sha256sums.txt`) are stored outside git at `gs://btvaroska/insurance-agency/results/v0.8/artifacts/`; `replay-manifest.json` in the repo carries every trial's hashes and paths
-- Next: improve the five workflows where no zero-shot model passes more than 2 of 5 trials (06, 07, 10, 11, 15); most failures are missing follow-through (documenting the gap or opening the producer task)
-- Next: investigate why the domain skill guide hurts Scenario 01 intake (5 of 5 down to 1 of 5) and 02 quote comparison, then run a domain skill clean control so its row gets a clean-to-messy drop
-- Next: run more than one natural prompt per workflow or more trials so the zero-shot models can be separated (their `pass@1` intervals overlap)
-- Next: add a clean natural-language case for Scenario 08 and a clean variant for Scenario 09 so the control covers all 20 workflows
-- Done (2026-11-11): "Cost per task" now uses Vertex AI list prices calibrated against the Cloud Billing export (per 1M tokens: `gemini-3.8-flash` 1.50 input / 7.50 output / 0.15 cached; `DeepSeek-V4.1-Flash` 0.30 / 1.20 / 0.03; `claude-sonnet-5-5` 2.00 / 10.00 / 0.10 cached read / 2.50 cache write). The old table was about 7 times low for Gemini and 2 times low for DeepSeek and ignored Claude cache writes. Recomputed first-sweep cost matched the billed amount within 0.5%. At list price the v0.8 day cost about $216 (first sweep $77, pilot $28, published run $111)
+- Done (2026-11-11): "Cost per task" uses Vertex AI list prices calibrated against the Cloud Billing export (per 1M tokens: `gemini-3.8-flash` 1.50 input / 7.50 output / 0.15 cached; `DeepSeek-V4.1-Flash` 0.30 / 1.20 / 0.03; `claude-sonnet-5-5` 2.00 / 10.00 / 0.10 cached read / 2.50 cache write), synced across both `eval/inspect/summarize_inspect.py` and `eval/evaluators/economics.ts`. At list price the v0.8 day cost about $216 (first sweep $77, pilot $28, published run $111)
+- Done (2026-11-11): added a `clean` `natural` task to Scenario 08 (`08-clean-natural`) and a 5-case `clean` variant to Scenario 09 (`09-clean-*`), bringing the suite to **259 tasks** (`53/53` `validate-harness` variants green) so future clean controls cover all `20/20` workflows
+- Done (2026-11-11): completed 454-trial offline **Error Taxonomy** (`59.1%` missing follow-through records, `19.5%` uncaught judgment E&O traps, `12.6%` incomplete primary state changes, `5.0%` collateral penalties, `3.8%` system E&O traps), diagnosed the exact Domain Skill regressions on Scenarios `01` (`updateLead` instead of `createLead`) and `02` (unnecessary single-turn VIN clarification SMS + portal detour) in [`docs/v08-failure-analysis.md`](v08-failure-analysis.md), and generated the **60-trial stratified blind human audit sheet + sealed key + agreement scorer** ([`eval/results/v0.8/blind-audit-60-sheet.md`](../eval/results/v0.8/blind-audit-60-sheet.md), [`eval/inspect/score_blind_audit.py`](../eval/inspect/score_blind_audit.py))
+- Next: apply the two targeted Domain Skill fixes (`01` new-inquiry `createLead` rule; `02` single-turn existing-quote VIN rule) and run a 20-workflow Domain Skill clean + realistic check so its row gets a clean-to-messy drop
+- Next: remediate or test prompt/skill follow-through on the five weak workflows (`06, 07, 10, 11, 15`)
+- Next: mark the 60-trial blind audit sheet (`blind-audit-60-sheet.md`) and run `score_blind_audit.py` to report human-vs-grader agreement ($\kappa$, Gwet's `AC1`)
+- Next: run more than one prompt tier per workflow (`natural`, `vague`, `adversarial` x 5 trials) so zero-shot models can be statistically separated
 
 ### arXiv Paper (planned, not started)
 
@@ -166,9 +167,9 @@ Assessment (2026-11-11): the v0.8 run is enough for an honest single-domain benc
 
 - What already carries a paper: a new environment (8 separate systems over REST, MCP, and browser-only portals; legal traps the systems do not catch; grading on what changed in every database, not on the transcript), a real experiment (454 trials, 4 arms, confidence intervals, clean-versus-messy control, procedure-guide comparison, billing-calibrated cost), and reproducibility (scripted reference 100%, do-nothing 0%, 120-item rubric gold set, per-trial replay hashes)
 - Strengthen before drafting (likely reviewer attacks):
-  1. Models are statistically tied at n = 20 (one natural prompt per workflow). Run the natural, vague, and adversarial tiers at 5 trials each (300 trials per arm, about $310 list / $180 net at calibrated rates) to separate models and add a difficulty curve; the full 253 prompts x 3 trials is about $790 list
-  2. Grader validity: the collateral rules were tightened after the first sweep. Disclose this and back it with a blind hand audit of about 60 trials (human verdict versus grader verdict)
-  3. Error taxonomy: most failures are missing follow-through (finding the coverage gap, below-minimum policy, or commission discrepancy, then not documenting it or opening the producer task). Classify all failures from the saved receipts
+  1. Models are statistically tied at n = 20 (one natural prompt per workflow). Run the natural, vague, and adversarial tiers at 5 trials each (300 trials per arm, about $310 list / $180 net at calibrated rates) to separate models and add a difficulty curve; the full 259 prompts x 3 trials is about $810 list
+  2. Grader validity: the collateral rules were tightened after the first sweep. Disclose this and back it with the 60-trial blind hand audit (`eval/results/v0.8/blind-audit-60-sheet.md` + `eval/inspect/score_blind_audit.py`; template & sealed key staged, human marking pending)
+  3. Error taxonomy: classified across all 454 `v0.8` trials in [`docs/v08-failure-analysis.md`](v08-failure-analysis.md) (`59.1%` missing follow-through record, `19.5%` uncaught judgment E&O trap, `12.6%` incomplete primary state change, `5.0%` collateral penalty, `3.8%` system E&O trap)
   4. Generalization: one business cannot carry "benchmarking knowledge work" as a general claim. Frame v1 as one worked domain ("a first step"); a second business turns the paper into a framework shown on two domains
 - Second business option: small (4 to 5 systems, about 10 workflows), for example a bookkeeping practice with a browser-only tax portal, reusing the harness, state-diff grader, collateral policy, and Inspect pipeline. Estimate 3 to 6 weeks with agent help
 - Gates, start in parallel either way: an arXiv endorser in the target category (first-time submitters need one unless they have an institutional email and an existing paper there), and employer publication approval (which approval process covers this repo is not yet recorded)

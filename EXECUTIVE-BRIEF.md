@@ -1,6 +1,6 @@
 # Evergreen Insurance Partners: Executive Brief (`EXECUTIVE-BRIEF.md`)
 
-**One-Line Summary:** Evergreen is a runnable 8-microservice Property and Casualty (P&C) insurance brokerage showcase and 20-scenario (253-task) governance benchmark pairing an analytical agency capacity model (**$20.0M to $38.5M modeled written premium; `$200K to $385K` modeled revenue/employee, `+92.5%`**) with a **deterministic HTTP `422` service-layer Errors and Omissions (E&O) firewall**, **32-table SQLite collateral-damage auditing**, and **measured multi-model Inspect AI evaluations**.
+**One-Line Summary:** Evergreen is a runnable 8-microservice Property and Casualty (P&C) insurance brokerage showcase and 20-scenario (259-task) governance benchmark pairing an analytical agency capacity model (**$20.0M to $38.5M modeled written premium; `$200K to $385K` modeled revenue/employee, `+92.5%`**) with a **deterministic HTTP `422` service-layer Errors and Omissions (E&O) firewall**, **32-table SQLite collateral-damage auditing**, and **measured multi-model Inspect AI evaluations**.
 
 ---
 
@@ -14,7 +14,7 @@
 | **Routine CSR Servicing Share (Modeled Assumption)** | `0%` automated | **`78%`** routine volume (COIs, FNOL, renewals, audits) | **Modeled:** `calculateAgencyRoi` input parameter in [`eval/evolution-showcase.ts`](eval/evolution-showcase.ts) |
 | **1st-Line Statutory E&O Firewall (Measured in Code)** | Manual CSR memory | **HTTP `422` Hard Service Gate (10 States)** | **Measured:** [`packages/shared/src/compliance-firewall.ts`](packages/shared/src/compliance-firewall.ts) |
 | **3rd-Line Database Collateral Audit (Measured in Code)** | Unverified chat logs | **32-Table Pre/Post SQLite State Diff + `collateralPolicy`** | **Measured:** [`eval/evaluators/state-diff.ts`](eval/evaluators/state-diff.ts) |
-| **Reference Verifier vs. LLM Cost (Measured)** | `$0.010 to $0.079 / task` (measured LLM runs) | **`$0.0000 / run`** (`0` LLM tokens in scripted verifier) | **Measured:** [`eval/validate-harness.ts`](eval/validate-harness.ts) & [`eval/agents/baseline-agent.ts`](eval/agents/baseline-agent.ts) |
+| **Reference Verifier vs. LLM Cost (Measured)** | `$0.073 to $0.449 / task` (v0.8 list price) | **`$0.0000 / run`** (`0` LLM tokens in scripted verifier) | **Measured:** [`eval/validate-harness.ts`](eval/validate-harness.ts) & [`eval/agents/baseline-agent.ts`](eval/agents/baseline-agent.ts) |
 
 ---
 
@@ -43,7 +43,7 @@ Launch the Executive Operations & Governance Workbench (`bun run showcase` at `h
 ## 4. Measured vs. Modeled Provenance & 60-Second Quickstart
 
 > **Measured vs. Modeled Provenance:**
-> - **Measured in Code & Empirical Runs:** All 8 Bun/Hono microservices, 32 SQLite tables, 20 scenarios (253 tasks), bidirectional OpenAPI contracts, the HTTP `422` statutory E&O firewall across 10 US states, `%PDF-1.7` ACORD 25 output, the 120-item dual-expert rubric calibration set (`eval/calibration/rubric_gold_120.json`), `1.000` scripted / `0.000` no-op harness validation (`bun eval/validate-harness.ts`), and Inspect AI `.eval` logs under `eval/results/` are executed and verified directly on disk.
+> - **Measured in Code & Empirical Runs:** All 8 Bun/Hono microservices, 32 SQLite tables, 20 scenarios (259 tasks), bidirectional OpenAPI contracts, the HTTP `422` statutory E&O firewall across 10 US states, `%PDF-1.7` ACORD 25 output, the 120-item dual-expert rubric calibration set (`eval/calibration/rubric_gold_120.json`), `1.000` scripted / `0.000` no-op harness validation (`bun eval/validate-harness.ts`), and Inspect AI `.eval` logs under `eval/results/` are executed and verified directly on disk.
 > - **Modeled Agency Economics:** The 11-person brokerage financials (`$20.0M` to `$38.5M` written premium, `$200,000` to `$385,000` revenue per employee, and the `78%` routine CSR servicing share) are analytical projections computed by `calculateAgencyRoi` ([`eval/evolution-showcase.ts`](eval/evolution-showcase.ts) / [`landscape.md`](landscape.md)), not telemetry from a live insurance agency.
 
 ```bash

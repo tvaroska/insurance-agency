@@ -2,7 +2,7 @@
  * Export Evergreen Insurance API Gym scenarios to the Harbor / Terminal-Bench 2.0 task standard.
  *
  * Generates:
- *   - eval/harbor/tasks-manifest.json (all 253 task cases across 20 scenarios)
+ *   - eval/harbor/tasks-manifest.json (all 259 task cases across 20 scenarios)
  *   - eval/harbor/docker-compose.harbor.yaml (shared 8-service + agent container topology)
  *   - eval/harbor/tasks/<task_id>/task.yaml
  *   - eval/harbor/tasks/<task_id>/tests/test_outputs.py (invokes `bun eval/score.ts`)

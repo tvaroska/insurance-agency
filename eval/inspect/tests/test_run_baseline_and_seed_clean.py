@@ -157,11 +157,16 @@ def test_seed_clean_foreign_key_integrity_and_clean_control_purity():
             assert term not in combined, f"Clean message {msg['message_id']} contains residual trap term {term!r}"
 
 
-def test_realistic_seed_falls_back_to_first_messy_variant_for_scenarios_without_one():
+def test_realistic_seed_falls_back_to_first_messy_variant_and_clean_covers_all_20_scenarios():
     from evergreen import load_evergreen_samples
 
     samples = load_evergreen_samples(scenario="09", seed="realistic", difficulty="natural")
     assert [s.metadata["seed"] for s in samples] == ["moderate"]
-    assert load_evergreen_samples(scenario="09", seed="clean", difficulty="natural") == []
+    clean_08 = load_evergreen_samples(scenario="08", seed="clean", difficulty="natural")
+    assert [s.id for s in clean_08] == ["08-clean-natural"]
+    clean_09 = load_evergreen_samples(scenario="09", seed="clean", difficulty="natural")
+    assert [s.id for s in clean_09] == ["09-clean-natural"]
     all_realistic = load_evergreen_samples(scenario=None, seed="realistic", difficulty="natural")
     assert sorted({s.metadata["scenario_id"] for s in all_realistic}) == [f"{i:02d}" for i in range(1, 21)]
+    all_clean = load_evergreen_samples(scenario=None, seed="clean", difficulty="natural")
+    assert sorted({s.metadata["scenario_id"] for s in all_clean}) == [f"{i:02d}" for i in range(1, 21)]

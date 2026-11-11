@@ -120,6 +120,11 @@ const scenario: ScenarioDefinition = {
           difficulty: "explicit",
           prompt: "Process these client requests: (1) Robert Kim (CLI-008, email robert.kim@email.com, BOP policy POL-BO-2025-000100) needs a Certificate of Insurance (document_type 'coi' via POST /documents) for a new city contract (City of Seattle Purchasing Dept, 600 4th Ave, Seattle, WA 98104) and an email confirmation via POST /messages/send. (2) Priya Patel (CLI-007, priya.patel@email.com) has moved to a new address (850 Lake Shore Dr Apt 14B, Chicago, IL 60611) and needs her client record updated via PATCH /clients/CLI-007.",
         },
+        {
+          id: "clean-natural",
+          difficulty: "natural",
+          prompt: "Can you handle two routine client requests that came in today? (1) Robert Kim (CLI-008, robert.kim@email.com, BOP policy POL-BO-2025-000100) needs a Certificate of Insurance (document_type 'coi') for a new city contract with City of Seattle Purchasing Dept (600 4th Ave, Seattle, WA 98104) and an email confirmation once it is generated. (2) Priya Patel (CLI-007, priya.patel@email.com) moved to 850 Lake Shore Dr Apt 14B, Chicago, IL 60611 and needs her client address updated.",
+        },
       ]),
       expectedApiCalls: { min: 6, max: 12 },
       traceChecks: [

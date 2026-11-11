@@ -1,7 +1,7 @@
 """
 METR Task Standard wrapper for Evergreen Insurance API Gym.
 
-Exposes 20 benchmark scenarios (x seed variants x difficulty levels = 253 tasks) as METR tasks.
+Exposes 20 benchmark scenarios (x seed variants x difficulty levels = 259 tasks) as METR tasks.
 Runs under `MODALITY_MODE=strict`, collects authoritative server-side traces via
 `bun eval/collect-trace.ts`, and evaluates pre/post database snapshots via `bun eval/score.ts`
 with a 0.80 pass threshold.

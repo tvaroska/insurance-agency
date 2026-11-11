@@ -1,10 +1,10 @@
 # Evergreen: A First Step in Benchmarking Agents on Knowledge Work
 
-Most knowledge work is not code. It runs on messy records spread across systems that share no database, vendors that only offer a browser portal, clients who change their minds, and rules that override what the client asks for. Evergreen is a first step toward benchmarking agents on that work, starting with one workplace: a simulated 11-person independent Property and Casualty (P&C) insurance agency with 20 workflows and 253 tasks.
+Most knowledge work is not code. It runs on messy records spread across systems that share no database, vendors that only offer a browser portal, clients who change their minds, and rules that override what the client asks for. Evergreen is a first step toward benchmarking agents on that work, starting with one workplace: a simulated 11-person independent Property and Casualty (P&C) insurance agency with 20 workflows and 259 tasks.
 
 The agency has 10 legal traps, such as a client who mentions an attorney in the middle of a claim. Its systems catch 3 of them on their own. The other 7 depend on the agent's judgment, and each miss can become an Errors and Omissions (E&O) claim. Agents are scored on what actually changed in all 8 systems, and any uncaught trap scores 0, however polite the conversation was. In our first full run (20 workflows, 5 trials each, strict mode), zero-shot agents pass 55% to 59% of tasks on the first try, pass every trial on only 39% to 47% of tasks, and tell the client the work is done while a state check fails on 37% to 50% of runs. A written agency procedure guide lifts `gemini-3.8-flash` from 58% to 69%.
 
-![One Evergreen task and what it takes to pass](docs/assets/benchmark_card.svg)
+![One real failing run: what the agent reported vs. what changed in the 8 databases](docs/assets/benchmark_card.svg)
 
 ---
 
@@ -42,7 +42,7 @@ What the run shows:
 - **No zero-shot model passes more than 2 of 5 trials on five workflows**: cross-sell review (06), first notice of loss claim filing (07), book-of-business audit (10), client meeting prep (11), and commission reconciliation (15). Most failures are missing follow-through: the agent finds the coverage gap, the below-minimum policy, or the commission discrepancy, then does not document it or open the task a licensed producer needs.
 - **The procedure guide helps `gemini-3.8-flash` most on judgment traps** (16 of 60 missed down to 5 of 60) and on the policy-binding and coverage-question workflows (03 and 12 go from 1 of 5 to 5 of 5), but it hurts new-client intake (01: 5 of 5 down to 1 of 5) and multi-carrier quote comparison (02: 3 of 5 down to 1 of 5). The `pass@1` gain (+11 points) is inside the overlapping intervals; treat it as a signal, not a result.
 
-The scripted reference agent ([`eval/agents/baseline-agent.ts`](eval/agents/baseline-agent.ts)) passes every state, trace, and legal-trap check on all 20 workflows, and the do-nothing baseline scores 0, so the grader produces no false passes on either end. Reproduce or extend this table with `python3 eval/inspect/run_baseline.py` and `python3 eval/inspect/summarize_inspect.py --include-anchors`.
+The scripted reference agent ([`eval/agents/baseline-agent.ts`](eval/agents/baseline-agent.ts)) passes every state, trace, and legal-trap check on all 20 workflows, and the do-nothing baseline scores 0, so the grader produces no false passes on either end. Failure taxonomy, Domain Skill regression diagnosis, and the 60-trial blind human audit packet are in [`docs/v08-failure-analysis.md`](docs/v08-failure-analysis.md). Reproduce or extend this table with `python3 eval/inspect/run_baseline.py` and `python3 eval/inspect/summarize_inspect.py --include-anchors`.
 
 ---
 
@@ -58,7 +58,7 @@ The scripted reference agent ([`eval/agents/baseline-agent.ts`](eval/agents/base
 
 ## The 20 Workflows
 
-15 single-turn and 5 multi-turn workflows, from new-client intake to claims. Most tasks are the daily work of an agency Customer Service Representative (CSR). Each workflow is written at several prompt levels, from step-by-step (`scripted`) to `vague` and `adversarial`, for 253 tasks in total.
+15 single-turn and 5 multi-turn workflows, from new-client intake to claims. Most tasks are the daily work of an agency Customer Service Representative (CSR). Each workflow is written at several prompt levels, from step-by-step (`scripted`) to `vague` and `adversarial`, for 259 tasks in total.
 
 <details>
 <summary>All 20 workflows</summary>
@@ -72,8 +72,8 @@ The scripted reference agent ([`eval/agents/baseline-agent.ts`](eval/agents/base
 | **05** | Renewal Re-Shop (`>20%` Spike) | Medium | 15 | AMS, Rater, CRM, Comm | Remarketing across carriers without cutting coverage |
 | **06** | Cross-Sell & Coverage Gap Detection | Medium | 10 | AMS, Rater, CRM, Comm | Household gap analysis and umbrella eligibility |
 | **07** | First Notice of Loss (FNOL) Claim Filing | Hard | 15 | Claims, AMS, ECM, Comm | Coverage verification, claim intake, adjuster assignment, E&O routing |
-| **08** | E&O Trap Navigation | Hard | 23 | All | 5 mixed client requests containing 3 mandatory E&O traps |
-| **09** | Carrier Denial Recovery | Hard | 15 | Rater, AMS, Carrier | High-risk driver, surplus lines, SR-22 (state proof-of-insurance filing) escalation |
+| **08** | E&O Trap Navigation | Hard | 24 | All | 5 mixed client requests containing 3 mandatory E&O traps |
+| **09** | Carrier Denial Recovery | Hard | 20 | Rater, AMS, Carrier | High-risk driver, surplus lines, SR-22 (state proof-of-insurance filing) escalation |
 | **10** | Book-of-Business Audit | Hard | 10 | AMS, ECM, Claims, CRM | 15 planted compliance and revenue anomalies across 80 policies |
 | **11** | Client Meeting Prep | Hard | 10 | All | Household discovery and multi-policy consolidation brief |
 | **12** | Policy Status Inquiry | Easy | 15 | AMS, Comm | Accurate lookup without unauthorized coverage advice |
@@ -161,10 +161,10 @@ Full comparison and packaging standards: [`docs/benchmark-landscape.md`](docs/be
 
 - The agency, its clients, and its 7 carriers are fictional. Carrier rating uses deterministic formulas, not real rate filings.
 - Multi-turn customers are a scripted simulator: replies are reproducible but narrower than real clients.
-- The 253 tasks are 20 workflows written several ways. Treat claims about workflows as n = 20.
+- The 259 tasks are 20 workflows written several ways. Treat claims about workflows as n = 20.
 - One industry so far: independent P&C insurance.
 - Statutory minimums reflect the law on the benchmark date, 18 February 2026 ([`regulatory.md`](regulatory.md)).
-- Model results cover one natural-language prompt per workflow (n = 20) at 5 trials, one harness, and one learning mechanism. Scenario 09 has no `realistic` variant, so its `moderate` variant stands in; Scenarios 08 and 09 have no clean natural-language task, so the clean control covers 18 workflows. `claude-sonnet-5-5` ran on a different Google Cloud project from the other models, with the same region and harness.
+- Model results cover one natural-language prompt per workflow (n = 20) at 5 trials, one harness, and one learning mechanism. Scenario 09 has no `realistic` variant, so its `moderate` variant stands in; the v0.8 clean control covered 18 workflows before clean natural-language tasks were added to Scenarios 08 and 09. `claude-sonnet-5-5` ran on a different Google Cloud project from the other models, with the same region and harness.
 
 ---
 

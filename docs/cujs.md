@@ -6,7 +6,7 @@ End-to-end flows for researchers and agent developers benchmarking AI agents aga
 
 ## CUJ-1: Running an AI Agent Against a Benchmark Scenario
 
-**Description:** An agent developer boots the gym, authenticates via OAuth2, and runs an AI agent against one of the 20 benchmark scenarios (253 total test cases, e.g., Scenario 01 New Client Intake, Scenario 07 FNOL Claim Filing, or Scenario 16–20 Multi-Turn Pivots).
+**Description:** An agent developer boots the gym, authenticates via OAuth2, and runs an AI agent against one of the 20 benchmark scenarios (259 total test cases, e.g., Scenario 01 New Client Intake, Scenario 07 FNOL Claim Filing, or Scenario 16–20 Multi-Turn Pivots).
 
 **Steps:**
 1. Developer starts all 8 microservices via `bun run showcase` or `docker compose up --build` and verifies `/health` on ports `3000–3007`.

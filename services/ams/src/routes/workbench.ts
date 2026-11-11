@@ -1451,7 +1451,7 @@ export function renderWorkbenchHtml(): string {
       <div class="brand-shield">E</div>
       <div>
         <div class="brand-title">Evergreen Insurance Partners — Executive Operations &amp; Governance Workbench</div>
-        <div class="brand-subtitle">8 Microservices &bull; 32 SQLite Tables &bull; 20 Scenarios / 253 Tasks &bull; REST + MCP + Legacy Carrier Portals</div>
+        <div class="brand-subtitle">8 Microservices &bull; 32 SQLite Tables &bull; 20 Scenarios / 259 Tasks &bull; REST + MCP + Legacy Carrier Portals</div>
       </div>
     </div>
     <div class="defense-pills">

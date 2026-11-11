@@ -1011,6 +1011,33 @@ export function getReferencePlaybook(
       ];
 
     case "09":
+      if (seed === "clean") {
+        return [
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-019" },
+          { service: "rater", method: "GET", path: "/v1/quotes/QR-002/results" },
+          { service: "rater", method: "GET", path: "/v1/carriers/appetite?state=CA&policy_type=personal_auto" },
+          {
+            service: "coastal-star",
+            modality: portalModality,
+            method: "GET",
+            path: "/v1/coastal/quotes?client_id=CLI-019",
+          },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-019",
+              to: "tyler.morrison@email.com",
+              channel: "email",
+              subject: "Alternative Carrier Options Following Underwriting Decline",
+              body: "Following the SMIT and ERIE underwriting declines due to 2 at-fault accidents, your remaining options are Coastal Star ($2,780), Liberty Crest ($3,100), and SafeHarbor ($3,350), compared to your prior $1,680 rate. Accident surcharges typically age off in 12 to 24 months.",
+            },
+          },
+        ];
+      }
       if (seed === "severe") {
         return [
           { service: "rater", method: "GET", path: "/v1/quotes/QR-014/results" },

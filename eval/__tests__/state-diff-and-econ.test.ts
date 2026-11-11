@@ -249,24 +249,32 @@ describe("S3-ECON-1 & S3-SIM-1: economics & turn-budget evaluator", () => {
 
   test("calculateModelCost computes accurate pricing for gemini-3.8-flash and gemini-4-argon", () => {
     expect(MODEL_PRICING_PER_1M["gemini-3.8-flash"]).toEqual({
-      input: 0.15,
-      output: 0.6,
+      input: 1.5,
+      output: 7.5,
     });
     expect(MODEL_PRICING_PER_1M["gemini-4-argon"]).toEqual({
       input: 1.25,
       output: 5.0,
     });
+    expect(MODEL_PRICING_PER_1M["claude-sonnet-5-5"]).toEqual({
+      input: 2.0,
+      output: 10.0,
+    });
+    expect(MODEL_PRICING_PER_1M["deepseek-v4.1-flash"]).toEqual({
+      input: 0.3,
+      output: 1.2,
+    });
 
-    // 1M input + 1M output on gemini-3.8-flash = $0.15 + $0.60 = $0.75
-    expect(calculateModelCost("gemini-3.8-flash", 1_000_000, 1_000_000)).toBe(0.75);
+    // 1M input + 1M output on gemini-3.8-flash = $1.50 + $7.50 = $9.00
+    expect(calculateModelCost("gemini-3.8-flash", 1_000_000, 1_000_000)).toBe(9.0);
 
     // 100k input + 20k output on gemini-4-argon-001 = 0.1 * 1.25 + 0.02 * 5.0 = 0.125 + 0.10 = $0.225
     expect(calculateModelCost("gemini-4-argon-001", 100_000, 20_000)).toBe(0.225);
 
     // Unknown model falls back to default pricing
     expect(resolveModelPricing("unknown-custom-model")).toEqual({
-      input: 0.15,
-      output: 0.6,
+      input: 1.5,
+      output: 7.5,
     });
   });
 
@@ -406,13 +414,13 @@ describe("S3-ECON-1 & S3-SIM-1: economics & turn-budget evaluator", () => {
     expect(econ.errorCount5xx).toBe(1);
     expect(econ.retryRate).toBe(0.25); // 1 retry out of 4 HTTP calls
     // Cost:
-    // Span 1 (gemini-3.8-flash): 0.1 * 0.15 + 0.01 * 0.60 = 0.015 + 0.006 = 0.021
+    // Span 1 (gemini-3.8-flash): 0.1 * 1.50 + 0.01 * 7.50 = 0.15 + 0.075 = 0.225
     // Span 2 (gemini-4-argon):   0.04 * 1.25 + 0.005 * 5.0 = 0.05 + 0.025 = 0.075
-    // Total = 0.096 USD
-    expect(econ.estimatedCostUsd).toBe(0.096);
+    // Total = 0.300 USD
+    expect(econ.estimatedCostUsd).toBe(0.3);
     expect(econ.turnCount).toBe(1);
     expect(econ.turnBudgetScore).toBe(1.0);
-    expect(econ.paretoEfficiency).toBe(computeParetoEfficiency(0.9, 0.096));
+    expect(econ.paretoEfficiency).toBe(computeParetoEfficiency(0.9, 0.3));
     expect(econ.modelsUsed).toEqual(["gemini-3.8-flash", "gemini-4-argon"]);
   });
 
