@@ -637,7 +637,7 @@ export function createVertexJudgeFn(
       process.env.GOOGLE_CLOUD_PROJECT ??
       process.env.VERTEX_PROJECT_ID;
     const location =
-      opts.location ?? process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1";
+      opts.location ?? process.env.GOOGLE_CLOUD_LOCATION ?? "global";
 
     if (openAiBase) {
       const endpoint = `${openAiBase.replace(/\/$/, "")}/chat/completions`;
@@ -685,14 +685,24 @@ export function createVertexJudgeFn(
         );
       }
       const body = (await res.json()) as {
-        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+        candidates?: Array<{
+          content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+        }>;
       };
-      const text = body.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      const parts = body.candidates?.[0]?.content?.parts ?? [];
+      const text =
+        parts.find((p) => !p.thought && typeof p.text === "string")?.text ??
+        parts[0]?.text ??
+        "";
       return parseStructuredJudgeJson(text);
     }
 
     if (projectId && accessToken) {
-      const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/${encodeURIComponent(location)}/publishers/google/models/${encodeURIComponent(model)}:generateContent`;
+      const host =
+        location === "global"
+          ? "aiplatform.googleapis.com"
+          : `${location}-aiplatform.googleapis.com`;
+      const endpoint = `https://${host}/v1/projects/${encodeURIComponent(projectId)}/locations/${encodeURIComponent(location)}/publishers/google/models/${encodeURIComponent(model)}:generateContent`;
       const res = await fetchFn(endpoint, {
         method: "POST",
         headers: {
@@ -713,9 +723,15 @@ export function createVertexJudgeFn(
         );
       }
       const body = (await res.json()) as {
-        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+        candidates?: Array<{
+          content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+        }>;
       };
-      const text = body.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      const parts = body.candidates?.[0]?.content?.parts ?? [];
+      const text =
+        parts.find((p) => !p.thought && typeof p.text === "string")?.text ??
+        parts[0]?.text ??
+        "";
       return parseStructuredJudgeJson(text);
     }
 

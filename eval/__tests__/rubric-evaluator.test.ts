@@ -303,6 +303,67 @@ describe("Tier-2 Atomic Rubric, Rogan-Gladen & EVAL-P01..P10 Calibration", () =>
     expect(verdict.score).toBe(1.0);
   });
 
+  test("createVertexJudgeFn defaults to Vertex global host and skips thought parts", async () => {
+    const prevLocation = process.env.GOOGLE_CLOUD_LOCATION;
+    delete process.env.GOOGLE_CLOUD_LOCATION;
+    try {
+      let seenUrl = "";
+      const vertexJudge = createVertexJudgeFn({
+        projectId: "evergreen-eval-proj",
+        accessToken: "fake-vertex-access-token",
+        fetchImpl: (async (input: RequestInfo | URL) => {
+          seenUrl = String(input);
+          return new Response(
+            JSON.stringify({
+              candidates: [
+                {
+                  content: {
+                    parts: [
+                      {
+                        thought: true,
+                        text: "Checking the quoted numbers carefully before scoring.",
+                      },
+                      {
+                        text: JSON.stringify({
+                          reasoning_trace: "Verified carrier rates and coverage limits.",
+                          score: 1.0,
+                          passed: true,
+                        }),
+                      },
+                    ],
+                  },
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }) as typeof fetch,
+      });
+
+      const dummyCriterion: RubricCriterion = {
+        id: "vertex_global_test",
+        name: "Vertex Global Test",
+        question: "Does the candidate cite carrier rates accurately?",
+        weight: 1,
+        service: "comm",
+        path: "/messages",
+        field: "body",
+      };
+
+      const verdict = await vertexJudge("Judge prompt", dummyCriterion, "gemini-4-argon");
+      expect(seenUrl).toBe(
+        "https://aiplatform.googleapis.com/v1/projects/evergreen-eval-proj/locations/global/publishers/google/models/gemini-4-argon:generateContent",
+      );
+      expect(verdict.passed).toBe(true);
+      expect(verdict.score).toBe(1.0);
+      expect(verdict.reasoning_trace).toContain("Verified carrier rates");
+    } finally {
+      if (prevLocation !== undefined) {
+        process.env.GOOGLE_CLOUD_LOCATION = prevLocation;
+      }
+    }
+  });
+
   test("all scenario rubricChecks across scenarios 02, 05, 11, 12, 15, and 16-20 pass 7-rule validation", () => {
     let totalCriteria = 0;
     for (const scenario of Object.values(scenarios)) {
