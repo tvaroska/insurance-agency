@@ -35,7 +35,7 @@ SEED_MODE=clean docker compose up                # clean (no adversarial data)
 1. every requested scenario produced samples (no `dataset is empty`)
 2. `stateDiff.findings` contain no correct actions flagged as collateral (escalations or audit tasks on the variant's trap clients)
 3. receipt directories are unique per arm (`replay-manifest.json` has no duplicate `artifacts_dir`)
-4. a 1-token call to each provider succeeds (Vertex Model Garden access; Claude runs on project `coding007`)
+4. a 1-token call to each provider succeeds (Vertex Model Garden access; pass `--project` if Claude runs on a separate GCP project)
 
 Fix everything the pilot surfaces in one pass, then run the production sweep once as-is.
 

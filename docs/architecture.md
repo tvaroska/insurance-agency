@@ -32,14 +32,14 @@ Each microservice runs as an independent Bun + Hono HTTP server with its own iso
 | **Claims** (`services/claims`) | 3007 | REST | First Notice of Loss (FNOL) intake, forward-only status state machine (`specs/claims.behavior.yaml`), adjuster capacity checks, reserves, and claim timeline tracking. |
 
 ### 3. Evaluation & Scoring Engine (`eval/`)
-- **Responsibility:** Evaluates agent runs across 20 scenarios (253 cases across `scripted`, `explicit`, `natural`, `vague`, and `adversarial` prompt difficulty tiers) using a hybrid scorer (`eval/score.ts`):
+- **Responsibility:** Evaluates agent runs across 20 scenarios (259 cases across `scripted`, `explicit`, `natural`, `vague`, and `adversarial` prompt difficulty tiers) using a hybrid scorer (`eval/score.ts`):
   - **Output & 32-Table State-Diff Evaluator (60% weight):** Queries live REST APIs (`eval/evaluators/output.ts`) and compares before/after 32-table primary-key snapshots (`eval/evaluators/state-diff.ts`), enforcing per-variant `collateralPolicy` (`allowedClientIds`, `allowedPolicyIds`, `maxTotalMutations`) to penalize unauthorized mutations.
   - **Trace Evaluator (40% weight):** Collects service-side OTLP spans (`eval/collect-trace.ts` via `GET /sim/trace`) or agent-emitted spans (`eval/evaluators/trace.ts`, `eval/evaluators/trace-genai.ts`) to verify workflow sequences, presence/absence constraints, and API call efficiency.
   - **E&O Trap Gate (Hard Override):** Any uncaught Errors & Omissions regulatory violation (`regulatory.md`) caps the scenario score at `0%`.
   - **Calibrated Communication Rubrics (`EVAL-P01..P10`):** Evaluates free-text communication safety (`eval/evaluators/rubric.ts`), reporting deterministic rule checks offline (`judgeModel: "deterministic-rule"`) and supporting optional Vertex AI LLM judging (`--llm-judge`) calibrated against the 120-item dual-expert gold set (`eval/calibration/rubric_gold_120.json`).
 
 ### 4. Benchmark Interoperability Adapters (`eval/inspect/`, `eval/harbor/`, `eval/metr/`, `eval/openenv/`, `eval/hal/`)
-- **Responsibility:** Exposes the 20 scenarios and 253 task variants across UK AISI Inspect AI (`eval/inspect/evergreen_langchain.py` & `evergreen.py`), Harbor / Terminal-Bench (`eval/harbor/export-harbor.ts`), METR Task Standard v0.5.0 (`eval/metr/EvergreenInsurance.py`), OpenEnv / `verifiers` (`eval/openenv/`), and Princeton HAL (`eval/hal/export-hal.ts`).
+- **Responsibility:** Exposes the 20 scenarios and 259 task variants across UK AISI Inspect AI (`eval/inspect/evergreen_langchain.py` & `evergreen.py`), Harbor / Terminal-Bench (`eval/harbor/export-harbor.ts`), METR Task Standard v0.5.0 (`eval/metr/EvergreenInsurance.py`), OpenEnv / `verifiers` (`eval/openenv/`), and Princeton HAL (`eval/hal/export-hal.ts`).
 
 ---
 

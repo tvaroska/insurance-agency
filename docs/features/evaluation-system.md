@@ -1,6 +1,6 @@
 # Evaluation System
 
-Scorer that evaluates AI agent performance on 20 benchmark scenarios (253 test cases across 5 prompt difficulty tiers) using output scoring (DB state assertions and 32-table pre/post state diffing), trace scoring (OTLP HTTP and GenAI trace analysis), hard E&O compliance overrides, and calibrated atomic rubrics.
+Scorer that evaluates AI agent performance on 20 benchmark scenarios (259 test cases across 5 prompt difficulty tiers) using output scoring (DB state assertions and 32-table pre/post state diffing), trace scoring (OTLP HTTP and GenAI trace analysis), hard E&O compliance overrides, and calibrated atomic rubrics.
 
 ---
 

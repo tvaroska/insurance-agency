@@ -27,7 +27,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from inspect_ai.log import EvalLog, read_eval_log
+from inspect_ai.log import EvalLog, read_eval_log, read_eval_log_sample, read_eval_log_sample_summaries
 
 GYM_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESULTS_CANDIDATES: tuple[Path, ...] = (
@@ -530,6 +530,50 @@ def build_replay_manifest(records: list[SampleRecord]) -> dict[str, Any]:
     }
 
 
+_SUMMARY_EXCLUDE_FIELDS: set[str] = {"messages", "events", "attachments", "store"}
+
+
+def _read_log_for_summary(eval_file: Path) -> EvalLog:
+    """Read Inspect .eval header + sample summaries, loading full samples only when answer text is truncated."""
+    header = read_eval_log(str(eval_file), header_only=True)
+    if header.status != "success":
+        return header
+    try:
+        summaries = read_eval_log_sample_summaries(str(eval_file))
+    except Exception:
+        summaries = []
+    if not summaries:
+        return read_eval_log(str(eval_file), exclude_fields=_SUMMARY_EXCLUDE_FIELDS)
+
+    hydrated: list[Any] = []
+    for sample in summaries:
+        needs_full = False
+        if sample.scores:
+            score_obj = next(iter(sample.scores.values()))
+            meta = score_obj.metadata or {}
+            api_calls = int(meta.get("api_calls", 0) or 0)
+            out_score = float(meta.get("output_score", 0.0))
+            eo_ok = bool(meta.get("eo_compliant", False))
+            if api_calls > 0 and (out_score < 1.0 or not eo_ok):
+                ans = score_obj.answer or ""
+                if not ans or (ans.endswith("...") and not _REFUSAL_OR_ABORT_RE.search(ans)):
+                    needs_full = True
+        if needs_full:
+            hydrated.append(
+                read_eval_log_sample(
+                    str(eval_file),
+                    id=sample.id,
+                    epoch=sample.epoch,
+                    exclude_fields=_SUMMARY_EXCLUDE_FIELDS,
+                )
+            )
+        else:
+            hydrated.append(sample)
+
+    header.samples = hydrated  # type: ignore[assignment]
+    return header
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -571,13 +615,13 @@ def main(argv: list[str] | None = None) -> int:
 
     records: list[SampleRecord] = []
     for f in eval_files:
-        log = read_eval_log(str(f))
+        log = _read_log_for_summary(f)
         if log.status == "success":
             records.extend(extract_records_from_log(log, pass_threshold=args.pass_threshold, eval_log_path=f))
 
     clean_records: list[SampleRecord] = []
     for f in collect_eval_files(clean_paths):
-        log = read_eval_log(str(f))
+        log = _read_log_for_summary(f)
         if log.status == "success":
             clean_records.extend(extract_records_from_log(log, pass_threshold=args.pass_threshold, eval_log_path=f))
 

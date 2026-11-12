@@ -32,7 +32,7 @@ High-level priorities and feature areas for Evergreen, a first step in benchmark
 
 Goals:
 - Scorer with output + trace evaluation (done)
-- 20 benchmark scenarios (15 single-turn + 5 interactive multi-turn scenarios, 253 total cases across 5 prompt difficulty tiers) (done)
+- 20 benchmark scenarios (15 single-turn + 5 interactive multi-turn scenarios, 259 total cases across 5 prompt difficulty tiers) (done)
 - Per-trap E&O payload verification & audit output checks (`S0-BUG-2`, `S0-BUG-3`, done)
 - Snapshot-based exact DB state diffing & collateral damage detection (`S3-DIFF-1`, done)
 - Strict 3-modality enforcement (`MODALITY_MODE=strict`) for REST + MCP + Browser harnesses (`S3-MOD-1`, done)
@@ -47,7 +47,7 @@ Goals:
 **Progress:** 100%
 
 Goals:
-- METR Task Standard v0.5.0 compatibility — 253 tasks exported via `eval/metr/EvergreenInsurance.py` (`S0-BUG-1`, `S1-INTOP-1`, done)
+- METR Task Standard v0.5.0 compatibility — 259 tasks exported via `eval/metr/EvergreenInsurance.py` (`S0-BUG-1`, `S1-INTOP-1`, done)
 - **Harbor / Terminal-Bench framework adapter** (`S2-INTOP-1`, done) — packages tasks for zero-code execution across Claude Code, OpenHands, Codex CLI, Goose, and Aider
 - Native UK AISI `Inspect AI` `@task` with multi-container Docker Compose sandboxing & native MCP (`S3-INTOP-2`, done)
 - OpenEnv & Prime Intellect `verifiers` RL Gym Control Plane (`/sim/reset`, `/sim/snapshot`, `/sim/time-travel`, `/sim/chaos`) (`S3-INTOP-3`, done)
@@ -149,7 +149,7 @@ Goals:
   5. "Drop, clean to messy" compares an arm only with its own clean runs, on the scenarios both seeds cover
   6. `run_baseline.py` collects job failures and still summarizes; stack data dirs are keyed by port so parallel runners do not collide
   7. A pre-sweep pilot gate (1 trial per workflow on every arm) is now required before a production sweep (`AGENTS.md`)
-- Done (2026-11-11): published v0.8 run (`eval/results/v0.8/`, 454 trials: 20 workflows x 5 trials realistic for 4 arms, 18 workflows x 1 trial clean for the 3 zero-shot arms; `claude-sonnet-5-5` on Vertex project `coding007`). Results table in `README.md`, `docs/assets/benchmark_card.svg`, `docs/executive-scorecard.html`, `eval/evolution-showcase.ts` and the workbench. Replay bundles (trace, before/after snapshots, report, `sha256sums.txt`) are stored outside git at `gs://btvaroska/insurance-agency/results/v0.8/artifacts/`; `replay-manifest.json` in the repo carries every trial's hashes and paths
+- Done (2026-11-11): published v0.8 run (`eval/results/v0.8/`, 454 trials: 20 workflows x 5 trials realistic for 4 arms, 18 workflows x 1 trial clean for the 3 zero-shot arms; `claude-sonnet-5-5` on a separate Vertex AI project). Results table in `README.md`, `docs/assets/benchmark_card.svg`, `docs/executive-scorecard.html`, `eval/evolution-showcase.ts` and the workbench. Raw replay bundles (trace, before/after snapshots, report, `sha256sums.txt`) are archived outside git; `replay-manifest.json` in the repo carries every trial's hashes and paths
 - Done (2026-11-11): "Cost per task" uses Vertex AI list prices calibrated against the Cloud Billing export (per 1M tokens: `gemini-3.8-flash` 1.50 input / 7.50 output / 0.15 cached; `DeepSeek-V4.1-Flash` 0.30 / 1.20 / 0.03; `claude-sonnet-5-5` 2.00 / 10.00 / 0.10 cached read / 2.50 cache write), synced across both `eval/inspect/summarize_inspect.py` and `eval/evaluators/economics.ts`. At list price the v0.8 day cost about $216 (first sweep $77, pilot $28, published run $111)
 - Done (2026-11-11): added a `clean` `natural` task to Scenario 08 (`08-clean-natural`) and a 5-case `clean` variant to Scenario 09 (`09-clean-*`), bringing the suite to **259 tasks** (`53/53` `validate-harness` variants green) so future clean controls cover all `20/20` workflows
 - Done (2026-11-11): completed 454-trial offline **Error Taxonomy** (`59.1%` missing follow-through records, `19.5%` uncaught judgment E&O traps, `12.6%` incomplete primary state changes, `5.0%` collateral penalties, `3.8%` system E&O traps), diagnosed the exact Domain Skill regressions on Scenarios `01` (`updateLead` instead of `createLead`) and `02` (unnecessary single-turn VIN clarification SMS + portal detour) in [`docs/v08-failure-analysis.md`](v08-failure-analysis.md), and generated the **60-trial stratified blind human audit sheet + sealed key + agreement scorer** ([`eval/results/v0.8/blind-audit-60-sheet.md`](../eval/results/v0.8/blind-audit-60-sheet.md), [`eval/inspect/score_blind_audit.py`](../eval/inspect/score_blind_audit.py))

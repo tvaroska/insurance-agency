@@ -31,5 +31,5 @@ experiments/
 __pycache__/
 *.pyc
 
-# Replay bundles live in GCS (gs://btvaroska/insurance-agency/results/<version>/artifacts/); hashes are in replay-manifest.json
+# Replay bundles are archived outside git; per-trial SHA-256 hashes live in replay-manifest.json
 eval/results/*/artifacts/
