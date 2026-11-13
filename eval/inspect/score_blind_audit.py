@@ -26,7 +26,7 @@ DEFAULT_KEY = GYM_ROOT / "eval" / "results" / "v0.8" / "blind-audit-60-key.json"
 _HEADER_RE = re.compile(r"^##\s+(AUD-\d+)\b", re.MULTILINE)
 _PASS_CHECK_RE = re.compile(r"^-\s*\[[xX]\]\s*`?PASS`?\b", re.MULTILINE)
 _FAIL_CHECK_RE = re.compile(r"^-\s*\[[xX]\]\s*`?FAIL`?\b", re.MULTILINE)
-_NOTE_RE = re.compile(r"^-\s*\*\*Rater Note:\*\*\s*(.*)$", re.MULTILINE)
+_NOTE_RE = re.compile(r"^-\s*\*\*Rater Note:\*\*[ \t]*(.*)$", re.MULTILINE)
 
 
 def parse_blind_sheet(markdown: str) -> dict[str, dict[str, Any]]:

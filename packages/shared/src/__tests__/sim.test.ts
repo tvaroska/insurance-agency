@@ -416,4 +416,100 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     process.env.TEST_DATABASE_URL = "file:/tmp/custom-override.db";
     expect(getTestDatabaseUrl("/tmp/default.db")).toBe("file:/tmp/custom-override.db");
   });
+
+  test("POST /sim/seed initializes empty base, normalizes JSON fields, and upserts overlays", async () => {
+    const calls: string[] = [];
+    const createdRows: Record<string, Record<string, unknown>[]> = { clients: [], policies: [] };
+    const upsertedRows: Record<string, unknown>[] = [];
+    const fakePrisma = {
+      client: {
+        create: async ({ data }: any) => {
+          calls.push(`create:clients:${data.id}`);
+          createdRows.clients.push(data);
+          return data;
+        },
+        upsert: async ({ where, create }: any) => {
+          calls.push(`upsert:clients:${where.id}`);
+          upsertedRows.push(create);
+          return create;
+        },
+      },
+      policy: {
+        create: async ({ data }: any) => {
+          calls.push(`create:policies:${data.policy_id}`);
+          createdRows.policies.push(data);
+          return data;
+        },
+      },
+    };
+
+    const resetModes: string[] = [];
+    const app = new Hono();
+    app.route(
+      "/sim",
+      createSimRouter({
+        serviceName: "ams",
+        prisma: fakePrisma,
+        tables: [
+          { name: "clients", delegate: "client", orderBy: "id" },
+          { name: "policies", delegate: "policy", orderBy: "policy_id" },
+        ],
+        onReset: async (mode) => {
+          resetModes.push(mode);
+        },
+      }),
+    );
+
+    // 1. Minimal empty fixture — respects parent-before-child table order even if JSON keys are reversed
+    const emptyRes = await app.request("/sim/seed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        base: "empty",
+        tables: {
+          policies: [{ policy_id: "POL-1", client_id: "CLI-1", meta: { nested: true } }],
+          clients: [{ id: "CLI-1", first_name: "Ada", tags: ["vip"] }],
+        },
+      }),
+    });
+    expect(emptyRes.status).toBe(200);
+    const emptyBody = await emptyRes.json();
+    expect(emptyBody.status).toBe("seeded");
+    expect(emptyBody.base).toBe("empty");
+    expect(emptyBody.inserted).toEqual({ clients: 1, policies: 1 });
+    expect(resetModes).toEqual(["empty"]);
+    expect(calls).toEqual(["create:clients:CLI-1", "create:policies:POL-1"]);
+    expect(createdRows.clients[0].tags).toBe('["vip"]');
+    expect(createdRows.policies[0].meta).toBe('{"nested":true}');
+
+    // 2. Overlay on realistic seed uses upsert by primary key
+    const overlayRes = await app.request("/sim/seed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        base: "realistic",
+        tables: {
+          clients: [{ id: "CLI-999", first_name: "Overlay" }],
+        },
+      }),
+    });
+    expect(overlayRes.status).toBe(200);
+    expect(resetModes).toEqual(["empty", "realistic"]);
+    expect(upsertedRows).toHaveLength(1);
+
+    // 3. Rejects unknown table or invalid base
+    const badTableRes = await app.request("/sim/seed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base: "empty", tables: { nonexistent: [] } }),
+    });
+    expect(badTableRes.status).toBe(400);
+
+    const badBaseRes = await app.request("/sim/seed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base: "bogus" }),
+    });
+    expect(badBaseRes.status).toBe(400);
+  });
 });

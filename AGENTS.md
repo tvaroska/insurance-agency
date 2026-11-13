@@ -25,6 +25,10 @@ bun run showcase --strict                        # strict modality + portal sess
 proj-test insurance-agency inspect-baseline --scenario 01,03,07,14,19,20 --difficulty natural
 proj-test insurance-agency inspect-summary eval/results/v0.7/realistic-natural --clean-logs eval/results/v0.7/clean-natural --include-anchors
 
+# Deterministic multi-turn DB-state suite (eval/deterministic/DT-01..DT-10):
+bun eval/run-state-scenarios.ts --verify-reference
+python3 eval/inspect/summarize_deterministic.py eval/results/deterministic-v1/logs --artifacts-dir eval/results/deterministic-v1/artifacts
+
 # Build & start via Docker Compose (seeds DB on first start):
 docker compose build
 docker compose up                                # realistic (default, adversarial data)
@@ -39,7 +43,7 @@ SEED_MODE=clean docker compose up                # clean (no adversarial data)
 
 Fix everything the pilot surfaces in one pass, then run the production sweep once as-is.
 
-**Sweep cost and cleanup:** state the expected cost before launching, using `summarize_inspect.py` rates (calibrated against the billing export; at list price about $0.45 per trial for Gemini, $0.11 for Claude, $0.07 for DeepSeek; Gemini gets a 50% credit). Check actual spend afterwards with `bq` against the billing export (it lags 3 to 5 hours). After cancelling a sweep, kill its stacks before relaunching (with `BypassSandbox: true`: `pgrep -f "[r]un-showcase.ts --strict"` and `pgrep -f "[i]nsurance-agency/services/.*/src/index.ts"`), because the runner attaches to any stack already listening on `3100+`.
+**Sweep cost, archival, and cleanup:** state the expected cost before launching, using `summarize_inspect.py` rates (calibrated against the billing export; at list price about $0.45 per trial for `gemini-3.8-flash`, $0.14–$0.20 for `gemini-4-hydrogen`, $0.11–$0.22 for `claude-sonnet-5-5`, $0.04–$0.07 for `DeepSeek-V4.1-Flash`, and $0.013 for `gpt-oss-120b`; `gemini-3.8-flash` gets a 50% credit). Never leave paid Inspect `.eval` logs solely in `/tmp/`: persist every completed run into `eval/results/<run>/` (`.eval` logs, `summary.md`, `summary-report.json`, and `replay-manifest.json` in git) and sync its gitignored `artifacts/` bundles to `gs://btvaroska/insurance-agency/results/<run>/artifacts/` before wrapping up. Check actual spend afterwards with `bq` against the billing export (it lags 3 to 5 hours). After cancelling or finishing a sweep, kill its stacks before relaunching (with `BypassSandbox: true`: `pgrep -f "[r]un-showcase.ts --strict"` and `pgrep -f "[i]nsurance-agency/services/.*/src/index.ts"`), because the runner attaches to any stack already listening on `3100+`.
 
 ## 2. Documentation & Planning Workflow
 

@@ -1,0 +1,123 @@
+id: DT-05
+slug: coi-venue-pivot-realistic-overlay
+name: Multi-BOP COI Venue Pivot + GL Limit Endorsement (Realistic Seed Overlay)
+description: >
+  Runs on top of the full 33-client realistic seed with an overlaid two-location
+  bakery client. Client pivots mid-conversation from their first BOP location to
+  their second BOP location, requesting a $2,000,000 general_liability limit
+  endorsement and a Certificate of Insurance for Winter Park Farmers Market,
+  while leaving the first BOP and all 33 background realistic clients untouched.
+difficulty: hard
+services:
+  - ams
+  - ecm
+
+start_state:
+  base: realistic
+  tables:
+    ams:
+      clients:
+        - id: CLI-DT05-A
+          first_name: Elena
+          last_name: Solis
+          dob: "1983-08-14"
+          email: elena.solis@solisbakery.example.com
+          phone: 407-555-7701
+          address_street: 215 Park Ave S
+          address_city: Winter Park
+          address_state: FL
+          address_zip: "32789"
+          occupation: Bakery Owner
+          status: active
+          created_at: "2025-01-20T00:00:00Z"
+          updated_at: "2025-01-20T00:00:00Z"
+      policies:
+        - policy_id: POL-BO-DT05-OLD
+          client_id: CLI-DT05-A
+          carrier_code: SMIT
+          policy_type: bop
+          effective_date: "2025-06-01"
+          expiration_date: "2026-06-01"
+          premium_current: 2100
+          status: active
+          created_at: "2025-06-01T00:00:00Z"
+          updated_at: "2025-06-01T00:00:00Z"
+        - policy_id: POL-BO-DT05-NEW
+          client_id: CLI-DT05-A
+          carrier_code: SMIT
+          policy_type: bop
+          effective_date: "2025-09-01"
+          expiration_date: "2026-09-01"
+          premium_current: 2350
+          status: active
+          created_at: "2025-09-01T00:00:00Z"
+          updated_at: "2025-09-01T00:00:00Z"
+      coverages:
+        - policy_id: POL-BO-DT05-OLD
+          type: general_liability
+          limit: "1000000"
+          deductible: 1000
+        - policy_id: POL-BO-DT05-NEW
+          type: general_liability
+          limit: "1000000"
+          deductible: 1000
+
+turns:
+  - role: client
+    message: >
+      Hi, I'm Elena Solis (Solis Bakery). I need a Certificate of Insurance for
+      my bakery BOP for an event venue. Can you check my active BOP policies
+      first before issuing anything?
+  - role: client
+    message: >
+      Wait — do NOT modify or issue a COI on my first location policy
+      (POL-BO-DT05-OLD)! I need this under my second bakery location BOP
+      (POL-BO-DT05-NEW). Their vendor packet also requires $2,000,000 General
+      Liability, so please submit a modify_coverage endorsement on
+      POL-BO-DT05-NEW effective 2026-03-01 raising general_liability limit to
+      2000000, and generate the COI on POL-BO-DT05-NEW with certificate holder
+      "Winter Park Farmers Market", address 200 W New England Ave, Winter Park,
+      FL 32789.
+  - role: client
+    message: >
+      Thanks — please confirm both the $2,000,000 endorsement and the COI were
+      created under POL-BO-DT05-NEW and that POL-BO-DT05-OLD was untouched.
+
+expected_diff:
+  must_insert:
+    - label: second_bop_gl_limit_endorsement
+      service: ams
+      table: endorsements
+      where:
+        policy_id: POL-BO-DT05-NEW
+        change_type: modify_coverage
+        effective_date: "2026-03-01"
+        changes:
+          regex: "2,?000,?000|2000000|2M"
+    - label: winter_park_coi_document
+      service: ecm
+      table: documents
+      where:
+        client_id: CLI-DT05-A
+        document_type: coi
+        status: generated
+        filename:
+          contains: POL-BO-DT05-NEW
+  must_update: []
+  must_delete: []
+  allowed_extras:
+    - service: ams
+      table: tasks
+      op: insert
+      where:
+        related_client_id: CLI-DT05-A
+      max_count: 1
+      reason: Optional follow-up task scoped strictly to Elena Solis (CLI-DT05-A)
+    - service: comm
+      table: messages
+      op: insert
+      where:
+        client_id: CLI-DT05-A
+      max_count: 2
+      reason: Optional outbound confirmation message to Elena Solis (CLI-DT05-A)
+  strict_no_unexpected_writes: true

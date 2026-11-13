@@ -114,6 +114,7 @@ export async function seedDatabase(
     console.log("Creating tables...");
   }
   await createTables();
+  if (seedMode === "empty") return;
 
   const [leadsData, campaignsData, risksData] = await Promise.all([
     loadJson<SeedLead[]>(seedDir, "leads.json"),

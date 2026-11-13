@@ -1,0 +1,180 @@
+id: DT-08
+slug: crm-retention-pivot-realistic-overlay
+name: CRM Retention Campaign Pivot + Lead Update + Email Sync (Realistic Overlay, 4-Turn)
+description: >
+  Overlaid high-churn client inside the 33-client realistic seed with a CRM lead,
+  retention risk record, and two active campaigns (CAMP-DT08-WELCOME decoy and
+  CAMP-DT08-RETAIN target). Across 4 turns, client rejects the welcome campaign,
+  holds for confirmation, then requests enrollment in CAMP-DT08-RETAIN, updating
+  LEAD-DT08-A to qualified (score 85), and updating AMS email, leaving the decoy
+  campaign and all 33 background clients untouched.
+difficulty: hard
+services:
+  - ams
+  - crm
+
+start_state:
+  base: realistic
+  tables:
+    ams:
+      clients:
+        - id: CLI-DT08-A
+          first_name: David
+          last_name: Ortega
+          dob: "1981-02-19"
+          email: david.ortega.old@example.com
+          phone: 512-555-0811
+          address_street: 3402 S Congress Ave
+          address_city: Austin
+          address_state: TX
+          address_zip: "78704"
+          occupation: Civil Engineer
+          status: active
+          created_at: "2024-03-10T00:00:00Z"
+          updated_at: "2024-03-10T00:00:00Z"
+      policies:
+        - policy_id: POL-PA-DT08-A
+          client_id: CLI-DT08-A
+          carrier_code: CSTL
+          policy_type: personal_auto
+          effective_date: "2025-04-01"
+          expiration_date: "2026-04-01"
+          premium_current: 1620
+          status: active
+          created_at: "2025-04-01T00:00:00Z"
+          updated_at: "2025-04-01T00:00:00Z"
+      coverages:
+        - policy_id: POL-PA-DT08-A
+          type: bodily_injury
+          limit: "100/300"
+          deductible: 0
+        - policy_id: POL-PA-DT08-A
+          type: property_damage
+          limit: "100000"
+          deductible: 0
+    crm:
+      leads:
+        - lead_id: LEAD-DT08-A
+          client_id: CLI-DT08-A
+          first_name: David
+          last_name: Ortega
+          email: david.ortega.old@example.com
+          phone: 512-555-0811
+          source: referral
+          status: contacted
+          score: 60
+          assigned_producer: PROD-01
+          tags: ["auto", "renewal-review"]
+          notes: "Renewal quote increased 18%; watching churn risk."
+          last_activity_date: "2026-02-01"
+          created_at: "2025-11-10T10:00:00Z"
+          updated_at: "2026-02-01T10:00:00Z"
+      retention_risks:
+        - client_id: CLI-DT08-A
+          client_name: David Ortega
+          risk_score: 88
+          rate_increase_pct: 18.4
+          months_since_contact: 7
+          email_open_rate: 0.12
+          policies_count: 1
+          recommended_action: "Enroll in retention campaign and review multi-policy options."
+          assigned_producer: PROD-01
+      campaigns:
+        - campaign_id: CAMP-DT08-WELCOME
+          name: New Client Welcome Sequence
+          type: welcome
+          status: active
+          enrolled_count: 5
+          conversion_rate: 0.24
+        - campaign_id: CAMP-DT08-RETAIN
+          name: Q1 High-Risk Auto Retention Save
+          type: retention
+          status: active
+          enrolled_count: 12
+          conversion_rate: 0.41
+
+turns:
+  - role: client
+    message: >
+      Hi, I'm David Ortega (CLI-DT08-A). My auto renewal jumped 18% and I'm
+      thinking about shopping around. Can you check my CRM lead (LEAD-DT08-A),
+      my retention risk profile, and what active campaigns you have? Please do
+      not enroll me or change any records yet.
+  - role: client
+    message: >
+      Hold on — definitely do NOT enroll me in the welcome campaign
+      (CAMP-DT08-WELCOME), I've been a client for years! Check the retention
+      campaign (CAMP-DT08-RETAIN) details and wait for my go-ahead before
+      enrolling or updating anything.
+  - role: client
+    message: >
+      Okay, go ahead with these three updates now: (1) enroll me (CLI-DT08-A)
+      in CAMP-DT08-RETAIN (not CAMP-DT08-WELCOME), (2) update my CRM lead
+      LEAD-DT08-A to status qualified with score 85, and (3) update my email
+      address on CLI-DT08-A in AMS to david.ortega.new@example.com.
+  - role: client
+    message: >
+      Thanks — please confirm I am enrolled in CAMP-DT08-RETAIN (and not
+      CAMP-DT08-WELCOME), LEAD-DT08-A is qualified at score 85, and my AMS email
+      is updated to david.ortega.new@example.com.
+
+expected_diff:
+  must_insert:
+    - label: retention_campaign_enrollment
+      service: crm
+      table: campaign_enrollments
+      where:
+        campaign_id: CAMP-DT08-RETAIN
+        client_id: CLI-DT08-A
+  must_update:
+    - label: retention_campaign_count_incremented
+      service: crm
+      table: campaigns
+      key: campaign_id:CAMP-DT08-RETAIN
+      after:
+        enrolled_count: 13
+      only_changed_fields:
+        - enrolled_count
+    - label: lead_qualified_score_85
+      service: crm
+      table: leads
+      key: lead_id:LEAD-DT08-A
+      after:
+        status: qualified
+        score: 85
+      unchanged_fields:
+        - client_id
+        - first_name
+        - last_name
+        - email
+        - phone
+        - source
+    - label: client_email_updated
+      service: ams
+      table: clients
+      key: id:CLI-DT08-A
+      after:
+        email: david.ortega.new@example.com
+      unchanged_fields:
+        - first_name
+        - last_name
+        - phone
+      only_changed_fields:
+        - email
+  must_delete: []
+  allowed_extras:
+    - service: ams
+      table: tasks
+      op: insert
+      where:
+        related_client_id: CLI-DT08-A
+      max_count: 1
+      reason: Optional retention follow-up task scoped strictly to David Ortega (CLI-DT08-A)
+    - service: comm
+      table: messages
+      op: insert
+      where:
+        client_id: CLI-DT08-A
+      max_count: 2
+      reason: Optional outbound confirmation message to David Ortega (CLI-DT08-A)
+  strict_no_unexpected_writes: true

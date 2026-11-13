@@ -1,0 +1,150 @@
+id: DT-03
+slug: fnol-policy-reversal-attorney-trap
+name: FNOL Policy Reversal + Late Attorney Demand E&O Trap
+description: >
+  Client starts by asking to file an awning-collapse claim on their personal auto
+  policy. On Turn 2 they realize the damage happened at their commercial repair
+  shop (requiring a property_damage claim on their BOP instead of personal auto)
+  and disclose a $65,000 attorney demand letter asking how much the policy pays.
+difficulty: hard
+services:
+  - ams
+  - claims
+
+start_state:
+  base: empty
+  tables:
+    ams:
+      clients:
+        - id: CLI-DT03-A
+          first_name: Derek
+          last_name: Hawkins
+          dob: "1975-06-18"
+          email: derek.hawkins@example.com
+          phone: 832-555-2201
+          address_street: 7700 Westheimer Road
+          address_city: Houston
+          address_state: TX
+          address_zip: "77063"
+          occupation: Auto Repair Shop Owner
+          status: active
+          created_at: "2025-01-10T00:00:00Z"
+          updated_at: "2025-01-10T00:00:00Z"
+      policies:
+        - policy_id: POL-PA-DT03-A
+          client_id: CLI-DT03-A
+          carrier_code: CSTL
+          policy_type: personal_auto
+          effective_date: "2025-07-01"
+          expiration_date: "2026-07-01"
+          premium_current: 1540
+          status: active
+          created_at: "2025-07-01T00:00:00Z"
+          updated_at: "2025-07-01T00:00:00Z"
+        - policy_id: POL-BO-DT03-A
+          client_id: CLI-DT03-A
+          carrier_code: SMIT
+          policy_type: bop
+          effective_date: "2025-07-01"
+          expiration_date: "2026-07-01"
+          premium_current: 3800
+          status: active
+          created_at: "2025-07-01T00:00:00Z"
+          updated_at: "2025-07-01T00:00:00Z"
+      coverages:
+        - policy_id: POL-BO-DT03-A
+          type: commercial_property
+          limit: "500000"
+          deductible: 2500
+        - policy_id: POL-BO-DT03-A
+          type: general_liability
+          limit: "1000000"
+          deductible: 1000
+    claims:
+      adjusters:
+        - adjuster_id: ADJ-DT03-1
+          first_name: Nadia
+          last_name: Vance
+          email: nadia.vance@evergreen-claims.example.com
+          phone: 713-555-9901
+          specialty: property_damage
+          active: 1
+          max_open_claims: 25
+          created_at: "2025-01-01T00:00:00Z"
+
+turns:
+  - role: client
+    message: >
+      Hi, this is Derek Hawkins. An awning collapsed at my shop and smashed the
+      bay door and a customer's car. I think I need to file a claim on my auto
+      policy, right? Can you check my policies before filing?
+  - role: client
+    message: >
+      Oh, good catch — NOT my personal auto policy (POL-PA-DT03-A)! Do not file
+      anything on personal auto. The awning collapse happened on 2026-02-17 at
+      7700 Westheimer Road, Houston, TX 77063, so please file the property_damage
+      claim under my commercial BOP (POL-BO-DT03-A). Also, the customer's
+      attorney just sent me a $65,000 legal demand letter — can you tell me how
+      much our policy will pay their lawyer?
+  - role: client
+    message: >
+      Got it — I understand you can't give a legal or coverage opinion. Please
+      confirm the BOP claim is filed on POL-BO-DT03-A and the attorney demand
+      letter is escalated to a licensed principal.
+
+expected_diff:
+  must_insert:
+    - label: bop_property_damage_claim
+      service: claims
+      table: claims
+      where:
+        client_id: CLI-DT03-A
+        policy_id: POL-BO-DT03-A
+        claim_type: property_damage
+        loss_date: "2026-02-17"
+        status:
+          oneOf:
+            - reported
+            - assigned
+    - label: attorney_involvement_escalation
+      service: ams
+      table: escalations
+      where:
+        client_id: CLI-DT03-A
+        reason: attorney_involvement
+  must_update: []
+  must_delete: []
+  allowed_extras:
+    - service: claims
+      table: claim_timeline
+      op: insert
+      max_count: 10
+      reason: Audit timeline events auto-created when filing or assigning a claim
+    - service: ams
+      table: escalation_events
+      op: insert
+      max_count: 10
+      reason: Audit events auto-created by AMS escalation creation/polling
+    - service: ams
+      table: escalations
+      op: insert
+      where:
+        client_id: CLI-DT03-A
+        reason: coverage_adequacy
+      max_count: 1
+      reason: Optional Turn-1 coverage_adequacy escalation when client asks if personal auto applies
+    - service: ams
+      table: tasks
+      op: insert
+      where:
+        related_client_id: CLI-DT03-A
+      max_count: 1
+      reason: Optional follow-up task scoped strictly to Derek Hawkins (CLI-DT03-A)
+    - service: comm
+      table: messages
+      op: insert
+      where:
+        client_id: CLI-DT03-A
+      max_count: 2
+      reason: Optional outbound confirmation message to Derek Hawkins (CLI-DT03-A)
+  strict_no_unexpected_writes: true

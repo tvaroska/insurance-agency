@@ -1,0 +1,164 @@
+id: DT-09
+slug: portal-coastal-bind-pivot
+name: Coastal Star Web Portal Quote Pivot + Bind & Go Digital ID Card (3-Turn, Browser-Only)
+description: >
+  Tests strict browser-only carrier portal execution via Playwright MCP. Client
+  has two assessed quotes in Coastal Star Auto (QT-CSTL-DT09-SEDAN decoy and
+  QT-CSTL-DT09-SUV target). Client verifies her AMS profile first, pivots away
+  from the sedan quote, and instructs the agent to bind QT-CSTL-DT09-SUV via
+  the Coastal Star Bind & Go web portal effective 2026-03-15 on the semi_annual
+  plan, verifying the resulting Coastal Star policy and digital ID card while
+  leaving QT-CSTL-DT09-SEDAN and AMS policies untouched.
+difficulty: hard
+services:
+  - ams
+  - carrier-coastal
+
+start_state:
+  base: empty
+  tables:
+    ams:
+      clients:
+        - id: CLI-DT09-A
+          first_name: Hannah
+          last_name: Brooks
+          dob: "1990-07-22"
+          email: hannah.brooks@example.com
+          phone: 619-555-0918
+          address_street: 2910 Juniper St
+          address_city: San Diego
+          address_state: CA
+          address_zip: "92104"
+          status: active
+          created_at: "2025-02-01T00:00:00Z"
+          updated_at: "2025-02-01T00:00:00Z"
+    carrier-coastal:
+      quotes:
+        - quote_id: QT-CSTL-DT09-SEDAN
+          request_id: QR-CSTL-DT09-1
+          client_id: CLI-DT09-A
+          policy_type: personal_auto
+          premium_annual: 1340
+          premium_semi_annual: 696.8
+          premium_monthly: 111.67
+          coverages:
+            - type: bodily_injury
+              limit: "100/300"
+            - type: property_damage
+              limit: "100000"
+          deductibles:
+            collision: 500
+            comprehensive: 250
+          status: assessed
+          valid_until: "2026-03-31"
+          submitted_at: "2026-02-14T10:00:00Z"
+          risk_score: 78
+          risk_tier: preferred
+          assessed_at: "2026-02-14T10:02:00Z"
+          bind_status: unbound
+          vin: 1HGCV1F34NA012345
+          vehicle_year: 2022
+          vehicle_make: Honda
+          vehicle_model: Accord
+          driver_name: Hannah Brooks
+          driver_dob: "1990-07-22"
+        - quote_id: QT-CSTL-DT09-SUV
+          request_id: QR-CSTL-DT09-2
+          client_id: CLI-DT09-A
+          policy_type: personal_auto
+          premium_annual: 1590
+          premium_semi_annual: 826.8
+          premium_monthly: 132.5
+          coverages:
+            - type: bodily_injury
+              limit: "100/300"
+            - type: property_damage
+              limit: "100000"
+          deductibles:
+            collision: 500
+            comprehensive: 250
+          status: assessed
+          valid_until: "2026-03-31"
+          submitted_at: "2026-02-15T11:00:00Z"
+          risk_score: 81
+          risk_tier: preferred
+          assessed_at: "2026-02-15T11:02:00Z"
+          bind_status: unbound
+          vin: 2T3P1RFV0SW067890
+          vehicle_year: 2025
+          vehicle_make: Toyota
+          vehicle_model: RAV4
+          driver_name: Hannah Brooks
+          driver_dob: "1990-07-22"
+
+turns:
+  - role: client
+    message: >
+      Hi, I'm Hannah Brooks (CLI-DT09-A). I have two assessed Coastal Star Auto
+      quotes ready in the Coastal Star web portal — QT-CSTL-DT09-SEDAN (Honda
+      Accord) and QT-CSTL-DT09-SUV (Toyota RAV4). Can you verify my AMS profile
+      first and wait before binding either quote?
+  - role: client
+    message: >
+      We traded in the Accord, so do NOT bind QT-CSTL-DT09-SEDAN! Please open
+      the Coastal Star Auto web portal, go to the Bind & Go tab, and bind
+      QT-CSTL-DT09-SUV with effective date 2026-03-15 on the Semi-Annual
+      payment plan. Leave AMS records untouched — just complete the bind and
+      digital ID card generation in the Coastal Star portal.
+  - role: client
+    message: >
+      Thanks — please confirm the new Coastal Star policy ID and digital ID card
+      were issued for QT-CSTL-DT09-SUV effective 2026-03-15, and that
+      QT-CSTL-DT09-SEDAN remains unbound.
+
+expected_diff:
+  must_insert:
+    - label: coastal_suv_policy_bound
+      service: carrier-coastal
+      table: policies
+      where:
+        client_id: CLI-DT09-A
+        policy_type: personal_auto
+        effective_date: "2026-03-15"
+        status: active
+    - label: coastal_suv_digital_id_card
+      service: carrier-coastal
+      table: id_cards
+      where:
+        policy_id:
+          present: true
+        card_data:
+          containsAll:
+            - CLI-DT09-A
+            - "2026-03-15"
+  must_update:
+    - label: coastal_suv_quote_marked_bound
+      service: carrier-coastal
+      table: quotes
+      key: quote_id:QT-CSTL-DT09-SUV
+      after:
+        status: bound
+        bind_status: bound
+        policy_id:
+          present: true
+      unchanged_fields:
+        - client_id
+        - vin
+        - premium_annual
+  must_delete: []
+  allowed_extras:
+    - service: ams
+      table: tasks
+      op: insert
+      where:
+        related_client_id: CLI-DT09-A
+      max_count: 1
+      reason: Optional follow-up task scoped strictly to Hannah Brooks (CLI-DT09-A)
+    - service: comm
+      table: messages
+      op: insert
+      where:
+        client_id: CLI-DT09-A
+      max_count: 2
+      reason: Optional outbound confirmation message to Hannah Brooks (CLI-DT09-A)
+  strict_no_unexpected_writes: true

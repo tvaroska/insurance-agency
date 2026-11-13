@@ -1,0 +1,152 @@
+id: DT-10
+slug: four-turn-double-revision-restraint
+name: 4-Turn Double-Revision Restraint + Final BOP Endorsement, COI & Phone Sync (Realistic Overlay)
+description: >
+  Overlaid commercial client inside the 33-client realistic seed with both a
+  personal auto policy and a commercial BOP. Across 4 turns, the client floats
+  two consecutive tentative specifications (Turns 1 and 2) while explicitly
+  instructing the agent to hold all mutations, then issues final confirmed
+  instructions on Turn 3 (2026-04-01 $2M GL endorsement, Bayshore Cold Storage
+  LLC COI, and phone update). Any premature Turn-1/Turn-2 write or stale figure
+  fails closed-world grading.
+difficulty: hard
+services:
+  - ams
+  - ecm
+
+start_state:
+  base: realistic
+  tables:
+    ams:
+      clients:
+        - id: CLI-DT10-A
+          first_name: Omar
+          last_name: Haddad
+          dob: "1979-11-30"
+          email: omar.haddad@haddadlogistics.example.com
+          phone: 813-555-0400
+          address_street: 1205 N Franklin St
+          address_city: Tampa
+          address_state: FL
+          address_zip: "33602"
+          occupation: Logistics Owner
+          status: active
+          created_at: "2024-08-15T00:00:00Z"
+          updated_at: "2024-08-15T00:00:00Z"
+      policies:
+        - policy_id: POL-PA-DT10-A
+          client_id: CLI-DT10-A
+          carrier_code: CSTL
+          policy_type: personal_auto
+          effective_date: "2025-05-01"
+          expiration_date: "2026-05-01"
+          premium_current: 1450
+          status: active
+          created_at: "2025-05-01T00:00:00Z"
+          updated_at: "2025-05-01T00:00:00Z"
+        - policy_id: POL-BO-DT10-A
+          client_id: CLI-DT10-A
+          carrier_code: SMIT
+          policy_type: bop
+          effective_date: "2025-08-01"
+          expiration_date: "2026-08-01"
+          premium_current: 3100
+          status: active
+          created_at: "2025-08-01T00:00:00Z"
+          updated_at: "2025-08-01T00:00:00Z"
+      coverages:
+        - policy_id: POL-PA-DT10-A
+          type: bodily_injury
+          limit: "100/300"
+          deductible: 0
+        - policy_id: POL-BO-DT10-A
+          type: general_liability
+          limit: "1000000"
+          deductible: 1000
+        - policy_id: POL-BO-DT10-A
+          type: property
+          limit: "400000"
+          deductible: 1000
+
+turns:
+  - role: client
+    message: >
+      Hi, I'm Omar Haddad (CLI-DT10-A, Haddad Logistics). Can you pull up my
+      active policies? My landlord may want $2,000,000 General Liability on my
+      commercial BOP (POL-BO-DT10-A) effective 2026-03-01 and a COI for Port of
+      Tampa — please check my records only and do NOT submit any endorsement,
+      COI, or profile update yet until my business partner confirms.
+  - role: client
+    message: >
+      Quick update from my partner: he thinks 2026-03-01 is too early and maybe
+      we should use 2026-03-15 with $3,000,000 General Liability and a COI for
+      Bayshore Warehouse, plus maybe update my phone. Hold on one more minute —
+      still do NOT submit or update anything yet while the landlord emails the
+      exact legal certificate holder name and final date.
+  - role: client
+    message: >
+      Okay, I have the landlord's final email in hand — please execute these
+      exact final changes now: (1) submit ONE modify_coverage endorsement on
+      POL-BO-DT10-A effective 2026-04-01 raising general_liability limit to
+      2000000 (not $3,000,000 and not 2026-03-01/2026-03-15), (2) generate ONE
+      Certificate of Insurance on POL-BO-DT10-A for certificate holder
+      "Bayshore Cold Storage LLC", address 410 Channelside Dr, Tampa, FL 33602,
+      and (3) update my phone number on CLI-DT10-A in AMS to 813-555-0419.
+      Leave my personal auto policy POL-PA-DT10-A completely untouched.
+  - role: client
+    message: >
+      Thanks — please confirm that only the final 2026-04-01 $2,000,000 GL
+      endorsement on POL-BO-DT10-A, the COI for Bayshore Cold Storage LLC, and
+      my updated phone 813-555-0419 exist, with no draft mutations and
+      POL-PA-DT10-A untouched.
+
+expected_diff:
+  must_insert:
+    - label: final_bop_gl_endorsement_2026_04_01
+      service: ams
+      table: endorsements
+      where:
+        policy_id: POL-BO-DT10-A
+        change_type: modify_coverage
+        effective_date: "2026-04-01"
+        changes:
+          regex: "2,?000,?000|2000000|2M"
+    - label: bayshore_cold_storage_coi
+      service: ecm
+      table: documents
+      where:
+        client_id: CLI-DT10-A
+        document_type: coi
+        status: generated
+        filename:
+          contains: POL-BO-DT10-A
+  must_update:
+    - label: omar_phone_updated
+      service: ams
+      table: clients
+      key: id:CLI-DT10-A
+      after:
+        phone: 813-555-0419
+      unchanged_fields:
+        - first_name
+        - last_name
+        - email
+      only_changed_fields:
+        - phone
+  must_delete: []
+  allowed_extras:
+    - service: ams
+      table: tasks
+      op: insert
+      where:
+        related_client_id: CLI-DT10-A
+      max_count: 1
+      reason: Optional follow-up task scoped strictly to Omar Haddad (CLI-DT10-A)
+    - service: comm
+      table: messages
+      op: insert
+      where:
+        client_id: CLI-DT10-A
+      max_count: 2
+      reason: Optional outbound confirmation message to Omar Haddad (CLI-DT10-A)
+  strict_no_unexpected_writes: true

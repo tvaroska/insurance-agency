@@ -147,7 +147,7 @@ export function createRequestLog(options: RequestLogOptions) {
     const method = c.req.method;
     const path = c.req.path;
 
-    if (method === "POST" && path === "/sim/reset") {
+    if (method === "POST" && (path === "/sim/reset" || path === "/sim/seed")) {
       await next();
       if (c.res.ok) spans = [];
       return;

@@ -38,8 +38,8 @@ app.route(
     serviceName: "claims",
     prisma,
     tables: [
-      { name: "claims", delegate: "claim", orderBy: "claim_id" },
       { name: "adjusters", delegate: "adjuster", orderBy: "adjuster_id" },
+      { name: "claims", delegate: "claim", orderBy: "claim_id" },
       { name: "claim_documents", delegate: "claimDocument", orderBy: "document_id" },
       { name: "claim_timeline", delegate: "claimTimeline", orderBy: "event_id" },
     ],

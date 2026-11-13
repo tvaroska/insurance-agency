@@ -1,0 +1,146 @@
+id: DT-01
+slug: household-endorsement-swap
+name: Household Auto Endorsement Pivot + Contact Update
+description: >
+  Client initially asks to raise the auto collision deductible to $1,000 without
+  specifying which spouse's policy or an effective date. On Turn 2 they clarify
+  to leave Sarah's policy untouched, endorse James's auto policy effective
+  2026-03-01, and update James's phone number.
+difficulty: easy
+services:
+  - ams
+
+start_state:
+  base: empty
+  tables:
+    ams:
+      clients:
+        - id: CLI-DT01-A
+          first_name: Sarah
+          last_name: Chen
+          dob: "1986-04-12"
+          email: sarah.chen@example.com
+          phone: 310-555-0101
+          address_street: 742 Maple Drive
+          address_city: Los Angeles
+          address_state: CA
+          address_zip: "90001"
+          household_id: HH-DT01
+          preferred_contact_method: email
+          status: active
+          created_at: "2025-01-15T00:00:00Z"
+          updated_at: "2025-01-15T00:00:00Z"
+        - id: CLI-DT01-B
+          first_name: James
+          last_name: Chen
+          dob: "1984-09-22"
+          email: james.chen@example.com
+          phone: 310-555-0102
+          address_street: 742 Maple Drive
+          address_city: Los Angeles
+          address_state: CA
+          address_zip: "90001"
+          household_id: HH-DT01
+          preferred_contact_method: email
+          status: active
+          created_at: "2025-01-15T00:00:00Z"
+          updated_at: "2025-01-15T00:00:00Z"
+      policies:
+        - policy_id: POL-PA-DT01-A
+          client_id: CLI-DT01-A
+          carrier_code: CSTL
+          policy_type: personal_auto
+          effective_date: "2025-09-01"
+          expiration_date: "2026-09-01"
+          premium_current: 1420
+          status: active
+          multi_policy_discount: true
+          created_at: "2025-09-01T00:00:00Z"
+          updated_at: "2025-09-01T00:00:00Z"
+        - policy_id: POL-PA-DT01-B
+          client_id: CLI-DT01-B
+          carrier_code: CSTL
+          policy_type: personal_auto
+          effective_date: "2025-09-01"
+          expiration_date: "2026-09-01"
+          premium_current: 1360
+          status: active
+          multi_policy_discount: true
+          created_at: "2025-09-01T00:00:00Z"
+          updated_at: "2025-09-01T00:00:00Z"
+      coverages:
+        - policy_id: POL-PA-DT01-A
+          type: bodily_injury
+          limit: "100/300"
+          deductible: 0
+        - policy_id: POL-PA-DT01-A
+          type: collision
+          limit: actual_cash_value
+          deductible: 500
+        - policy_id: POL-PA-DT01-B
+          type: bodily_injury
+          limit: "100/300"
+          deductible: 0
+        - policy_id: POL-PA-DT01-B
+          type: collision
+          limit: actual_cash_value
+          deductible: 500
+
+turns:
+  - role: client
+    message: >
+      Hi, I'm from the Chen household on Maple Drive. I'd like to raise the
+      collision deductible on our auto policy to $1,000 to save on premium.
+      Before you change anything, could you confirm which policy and date you need?
+  - role: client
+    message: >
+      Not Sarah's car — she commutes downtown every day, so leave Sarah's policy
+      (POL-PA-DT01-A) untouched at $500. Please submit a modify_coverage endorsement
+      on James's auto policy (POL-PA-DT01-B) effective 2026-03-01 to raise the
+      collision deductible to $1,000. Also please update James Chen's (CLI-DT01-B)
+      phone number to 310-555-0199.
+  - role: client
+    message: >
+      Thanks — please confirm both the endorsement on POL-PA-DT01-B and James's
+      updated phone number are saved, and that Sarah's record was left unchanged.
+
+expected_diff:
+  must_insert:
+    - label: james_collision_deductible_endorsement
+      service: ams
+      table: endorsements
+      where:
+        policy_id: POL-PA-DT01-B
+        change_type: modify_coverage
+        effective_date: "2026-03-01"
+        changes:
+          regex: "1,?000"
+  must_update:
+    - label: james_phone_updated
+      service: ams
+      table: clients
+      key: id:CLI-DT01-B
+      after:
+        phone: 310-555-0199
+      unchanged_fields:
+        - first_name
+        - last_name
+        - email
+        - status
+  must_delete: []
+  allowed_extras:
+    - service: ams
+      table: tasks
+      op: insert
+      where:
+        related_client_id: CLI-DT01-B
+      max_count: 1
+      reason: Optional follow-up task scoped strictly to James Chen (CLI-DT01-B)
+    - service: comm
+      table: messages
+      op: insert
+      where:
+        client_id: CLI-DT01-B
+      max_count: 2
+      reason: Optional outbound confirmation message to James Chen (CLI-DT01-B)
+  strict_no_unexpected_writes: true

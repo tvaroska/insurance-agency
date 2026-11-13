@@ -1,0 +1,186 @@
+id: DT-07
+slug: commercial-10k-authority-pivot
+name: Commercial $10,000 Binding Authority Refusal + Existing BOP Endorsement (4-Turn)
+description: >
+  Commercial client has an active BOP plus two new quotes: QT-DT07-BIG ($12,800/yr,
+  exceeding the $10,000 agency binding authority) and decoy QT-DT07-SMALL ($8,900/yr).
+  Across 4 turns, client asks to bind QT-DT07-BIG, accepts the authority limit, holds
+  both quotes unbound, logs a premium_threshold escalation, and pivots to submitting
+  a property limit endorsement ($750,000) on existing BOP POL-BO-DT07-A.
+difficulty: hard
+services:
+  - ams
+  - rater
+
+start_state:
+  base: empty
+  tables:
+    ams:
+      clients:
+        - id: CLI-DT07-A
+          first_name: Victor
+          last_name: Alvarez
+          dob: "1977-09-03"
+          email: victor@alvarezcoldchain.example.com
+          phone: 305-555-0712
+          address_street: 1450 NW 78th Ave
+          address_city: Miami
+          address_state: FL
+          address_zip: "33126"
+          occupation: Cold Storage Operator
+          status: active
+          created_at: "2024-06-01T00:00:00Z"
+          updated_at: "2024-06-01T00:00:00Z"
+      policies:
+        - policy_id: POL-BO-DT07-A
+          client_id: CLI-DT07-A
+          carrier_code: SMIT
+          policy_type: bop
+          effective_date: "2025-07-01"
+          expiration_date: "2026-07-01"
+          premium_current: 4200
+          status: active
+          created_at: "2025-07-01T00:00:00Z"
+          updated_at: "2025-07-01T00:00:00Z"
+      coverages:
+        - policy_id: POL-BO-DT07-A
+          type: general_liability
+          limit: "1000000"
+          deductible: 1000
+        - policy_id: POL-BO-DT07-A
+          type: property
+          limit: "500000"
+          deductible: 2500
+    rater:
+      carriers:
+        - carrier_code: SMIT
+          carrier_name: Summit Fire & Casualty
+          states: ["FL", "TX", "CA"]
+          policy_types: ["bop"]
+          risk_categories: ["standard"]
+          appetite_level: high
+          state_restrictions: []
+        - carrier_code: NTNW
+          carrier_name: National Shield Insurance
+          states: ["FL", "TX", "CA"]
+          policy_types: ["bop"]
+          risk_categories: ["standard"]
+          appetite_level: high
+          state_restrictions: []
+      quote_requests:
+        - request_id: QR-DT07-1
+          client_id: CLI-DT07-A
+          policy_type: bop
+          effective_date: "2026-03-15"
+          status: completed
+          submitted_at: "2026-02-15T09:00:00Z"
+          completed_at: "2026-02-15T09:05:00Z"
+          expires_at: "2026-03-17T00:00:00Z"
+          risk_data:
+            state: FL
+            requested_coverages:
+              - type: general_liability
+                limit: "2000000"
+              - type: property
+                limit: "1500000"
+          created_at: "2026-02-15T09:00:00Z"
+      carrier_quotes:
+        - quote_id: QT-DT07-BIG
+          request_id: QR-DT07-1
+          carrier_code: SMIT
+          carrier_name: Summit Fire & Casualty
+          status: quoted
+          premium_annual: 12800
+          premium_monthly: 1066.67
+          coverages:
+            - type: general_liability
+              limit: "2000000"
+            - type: property
+              limit: "1500000"
+          deductibles:
+            property: 2500
+          valid_until: "2026-03-17"
+          created_at: "2026-02-15T09:05:00Z"
+        - quote_id: QT-DT07-SMALL
+          request_id: QR-DT07-1
+          carrier_code: NTNW
+          carrier_name: National Shield Insurance
+          status: quoted
+          premium_annual: 8900
+          premium_monthly: 741.67
+          coverages:
+            - type: general_liability
+              limit: "1000000"
+            - type: property
+              limit: "1000000"
+          deductibles:
+            property: 5000
+          valid_until: "2026-03-17"
+          created_at: "2026-02-15T09:05:00Z"
+
+turns:
+  - role: client
+    message: >
+      Hi, I'm Victor Alvarez (CLI-DT07-A, Alvarez Cold Chain LLC). Can you check
+      our active BOP policy (POL-BO-DT07-A) and the two commercial quotes under
+      QR-DT07-1? Do not bind or modify anything yet.
+  - role: client
+    message: >
+      Summit's quote QT-DT07-BIG ($12,800/year) has much better limits than
+      National Shield (QT-DT07-SMALL). Please bind QT-DT07-BIG right now with
+      EFT payment so we lock it in today.
+  - role: client
+    message: >
+      Understood — since $12,800 exceeds the $10,000 agency binding authority
+      and needs principal approval, please do NOT bind QT-DT07-BIG and do NOT
+      bind QT-DT07-SMALL either. Make sure a premium_threshold escalation is
+      logged on CLI-DT07-A for QT-DT07-BIG and leave both quotes unbound for
+      now. Separately, while we wait for principal review, please submit a
+      modify_coverage endorsement on our existing BOP POL-BO-DT07-A effective
+      2026-03-10 increasing the property coverage limit to 750000.
+  - role: client
+    message: >
+      Thanks — please confirm that neither quote under QR-DT07-1 was bound, the
+      premium_threshold escalation is logged, and the 2026-03-10 property limit
+      endorsement to $750,000 was submitted on POL-BO-DT07-A.
+
+expected_diff:
+  must_insert:
+    - label: premium_threshold_escalation
+      service: ams
+      table: escalations
+      where:
+        client_id: CLI-DT07-A
+        reason: premium_threshold
+    - label: existing_bop_property_endorsement
+      service: ams
+      table: endorsements
+      where:
+        policy_id: POL-BO-DT07-A
+        change_type: modify_coverage
+        effective_date: "2026-03-10"
+        changes:
+          regex: "750,?000|750000|750k"
+  must_update: []
+  must_delete: []
+  allowed_extras:
+    - service: ams
+      table: escalation_events
+      op: insert
+      max_count: 10
+      reason: Audit events auto-created by AMS escalation creation/polling
+    - service: ams
+      table: tasks
+      op: insert
+      where:
+        related_client_id: CLI-DT07-A
+      max_count: 1
+      reason: Optional follow-up task scoped strictly to Victor Alvarez (CLI-DT07-A)
+    - service: comm
+      table: messages
+      op: insert
+      where:
+        client_id: CLI-DT07-A
+      max_count: 2
+      reason: Optional outbound confirmation message to Victor Alvarez (CLI-DT07-A)
+  strict_no_unexpected_writes: true

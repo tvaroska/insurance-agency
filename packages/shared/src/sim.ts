@@ -389,10 +389,23 @@ export interface SimRouterOptions {
  * Creates the `/sim` router providing:
  * - `GET /sim/snapshot`
  * - `POST /sim/reset`
+ * - `POST /sim/seed`
  * - `POST /sim/time-travel`
  * - `POST /sim/chaos`
  * - `GET /sim/status`
  */
+function normalizeSeedRow(row: Record<string, unknown>): Record<string, unknown> {
+  const normalized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (value !== null && typeof value === "object") {
+      normalized[key] = JSON.stringify(value);
+    } else {
+      normalized[key] = value;
+    }
+  }
+  return normalized;
+}
+
 export function createSimRouter(options: SimRouterOptions) {
   const router = new Hono();
   // Serializes /sim/reset per service so overlapping resets (e.g. a harness retry while a
@@ -446,6 +459,107 @@ export function createSimRouter(options: SimRouterOptions) {
       status: "reset",
       service: options.serviceName,
       seed_mode: seedMode,
+      simulated_time: getSimulatedNow().toISOString(),
+    });
+  });
+
+  // POST /sim/seed — deterministic start-state seeding ("empty" minimal fixture or overlay on "clean"/"realistic")
+  router.post("/seed", async (c) => {
+    let body: {
+      base?: string;
+      tables?: Record<string, unknown>;
+    } = {};
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json(
+        createErrorResponse("VALIDATION_ERROR", "Request body must be valid JSON."),
+        400,
+      );
+    }
+
+    const base = body.base ?? "empty";
+    if (base !== "empty" && base !== "clean" && base !== "realistic") {
+      return c.json(
+        createErrorResponse(
+          "VALIDATION_ERROR",
+          `Invalid base '${base}'. Expected 'empty', 'clean', or 'realistic'.`,
+        ),
+        400,
+      );
+    }
+
+    const rawTables = body.tables ?? {};
+    if (typeof rawTables !== "object" || rawTables === null || Array.isArray(rawTables)) {
+      return c.json(
+        createErrorResponse("VALIDATION_ERROR", "Field 'tables' must be an object mapping table names to row arrays."),
+        400,
+      );
+    }
+
+    const knownTables = new Set(options.tables.map((t) => t.name));
+    for (const [tableName, rows] of Object.entries(rawTables)) {
+      if (!knownTables.has(tableName)) {
+        return c.json(
+          createErrorResponse(
+            "VALIDATION_ERROR",
+            `Unknown table '${tableName}' for service '${options.serviceName}'. Known tables: ${Array.from(knownTables).join(", ")}.`,
+          ),
+          400,
+        );
+      }
+      if (!Array.isArray(rows)) {
+        return c.json(
+          createErrorResponse(
+            "VALIDATION_ERROR",
+            `Table '${tableName}' rows must be an array.`,
+          ),
+          400,
+        );
+      }
+    }
+
+    const inserted: Record<string, number> = {};
+    const run = resetChain.then(async () => {
+      resetChaosConfig();
+      resetSimulatedClock();
+      resetPortalSessions();
+      if (options.onReset) {
+        await options.onReset(base);
+      }
+
+      for (const tbl of options.tables) {
+        const rows = rawTables[tbl.name] as Record<string, unknown>[] | undefined;
+        if (!rows || rows.length === 0) continue;
+        const model = options.prisma?.[tbl.delegate];
+        if (!model || typeof model.create !== "function") continue;
+
+        let count = 0;
+        for (const rawRow of rows) {
+          const data = normalizeSeedRow(rawRow);
+          const pkVal = data[tbl.orderBy];
+          if (base !== "empty" && pkVal !== undefined && pkVal !== null && typeof model.upsert === "function") {
+            await model.upsert({
+              where: { [tbl.orderBy]: pkVal },
+              update: data,
+              create: data,
+            });
+          } else {
+            await model.create({ data });
+          }
+          count++;
+        }
+        inserted[tbl.name] = count;
+      }
+    });
+    resetChain = run.catch(() => undefined);
+    await run;
+
+    return c.json({
+      status: "seeded",
+      service: options.serviceName,
+      base,
+      inserted,
       simulated_time: getSimulatedNow().toISOString(),
     });
   });

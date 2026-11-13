@@ -31,6 +31,12 @@ inspect eval eval/inspect/evergreen.py \
   -T learning_mechanism=domain_skill \
   --max-samples 1
 
+# Run pure DB-state multi-turn deterministic scenarios (eval/deterministic/*.yaml):
+inspect eval eval/inspect/evergreen_deterministic.py \
+  --model google/gemini-3.8-flash \
+  -T scenario=DT-01,DT-02,DT-03,DT-04,DT-05 \
+  --max-samples 1
+
 # Run the 3-model Vertex AI baseline across 4 isolated parallel service stacks (:3100..:3400):
 python3 eval/inspect/run_baseline.py \
   --scenario all \
@@ -43,6 +49,13 @@ python3 eval/inspect/run_baseline.py \
 
 # Regenerate the README Results table (defaults to eval/results/v0.8/realistic-natural, falling back to v0.7):
 python3 eval/inspect/summarize_inspect.py --include-anchors
+
+# Summarize deterministic DB-state runs and emit a SHA-256 replay manifest:
+python3 eval/inspect/summarize_deterministic.py eval/results/deterministic-v1/logs \
+  --artifacts-dir eval/results/deterministic-v1/artifacts \
+  --md-out eval/results/deterministic-v1/summary.md \
+  --json-out eval/results/deterministic-v1/summary-report.json \
+  --export-replay-manifest eval/results/deterministic-v1/replay-manifest.json
 ```
 
 ---

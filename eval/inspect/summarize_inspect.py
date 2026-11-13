@@ -36,24 +36,35 @@ DEFAULT_RESULTS_CANDIDATES: tuple[Path, ...] = (
 )
 
 # USD per 1M tokens at Vertex AI list price (input, output, cache_read, cache_write), calibrated
-# against the Cloud Billing export on 2026-11-11 (cost / billed units per SKU). Gemini implicit
-# caching has no separate write charge, so its cache_write rate equals the input rate.
+# against Cloud Billing SKUs & export (2026-11-11 / 2026-11-13). Gemini implicit caching has no
+# separate write charge, so its cache_write rate equals the input rate.
 MODEL_PRICING_PER_1M: dict[str, tuple[float, float, float, float]] = {
+    "gemini-4-hydrogen": (1.50, 7.50, 0.075, 1.50),
     "gemini-3.8-flash": (1.50, 7.50, 0.15, 1.50),
-    "gemini-4-argon": (1.25, 5.00, 0.3125, 1.25),
+    "gemini-4-argon": (4.00, 20.00, 0.20, 4.00),
+    "gemini-4-carbon": (4.00, 20.00, 0.20, 4.00),
     "gemini-3.5-flash-lite": (0.075, 0.30, 0.01875, 0.075),
     "claude-sonnet-5-5": (2.00, 10.00, 0.10, 2.50),
     "claude-sonnet-4-5": (3.00, 15.00, 0.30, 3.75),
     "deepseek-v4.1-flash-maas": (0.30, 1.20, 0.03, 0.30),
     "deepseek-v4.1-flash": (0.30, 1.20, 0.03, 0.30),
+    "gpt-oss-120b-maas": (0.09, 0.36, 0.09, 0.09),
+    "gpt-oss-120b": (0.09, 0.36, 0.09, 0.09),
+    "gemma-4-26b-a4b-it-maas": (0.15, 0.60, 0.015, 0.15),
+    "gemma-4-26b-a4b-it": (0.15, 0.60, 0.015, 0.15),
 }
 
 DEFAULT_PRICING_PER_1M: tuple[float, float, float, float] = MODEL_PRICING_PER_1M["gemini-3.8-flash"]
 
 DISPLAY_MODEL_NAMES: dict[str, str] = {
+    "google/gemini-4-hydrogen": "`gemini-4-hydrogen`",
+    "google/gemini-4-argon": "`gemini-4-argon`",
+    "google/gemini-4-carbon": "`gemini-4-carbon`",
     "google/gemini-3.8-flash": "`gemini-3.8-flash`",
     "anthropic/vertex/claude-sonnet-5-5": "`claude-sonnet-5-5`",
     "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas": "`DeepSeek-V4.1-Flash`",
+    "openai-api/vertex-maas/openai/gpt-oss-120b-maas": "`gpt-oss-120b`",
+    "openai-api/vertex-maas/google/gemma-4-26b-a4b-it-maas": "`gemma-4-26b-a4b-it`",
 }
 
 _REFUSAL_OR_ABORT_RE = re.compile(

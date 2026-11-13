@@ -84,6 +84,7 @@ export async function seedDatabase(
     console.log("Creating tables...");
   }
   await createTables();
+  if (seedMode === "empty") return;
 
   const messagesData = await loadJson<SeedMessage[]>(seedDir, "communications.json");
   if (verbose) {

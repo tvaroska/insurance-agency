@@ -222,6 +222,7 @@ export async function seedDatabase(
     console.log("Creating tables...");
   }
   await createTables();
+  if (seedMode === "empty") return;
 
   const [
     clientsData,

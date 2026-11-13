@@ -283,4 +283,18 @@ describe("Service-side request log (packages/shared/src/request-log.ts)", () => 
       }
     }
   });
+
+  test("POST /sim/seed clears recorded spans on success", async () => {
+    const { app } = createApp();
+    await app.request("/v1/clients");
+    expect(await spans(app)).toHaveLength(1);
+
+    const res = await app.request("/sim/seed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base: "empty", tables: {} }),
+    });
+    expect(res.status).toBe(200);
+    expect(await spans(app)).toEqual([]);
+  });
 });

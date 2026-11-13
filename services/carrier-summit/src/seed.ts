@@ -126,6 +126,7 @@ export async function seedDatabase(
     console.log("Creating tables...");
   }
   await createTables();
+  if (seedMode === "empty") return;
 
   const [quoteRequests, allPolicies] = await Promise.all([
     loadJson<SeedQuoteRequest[]>(seedDir, "quotes.json"),
