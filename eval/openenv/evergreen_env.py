@@ -77,6 +77,8 @@ class EvergreenGymEnv:
         self.step_count = 0
         self.recorded_spans: list[dict[str, Any]] = []
         self._bearer_token: str | None = None
+        self._effective_seed: str = str(self.current_task["seed"])
+        self._initial_snapshot: dict[str, Any] | None = None
 
     def _request_json(
         self,
@@ -126,6 +128,7 @@ class EvergreenGymEnv:
 
         self.step_count = 0
         self.recorded_spans = []
+        self._effective_seed = effective_seed
 
         reset_statuses: dict[str, Any] = {}
         for canonical_port, service in PORT_SERVICE_MAP.items():
@@ -135,6 +138,8 @@ class EvergreenGymEnv:
                 "POST", url, {"seed_mode": effective_seed}
             )
             reset_statuses[service] = {"status_code": status_code, "response": payload}
+
+        self._initial_snapshot = self.snapshot()
 
         obs = {
             "task_id": self.task_id,
@@ -376,7 +381,7 @@ class EvergreenGymEnv:
         }
 
     def score(self) -> dict[str, Any]:
-        """Invoke `bun eval/score.ts` on the current trajectory and live backend state."""
+        """Invoke `bun eval/score.ts` on the current trajectory and before/after 32-table snapshots."""
         if self._scorer_fn is not None:
             return self._scorer_fn(self.current_task, self.recorded_spans)
 
@@ -396,12 +401,25 @@ class EvergreenGymEnv:
             "--scenario",
             self.current_task["scenario_id"],
             "--seed",
-            self.current_task["seed"],
+            self._effective_seed,
             "--case",
             self.current_task["case_id"],
             "--out",
             str(out_dir),
         ]
+        if self._initial_snapshot is not None:
+            before_file = trace_dir / "snapshot-before.json"
+            after_file = trace_dir / "snapshot-after.json"
+            before_file.write_text(json.dumps(self._initial_snapshot))
+            after_file.write_text(json.dumps(self.snapshot()))
+            cmd.extend(
+                [
+                    "--snapshot-before",
+                    str(before_file),
+                    "--snapshot-after",
+                    str(after_file),
+                ]
+            )
         res = subprocess.run(
             cmd,
             cwd=str(GYM_ROOT),

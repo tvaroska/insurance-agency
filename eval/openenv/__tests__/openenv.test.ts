@@ -234,10 +234,13 @@ trace = env.export_otlp_trace()
 os.environ.pop("EVERGREEN_BASE_PORT", None)
 span_names = [s["name"] for rs in trace["resourceSpans"] for ss in rs["scopeSpans"] for s in ss["spans"]]
 reset_ports = sorted(url.split(":")[2].split("/")[0] for m, url in seen_urls if url.endswith("/sim/reset"))
-print(json.dumps({"span_names": span_names, "reset_ports": reset_ports}))
+snap_ports = sorted(url.split(":")[2].split("/")[0] for m, url in seen_urls if url.endswith("/sim/snapshot"))
+print(json.dumps({"span_names": span_names, "reset_ports": reset_ports, "snap_ports": snap_ports, "has_initial_snap": env._initial_snapshot is not None}))
 `);
 
     expect(pyResult.reset_ports).toEqual(["4100", "4101", "4102", "4103", "4104", "4105", "4106", "4107"]);
+    expect(pyResult.snap_ports).toEqual(["4100", "4101", "4102", "4103", "4104", "4105", "4106", "4107"]);
+    expect(pyResult.has_initial_snap).toBe(true);
     expect(pyResult.span_names).toEqual(["POST /v1/summit/submissions", "POST /mcp"]);
   });
 });
