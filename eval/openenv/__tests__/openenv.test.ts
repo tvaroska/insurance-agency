@@ -172,4 +172,72 @@ print(json.dumps({
     expect(pyResult.rewards.eo_compliance_reward).toBe(1);
     expect(pyResult.rewards.combined_reward).toBeCloseTo(0.92, 2);
   });
+
+  it("collects service-side /sim/trace spans and honors EVERGREEN_BASE_PORT in EvergreenGymEnv", () => {
+    const pyResult = runPythonJson(`
+import json
+import os
+import evergreen_env
+
+os.environ["EVERGREEN_BASE_PORT"] = "4100"
+seen_urls = []
+
+def fake_http(method, url, body, headers):
+    seen_urls.append((method, url))
+    if url.endswith("/sim/trace"):
+        if ":4104/" in url:
+            return 200, {
+                "resourceSpans": [{
+                    "resource": {"attributes": [{"key": "service.name", "value": {"stringValue": "comm"}}]},
+                    "scopeSpans": [{"spans": [{
+                        "traceId": "t1",
+                        "spanId": "s2",
+                        "name": "POST /mcp",
+                        "kind": 3,
+                        "startTimeUnixNano": "200",
+                        "endTimeUnixNano": "210",
+                        "attributes": [
+                            {"key": "http.request.method", "value": {"stringValue": "POST"}},
+                            {"key": "url.full", "value": {"stringValue": "http://localhost:3004/mcp"}},
+                            {"key": "server.port", "value": {"intValue": 3004}},
+                            {"key": "http.response.status_code", "value": {"intValue": 200}},
+                        ],
+                    }]}],
+                }]
+            }
+        if ":4105/" in url:
+            return 200, {
+                "resourceSpans": [{
+                    "resource": {"attributes": [{"key": "service.name", "value": {"stringValue": "summit-fire"}}]},
+                    "scopeSpans": [{"spans": [{
+                        "traceId": "t1",
+                        "spanId": "s1",
+                        "name": "POST /v1/summit/submissions",
+                        "kind": 3,
+                        "startTimeUnixNano": "100",
+                        "endTimeUnixNano": "120",
+                        "attributes": [
+                            {"key": "http.request.method", "value": {"stringValue": "POST"}},
+                            {"key": "url.full", "value": {"stringValue": "http://localhost:3005/v1/summit/submissions"}},
+                            {"key": "server.port", "value": {"intValue": 3005}},
+                            {"key": "http.response.status_code", "value": {"intValue": 201}},
+                        ],
+                    }]}],
+                }]
+            }
+        return 200, {"resourceSpans": []}
+    return 200, {"status": "reset"}
+
+env = evergreen_env.EvergreenGymEnv(task_id="03-realistic-natural", http_handler=fake_http)
+env.reset()
+trace = env.export_otlp_trace()
+os.environ.pop("EVERGREEN_BASE_PORT", None)
+span_names = [s["name"] for rs in trace["resourceSpans"] for ss in rs["scopeSpans"] for s in ss["spans"]]
+reset_ports = sorted(url.split(":")[2].split("/")[0] for m, url in seen_urls if url.endswith("/sim/reset"))
+print(json.dumps({"span_names": span_names, "reset_ports": reset_ports}))
+`);
+
+    expect(pyResult.reset_ports).toEqual(["4100", "4101", "4102", "4103", "4104", "4105", "4106", "4107"]);
+    expect(pyResult.span_names).toEqual(["POST /v1/summit/submissions", "POST /mcp"]);
+  });
 });

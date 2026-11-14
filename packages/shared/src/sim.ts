@@ -3,9 +3,51 @@ import { createMiddleware } from "hono/factory";
 import { createErrorResponse } from "./errors";
 import { isAuthorizedScorerOrInternal } from "./request-log";
 
-// ── Simulated Clock State ───────────────────────────────────────────
+// ── Simulated Clock & Deterministic PRNG State ──────────────────────
 
 let simulatedOffsetMs = 0;
+
+const BASE36_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+function hashSeedString(seedKey: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < seedKey.length; i++) {
+    h ^= seedKey.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h || 0x20260218;
+}
+
+let simPrngState: number = hashSeedString("realistic");
+
+/**
+ * Resets the deterministic episode PRNG so identical action sequences after
+ * `/sim/reset` or `/sim/seed` yield identical IDs, premiums, and risk scores.
+ */
+export function resetSimRandom(seedKey = "realistic"): void {
+  simPrngState = hashSeedString(`evergreen:${seedKey}`);
+}
+
+/**
+ * Mulberry32 deterministic PRNG returning a float in `[0, 1)`.
+ */
+export function simRandom(): number {
+  simPrngState = (simPrngState + 0x6d2b79f5) >>> 0;
+  let t = Math.imul(simPrngState ^ (simPrngState >>> 15), 1 | simPrngState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+/**
+ * Generates a deterministic lowercase `[a-z0-9]` suffix of `length` characters.
+ */
+export function simRandomId(length = 8): string {
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += BASE36_CHARS[Math.floor(simRandom() * BASE36_CHARS.length)];
+  }
+  return out;
+}
 
 /**
  * Returns the current simulated Date (wall clock + offset from time-travel).
@@ -132,7 +174,7 @@ export function chaosMiddleware() {
         );
       }
 
-      if (chaosConfig.error_rate > 0 && Math.random() < chaosConfig.error_rate) {
+      if (chaosConfig.error_rate > 0 && simRandom() < chaosConfig.error_rate) {
         const correlationId = c.get?.("correlationId") ?? crypto.randomUUID();
         return c.json(
           createErrorResponse(
@@ -447,6 +489,7 @@ export function createSimRouter(options: SimRouterOptions) {
     const run = resetChain.then(async () => {
       resetChaosConfig();
       resetSimulatedClock();
+      resetSimRandom(seedMode);
       resetPortalSessions();
       if (options.onReset) {
         await options.onReset(seedMode);
@@ -523,6 +566,7 @@ export function createSimRouter(options: SimRouterOptions) {
     const run = resetChain.then(async () => {
       resetChaosConfig();
       resetSimulatedClock();
+      resetSimRandom(base);
       resetPortalSessions();
       if (options.onReset) {
         await options.onReset(base);

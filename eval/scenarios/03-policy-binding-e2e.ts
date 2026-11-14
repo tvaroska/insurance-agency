@@ -40,6 +40,23 @@ const REALISTIC_CHECKS: OutputCheck[] = [
     path: "/tasks?related_client_id=CLI-003",
     expect: { status: 200, arrayMinLength: 1, bodyMatch: { data: [{ related_client_id: "CLI-003", status: "open" }] } },
   },
+  {
+    name: "quote_remains_unbound",
+    weight: 0.4,
+    service: "rater",
+    method: "GET",
+    path: "/quotes/QR-001/results",
+    expect: {
+      status: 200,
+      bodyMatch: {
+        request_id: "QR-001",
+        carriers: [{ quote_id: "QT-001-NTNW", status: "quoted" }],
+      },
+      bodyForbiddenRegex: {
+        carriers: '"status":"bound"',
+      },
+    },
+  },
 ];
 
 const scenario: ScenarioDefinition = {
@@ -87,13 +104,23 @@ const scenario: ScenarioDefinition = {
         },
         {
           name: "check_documents",
-          weight: 0.15,
+          weight: 0.1,
           type: "presence",
           pattern: { method: "GET", pathPattern: "/v1/documents", service: "ecm" },
         },
         {
+          name: "docs_verified_before_bind",
+          weight: 0.15,
+          type: "sequence",
+          pattern: {},
+          sequence: [
+            { method: "GET", pathPattern: "/v1/documents" },
+            { method: "POST", pathPattern: "/v1/quotes/.*/bind" },
+          ],
+        },
+        {
           name: "bind_quote",
-          weight: 0.25,
+          weight: 0.15,
           type: "presence",
           pattern: { method: "POST", pathPattern: "/v1/quotes/.*/bind", service: "rater" },
         },
@@ -176,6 +203,12 @@ const scenario: ScenarioDefinition = {
           pattern: { method: "POST", pathPattern: "/v1/(envelopes/create|messages/send)", service: "(ecm|comm)" },
         },
         {
+          name: "no_unsigned_bind",
+          weight: 0.2,
+          type: "absence",
+          pattern: { method: "POST", pathPattern: "/v1/quotes/.*/bind", service: "rater" },
+        },
+        {
           name: "notify_client",
           weight: 0.1,
           type: "presence",
@@ -193,6 +226,23 @@ const scenario: ScenarioDefinition = {
             weight: 1,
             type: "presence",
             pattern: { method: "GET", pathPattern: "/v1/documents", service: "ecm" },
+          },
+          outputCheck: {
+            name: "quote_remains_unbound",
+            weight: 1,
+            service: "rater",
+            method: "GET",
+            path: "/quotes/QR-001/results",
+            expect: {
+              status: 200,
+              bodyMatch: {
+                request_id: "QR-001",
+                carriers: [{ quote_id: "QT-001-NTNW", status: "quoted" }],
+              },
+              bodyForbiddenRegex: {
+                carriers: '"status":"bound"',
+              },
+            },
           },
         },
       ],

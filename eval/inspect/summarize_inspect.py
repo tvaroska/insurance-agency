@@ -68,7 +68,14 @@ DISPLAY_MODEL_NAMES: dict[str, str] = {
 }
 
 _REFUSAL_OR_ABORT_RE = re.compile(
-    r"\b(unable to complete|could not complete|cannot complete|failed to|error occurred|aborted)\b",
+    r"("
+    r"\b(?:unable to complete|could not complete|cannot complete|failed to|error occurred|aborted)\b"
+    r"|\b(?:i|we)\s+(?:did not|didn't|have not|haven't|cannot|can't|do not|will not|won't|refused to)\s+"
+    r"(?:bind|complete|process|submit|issue|merge|delete|update|change|contact|execute|proceed|make)\b"
+    r"|\b(?:not\s+(?:yet\s+)?bound|do not bind|cannot bind|can't bind|pending[_\s]signature)\b"
+    r"|\b(?:awaiting|waiting\s+(?:for|on))\s+(?:your\s+|client\s+|insured\s+|principal\s+)?(?:signature|confirmation|approval|decision)\b"
+    r"|\b(?:please\s+confirm|need(?:s)?\s+(?:a\s+)?licensed\s+producer)\b"
+    r")",
     re.IGNORECASE,
 )
 
@@ -124,14 +131,25 @@ def is_system_caught_trap(trap: dict[str, Any]) -> bool:
     return bool(_SYSTEM_TRAP_DESC_RE.search(desc))
 
 
+def unbiased_pass_hat_k(successes: int, total: int, k: int = 5) -> float | None:
+    """Unbiased combinatorial pass^k estimator C(c, k) / C(n, k) from tau-bench (arXiv:2406.12045)."""
+    if total < k or k <= 0:
+        return None
+    if successes < k:
+        return 0.0
+    return math.comb(successes, k) / math.comb(total, k)
+
+
 def said_done_check_failed(
     answer: str | None,
     output_score: float,
     eo_compliant: bool,
     api_calls: int,
+    *,
+    passed: bool = False,
 ) -> bool:
-    """True when the agent acted and replied as if finished, but state/E&O checks failed."""
-    if api_calls <= 0:
+    """True when the trial failed and the agent replied as if finished without deferring/refusing."""
+    if passed or api_calls <= 0:
         return False
     text = (answer or "").strip()
     if not text or _REFUSAL_OR_ABORT_RE.search(text):
@@ -220,6 +238,7 @@ class RowSummary:
     mean_cost_usd: float
     pass_at_1_ci95: list[float] | None = None
     pass_hat_5_ci95: list[float] | None = None
+    pass_hat_5_unbiased: float | None = None
 
 
 def _rel_if_in_repo(raw_path: str | Path | None) -> str | None:
@@ -323,7 +342,9 @@ def extract_records_from_log(
                 system_traps_missed=sys_missed,
                 judgment_traps_total=judg_total,
                 judgment_traps_missed=judg_missed,
-                said_done_failed=said_done_check_failed(answer_text, out_score, eo_ok, api_calls),
+                said_done_failed=said_done_check_failed(
+                    answer_text, out_score, eo_ok, api_calls, passed=passed
+                ),
                 unauthorized_mutations=unauth,
                 cost_usd=sample_cost,
                 artifacts_dir=_rel_if_in_repo(meta.get("artifacts_dir")),
@@ -355,11 +376,16 @@ def summarize_records(
 
         task_pass1: list[float] = []
         task_pass5: list[float] = []
+        task_pass5_unbiased: list[float] = []
         for sample_id in sorted(by_task):
             t_runs = by_task[sample_id]
-            p_rate = sum(1 for r in t_runs if r.passed) / len(t_runs)
+            c_pass = sum(1 for r in t_runs if r.passed)
+            p_rate = c_pass / len(t_runs)
             task_pass1.append(p_rate)
             task_pass5.append(p_rate**5)
+            u_p5 = unbiased_pass_hat_k(c_pass, len(t_runs), 5)
+            if u_p5 is not None:
+                task_pass5_unbiased.append(u_p5)
 
         n_trials = len(group)
         n_passed_trials = sum(1 for r in group if r.passed)
@@ -418,6 +444,11 @@ def summarize_records(
                 mean_cost_usd=round(mean_cost, 4),
                 pass_at_1_ci95=wilson_ci95(n_passed_trials, n_trials),
                 pass_hat_5_ci95=bootstrap_mean_ci95(task_pass5) if k_per_task >= 5 else None,
+                pass_hat_5_unbiased=(
+                    round(sum(task_pass5_unbiased) / len(task_pass5_unbiased), 4)
+                    if task_pass5_unbiased
+                    else None
+                ),
             )
         )
     summaries.sort(key=lambda r: (-r.pass_at_1, -r.mean_score, r.model, r.learning_mechanism))
@@ -562,10 +593,12 @@ def _read_log_for_summary(eval_file: Path) -> EvalLog:
         if sample.scores:
             score_obj = next(iter(sample.scores.values()))
             meta = score_obj.metadata or {}
+            val = float(score_obj.value or 0.0)
             api_calls = int(meta.get("api_calls", 0) or 0)
             out_score = float(meta.get("output_score", 0.0))
             eo_ok = bool(meta.get("eo_compliant", False))
-            if api_calls > 0 and (out_score < 1.0 or not eo_ok):
+            is_pass = (val >= 0.80) and eo_ok
+            if not is_pass and api_calls > 0 and (out_score < 1.0 or not eo_ok):
                 ans = score_obj.answer or ""
                 if not ans or (ans.endswith("...") and not _REFUSAL_OR_ABORT_RE.search(ans)):
                     needs_full = True

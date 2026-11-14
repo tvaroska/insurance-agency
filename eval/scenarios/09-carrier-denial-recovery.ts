@@ -3,60 +3,45 @@ import { buildCases } from "./helpers";
 
 const MODERATE_CHECKS: OutputCheck[] = [
   {
-    name: "quote_results_reviewed",
-    weight: 0.3,
-    service: "rater",
-    method: "GET",
-    path: "/quotes?client_id=CLI-019",
-    expect: { status: 200, arrayMinLength: 1, bodyMatch: { data: [{ client_id: "CLI-019" }] } },
-  },
-  {
     name: "options_sent_to_client",
-    weight: 0.2,
+    weight: 1.0,
     service: "comm",
     method: "GET",
     path: "/messages?client_id=CLI-019&direction=outbound",
-    expect: { status: 200, arrayMinLength: 1, bodyMatch: { data: [{ client_id: "CLI-019", direction: "outbound" }] } },
+    expect: {
+      status: 200,
+      arrayMinLength: 1,
+      bodyMatch: { data: [{ client_id: "CLI-019", direction: "outbound" }] },
+      bodyRegex: { body: "(Coastal|Liberty|SafeHarbor|2,?780|3,?100|3,?350)" },
+    },
   },
 ];
 const SEVERE_CHECKS: OutputCheck[] = [
   {
-    name: "victor_quote_reviewed",
-    weight: 0.2,
-    service: "rater",
-    method: "GET",
-    path: "/quotes?limit=50",
-    expect: { status: 200, arrayMinLength: 1, bodyMatch: { data: [{ client_id: "CLI-026" }] } },
-  },
-  {
     name: "tanya_escalation",
-    weight: 0.3,
+    weight: 0.6,
     service: "ams",
     method: "GET",
     path: "/escalations?client_id=CLI-027",
     expect: { status: 200, arrayMinLength: 1, bodyMatch: { data: [{ client_id: "CLI-027" }] } },
   },
+  {
+    name: "victor_options_sent",
+    weight: 0.4,
+    service: "comm",
+    method: "GET",
+    path: "/messages?client_id=CLI-026&direction=outbound",
+    expect: {
+      status: 200,
+      arrayMinLength: 1,
+      bodyMatch: { data: [{ client_id: "CLI-026", direction: "outbound" }] },
+    },
+  },
 ];
 const MARKET_EXIT_CHECKS: OutputCheck[] = [
   {
-    name: "quotes_reviewed",
-    weight: 0.2,
-    service: "rater",
-    method: "GET",
-    path: "/quotes?limit=50",
-    expect: { status: 200, arrayMinLength: 1, bodyMatch: { data: [{ client_id: "CLI-022" }] } },
-  },
-  {
-    name: "documents_checked",
-    weight: 0.2,
-    service: "ecm",
-    method: "GET",
-    path: "/documents?client_id=CLI-022&limit=50",
-    expect: { status: 200, arrayMinLength: 1, bodyMatch: { data: [{ client_id: "CLI-022" }] } },
-  },
-  {
     name: "escalation_created",
-    weight: 0.3,
+    weight: 1.0,
     service: "ams",
     method: "GET",
     path: "/escalations?client_id=CLI-022",

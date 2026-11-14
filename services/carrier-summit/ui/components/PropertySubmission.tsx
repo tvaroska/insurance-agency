@@ -2,7 +2,9 @@ import { useState } from "react";
 import { api } from "../api";
 
 interface FormData {
-  // Step 1: Address
+  // Step 1: Client & Address
+  client_id: string;
+  policy_type: string;
   street: string;
   city: string;
   state: string;
@@ -36,6 +38,8 @@ const PHOTO_ITEMS = [
 const STEP_LABELS = ["Address", "Property Details", "Photo Checklist", "Coverage"];
 
 const initialFormData: FormData = {
+  client_id: "",
+  policy_type: "homeowners",
   street: "",
   city: "",
   state: "",
@@ -74,7 +78,14 @@ export default function PropertySubmission() {
   function canAdvance(): boolean {
     switch (currentStep) {
       case 1:
-        return !!(formData.street && formData.city && formData.state && formData.zip);
+        return !!(
+          formData.client_id.trim() &&
+          formData.policy_type &&
+          formData.street &&
+          formData.city &&
+          formData.state &&
+          formData.zip
+        );
       case 2:
         return !!(formData.year_built && formData.square_feet && formData.construction_type && formData.roof_type);
       case 3:
@@ -91,35 +102,48 @@ export default function PropertySubmission() {
     setError("");
     setSuccess("");
     try {
+      const coverages: Array<{ type: string; limit: number }> = [
+        { type: "dwelling", limit: parseInt(formData.dwelling_limit, 10) },
+      ];
+      if (formData.personal_property_limit) {
+        coverages.push({
+          type: "personal_property",
+          limit: parseInt(formData.personal_property_limit, 10),
+        });
+      }
+      if (formData.liability_limit) {
+        coverages.push({
+          type: "liability",
+          limit: parseInt(formData.liability_limit, 10),
+        });
+      }
       const payload = {
-        address: {
+        client_id: formData.client_id.trim(),
+        policy_type: formData.policy_type,
+        property_address: {
           street: formData.street,
           city: formData.city,
           state: formData.state,
           zip: formData.zip,
         },
-        property: {
+        property_details: {
           year_built: parseInt(formData.year_built, 10),
           square_feet: parseInt(formData.square_feet, 10),
           construction_type: formData.construction_type,
           roof_type: formData.roof_type,
-          roof_year: formData.roof_year ? parseInt(formData.roof_year, 10) : undefined,
-          heating_type: formData.heating_type || undefined,
+          ...(formData.roof_year ? { roof_year: parseInt(formData.roof_year, 10) } : {}),
+          ...(formData.heating_type ? { heating_type: formData.heating_type } : {}),
         },
-        photos: Object.keys(formData.photos).filter((k) => formData.photos[k]),
-        coverage: {
-          dwelling_limit: parseInt(formData.dwelling_limit, 10),
-          personal_property_limit: formData.personal_property_limit
-            ? parseInt(formData.personal_property_limit, 10)
-            : undefined,
-          liability_limit: formData.liability_limit
-            ? parseInt(formData.liability_limit, 10)
-            : undefined,
-          deductible: parseInt(formData.deductible, 10),
-        },
+        coverages,
+        deductibles: { all_perils: parseInt(formData.deductible, 10) },
+        photo_checklist: Object.keys(formData.photos).filter((k) => formData.photos[k]),
       };
-      await api.submitProperty(payload);
-      setSuccess("Property submission created successfully.");
+      const created: any = await api.submitProperty(payload);
+      setSuccess(
+        created?.quote_id
+          ? `Property submission created successfully (${created.quote_id}).`
+          : "Property submission created successfully.",
+      );
       setFormData({ ...initialFormData });
       setCurrentStep(1);
     } catch (err: any) {
@@ -169,6 +193,30 @@ export default function PropertySubmission() {
       {/* Step 1: Address */}
       {currentStep === 1 && (
         <div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Client ID</label>
+              <input
+                type="text"
+                value={formData.client_id}
+                onChange={(e) => updateField("client_id", e.target.value)}
+                placeholder="e.g. CLI-001"
+              />
+            </div>
+            <div className="form-group">
+              <label>Policy Type</label>
+              <select
+                value={formData.policy_type}
+                onChange={(e) => updateField("policy_type", e.target.value)}
+              >
+                <option value="homeowners">Homeowners</option>
+                <option value="bop">Business Owners Policy (BOP)</option>
+                <option value="commercial_property">Commercial Property</option>
+                <option value="personal_auto">Personal Auto</option>
+                <option value="umbrella">Umbrella</option>
+              </select>
+            </div>
+          </div>
           <div className="form-group">
             <label>Street Address</label>
             <input

@@ -128,7 +128,8 @@ class EvergreenGymEnv:
         self.recorded_spans = []
 
         reset_statuses: dict[str, Any] = {}
-        for port, service in PORT_SERVICE_MAP.items():
+        for canonical_port, service in PORT_SERVICE_MAP.items():
+            port = self._service_port(canonical_port)
             url = f"{self.host}:{port}/sim/reset"
             status_code, payload = self._request_json(
                 "POST", url, {"seed_mode": effective_seed}
@@ -182,7 +183,8 @@ class EvergreenGymEnv:
             return obs, reward, True, False, {"report": report}
 
         service = str(act.get("service", "ams"))
-        port = SERVICE_PORT_MAP.get(service, 3000)
+        canonical_port = SERVICE_PORT_MAP.get(service, 3000)
+        port = self._service_port(canonical_port)
         method = str(act.get("method", "GET")).upper()
         path = str(act.get("path", "/v1/clients"))
         if not path.startswith("/"):
@@ -208,7 +210,8 @@ class EvergreenGymEnv:
                 "endTimeUnixNano": str(end_ns),
                 "attributes": [
                     {"key": "http.request.method", "value": {"stringValue": method}},
-                    {"key": "url.full", "value": {"stringValue": url}},
+                    {"key": "url.full", "value": {"stringValue": f"{self.host}:{canonical_port}{path}"}},
+                    {"key": "server.port", "value": {"intValue": canonical_port}},
                     {"key": "http.response.status_code", "value": {"intValue": status_code}},
                 ],
             }
@@ -278,10 +281,11 @@ class EvergreenGymEnv:
 
         targets = services or list(SERVICE_PORT_MAP.keys())
         results: dict[str, Any] = {}
+        headers = self._scorer_headers()
         for svc in targets:
-            port = SERVICE_PORT_MAP[svc]
+            port = self._service_port(svc)
             _, payload = self._request_json(
-                "POST", f"{self.host}:{port}/sim/time-travel", body
+                "POST", f"{self.host}:{port}/sim/time-travel", body, headers
             )
             results[svc] = payload
         return results
@@ -304,16 +308,57 @@ class EvergreenGymEnv:
         }
         targets = services or list(SERVICE_PORT_MAP.keys())
         results: dict[str, Any] = {}
+        headers = self._scorer_headers()
         for svc in targets:
-            port = SERVICE_PORT_MAP[svc]
+            port = self._service_port(svc)
             _, payload = self._request_json(
-                "POST", f"{self.host}:{port}/sim/chaos", body
+                "POST", f"{self.host}:{port}/sim/chaos", body, headers
             )
             results[svc] = payload
         return results
 
     def export_otlp_trace(self) -> dict[str, Any]:
-        """Return recorded HTTP interactions in OTLP JSON trace format."""
+        """Collect service-side OTLP traces (`GET /sim/trace`) across all 8 services, falling back to `self.recorded_spans` when running against mock handlers."""
+        headers = self._scorer_headers()
+        entries: list[tuple[int, dict[str, Any], dict[str, Any], dict[str, Any]]] = []
+        saw_service_trace_endpoint = False
+
+        for svc in SERVICE_PORT_MAP:
+            port = self._service_port(svc)
+            try:
+                status_code, payload = self._request_json(
+                    "GET", f"{self.host}:{port}/sim/trace", None, headers
+                )
+            except Exception:
+                continue
+            if status_code == 200 and isinstance(payload, dict) and isinstance(payload.get("resourceSpans"), list):
+                saw_service_trace_endpoint = True
+                for rs in payload["resourceSpans"]:
+                    resource = rs.get("resource", {})
+                    for ss in rs.get("scopeSpans", []):
+                        scope = {k: v for k, v in ss.items() if k != "spans"}
+                        for span in ss.get("spans", []):
+                            start_ns = int(span.get("startTimeUnixNano", "0") or "0")
+                            entries.append((start_ns, resource, scope, span))
+
+        if saw_service_trace_endpoint:
+            entries.sort(key=lambda item: item[0])
+            resource_spans: list[dict[str, Any]] = []
+            prev_resource: dict[str, Any] | None = None
+            prev_scope: dict[str, Any] | None = None
+            for _, resource, scope, span in entries:
+                if resource != prev_resource or scope != prev_scope or not resource_spans:
+                    resource_spans.append(
+                        {
+                            "resource": resource,
+                            "scopeSpans": [{**scope, "spans": []}],
+                        }
+                    )
+                    prev_resource = resource
+                    prev_scope = scope
+                resource_spans[-1]["scopeSpans"][0]["spans"].append(span)
+            return {"resourceSpans": resource_spans}
+
         return {
             "resourceSpans": [
                 {

@@ -10,6 +10,8 @@ import {
   validateBindingAuthority,
   validateStateMinimums,
   getInternalRequestHeaders,
+  simRandom,
+  simRandomId,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -214,7 +216,7 @@ quotesRouter.post(
     });
 
     // Generate request ID matching spec pattern: qr_[a-z0-9]{8}
-    const requestId = `qr_${Math.random().toString(36).slice(2, 10)}`;
+    const requestId = `qr_${simRandomId(8)}`;
     const now = new Date().toISOString();
 
     // Build risk_data JSON
@@ -255,11 +257,11 @@ quotesRouter.post(
     // Simulate carrier quotes for each eligible carrier
     for (const carrier of eligible) {
       // Generate quote ID matching spec pattern: qt_[a-z0-9]{8}
-      const quoteId = `qt_${Math.random().toString(36).slice(2, 10)}`;
+      const quoteId = `qt_${simRandomId(8)}`;
 
-      // Simulate a premium (random between 800 and 5000)
+      // Simulate a deterministic per-episode premium (between 800 and 5000)
       const premiumAnnual =
-        Math.round((800 + Math.random() * 4200) * 100) / 100;
+        Math.round((800 + simRandom() * 4200) * 100) / 100;
       const premiumMonthly = Math.round((premiumAnnual / 12) * 100) / 100;
 
       await prisma.carrierQuote.create({
@@ -593,7 +595,7 @@ quotesRouter.post(
 
     // Generate policy ID
     const year = new Date().getFullYear();
-    const policySeq = String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
+    const policySeq = String(Math.floor(simRandom() * 1_000_000)).padStart(6, "0");
     const policyId = `POL-${quote.carrier_code}-${year}-${policySeq}`;
 
     // Calculate expiration date (1 year from effective date)

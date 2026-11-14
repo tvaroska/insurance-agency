@@ -3,15 +3,17 @@ import { api } from "../api";
 
 interface RecalcResult {
   quote_id: string;
-  original_premium: number;
-  adjusted_premium: number;
-  coverages: {
-    bodily_injury: string;
-    property_damage: number;
-    collision_deductible: number;
-    comprehensive_deductible: number;
-    uninsured_motorist: string;
-  };
+  original_premium: number | { annual: number | null; monthly: number | null };
+  adjusted_premium: number | { annual: number; semi_annual: number; monthly: number };
+  coverages: Array<{ type: string; limit?: string | number; deductible?: number }>;
+}
+
+function extractAnnual(
+  premium: number | { annual: number | null } | null | undefined,
+): number | null {
+  if (typeof premium === "number") return premium;
+  if (premium && typeof premium === "object") return premium.annual ?? null;
+  return null;
 }
 
 function formatCurrency(value: number | null): string {
@@ -37,13 +39,13 @@ export default function CompareCustomize() {
     setError("");
     setResult(null);
     try {
-      const data = (await api.recalculatePremium(quoteId.trim(), {
-        bodily_injury: bodilyInjury,
-        property_damage: propertyDamage,
-        collision_deductible: collisionDeductible,
-        comprehensive_deductible: comprehensiveDeductible,
-        uninsured_motorist: uninsuredMotorist,
-      })) as RecalcResult;
+      const data = (await api.recalculatePremium(quoteId.trim(), [
+        { type: "bodily_injury", limit: bodilyInjury },
+        { type: "property_damage", limit: propertyDamage },
+        { type: "collision", deductible: collisionDeductible },
+        { type: "comprehensive", deductible: comprehensiveDeductible },
+        { type: "uninsured_motorist", limit: uninsuredMotorist },
+      ])) as RecalcResult;
       setResult(data);
     } catch (err: any) {
       setError(err.message);
@@ -52,7 +54,12 @@ export default function CompareCustomize() {
     }
   }
 
-  const diff = result ? result.adjusted_premium - result.original_premium : 0;
+  const originalAnnual = result ? extractAnnual(result.original_premium) : null;
+  const adjustedAnnual = result ? extractAnnual(result.adjusted_premium) : null;
+  const diff =
+    originalAnnual != null && adjustedAnnual != null
+      ? adjustedAnnual - originalAnnual
+      : 0;
   const diffSign = diff > 0 ? "+" : "";
   const diffColor = diff > 0 ? "var(--status-declined)" : diff < 0 ? "var(--status-approved)" : "var(--coastal-text-muted)";
 
@@ -138,11 +145,11 @@ export default function CompareCustomize() {
         <div className="side-by-side">
           <div className="comparison-box original">
             <div className="comparison-label">Original Premium</div>
-            <div className="comparison-amount">{formatCurrency(result.original_premium)}</div>
+            <div className="comparison-amount">{formatCurrency(originalAnnual)}</div>
           </div>
           <div className="comparison-box adjusted">
             <div className="comparison-label">Adjusted Premium</div>
-            <div className="comparison-amount">{formatCurrency(result.adjusted_premium)}</div>
+            <div className="comparison-amount">{formatCurrency(adjustedAnnual)}</div>
             <div className="comparison-diff" style={{ color: diffColor }}>
               {diffSign}{formatCurrency(Math.abs(diff))} {diff > 0 ? "increase" : diff < 0 ? "savings" : "no change"}
             </div>

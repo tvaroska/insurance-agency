@@ -13,7 +13,7 @@
     "system_traps_total": 30,
     "judgment_traps_missed": 5,
     "judgment_traps_total": 60,
-    "said_done_failed_rate": 0.35,
+    "said_done_failed_rate": 0.27,
     "unasked_mutation_rate": 0.07,
     "mean_unasked_mutations": 0.09,
     "drop_clean_to_messy_pp": null,
@@ -25,7 +25,8 @@
     "pass_hat_5_ci95": [
       0.4016,
       0.8011
-    ]
+    ],
+    "pass_hat_5_unbiased": 0.6
   },
   {
     "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
@@ -41,7 +42,7 @@
     "system_traps_total": 30,
     "judgment_traps_missed": 5,
     "judgment_traps_total": 60,
-    "said_done_failed_rate": 0.39,
+    "said_done_failed_rate": 0.27,
     "unasked_mutation_rate": 0.09,
     "mean_unasked_mutations": 0.22,
     "drop_clean_to_messy_pp": -1.1,
@@ -53,7 +54,8 @@
     "pass_hat_5_ci95": [
       0.1956,
       0.604
-    ]
+    ],
+    "pass_hat_5_unbiased": 0.35
   },
   {
     "model": "google/gemini-3.8-flash",
@@ -69,7 +71,7 @@
     "system_traps_total": 30,
     "judgment_traps_missed": 16,
     "judgment_traps_total": 60,
-    "said_done_failed_rate": 0.37,
+    "said_done_failed_rate": 0.29,
     "unasked_mutation_rate": 0.1,
     "mean_unasked_mutations": 0.39,
     "drop_clean_to_messy_pp": -21.1,
@@ -81,7 +83,8 @@
     "pass_hat_5_ci95": [
       0.256,
       0.6781
-    ]
+    ],
+    "pass_hat_5_unbiased": 0.45
   },
   {
     "model": "anthropic/vertex/claude-sonnet-5-5",
@@ -97,7 +100,7 @@
     "system_traps_total": 30,
     "judgment_traps_missed": 14,
     "judgment_traps_total": 60,
-    "said_done_failed_rate": 0.5,
+    "said_done_failed_rate": 0.26,
     "unasked_mutation_rate": 0.0,
     "mean_unasked_mutations": 0.0,
     "drop_clean_to_messy_pp": -20.0,
@@ -109,6 +112,7 @@
     "pass_hat_5_ci95": [
       0.2554,
       0.6617
-    ]
+    ],
+    "pass_hat_5_unbiased": 0.45
   }
 ]

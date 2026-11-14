@@ -354,11 +354,11 @@ Behaviour that looks unfinished and is specified as it is:
 
 5. Dates are not checked. Binding with an `effective_date` that is not a date succeeds and stores a meaningless `expiration_date`; `payment_plan` has no effect (CST-R40).
 6. Ids come from the clock in milliseconds; two creations in the same millisecond collide on the primary key and the second fails with `500`. A POST with no JSON body, or malformed JSON, also gives `500`, not `400`. Reading an ID card is a `GET` that writes a row (CST-R42).
-7. **Quick Quote screen.** The page sends the licence as `license_number`; the API reads `driver_license`, so the licence is never stored. The page reads the premiums as `premium_annual`, `premium_semi_annual` and `premium_monthly` at the top level; the API returns them nested as `premium.annual`, `premium.semi_annual`, `premium.monthly`, so the three amounts show "N/A". The quote is created and its id and status are shown.
-8. **Compare & Customize screen.** The page sends five flat fields; the API reads only a `coverages` array, so the choices are ignored and the adjusted premium is always computed from the quote's stored coverages. The page also treats `original_premium` and `adjusted_premium` as numbers, while the API returns objects, so the amounts and the difference do not display. The conformance suite pins the API side: the flat body gives the same result as an empty body.
-9. **Bind & Go screen.** The bind itself works. The plan prices stay "--" because the bind response has no premium breakdown, and the Insured and Vehicle lines of the card are blank because the page reads `insured_name` and `vehicle` at the top level of the card response, while the API nests the name under `card_data` and has no vehicle field.
+7. **Quick Quote screen.** The page sends `driver_license` matching CST-R35 and reads nested `premium.annual`, `premium.semi_annual` and `premium.monthly` returned by CST-R36.
+8. **Compare & Customize screen.** The page sends `{ "coverages": [...] }` matching CST-R37 and extracts `.annual` from `original_premium` and `adjusted_premium` objects returned by CST-R38. Legacy flat bodies without a `coverages` array remain ignored by the API.
+9. **Bind & Go screen.** The page derives plan breakdown estimates from `premium_current` when `premium_annual` is absent on the bind response and reads `card_data.insured_name` on the ID card response.
 10. The page's API client has a quote look-up call (`GET /v1/coastal/quotes/{id}`) that no screen uses and the API does not implement. That path, like any unknown `GET` under `/v1/coastal` sent with a valid token, falls through to the UI page and returns `200` HTML rather than a JSON `404`.
-11. The quick quote's risk score is random, so two identical requests can land in different tiers (CST-R34).
+11. The quick quote's risk score is generated via the deterministic episode PRNG (`simRandom()`, reset on `/sim/reset` and `/sim/seed`), so sequential calls in an episode vary across `[50, 84]` while identical trajectories from a reset state are reproducible (CST-R34).
 
 What the conformance suite cannot prove over HTTP, and would need a real browser:
 

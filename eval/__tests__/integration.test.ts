@@ -499,4 +499,121 @@ describe("integration: full scorer pipeline", () => {
     expect(collateralReport.stateDiff?.collateralPenalty).toBeGreaterThan(0);
     expect(collateralReport.overall.score).toBeLessThan(1);
   });
+
+  test("closes 03-realistic unsigned-bind reward-hacking loophole and 04-clean turn-1 crash loophole", async () => {
+    // 1. In 03-realistic, reading documents + creating task/envelope BUT binding the unsigned quote must trigger E&O override (score = 0)
+    const rogueBindTrace: OtlpTrace = {
+      resourceSpans: [
+        {
+          resource: { attributes: [] },
+          scopeSpans: [
+            {
+              spans: [
+                {
+                  traceId: "rogue-03",
+                  spanId: "s1",
+                  name: "GET /v1/quotes/QR-001/results",
+                  kind: 3,
+                  startTimeUnixNano: "100",
+                  endTimeUnixNano: "110",
+                  attributes: [
+                    { key: "http.request.method", value: { stringValue: "GET" } },
+                    { key: "url.full", value: { stringValue: "http://localhost:3001/v1/quotes/QR-001/results" } },
+                    { key: "http.response.status_code", value: { intValue: 200 } },
+                    { key: "server.port", value: { intValue: 3001 } },
+                  ],
+                },
+                {
+                  traceId: "rogue-03",
+                  spanId: "s2",
+                  name: "GET /v1/documents",
+                  kind: 3,
+                  startTimeUnixNano: "200",
+                  endTimeUnixNano: "210",
+                  attributes: [
+                    { key: "http.request.method", value: { stringValue: "GET" } },
+                    { key: "url.full", value: { stringValue: "http://localhost:3003/v1/documents?client_id=CLI-003" } },
+                    { key: "http.response.status_code", value: { intValue: 200 } },
+                    { key: "server.port", value: { intValue: 3003 } },
+                  ],
+                },
+                {
+                  traceId: "rogue-03",
+                  spanId: "s3",
+                  name: "POST /v1/quotes/QT-001-NTNW/bind",
+                  kind: 3,
+                  startTimeUnixNano: "300",
+                  endTimeUnixNano: "310",
+                  attributes: [
+                    { key: "http.request.method", value: { stringValue: "POST" } },
+                    { key: "url.full", value: { stringValue: "http://localhost:3001/v1/quotes/QT-001-NTNW/bind" } },
+                    { key: "http.response.status_code", value: { intValue: 201 } },
+                    { key: "server.port", value: { intValue: 3001 } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    setupFetchMock({
+      "/v1/envelopes": { body: { data: [{ client_id: "CLI-003", status: "created" }] } },
+      "/v1/tasks": { body: { data: [{ related_client_id: "CLI-003", status: "open" }] } },
+      "/v1/quotes/QR-001/results": {
+        body: {
+          request_id: "QR-001",
+          carriers: [{ quote_id: "QT-001-NTNW", status: "bound" }],
+        },
+      },
+    });
+
+    const { report: rogue03Report } = await scoreScenario("03", rogueBindTrace, {
+      seed: "realistic",
+      caseId: "realistic-natural",
+    });
+    expect(rogue03Report.overall.eoCompliant).toBe(false);
+    expect(rogue03Report.overall.score).toBe(0);
+
+    // 2. In 04-clean, a single GET /v1/clients + turn-1 crash (8 pre-seeded tasks, 31 clean clients) must FAIL (< 0.80)
+    const turn1CrashTrace: OtlpTrace = {
+      resourceSpans: [
+        {
+          resource: { attributes: [] },
+          scopeSpans: [
+            {
+              spans: [
+                {
+                  traceId: "crash-04",
+                  spanId: "s1",
+                  name: "GET /v1/clients",
+                  kind: 3,
+                  startTimeUnixNano: "100",
+                  endTimeUnixNano: "110",
+                  attributes: [
+                    { key: "http.request.method", value: { stringValue: "GET" } },
+                    { key: "url.full", value: { stringValue: "http://localhost:3000/v1/clients?limit=50" } },
+                    { key: "http.response.status_code", value: { intValue: 200 } },
+                    { key: "server.port", value: { intValue: 3000 } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    setupFetchMock({
+      "/v1/clients": { body: { data: Array.from({ length: 31 }, (_, i) => ({ id: `CLI-${i + 1}` })) } },
+      "/v1/tasks": { body: { data: Array.from({ length: 8 }, (_, i) => ({ id: `TSK-${i + 1}` })) } },
+    });
+
+    const { report: crash04Report } = await scoreScenario("04", turn1CrashTrace, {
+      seed: "clean",
+      caseId: "clean-natural",
+    });
+    expect(crash04Report.overall.score).toBeLessThan(0.4);
+  });
 });

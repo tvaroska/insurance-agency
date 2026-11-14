@@ -72,7 +72,7 @@ export const api = {
     vin: string;
     driver_name: string;
     driver_dob: string;
-    license_number: string;
+    driver_license: string;
     client_id: string;
   }) =>
     apiFetch("/v1/coastal/quotes/quick", {
@@ -83,16 +83,13 @@ export const api = {
   getQuote: (quoteId: string) =>
     apiFetch(`/v1/coastal/quotes/${encodeURIComponent(quoteId)}`),
 
-  recalculatePremium: (quoteId: string, coverages: {
-    bodily_injury: string;
-    property_damage: number;
-    collision_deductible: number;
-    comprehensive_deductible: number;
-    uninsured_motorist: string;
-  }) =>
+  recalculatePremium: (
+    quoteId: string,
+    coverages: Array<{ type: string; limit?: string | number; deductible?: number }>,
+  ) =>
     apiFetch(`/v1/coastal/quotes/${encodeURIComponent(quoteId)}/recalculate`, {
       method: "POST",
-      body: JSON.stringify(coverages),
+      body: JSON.stringify({ coverages }),
     }),
 
   getRiskAssessment: (quoteId: string) =>

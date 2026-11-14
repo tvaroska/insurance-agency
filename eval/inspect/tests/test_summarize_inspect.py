@@ -39,6 +39,21 @@ def test_said_done_check_failed_detects_false_completion_claims():
     assert not said_done_check_failed("All steps completed and escalated.", 1.0, True, 5)
     assert not said_done_check_failed("Done.", 0.0, True, 0)
     assert not said_done_check_failed("I was unable to complete the request due to an error.", 0.2, True, 2)
+    # Passing runs (score >= threshold and eo_compliant) must never be flagged as false completion
+    assert not said_done_check_failed("Completed the workflow.", 0.85, True, 6, passed=True)
+    # Explicit non-bind / pending-signature / licensed-producer deferrals are not false-done claims
+    assert not said_done_check_failed(
+        "I didn't contact clients, change policies or merge records. Several need a licensed producer's decision.",
+        0.5,
+        True,
+        4,
+    )
+    assert not said_done_check_failed(
+        "Quote QT-001-NTNW is not bound because DOC-011 is pending_signature; awaiting client signature.",
+        0.6,
+        True,
+        5,
+    )
 
 
 def test_extract_and_summarize_computes_pass1_pass5_traps_collateral_and_drop():
@@ -180,6 +195,8 @@ def test_five_epoch_confidence_intervals_and_domain_skill_separation():
     assert rows[1].learning_mechanism == "None (zero-shot)"
     assert rows[1].pass_at_1 == 0.6
     assert rows[1].pass_hat_5 == round(0.6**5, 4)
+    assert rows[1].pass_hat_5_unbiased == 0.0
+    assert rows[0].pass_hat_5_unbiased == 1.0
     assert rows[1].pass_at_1_ci95 is not None and len(rows[1].pass_at_1_ci95) == 2
 
     md = format_markdown_table(rows, include_anchors=False)
@@ -252,3 +269,20 @@ def test_drop_uses_only_the_arms_own_clean_runs_on_shared_scenarios():
     rows = {r.learning_mechanism: r for r in summarize_records(records, clean_records=clean)}
     assert rows[zero].drop_clean_to_messy_pp == -50.0
     assert rows[skill].drop_clean_to_messy_pp is None
+
+
+def test_resolve_pricing_and_display_labels_for_e2_models():
+    assert summarize_inspect.resolve_pricing("google/gemini-4-hydrogen") == (1.50, 7.50, 0.075, 1.50)
+    assert summarize_inspect.resolve_pricing("google/gemini-4-argon") == (4.00, 20.00, 0.20, 4.00)
+    assert summarize_inspect.resolve_pricing("google/gemini-4-carbon") == (4.00, 20.00, 0.20, 4.00)
+    assert summarize_inspect.resolve_pricing("openai-api/vertex-maas/openai/gpt-oss-120b-maas") == (
+        0.09,
+        0.36,
+        0.09,
+        0.09,
+    )
+    assert summarize_inspect.format_model_label("google/gemini-4-hydrogen") == "`gemini-4-hydrogen`"
+    assert (
+        summarize_inspect.format_model_label("openai-api/vertex-maas/openai/gpt-oss-120b-maas")
+        == "`gpt-oss-120b`"
+    )

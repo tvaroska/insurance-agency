@@ -7,20 +7,29 @@ interface BindResult {
   bind_status: string;
   effective_date: string;
   expiration_date: string;
-  premium_annual: number;
-  premium_semi_annual: number;
-  premium_monthly: number;
+  premium_current?: number;
+  premium_annual?: number;
+  premium_semi_annual?: number;
+  premium_monthly?: number;
   bound_at: string;
 }
 
 interface IdCardData {
+  card_id?: string;
   policy_id: string;
-  carrier: string;
-  insured_name: string;
-  vehicle: string;
-  effective_date: string;
-  expiration_date: string;
-  policy_type: string;
+  carrier?: string;
+  insured_name?: string;
+  vehicle?: string;
+  effective_date?: string;
+  expiration_date?: string;
+  policy_type?: string;
+  card_data?: {
+    carrier?: string;
+    policy_number?: string;
+    insured_name?: string;
+    effective_date?: string;
+    expiration_date?: string;
+  };
 }
 
 function formatCurrency(value: number | null): string {
@@ -37,10 +46,15 @@ export default function BindAndGo() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Estimated prices for display - these would come from a prior quote lookup
-  const estimatedAnnual = result?.premium_annual ?? null;
-  const estimatedSemiAnnual = result?.premium_semi_annual ?? null;
-  const estimatedMonthly = result?.premium_monthly ?? null;
+  // Estimated prices for display - derived from bind response or prior quote lookup
+  const estimatedAnnual = result?.premium_annual ?? result?.premium_current ?? null;
+  const estimatedSemiAnnual =
+    result?.premium_semi_annual ??
+    (estimatedAnnual != null ? Math.round(estimatedAnnual * 0.52 * 100) / 100 : null);
+  const estimatedMonthly =
+    result?.premium_monthly ??
+    (estimatedAnnual != null ? Math.round((estimatedAnnual / 12) * 100) / 100 : null);
+  const insuredName = idCard?.card_data?.insured_name ?? idCard?.insured_name ?? null;
 
   async function handleBind(e: React.FormEvent) {
     e.preventDefault();
@@ -193,17 +207,17 @@ export default function BindAndGo() {
                 <div className="id-card-field-label">Expires</div>
                 <div className="id-card-field-value">{result.expiration_date}</div>
               </div>
-              {idCard && (
-                <>
-                  <div className="id-card-field full-width">
-                    <div className="id-card-field-label">Insured</div>
-                    <div className="id-card-field-value">{idCard.insured_name}</div>
-                  </div>
-                  <div className="id-card-field full-width">
-                    <div className="id-card-field-label">Vehicle</div>
-                    <div className="id-card-field-value">{idCard.vehicle}</div>
-                  </div>
-                </>
+              {insuredName && (
+                <div className="id-card-field full-width">
+                  <div className="id-card-field-label">Insured</div>
+                  <div className="id-card-field-value">{insuredName}</div>
+                </div>
+              )}
+              {idCard?.vehicle && (
+                <div className="id-card-field full-width">
+                  <div className="id-card-field-label">Vehicle</div>
+                  <div className="id-card-field-value">{idCard.vehicle}</div>
+                </div>
               )}
             </div>
           </div>

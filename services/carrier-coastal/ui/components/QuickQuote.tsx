@@ -12,12 +12,17 @@ interface QuoteResult {
   quote_id: string;
   client_id: string;
   status: string;
-  premium_annual: number;
-  premium_semi_annual: number;
-  premium_monthly: number;
+  premium?: {
+    annual: number;
+    semi_annual: number;
+    monthly: number;
+  };
+  premium_annual?: number;
+  premium_semi_annual?: number;
+  premium_monthly?: number;
   vehicle: {
     vin: string;
-    year: string;
+    year: string | number;
     make: string;
     model: string;
   };
@@ -86,7 +91,7 @@ export default function QuickQuote() {
         vin: vin.trim(),
         driver_name: driverName.trim(),
         driver_dob: driverDob,
-        license_number: licenseNumber.trim(),
+        driver_license: licenseNumber.trim(),
         client_id: clientId.trim(),
       })) as QuoteResult;
       setResult(data);
@@ -202,15 +207,21 @@ export default function QuickQuote() {
           </div>
 
           <div className="premium-display">
-            <div className="premium-amount">{formatCurrency(result.premium_annual)}</div>
+            <div className="premium-amount">
+              {formatCurrency(result.premium?.annual ?? result.premium_annual ?? null)}
+            </div>
             <div className="premium-label">Annual Premium</div>
             <div className="premium-breakdown">
               <div className="breakdown-item">
-                <div className="breakdown-amount">{formatCurrency(result.premium_semi_annual)}</div>
+                <div className="breakdown-amount">
+                  {formatCurrency(result.premium?.semi_annual ?? result.premium_semi_annual ?? null)}
+                </div>
                 <div className="breakdown-label">Semi-Annual</div>
               </div>
               <div className="breakdown-item">
-                <div className="breakdown-amount">{formatCurrency(result.premium_monthly)}</div>
+                <div className="breakdown-amount">
+                  {formatCurrency(result.premium?.monthly ?? result.premium_monthly ?? null)}
+                </div>
                 <div className="breakdown-label">Monthly</div>
               </div>
             </div>

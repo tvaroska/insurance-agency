@@ -3,6 +3,7 @@ import {
   requireScopes,
   checkRequired,
   throwIfErrors,
+  simRandom,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -91,8 +92,8 @@ quickQuoteRouter.post(
     const vehicle = decodeVin(body.vin);
     const premiums = computeInstantPremium(vehicle.year, body.driver_dob || "1990-01-01");
 
-    // Generate risk assessment inline (speed-focused)
-    const riskScore = 50 + Math.floor(Math.random() * 35);
+    // Generate deterministic per-episode risk assessment inline (speed-focused)
+    const riskScore = 50 + Math.floor(simRandom() * 35);
     const riskTier = riskScore >= 75 ? "preferred" : riskScore >= 50 ? "standard" : "non_standard";
     const riskFactors = [
       { factor: "driver_age", impact: riskScore >= 60 ? "positive" : "neutral", detail: "Driver age assessment" },

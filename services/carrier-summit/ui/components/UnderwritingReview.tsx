@@ -86,14 +86,19 @@ export default function UnderwritingReview() {
     }
   }
 
-  async function handleDecision(decision: string) {
+  async function handleDecision(decision: "approve" | "decline" | "refer") {
     if (!quote) return;
     setSubmitting(true);
     setError("");
     setSuccess("");
+    const pastLabel: Record<string, string> = {
+      approve: "approved",
+      decline: "declined",
+      refer: "referred",
+    };
     try {
       await api.submitDecision(quote.quote_id, decision, notes || undefined);
-      setSuccess(`Quote ${quote.quote_id} has been ${decision}.`);
+      setSuccess(`Quote ${quote.quote_id} has been ${pastLabel[decision] ?? decision}.`);
       const data: any = await api.getQuote(quote.quote_id);
       setQuote(data.quote ?? data);
       setNotes("");
@@ -104,7 +109,10 @@ export default function UnderwritingReview() {
     }
   }
 
-  const canDecide = quote && quote.underwriting_status === "pending_review";
+  const canDecide =
+    quote &&
+    (quote.underwriting_status === "pending_review" ||
+      quote.underwriting_status === "referred");
   const timelineIndex = quote ? getTimelineIndex(quote.underwriting_status) : -1;
 
   return (
@@ -221,21 +229,21 @@ export default function UnderwritingReview() {
                 <button
                   className="btn btn-approve"
                   disabled={submitting}
-                  onClick={() => handleDecision("approved")}
+                  onClick={() => handleDecision("approve")}
                 >
                   Approve
                 </button>
                 <button
                   className="btn btn-decline"
                   disabled={submitting}
-                  onClick={() => handleDecision("declined")}
+                  onClick={() => handleDecision("decline")}
                 >
                   Decline
                 </button>
                 <button
                   className="btn btn-refer"
                   disabled={submitting}
-                  onClick={() => handleDecision("referred")}
+                  onClick={() => handleDecision("refer")}
                 >
                   Refer
                 </button>
