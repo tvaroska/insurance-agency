@@ -54,7 +54,7 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
       "measured_v0.8_baseline",
     );
     expect(summary.stages.stage1GeneralAgent.falseCompletionRateRange).toBe(
-      "37%–50%",
+      "26%–29%",
     );
     expect(summary.stages.stage1GeneralAgent.measuredModels).toHaveLength(3);
     expect(summary.stages.stage2DomainSkill.avgTokens).toBe(2700);

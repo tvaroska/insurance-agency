@@ -1,5 +1,7 @@
 # Evergreen Insurance Agency (`AGENTS.md`)
 
+> **Scope Guardrail (Agent Evaluation & Training Gym, Not Production SaaS):** Evergreen is a deterministic multi-service benchmark and RL/eval environment (`v0.8`), **not** production brokerage software. Isolated SQLite databases, seeded anomalies, and deterministic carrier-portal state transitions exist intentionally to test agent tool use, state verification, and E&O escalation; evaluate changes on benchmark validity, determinism, and anti-reward-hacking rigor rather than production SaaS infrastructure checklists.
+
 ## 1. Services & Execution
 
 Use `bun run showcase` for zero-Docker local execution of all 8 services (`:3000`–`:3007`) and the Executive Workbench (`http://localhost:3000/`), or `docker compose` for containerized execution:

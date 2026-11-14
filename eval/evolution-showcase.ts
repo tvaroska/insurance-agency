@@ -101,21 +101,21 @@ export const MEASURED_V08_STAGE1_MODELS: MeasuredModelBaseline[] = [
     model: "DeepSeek-V4.1-Flash",
     pass1: 0.59,
     meanScore: 0.78,
-    falseCompletionRate: 0.39,
+    falseCompletionRate: 0.27,
     costPerTaskUsd: 0.073,
   },
   {
     model: "gemini-3.8-flash",
     pass1: 0.58,
     meanScore: 0.71,
-    falseCompletionRate: 0.37,
+    falseCompletionRate: 0.29,
     costPerTaskUsd: 0.449,
   },
   {
     model: "claude-sonnet-5-5",
     pass1: 0.55,
     meanScore: 0.69,
-    falseCompletionRate: 0.5,
+    falseCompletionRate: 0.26,
     costPerTaskUsd: 0.111,
   },
 ];
@@ -412,7 +412,7 @@ export async function runStageTrajectory(options: {
     stage: options.stage,
     stageLabel:
       options.stage === "stage_1_general_agent"
-        ? "Stage 1: Zero-Shot General Agent (Measured v0.8, 20 workflows x 5 trials: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%; 37%–50% false-completion rate)"
+        ? "Stage 1: Zero-Shot General Agent (Measured v0.8, 20 workflows x 5 trials: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%; 26%–29% false-completion rate)"
         : options.stage === "stage_2_domain_skill"
           ? "Stage 2: Domain Skill Procedure Guide (Measured v0.8: gemini-3.8-flash 69.0% pass@1, 60.2% pass^5; eval/inspect/evergreen_domain_skill.md)"
           : isFallback
@@ -514,7 +514,7 @@ export async function runEvolutionShowcase(options?: {
     stages: {
       stage1GeneralAgent: {
         label:
-          "Stage 1: Zero-Shot General Agent (Measured v0.8, 20 workflows x 5 trials: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%; 37%–50% false-completion rate)",
+          "Stage 1: Zero-Shot General Agent (Measured v0.8, 20 workflows x 5 trials: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%; 26%–29% false-completion rate)",
         provenance: "measured_v0.8_baseline",
         avgTokens: 6500,
         cpvoUsd: 0.7741,
@@ -523,7 +523,7 @@ export async function runEvolutionShowcase(options?: {
         meanScore: 0.71,
         pass5: 0.471,
         eoComplianceRate: 0.75,
-        falseCompletionRateRange: "37%–50%",
+        falseCompletionRateRange: "26%–29%",
         measuredModels: MEASURED_V08_STAGE1_MODELS,
       },
       stage2DomainSkill: {

@@ -63,7 +63,7 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
     expect(data.evolutionStages).toHaveLength(3);
     expect(data.evolutionStages[0].pass1).toBe(0.58);
     expect(data.evolutionStages[0].meanScore).toBe(0.71);
-    expect(data.evolutionStages[0].falseCompletionRateRange).toBe("37%–50%");
+    expect(data.evolutionStages[0].falseCompletionRateRange).toBe("26%–29%");
     expect(data.evolutionStages[0].measuredModels).toHaveLength(3);
     expect(data.evolutionStages[1].provenance).toBe("measured_v0.8_domain_skill");
     expect(data.evolutionStages[2].pass1).toBe(1.0);

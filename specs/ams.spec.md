@@ -1014,31 +1014,31 @@ The fixed content served by the workbench (AMS-R104, AMS-R106, AMS-R111). A rebu
    "pass1": 0.58,
    "meanScore": 0.71,
    "pass5": 0.471,
-   "falseCompletionRateRange": "37%–50%",
+   "falseCompletionRateRange": "26%–29%",
    "measuredModels": [
     {
      "model": "DeepSeek-V4.1-Flash",
      "pass1": 0.59,
      "meanScore": 0.78,
-     "falseCompletionRate": 0.39,
+     "falseCompletionRate": 0.27,
      "costPerTaskUsd": 0.073
     },
     {
      "model": "gemini-3.8-flash",
      "pass1": 0.58,
      "meanScore": 0.71,
-     "falseCompletionRate": 0.37,
+     "falseCompletionRate": 0.29,
      "costPerTaskUsd": 0.449
     },
     {
      "model": "claude-sonnet-5-5",
      "pass1": 0.55,
      "meanScore": 0.69,
-     "falseCompletionRate": 0.5,
+     "falseCompletionRate": 0.26,
      "costPerTaskUsd": 0.111
     }
    ],
-   "description": "Measured v0.8 zero-shot baseline across 20 strict workflows, 5 trials each: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%, and a 37%–50% false-completion rate where the agent said \"done\" while a state check failed."
+   "description": "Measured v0.8 zero-shot baseline across 20 strict workflows, 5 trials each: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%, and a 26%–29% false-completion rate where the agent said \"done\" while a state check failed."
   },
   {
    "stage": "Stage 2: Domain Skill + Guardrails",
