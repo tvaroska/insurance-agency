@@ -1,0 +1,138 @@
+[
+  {
+    "model": "google/gemini-3.8-flash",
+    "model_label": "`gemini-3.8-flash`",
+    "harness": "Inspect + LangChain",
+    "learning_mechanism": "Domain skill (SOP)",
+    "tasks_count": 20,
+    "trials_count": 100,
+    "mean_score": 0.8747,
+    "pass_at_1": 0.83,
+    "pass_hat_5": 0.7372,
+    "system_traps_missed": 3,
+    "system_traps_total": 30,
+    "judgment_traps_missed": 2,
+    "judgment_traps_total": 60,
+    "said_done_failed_rate": 0.14,
+    "unasked_mutation_rate": 0.02,
+    "mean_unasked_mutations": 0.1,
+    "drop_clean_to_messy_pp": -12.0,
+    "mean_cost_usd": 0.4904,
+    "pass_at_1_ci95": [
+      0.68,
+      0.95
+    ],
+    "pass_hat_5_ci95": [
+      0.5499,
+      0.9
+    ],
+    "pass_hat_5_unbiased": 0.7,
+    "said_done_given_failed_rate": 0.8235,
+    "deferred_rate": 0.14,
+    "failed_deferred_rate": 0.0,
+    "train_pass_at_1": 0.84,
+    "holdout_pass_at_1": 0.82
+  },
+  {
+    "model": "google/gemini-3.8-flash",
+    "model_label": "`gemini-3.8-flash`",
+    "harness": "Inspect + LangChain",
+    "learning_mechanism": "None (zero-shot)",
+    "tasks_count": 20,
+    "trials_count": 100,
+    "mean_score": 0.77,
+    "pass_at_1": 0.67,
+    "pass_hat_5": 0.5867,
+    "system_traps_missed": 1,
+    "system_traps_total": 30,
+    "judgment_traps_missed": 12,
+    "judgment_traps_total": 60,
+    "said_done_failed_rate": 0.15,
+    "unasked_mutation_rate": 0.09,
+    "mean_unasked_mutations": 0.2,
+    "drop_clean_to_messy_pp": -28.0,
+    "mean_cost_usd": 0.476,
+    "pass_at_1_ci95": [
+      0.47,
+      0.84
+    ],
+    "pass_hat_5_ci95": [
+      0.3828,
+      0.7819
+    ],
+    "pass_hat_5_unbiased": 0.55,
+    "said_done_given_failed_rate": 0.4545,
+    "deferred_rate": 0.11,
+    "failed_deferred_rate": 0.07,
+    "train_pass_at_1": 0.74,
+    "holdout_pass_at_1": 0.6
+  },
+  {
+    "model": "anthropic/vertex/claude-sonnet-5-5",
+    "model_label": "`claude-sonnet-5-5`",
+    "harness": "Inspect + LangChain",
+    "learning_mechanism": "None (zero-shot)",
+    "tasks_count": 20,
+    "trials_count": 100,
+    "mean_score": 0.8086,
+    "pass_at_1": 0.66,
+    "pass_hat_5": 0.5502,
+    "system_traps_missed": 0,
+    "system_traps_total": 30,
+    "judgment_traps_missed": 5,
+    "judgment_traps_total": 60,
+    "said_done_failed_rate": 0.16,
+    "unasked_mutation_rate": 0.01,
+    "mean_unasked_mutations": 0.01,
+    "drop_clean_to_messy_pp": -9.0,
+    "mean_cost_usd": 0.1451,
+    "pass_at_1_ci95": [
+      0.48,
+      0.83
+    ],
+    "pass_hat_5_ci95": [
+      0.3502,
+      0.7492
+    ],
+    "pass_hat_5_unbiased": 0.5,
+    "said_done_given_failed_rate": 0.4706,
+    "deferred_rate": 0.46,
+    "failed_deferred_rate": 0.18,
+    "train_pass_at_1": 0.68,
+    "holdout_pass_at_1": 0.64
+  },
+  {
+    "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+    "model_label": "`DeepSeek-V4.1-Flash`",
+    "harness": "Inspect + LangChain",
+    "learning_mechanism": "None (zero-shot)",
+    "tasks_count": 20,
+    "trials_count": 100,
+    "mean_score": 0.7517,
+    "pass_at_1": 0.56,
+    "pass_hat_5": 0.3153,
+    "system_traps_missed": 0,
+    "system_traps_total": 30,
+    "judgment_traps_missed": 6,
+    "judgment_traps_total": 60,
+    "said_done_failed_rate": 0.34,
+    "unasked_mutation_rate": 0.11,
+    "mean_unasked_mutations": 0.67,
+    "drop_clean_to_messy_pp": -4.0,
+    "mean_cost_usd": 0.0388,
+    "pass_at_1_ci95": [
+      0.41,
+      0.71
+    ],
+    "pass_hat_5_ci95": [
+      0.1451,
+      0.4997
+    ],
+    "pass_hat_5_unbiased": 0.25,
+    "said_done_given_failed_rate": 0.7727,
+    "deferred_rate": 0.18,
+    "failed_deferred_rate": 0.04,
+    "train_pass_at_1": 0.44,
+    "holdout_pass_at_1": 0.68
+  }
+]

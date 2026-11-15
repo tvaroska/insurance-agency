@@ -5,7 +5,8 @@ The main [README](../README.md) covers the benchmark. This page lists the rest o
 ## Benchmark and Evaluation
 
 - [`evaluation.md`](evaluation.md): scorer design, trace format, scoring dimensions, and rubric checks.
-- [`v08-failure-analysis.md`](v08-failure-analysis.md): 454-trial `v0.8` failure taxonomy, Domain Skill regression root causes on Scenarios 01 & 02, hero receipt selection rule, and the 60-trial blind human audit protocol.
+- [`v09-failure-analysis.md`](v09-failure-analysis.md): 480-trial `v0.9` post-hardening failure taxonomy (`72.7%` missing follow-through), `10/10` train/holdout Domain Skill generalization (`84.0%` vs. `82.0%`), and cross-scenario simulator isolation.
+- [`v08-failure-analysis.md`](v08-failure-analysis.md): historical 454-trial `v0.8` failure taxonomy, Domain Skill regression root causes on Scenarios 01 & 02, hero receipt selection rule, and the 60-trial blind human audit protocol.
 - [`scenarios/`](scenarios/): per-workflow specifications.
 - [`benchmark-landscape.md`](benchmark-landscape.md): comparison with other agent benchmarks and packaging standards.
 - [`../regulatory.md`](../regulatory.md): state and federal rules behind the 10 E&O triggers.

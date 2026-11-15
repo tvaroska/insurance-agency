@@ -610,52 +610,52 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
     evolutionStages: [
       {
         stage: "Stage 1: Zero-Shot General Agent",
-        label: "Measured v0.8 Baseline (Strict 3-Modality, 20 Workflows x 5 Trials)",
-        provenance: "measured_v0.8_baseline",
-        avgTokensPerRun: 1099806,
-        avgCostUsd: 0.449,
-        avgLatencyMs: 200400,
-        pass1: 0.58,
-        meanScore: 0.71,
-        pass5: 0.471,
-        falseCompletionRateRange: "26%–29%",
+        label: "Measured v0.9 Baseline (Strict 3-Modality, 20 Workflows x 5 Trials + 20 Clean)",
+        provenance: "measured_v0.9_baseline",
+        avgTokensPerRun: 1333422,
+        avgCostUsd: 0.476,
+        avgLatencyMs: 214650,
+        pass1: 0.67,
+        meanScore: 0.77,
+        pass5: 0.587,
+        falseCompletionRateRange: "15%–34%",
         measuredModels: [
           {
-            model: "DeepSeek-V4.1-Flash",
-            pass1: 0.59,
-            meanScore: 0.78,
-            falseCompletionRate: 0.27,
-            costPerTaskUsd: 0.073,
-          },
-          {
             model: "gemini-3.8-flash",
-            pass1: 0.58,
-            meanScore: 0.71,
-            falseCompletionRate: 0.29,
-            costPerTaskUsd: 0.449,
+            pass1: 0.67,
+            meanScore: 0.77,
+            falseCompletionRate: 0.15,
+            costPerTaskUsd: 0.476,
           },
           {
             model: "claude-sonnet-5-5",
-            pass1: 0.55,
-            meanScore: 0.69,
-            falseCompletionRate: 0.26,
-            costPerTaskUsd: 0.111,
+            pass1: 0.66,
+            meanScore: 0.81,
+            falseCompletionRate: 0.16,
+            costPerTaskUsd: 0.145,
+          },
+          {
+            model: "DeepSeek-V4.1-Flash",
+            pass1: 0.56,
+            meanScore: 0.75,
+            falseCompletionRate: 0.34,
+            costPerTaskUsd: 0.039,
           },
         ],
         description:
-          "Measured v0.8 zero-shot baseline across 20 strict workflows, 5 trials each: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%, and a 26%–29% unconditional false-completion rate across all runs (57.8%–69.0% on failed runs).",
+          "Measured v0.9 zero-shot baseline across 20 strict workflows, 5 trials each: gemini-3.8-flash 67.0% pass@1, claude-sonnet-5-5 66.0%, DeepSeek-V4.1-Flash 56.0%, and a 15%–34% unconditional false-completion rate across all runs (45.5%–77.3% on failed runs).",
       },
       {
         stage: "Stage 2: Domain Skill + Guardrails",
-        label: "Measured v0.8 Domain Skill (Agency Procedure Guide)",
-        provenance: "measured_v0.8_domain_skill",
-        avgTokensPerRun: 998471,
-        avgCostUsd: 0.405,
-        avgLatencyMs: 218200,
-        pass1: 0.69,
-        pass5: 0.602,
+        label: "Measured v0.9 Domain Skill (Agency Procedure Guide, 10/10 Train-Holdout)",
+        provenance: "measured_v0.9_domain_skill",
+        avgTokensPerRun: 1002522,
+        avgCostUsd: 0.49,
+        avgLatencyMs: 194980,
+        pass1: 0.83,
+        pass5: 0.737,
         description:
-          "Measured v0.8: a one-page agency procedure guide appended to the gemini-3.8-flash prompt raises pass@1 from 58.0% to 69.0% and cuts judgment traps missed from 16 to 5 of 60 (tokens include cached tool-use context across multi-step runs).",
+          "Measured v0.9: a one-page agency procedure guide appended to the gemini-3.8-flash prompt raises pass@1 from 67.0% to 83.0% (84.0% train, 82.0% holdout), halves the messy-data drop (-28.0 pp to -12.0 pp), and cuts judgment traps missed from 12 to 2 of 60.",
       },
       {
         stage: "Stage 3: $0-Token Compiled Deterministic Code",
@@ -1796,8 +1796,8 @@ export function renderWorkbenchHtml(): string {
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">3-Stage Agent-to-Code Evolution (Measured v0.8 Zero-Shot vs. Measured Domain Skill &amp; Reference Anchor)</h2>
-            <p class="card-subtitle">Measured v0.8 results (20 workflows, 5 trials each) for zero-shot agents and the domain skill procedure guide, beside the 100.0% scripted reference verifier. Token and latency columns for Stages 1 and 2 are modeled.</p>
+            <h2 class="card-title">3-Stage Agent-to-Code Evolution (Measured v0.9 Zero-Shot vs. Measured Domain Skill &amp; Reference Anchor)</h2>
+            <p class="card-subtitle">Measured v0.9 results (20 workflows, 5 realistic + 1 clean trial each = 480 trials) for zero-shot agents and the domain skill procedure guide, beside the 100.0% scripted reference verifier.</p>
           </div>
           <span class="chip chip-pass">Stage 3: $0.0000 / Routine Run</span>
         </div>
@@ -1815,22 +1815,22 @@ export function renderWorkbenchHtml(): string {
           </thead>
           <tbody>
             <tr>
-              <td><strong>Stage 1: Zero-Shot General Agent</strong><br/><span class="chip chip-warn">Measured v0.8</span></td>
-              <td>Zero-shot tool discovery across 8 services (<code>DeepSeek-V4.1-Flash</code> 59.0% pass@1, <code>gemini-3.8-flash</code> 58.0%, <code>claude-sonnet-5-5</code> 55.0%)</td>
-              <td class="mono">215K–1.10M tok</td>
-              <td class="mono">$0.073–$0.449</td>
-              <td class="mono">29.9s–200.4s</td>
-              <td class="mono">55.0%–59.0%<br/>(0.69–0.78 mean)</td>
-              <td><span class="chip chip-block">39%–47% pass^5 · 26%–29% said "done" (58%–69% of fails)</span></td>
+              <td><strong>Stage 1: Zero-Shot General Agent</strong><br/><span class="chip chip-warn">Measured v0.9</span></td>
+              <td>Zero-shot tool discovery across 8 services (<code>gemini-3.8-flash</code> 67.0% pass@1, <code>claude-sonnet-5-5</code> 66.0%, <code>DeepSeek-V4.1-Flash</code> 56.0%)</td>
+              <td class="mono">309K–1.33M tok</td>
+              <td class="mono">$0.039–$0.476</td>
+              <td class="mono">37.2s–214.7s</td>
+              <td class="mono">56.0%–67.0%<br/>(0.75–0.81 mean)</td>
+              <td><span class="chip chip-block">32%–59% pass^5 · 15%–34% said "done" (45%–77% of fails)</span></td>
             </tr>
             <tr>
-              <td><strong>Stage 2: Domain Skill + Guardrails</strong><br/><span class="chip chip-info">Measured v0.8</span></td>
-              <td>One-page agency procedure guide appended to the <code>gemini-3.8-flash</code> prompt (<code>eval/inspect/evergreen_domain_skill.md</code>)</td>
-              <td class="mono">998K tok</td>
-              <td class="mono">$0.405</td>
-              <td class="mono">218.2s</td>
-              <td class="mono">69.0%</td>
-              <td><span class="chip chip-info">60.2% pass^5 · 27% false-done (87% of fails)</span></td>
+              <td><strong>Stage 2: Domain Skill + Guardrails</strong><br/><span class="chip chip-info">Measured v0.9</span></td>
+              <td>One-page agency procedure guide appended to the <code>gemini-3.8-flash</code> prompt (<code>eval/inspect/evergreen_domain_skill.md</code>, 84.0% train / 82.0% holdout)</td>
+              <td class="mono">1.00M tok</td>
+              <td class="mono">$0.490</td>
+              <td class="mono">195.0s</td>
+              <td class="mono">83.0%</td>
+              <td><span class="chip chip-info">73.7% pass^5 · 14% false-done (82% of fails)</span></td>
             </tr>
             <tr>
               <td><strong>Stage 3: $0-Token Compiled Deterministic Code (<code>privy:*</code>)</strong><br/><span class="chip chip-pass">Measured 20/20 Anchor</span></td>

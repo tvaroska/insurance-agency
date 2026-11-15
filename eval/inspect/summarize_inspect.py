@@ -33,6 +33,7 @@ from inspect_ai.log import EvalLog, read_eval_log, read_eval_log_sample, read_ev
 
 GYM_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESULTS_CANDIDATES: tuple[Path, ...] = (
+    GYM_ROOT / "eval" / "results" / "v0.9" / "realistic-natural",
     GYM_ROOT / "eval" / "results" / "v0.8" / "realistic-natural",
     GYM_ROOT / "eval" / "results" / "v0.7" / "realistic-natural",
 )
@@ -697,7 +698,7 @@ def main(argv: list[str] | None = None) -> int:
         "logs",
         nargs="*",
         default=[],
-        help="Inspect .eval log files or directories (defaults to eval/results/v0.8/realistic-natural, falling back to v0.7)",
+        help="Inspect .eval log files or directories (defaults to eval/results/v0.9/realistic-natural, falling back to v0.8 and v0.7)",
     )
     parser.add_argument(
         "--clean-logs",
