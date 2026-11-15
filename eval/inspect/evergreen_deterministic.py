@@ -31,6 +31,7 @@ import yaml
 from evergreen import GYM_ROOT, _HAS_INSPECT, MemoryDataset, Sample, Score, Target, Task, scorer, task
 from evergreen_langchain import (
     LEARNING_MECHANISM_LABELS,
+    MODALITY_MODE_KEY,
     STACK_HELD_KEY,
     WORK_DIR_KEY,
     _slugify_model,
@@ -299,6 +300,7 @@ def prepare_state_scenario():
         work_dir = Path(tempfile.mkdtemp(prefix=f"evergreen-dt-{state.sample_id}-e{state.epoch}-"))
         state.store.set(WORK_DIR_KEY, str(work_dir))
         state.store.set(TURNS_KEY, list(state.metadata["turns"]))
+        state.store.set(MODALITY_MODE_KEY, state.metadata["modality_mode"])
         urls = service_base_urls()
         async with httpx.AsyncClient(timeout=120) as http:
             await check_modality(http, urls, state.metadata["modality_mode"])
@@ -319,13 +321,20 @@ def multiturn_langchain_agent(learning_mechanism: str = "none"):
         urls = service_base_urls()
         work_dir = Path(store().get(WORK_DIR_KEY))
         turns = list(store().get(TURNS_KEY) or [])
+        modality_mode = str(store().get(MODALITY_MODE_KEY) or "strict")
         in_filter, out_filter = bridge_filters()
         async with AsyncExitStack() as stack:
             http = await stack.enter_async_context(httpx.AsyncClient(timeout=60))
             rest_client = RestClient(http, urls)
-            tools = [*build_rest_tools(rest_client), *await open_mcp_tools(stack, urls, work_dir)]
+            tools = [
+                *build_rest_tools(rest_client, modality_mode=modality_mode),
+                *await open_mcp_tools(stack, urls, work_dir),
+            ]
             model = ChatOpenAI(model="inspect", api_key="inspect", disable_streaming=True)
-            prompt = system_prompt(urls, learning_mechanism=norm_learning) + DIRECT_CHAT_GUIDANCE
+            prompt = (
+                system_prompt(urls, learning_mechanism=norm_learning, modality_mode=modality_mode)
+                + DIRECT_CHAT_GUIDANCE
+            )
             graph = create_agent(model, tools, system_prompt=prompt)
             async with agent_bridge(
                 state,

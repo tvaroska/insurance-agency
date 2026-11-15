@@ -9,6 +9,7 @@ import {
   checkEnum,
   checkMaxLength,
   throwIfErrors,
+  nextSimulatedEpochMs,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -20,7 +21,7 @@ type AppVariables = CorrelationVariables & AuthVariables;
 
 const escalationsRouter = new Hono<{ Variables: AppVariables }>();
 
-const ESCALATION_REASONS = [
+export const ESCALATION_REASONS = [
   "premium_threshold",
   "state_minimum_violation",
   "coverage_adequacy",
@@ -49,7 +50,7 @@ escalationsRouter.post(
       body.summary ? checkMaxLength("summary", body.summary, 2000) : null,
     ]);
 
-    const now = new Date().toISOString();
+    const now = new Date(nextSimulatedEpochMs()).toISOString();
     const escalationId = `esc_${Math.random().toString(36).slice(2, 10)}`;
 
     const record = {
@@ -99,7 +100,7 @@ escalationsRouter.get(
       throw notFoundError("escalation");
     }
 
-    const now = new Date().toISOString();
+    const now = new Date(nextSimulatedEpochMs()).toISOString();
     const newPollCount = row.poll_count + 1;
 
     // Always increment poll_count

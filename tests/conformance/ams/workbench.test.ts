@@ -442,7 +442,7 @@ describe("firewall tester", () => {
       message: "Bodily injury per-person limit ($10,000) is below CA statutory minimum of $30,000 (30/60/15).",
     });
     expect(backdating.message).toBe(
-      "E&O Firewall: Retroactive coverage backdating to 2020-01-01 (prior to 2026-02-18) is prohibited without Principal Underwriter approval.",
+      "E&O Firewall: Retroactive coverage backdating to 2020-01-01 (prior to 2026-10-14) is prohibited without Principal Underwriter approval.",
     );
     expect(premium.message).toBe("Premium of $14200.00 exceeds the $10,000 threshold requiring manager approval.");
   });
@@ -453,7 +453,7 @@ describe("firewall tester", () => {
       biPerPerson: 10000,
       biPerAccident: 20000,
       pdPerAccident: 10000,
-      effectiveDate: "2026-02-18",
+      effectiveDate: "2026-10-14",
       annualPremium: 10000,
     });
     expect(res.status).toBe(200);
@@ -461,15 +461,15 @@ describe("firewall tester", () => {
   });
 
   test("AMS-R108: each rule is evaluated on its own", async () => {
-    const ok = { state: "TX", biPerPerson: 30, biPerAccident: 60, pdPerAccident: 25, effectiveDate: "2026-03-01", annualPremium: 500 };
+    const ok = { state: "TX", biPerPerson: 30, biPerAccident: 60, pdPerAccident: 25, effectiveDate: "2026-11-01", annualPremium: 500 };
     const rules = async (overrides: Record<string, unknown>) =>
       (await wb("test-firewall", { ...ok, ...overrides })).body.violations.map((v: any) => v.rule);
     expect(await rules({})).toEqual([]);
     expect(await rules({ pdPerAccident: 20000 })).toEqual(["state_minimum_violation"]);
-    expect(await rules({ effectiveDate: "2026-02-17" })).toEqual(["backdating"]);
+    expect(await rules({ effectiveDate: "2026-10-13" })).toEqual(["backdating"]);
     expect(await rules({ annualPremium: 10001 })).toEqual(["premium_threshold"]);
     expect(await rules({ state: "ZZ", biPerPerson: 24000 })).toEqual(["state_minimum_violation"]);
-    expect(await rules({ effectiveDate: "2026-02-17", annualPremium: 10001 })).toEqual(["backdating", "premium_threshold"]);
+    expect(await rules({ effectiveDate: "2026-10-13", annualPremium: 10001 })).toEqual(["backdating", "premium_threshold"]);
   });
 });
 
@@ -481,7 +481,8 @@ describe("workbench time travel", () => {
     expect(result.status).toBe(200);
     const total = offsetBefore + 60;
     expect(result.body).toMatchObject({ status: "ok", daysAdvanced: 60, totalSimulatedDaysOffset: total, activatedEndorsementsCount: 0 });
-    const expectedDates = [Date.now(), Date.parse(`${today()}T00:00:00Z`)].map((ms) =>
+    const baseMs = Date.parse("2026-10-14T12:00:00.000Z");
+    const expectedDates = [baseMs, Date.parse("2026-10-14T00:00:00Z")].map((ms) =>
       new Date(ms + total * 86_400_000).toISOString().slice(0, 10),
     );
     expect(expectedDates).toContain(result.body.simulatedAgencyDate);

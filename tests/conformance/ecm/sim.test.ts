@@ -100,7 +100,8 @@ describe("seed data", () => {
 });
 
 describe("simulated clock", () => {
-  const at = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
+  const baseMs = Date.parse("2026-10-14T12:00:00.000Z");
+  const at = (days: number) => new Date(baseMs + days * 86_400_000).toISOString();
   const seed = () =>
     ctx.svc.seed({
       tables: {
@@ -137,7 +138,7 @@ describe("simulated clock", () => {
     expect((await ctx.svc.timeTravel({ days: -30 })).transitions).toEqual({ envelopes_expired: 0 });
   });
 
-  test("ECM-R112: request handling keeps using the real clock after time travel", async () => {
+  test("ECM-R112: request handling advances with the simulated clock after time travel", async () => {
     await ctx.svc.seed({
       tables: {
         documents: [
@@ -147,16 +148,17 @@ describe("simulated clock", () => {
       },
     });
     await ctx.svc.timeTravel({ days: 400 });
+    const simMs = (await ctx.svc.now()).getTime();
     const audit = await ctx.api.get("/v1/documents/CLI-1/audit");
-    expect(audit.body.compliance_status).toBe("compliant");
+    expect(audit.body.compliance_status).toBe("expired_documents");
 
     const created = await ctx.api.post("/v1/envelopes/create", {
       client_id: "CLI-1",
       document_ids: ["DOC-1"],
       signers: [{ name: "S", email: "s@example.test", role: "policyholder" }],
     });
-    expect(Math.abs(Date.parse(created.body.created_at) - Date.now())).toBeLessThan(60_000);
-    expect(Math.abs(Date.parse(created.body.expiration_date) - Date.now() - 30 * 86_400_000)).toBeLessThan(2 * 3_600_000);
+    expect(Math.abs(Date.parse(created.body.created_at) - simMs)).toBeLessThan(60_000);
+    expect(Math.abs(Date.parse(created.body.expiration_date) - simMs - 30 * 86_400_000)).toBeLessThan(2 * 3_600_000);
   });
 
   test("ECM-R113: seeding or resetting returns the clock to real time", async () => {

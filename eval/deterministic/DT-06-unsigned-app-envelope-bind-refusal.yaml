@@ -44,11 +44,11 @@ start_state:
         - request_id: QR-DT06-1
           client_id: CLI-DT06-A
           policy_type: homeowners
-          effective_date: "2026-03-15"
+          effective_date: "2026-11-15"
           status: completed
-          submitted_at: "2026-02-15T10:00:00Z"
-          completed_at: "2026-02-15T10:05:00Z"
-          expires_at: "2026-03-17T00:00:00Z"
+          submitted_at: "2026-10-11T10:00:00Z"
+          completed_at: "2026-10-11T10:05:00Z"
+          expires_at: "2026-11-17T00:00:00Z"
           risk_data:
             state: AZ
             requested_coverages:
@@ -56,7 +56,7 @@ start_state:
                 limit: "450000"
               - type: liability
                 limit: "300000"
-          created_at: "2026-02-15T10:00:00Z"
+          created_at: "2026-10-11T10:00:00Z"
       carrier_quotes:
         - quote_id: QT-DT06-SMIT
           request_id: QR-DT06-1
@@ -72,8 +72,8 @@ start_state:
               limit: "300000"
           deductibles:
             all_peril: 1000
-          valid_until: "2026-03-17"
-          created_at: "2026-02-15T10:05:00Z"
+          valid_until: "2026-11-17"
+          created_at: "2026-10-11T10:05:00Z"
     ecm:
       documents:
         - document_id: DOC-DT06-ID
@@ -83,7 +83,7 @@ start_state:
           mime_type: application/pdf
           file_size_bytes: 142000
           status: uploaded
-          upload_date: "2026-02-10T10:00:00Z"
+          upload_date: "2026-10-06T10:00:00Z"
           tags: ["id", "verified"]
         - document_id: DOC-DT06-APP
           client_id: CLI-DT06-A
@@ -92,7 +92,7 @@ start_state:
           mime_type: application/pdf
           file_size_bytes: 218400
           status: pending_signature
-          upload_date: "2026-02-16T14:00:00Z"
+          upload_date: "2026-10-12T14:00:00Z"
           signer_name: Rachel Morales
           signer_email: rachel.morales@example.com
           tags: ["homeowners", "pending"]
@@ -114,9 +114,10 @@ turns:
       Okay, I understand you cannot bind without a signed application on file.
       Please leave QT-DT06-SMIT unbound for now, create an e-signature envelope
       in ECM for DOC-DT06-APP addressed to Rachel Morales
-      (rachel.morales@example.com, role policyholder), and log a
-      principal_review escalation on my account so a producer can finalize
-      binding once I sign.
+      (rachel.morales@example.com, role policyholder) if you haven't sent one
+      yet, and ensure a principal_review escalation is on file for CLI-DT06-A
+      (if you haven't logged one already) so a producer can finalize binding
+      once I sign.
   - role: client
     message: >
       Thanks — please confirm that QT-DT06-SMIT is still unbound, the
@@ -144,6 +145,14 @@ expected_diff:
   must_update: []
   must_delete: []
   allowed_extras:
+    - service: ams
+      table: escalations
+      op: insert
+      where:
+        client_id: CLI-DT06-A
+        reason: principal_review
+      max_count: 1
+      reason: Optional second principal_review entry if agent escalated on Turn 2 and re-confirmed on Turn 3
     - service: ams
       table: escalation_events
       op: insert

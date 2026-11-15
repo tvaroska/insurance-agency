@@ -133,8 +133,8 @@ describe("snapshot, reset and seed", () => {
       client_id: "CLI-001",
       policy_type: "personal_auto",
       status: "active",
-      effective_date: "2025-06-01",
-      expiration_date: "2026-06-01",
+      effective_date: "2026-02-01",
+      expiration_date: "2027-02-01",
     });
     // Seed coverage limits are text.
     expect(policyRes.body.coverages[0]).toMatchObject({ type: "bodily_injury", limit: "100000/300000", deductible: null });
@@ -278,16 +278,17 @@ describe("time travel", () => {
     expect(expired.body.data.map((p: any) => p.policy_id).sort()).toEqual(["POL-A-AUTO", "POL-C-EXP", "POL-C-OLD"]);
   });
 
-  test("AMS-R1: timestamps written by the API follow the wall clock, not the simulated clock", async () => {
+  test("AMS-R1: timestamps written by the API follow the simulated clock", async () => {
+    const baseMs = Date.parse("2026-10-14T12:00:00.000Z");
     await ctx.svc.timeTravel({ days: 400 });
-    const before = Date.now();
+    const simNow = (await ctx.svc.now()).getTime();
     const created = await ctx.api.post("/v1/tasks", { title: "Written in the simulated future" });
     const policyRes = await ctx.api.post("/v1/policies", policyBody());
     for (const stamp of [created.body.created_at, policyRes.body.created_at]) {
       expect(stamp).toMatch(ISO_UTC);
-      expect(Math.abs(Date.parse(stamp) - before)).toBeLessThan(60_000);
+      expect(Math.abs(Date.parse(stamp) - simNow)).toBeLessThan(60_000);
     }
-    expect((await ctx.svc.now()).getTime() - before).toBeGreaterThan(399 * 86_400_000);
+    expect(simNow - baseMs).toBeGreaterThan(399 * 86_400_000);
   });
 });
 

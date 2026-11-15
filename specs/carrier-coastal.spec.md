@@ -314,7 +314,7 @@ An `assessed` quote does not expire. `bound` is final.
   | `QT-002-CSTL` | annual 2780, score 51, `standard`, recommendation `review` |
   | `QT-005-CSTL` | `bound`, policy `POL-PA-2025-002301` |
   | `QT-014-CSTL` | `assessed` although declined in the seed file; premiums null |
-  | `POL-PA-2025-002103` | client `CLI-003`, `2025-09-15` to `2026-03-15`, `active` |
+  | `POL-PA-2025-002103` | client `CLI-003`, `2026-05-15` to `2026-11-15`, `active` |
 | `POL-PA-2026-000030` | realistic: `premium_current` 680, three coverages (`bodily_injury` 15000/30000, `property_damage` 5000, `collision` deductible 2000); clean: `premium_current` 1250, five coverages |
 
 ## Simulated clock
@@ -324,7 +324,7 @@ An `assessed` quote does not expire. `bound` is final.
   - every policy with `status` `active` and an `expiration_date` earlier than the simulated date becomes `expired`, and its `updated_at` becomes the simulated time
 
   The response's `transitions` is `{ "quotes_expired": <count>, "policies_expired": <count> }`. Dates equal to the simulated date do not expire.
-- **CST-R54** Nothing else follows the simulated clock. Ids, `submitted_at`, `assessed_at`, `bound_at`, `issued_at`, the driver's age and session lifetimes use the wall clock, also after time travel. Reset and seed return the simulated clock to the wall clock.
+- **CST-R54** API operations follow the shared simulated clock (`getSimulatedNow()`, `nextSimulatedEpochMs()`, anchored at `2026-10-14T12:00:00.000Z` unless `SIMULATED_TODAY` overrides it): monotonic epoch-millisecond ids, `submitted_at`, `assessed_at`, `bound_at`, `issued_at` and the driver's age advance with `/sim/time-travel`. Portal session and bootstrap cookie lifetimes continue to use 3600s of wall-clock time. Reset and seed return the simulated clock to `2026-10-14T12:00:00.000Z` (`clock_offset_ms` = 0).
 
 ## Simulation control plane and request log
 

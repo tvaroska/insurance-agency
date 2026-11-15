@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../generated/prisma/client";
+import { getSimulatedNow } from "@evergreen/shared";
 import { SIMULATOR_RULES, type SimulatorTurnRule } from "./rules";
 
 export interface SimulatedReplyInput {
@@ -95,7 +96,7 @@ export async function processSimulatedReply(
     const replyMessageId = `${prefix}t${existingReplies + 1}_${crypto.randomUUID().slice(0, 8)}`;
     const baseMs = Date.parse(input.outboundTimestamp);
     const replyTimestamp = new Date(
-      (Number.isNaN(baseMs) ? Date.now() : baseMs) + 10,
+      (Number.isNaN(baseMs) ? getSimulatedNow().getTime() : baseMs) + 10,
     ).toISOString();
     const toAddr =
       input.channel === "email" ? "service@evergreen-ins.com" : "800-555-EVER";

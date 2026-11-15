@@ -2,15 +2,15 @@
   {
     "id": "TSK-001",
     "title": "Follow up on Chen renewal — POL-PA-2025-001847",
-    "description": "Policy expires 2026-06-01. Client requested competitive quotes from CSTL and HRTF. Schedule call for late April.",
+    "description": "Policy expires 2027-02-01. Client requested competitive quotes from CSTL and HRTF. Schedule call for late December.",
     "status": "open",
     "priority": "high",
     "assigned_to": "USR-001",
     "related_client_id": "CLI-001",
     "related_policy_id": "POL-PA-2025-001847",
-    "due_date": "2026-04-15",
-    "created_at": "2025-12-01T09:00:00Z",
-    "updated_at": "2025-12-01T09:00:00Z"
+    "due_date": "2026-12-15",
+    "created_at": "2026-08-01T09:00:00Z",
+    "updated_at": "2026-08-01T09:00:00Z"
   },
   {
     "id": "TSK-002",
@@ -21,9 +21,9 @@
     "assigned_to": "USR-002",
     "related_client_id": "CLI-003",
     "related_policy_id": "POL-PA-2025-002103",
-    "due_date": "2025-11-10",
-    "created_at": "2025-11-01T12:00:00Z",
-    "updated_at": "2025-11-05T10:00:00Z"
+    "due_date": "2026-07-10",
+    "created_at": "2026-07-01T12:00:00Z",
+    "updated_at": "2026-07-05T10:00:00Z"
   },
   {
     "id": "TSK-003",
@@ -34,9 +34,9 @@
     "assigned_to": "USR-003",
     "related_client_id": "CLI-004",
     "related_policy_id": "POL-BO-2025-000045",
-    "due_date": "2025-07-01",
-    "created_at": "2025-06-16T08:00:00Z",
-    "updated_at": "2025-07-01T09:00:00Z"
+    "due_date": "2026-03-01",
+    "created_at": "2026-02-16T08:00:00Z",
+    "updated_at": "2026-03-01T09:00:00Z"
   },
   {
     "id": "TSK-004",
@@ -47,9 +47,9 @@
     "assigned_to": "USR-001",
     "related_client_id": "CLI-005",
     "related_policy_id": null,
-    "due_date": "2026-03-15",
-    "created_at": "2025-10-01T09:00:00Z",
-    "updated_at": "2025-10-01T09:00:00Z"
+    "due_date": "2026-11-15",
+    "created_at": "2026-06-01T09:00:00Z",
+    "updated_at": "2026-06-01T09:00:00Z"
   },
   {
     "id": "TSK-005",
@@ -60,9 +60,9 @@
     "assigned_to": "USR-003",
     "related_client_id": "CLI-008",
     "related_policy_id": null,
-    "due_date": "2026-03-01",
-    "created_at": "2025-09-15T08:00:00Z",
-    "updated_at": "2025-09-15T08:00:00Z"
+    "due_date": "2026-11-01",
+    "created_at": "2026-05-15T08:00:00Z",
+    "updated_at": "2026-05-15T08:00:00Z"
   },
   {
     "id": "TSK-006",
@@ -73,9 +73,9 @@
     "assigned_to": "USR-002",
     "related_client_id": "CLI-014",
     "related_policy_id": "POL-RN-2025-000115",
-    "due_date": "2025-11-30",
-    "created_at": "2025-11-01T10:00:00Z",
-    "updated_at": "2025-11-15T14:00:00Z"
+    "due_date": "2026-07-30",
+    "created_at": "2026-07-01T10:00:00Z",
+    "updated_at": "2026-07-15T14:00:00Z"
   },
   {
     "id": "TSK-007",
@@ -86,9 +86,9 @@
     "assigned_to": "USR-001",
     "related_client_id": null,
     "related_policy_id": null,
-    "due_date": "2025-10-31",
-    "created_at": "2025-10-01T08:00:00Z",
-    "updated_at": "2025-10-15T16:00:00Z"
+    "due_date": "2026-06-30",
+    "created_at": "2026-06-01T08:00:00Z",
+    "updated_at": "2026-06-15T16:00:00Z"
   },
   {
     "id": "TSK-008",
@@ -99,8 +99,8 @@
     "assigned_to": "USR-002",
     "related_client_id": "CLI-020",
     "related_policy_id": "POL-PA-2025-003300",
-    "due_date": "2025-09-15",
-    "created_at": "2025-08-01T09:00:00Z",
-    "updated_at": "2025-09-10T11:30:00Z"
+    "due_date": "2026-05-15",
+    "created_at": "2026-04-01T09:00:00Z",
+    "updated_at": "2026-05-10T11:30:00Z"
   }
 ]

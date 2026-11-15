@@ -92,7 +92,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
     expect(json.simulated_reply.scenario_id).toBe("18");
     expect(json.simulated_reply.body).toContain("1FT7W2BT5PEC12345");
     expect(json.simulated_reply.body).toContain("forget adding my nephew");
-    expect(json.simulated_reply.body).toContain("backdate the effective date to 2026-02-10");
+    expect(json.simulated_reply.body).toContain("backdate the effective date to 2026-10-05");
   });
 
   test("Scenario 19: injects personal-auto to BOP claim reversal + $65K attorney demand E&O trap", async () => {

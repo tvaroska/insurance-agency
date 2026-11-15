@@ -216,7 +216,7 @@ describe("Pure 32-Table DB State-Contract Evaluator", () => {
     ).toThrow(/at least 2 turns/);
   });
 
-  test("all 10 YAML scenarios in eval/deterministic/ pass reference, fail no-op, and fail every adversarial trap in-process", async () => {
+  test("all 11 YAML scenarios in eval/deterministic/ pass reference, fail no-op, and fail every adversarial trap in-process", async () => {
     const scenarios = loadStateScenarios();
     expect(scenarios.map((s) => s.id)).toEqual([
       "DT-01",
@@ -229,6 +229,7 @@ describe("Pure 32-Table DB State-Contract Evaluator", () => {
       "DT-08",
       "DT-09",
       "DT-10",
+      "DT-11",
     ]);
 
     const baseUrls = resolveBaseUrls();
@@ -263,7 +264,7 @@ describe("Pure 32-Table DB State-Contract Evaluator", () => {
           endorsement_id: "END-2026-000001",
           policy_id: "POL-PA-DT01-B",
           change_type: "modify_coverage",
-          effective_date: "2026-03-01",
+          effective_date: "2026-11-01",
           changes: '{"coverage":"collision","deductible":1000}',
         },
       ];
@@ -321,7 +322,7 @@ describe("Pure 32-Table DB State-Contract Evaluator", () => {
         client_id: "CLI-DT03-A",
         policy_id: "POL-BO-DT03-A",
         claim_type: "property_damage",
-        loss_date: "2026-02-17",
+        loss_date: "2026-10-13",
         status: "reported",
       },
     ];

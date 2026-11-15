@@ -1,4 +1,5 @@
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
+import { getSimulatedToday } from "@evergreen/shared";
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ export async function createAcordDocument(
     color: WHITE,
   });
 
-  const dateText = `Generated: ${new Date().toISOString().split("T")[0]}`;
+  const dateText = `Generated: ${getSimulatedToday()}`;
   const dateWidth = regular.widthOfTextAtSize(dateText, FONT_SIZE_LABEL);
   page.drawText(dateText, {
     x: PAGE_WIDTH - MARGIN - dateWidth,

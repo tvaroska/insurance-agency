@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
+import { BENCHMARK_SIMULATED_TODAY } from "./compliance-firewall";
 import { createErrorResponse } from "./errors";
 import { isAuthorizedScorerOrInternal } from "./request-log";
 
 // ── Simulated Clock & Deterministic PRNG State ──────────────────────
 
 let simulatedOffsetMs = 0;
+let simEpochSeq = 0;
 
 const BASE36_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
 
@@ -15,7 +17,7 @@ function hashSeedString(seedKey: string): number {
     h ^= seedKey.charCodeAt(i);
     h = Math.imul(h, 16777619) >>> 0;
   }
-  return h || 0x20260218;
+  return h || 0x20261014;
 }
 
 let simPrngState: number = hashSeedString("realistic");
@@ -50,10 +52,39 @@ export function simRandomId(length = 8): string {
 }
 
 /**
- * Returns the current simulated Date (wall clock + offset from time-travel).
+ * Returns the frozen simulated base epoch in UTC milliseconds (`YYYY-MM-DDT12:00:00.000Z`).
+ * Defaults to `BENCHMARK_SIMULATED_TODAY` (`2026-10-14T12:00:00.000Z`), overridable via `SIMULATED_TODAY`.
+ */
+export function getSimulatedBaseEpochMs(): number {
+  const dateStr = (process.env.SIMULATED_TODAY || BENCHMARK_SIMULATED_TODAY).trim();
+  const parsed = Date.parse(`${dateStr}T12:00:00.000Z`);
+  return Number.isNaN(parsed)
+    ? Date.parse(`${BENCHMARK_SIMULATED_TODAY}T12:00:00.000Z`)
+    : parsed;
+}
+
+/**
+ * Returns the current simulated Date (frozen base epoch + offset from time-travel).
  */
 export function getSimulatedNow(): Date {
-  return new Date(Date.now() + simulatedOffsetMs);
+  return new Date(getSimulatedBaseEpochMs() + simulatedOffsetMs);
+}
+
+/**
+ * Returns the current simulated `YYYY-MM-DD` date string in UTC.
+ */
+export function getSimulatedToday(): string {
+  return getSimulatedNow().toISOString().slice(0, 10);
+}
+
+/**
+ * Returns a strictly monotonic 13-digit simulated millisecond epoch for deterministic IDs
+ * (`QT-SMIT-*`, `QT-CSTL-*`, `POL-CSTL-*`, `QR-*`, `IDC-*`, `COI-*-*.pdf`), reset on `/sim/reset` and `/sim/seed`.
+ */
+export function nextSimulatedEpochMs(): number {
+  const epoch = getSimulatedNow().getTime() + simEpochSeq;
+  simEpochSeq += 1;
+  return epoch;
 }
 
 /**
@@ -64,10 +95,11 @@ export function getSimulatedOffsetMs(): number {
 }
 
 /**
- * Resets the simulated clock back to real wall-clock time.
+ * Resets the simulated clock back to the frozen base epoch (`2026-10-14T12:00:00.000Z`).
  */
 export function resetSimulatedClock(): void {
   simulatedOffsetMs = 0;
+  simEpochSeq = 0;
 }
 
 /**

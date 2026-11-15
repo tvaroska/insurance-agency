@@ -372,9 +372,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--learning-mechanism",
-        choices=["none", "domain_skill"],
+        choices=["none", "policy_prompt", "domain_skill"],
         default="none",
-        help="Agent learning mechanism: 'none' (zero-shot) or 'domain_skill' (SOP) (default: none)",
+        help="Agent learning mechanism: 'none' (zero-shot), 'policy_prompt' (10-rule guardrails), or 'domain_skill' (SOP) (default: none)",
     )
     parser.add_argument(
         "--parallel-stacks",

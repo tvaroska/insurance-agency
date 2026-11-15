@@ -130,8 +130,8 @@ const VALID_CREATE = {
   client_id: "CL-001",
   policy_type: "personal_auto",
   carrier_code: "SMIT",
-  effective_date: "2026-06-01",
-  expiration_date: "2027-06-01",
+  effective_date: "2026-11-01",
+  expiration_date: "2027-11-01",
   annual_premium: 1450.0,
   status: "active",
   coverages: [
@@ -231,8 +231,8 @@ describe("POST /v1/policies - success", () => {
     expect(json.client_id).toBe("CL-001");
     expect(json.policy_type).toBe("personal_auto");
     expect(json.carrier_code).toBe("SMIT");
-    expect(json.effective_date).toBe("2026-06-01");
-    expect(json.expiration_date).toBe("2027-06-01");
+    expect(json.effective_date).toBe("2026-11-01");
+    expect(json.expiration_date).toBe("2027-11-01");
     expect(json.annual_premium).toBe(1450.0);
     expect(json.status).toBe("active");
     expect(json.coverages).toHaveLength(2);
@@ -516,7 +516,7 @@ describe("GET /v1/policies/:id/endorsements", () => {
         ...(await authHeader(["ams:policies:endorsements"])),
       },
       body: JSON.stringify({
-        effective_date: "2026-03-01",
+        effective_date: "2026-11-01",
         change_type: "modify_coverage",
         changes: { coverage: "collision", deductible: 1000 },
         notes: "Raised deductible per client pivot",
@@ -621,7 +621,7 @@ describe("POST /v1/policies - E&O firewall", () => {
     }
   });
 
-  test("backdated effective_date (< 2026-02-18) returns 422 E_EO_BACKDATING_PROHIBITED", async () => {
+  test("backdated effective_date (< 2026-10-14) returns 422 E_EO_BACKDATING_PROHIBITED", async () => {
     const res = await postPolicy({
       ...VALID_CREATE,
       client_id: TX_CLIENT,

@@ -182,7 +182,7 @@ describe("POST /underwriting/{quote_id}/decision", () => {
   });
 
   test("SMT-R26: the response is the updated quote plus decided_at", async () => {
-    const before = Date.now();
+    const before = (await ctx.svc.now()).getTime();
     const res = await decide("QT-PENDING", { decision: "approve", notes: "Clean loss history" });
     expect(res.status).toBe(200);
     expect(Object.keys(res.body)).toEqual([...QUOTE_FIELDS, "decided_at"]);
@@ -286,7 +286,7 @@ describe("POST /submissions", () => {
   }
 
   test("SMT-R30: a submission inserts one submitted quote with a scheduled inspection", async () => {
-    const before = Date.now();
+    const before = (await ctx.svc.now()).getTime();
     const { result: res, diff } = await ctx.svc.changes(() =>
       submit(ctx.api, { ...SUBMISSION, deductibles: { all_perils: 2500 }, photo_checklist: ["front_exterior", "roof_view"] }),
     );

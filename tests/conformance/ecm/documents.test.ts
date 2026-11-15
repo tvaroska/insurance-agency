@@ -78,7 +78,8 @@ describe("POST /v1/documents/upload", () => {
       upload_date: expect.stringMatching(ISO_UTC),
       status: "uploaded",
     });
-    expect(Math.abs(Date.parse(res.body.upload_date) - Date.now())).toBeLessThan(60_000);
+    const simMs = (await ctx.svc.now()).getTime();
+    expect(Math.abs(Date.parse(res.body.upload_date) - simMs)).toBeLessThan(60_000);
     expect(Object.keys(diff)).toEqual(["documents"]);
     expect(diff.documents.added).toEqual([
       {
@@ -254,8 +255,9 @@ describe("GET /v1/documents/{client_id}/audit", () => {
         reason: "State law requires a government-issued photo ID on file before binding coverage.",
       },
     ]);
+    const simMs = (await ctx.svc.now()).getTime();
     for (const missing of res.body.missing_documents) {
-      const days = (Date.parse(missing.required_by) - Date.now()) / 86_400_000;
+      const days = (Date.parse(missing.required_by) - simMs) / 86_400_000;
       expect(days).toBeGreaterThan(29.9);
       expect(days).toBeLessThan(30.1);
     }

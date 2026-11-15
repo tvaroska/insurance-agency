@@ -13,6 +13,7 @@ import {
   applyPrismaCursorPagination,
   paginatedResponse,
   BENCHMARK_SIMULATED_TODAY,
+  getSimulatedNow,
   validateBackdating,
   validateBindingAuthority,
   validateStateMinimums,
@@ -208,7 +209,7 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
     }
   }
 
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
   const policyId = `POL-${Math.random().toString(36).slice(2, 8)}`;
 
   const record = {
@@ -384,7 +385,7 @@ policiesRouter.post(
 
     if (!hasApprovedBackdatingEscalation) {
       // 1. Backdating guard: reject effective_date earlier than policy effective_date
-      // or earlier than the benchmark reference date ("2026-02-18") for active 2026 policies.
+      // or earlier than the benchmark reference date ("2026-10-14") for active 2026 policies.
       const referenceFloor =
         process.env.SIMULATED_TODAY ??
         (policy.expiration_date >= BENCHMARK_SIMULATED_TODAY
@@ -427,11 +428,12 @@ policiesRouter.post(
     }
 
     // Generate endorsement ID
-    const year = new Date().getFullYear();
+    const simNow = getSimulatedNow();
+    const year = simNow.getUTCFullYear();
     const seq = String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
     const endorsementId = `END-${year}-${seq}`;
 
-    const now = new Date().toISOString();
+    const now = simNow.toISOString();
 
     const record = {
       endorsement_id: endorsementId,

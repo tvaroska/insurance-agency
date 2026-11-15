@@ -1,0 +1,146 @@
+id: DT-11
+slug: portal-summit-property-submission
+name: Summit Fire Web Portal Commercial Property Submission + Underwriting Referral (3-Turn, Browser-Only)
+description: >
+  Tests strict browser-only commercial carrier portal execution via Playwright MCP on
+  Summit Fire & Casualty (http://localhost:3005). Client initially floats submitting
+  a historic masonry commercial building in Denver while holding until roof replacement
+  year is verified. On Turn 2 she confirms the details, instructs the agent to submit
+  the BOP property quote in the Summit Fire portal, record an underwriting referral
+  (decision: refer) on the resulting QT-SMIT-* quote, and update her AMS phone number.
+  On Turn 3 she asks for an open AMS follow-up task for the scheduled 4-point inspection.
+difficulty: hard
+services:
+  - ams
+  - carrier-summit
+
+start_state:
+  base: empty
+  tables:
+    ams:
+      clients:
+        - id: CLI-DT11-A
+          first_name: Elena
+          last_name: Rostova
+          dob: "1982-05-14"
+          email: elena.rostova@blakegallery.example.com
+          phone: 303-555-0110
+          address_street: 1820 Blake St
+          address_city: Denver
+          address_state: CO
+          address_zip: "80202"
+          occupation: Gallery & Studio Owner
+          status: active
+          created_at: "2025-11-01T00:00:00Z"
+          updated_at: "2025-11-01T00:00:00Z"
+      policies:
+        - policy_id: POL-PA-DT11-A
+          client_id: CLI-DT11-A
+          carrier_code: CSTL
+          policy_type: personal_auto
+          effective_date: "2026-06-01"
+          expiration_date: "2027-06-01"
+          premium_current: 1380
+          status: active
+          created_at: "2026-06-01T00:00:00Z"
+          updated_at: "2026-06-01T00:00:00Z"
+      coverages:
+        - policy_id: POL-PA-DT11-A
+          type: bodily_injury
+          limit: "100/300"
+          deductible: 0
+
+turns:
+  - role: client
+    message: >
+      Hi, I'm Elena Rostova (CLI-DT11-A). We're buying a historic brick commercial
+      building at 1820 Blake St, Denver, CO 80202 for our gallery and want to quote
+      a BOP through Summit Fire & Casualty's web portal (http://localhost:3005).
+      Can you check my AMS profile first and hold off submitting anything in Summit
+      Fire until my contractor confirms the roof details?
+  - role: client
+    message: >
+      Contractor confirmed the specs — please go ahead now: (1) open the Summit Fire
+      & Casualty web portal (http://localhost:3005), go to Property Submission, and
+      submit a bop quote for client_id CLI-DT11-A at 1820 Blake St, Denver, CO 80202
+      (year built 1988, 3,600 sq ft, masonry construction, metal roof, $800,000
+      dwelling/building coverage limit, $2,500 deductible); (2) open Underwriting
+      Review in the Summit Fire portal for the newly created QT-SMIT-* quote and
+      submit a "refer" underwriting decision with notes mentioning the 1988 historic
+      masonry review; and (3) update my phone number on CLI-DT11-A in AMS to
+      303-555-0188. Leave my personal auto policy POL-PA-DT11-A untouched.
+  - role: client
+    message: >
+      Great — since Summit scheduled a 4-point inspection on that submission, please
+      also create an open follow-up task in AMS on CLI-DT11-A to coordinate the
+      4-point inspection report, and confirm everything is saved.
+
+expected_diff:
+  must_insert:
+    - label: summit_bop_referred_submission
+      service: carrier-summit
+      table: quotes
+      where:
+        client_id: CLI-DT11-A
+        policy_type: bop
+        status: submitted
+        underwriting_status: referred
+        inspection_status: scheduled
+        property_address:
+          containsAll:
+            - 1820 Blake St
+            - Denver
+        underwriting_notes:
+          regex: "1988|historic|masonry|refer"
+    - label: summit_condition_4point_inspection
+      service: carrier-summit
+      table: underwriting_conditions
+      where:
+        condition_type: inspection_required
+        status: pending
+        description:
+          contains: 4-point inspection
+    - label: summit_condition_prior_coverage
+      service: carrier-summit
+      table: underwriting_conditions
+      where:
+        condition_type: document_required
+        status: pending
+        description:
+          contains: Proof of prior insurance
+    - label: summit_condition_property_photos
+      service: carrier-summit
+      table: underwriting_conditions
+      where:
+        condition_type: document_required
+        status: pending
+        description:
+          contains: Property photos
+    - label: ams_inspection_followup_task
+      service: ams
+      table: tasks
+      where:
+        related_client_id: CLI-DT11-A
+        status: open
+  must_update:
+    - label: elena_phone_updated
+      service: ams
+      table: clients
+      key: id:CLI-DT11-A
+      after:
+        phone: 303-555-0188
+      unchanged_fields:
+        - first_name
+        - last_name
+        - email
+        - status
+  must_delete: []
+  allowed_extras:
+    - service: comm
+      table: messages
+      op: insert
+      where:
+        client_id: CLI-DT11-A
+      max_count: 2
+      reason: Optional outbound confirmation message to Elena Rostova (CLI-DT11-A)
+  strict_no_unexpected_writes: true

@@ -8,6 +8,7 @@ import {
   parsePaginationParams,
   applyPrismaCursorPagination,
   paginatedResponse,
+  getSimulatedNow,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -65,7 +66,7 @@ documentsRouter.post(
     ]);
 
     const documentId = `doc_${Math.random().toString(36).slice(2, 10)}`;
-    const uploadDate = new Date().toISOString();
+    const uploadDate = getSimulatedNow().toISOString();
 
     await prisma.document.create({
       data: {
@@ -164,7 +165,8 @@ documentsRouter.get(
     });
 
     const presentTypes = new Set(allDocs.map((d) => d.document_type));
-    const now = new Date().toISOString();
+    const simNow = getSimulatedNow();
+    const now = simNow.toISOString();
 
     const expiredDocs = allDocs.filter(
       (d) => d.expiration_date && d.expiration_date < now,
@@ -178,8 +180,7 @@ documentsRouter.get(
 
     for (const reqType of REQUIRED_DOCUMENT_TYPES) {
       if (!presentTypes.has(reqType)) {
-        const requiredBy = new Date();
-        requiredBy.setDate(requiredBy.getDate() + 30);
+        const requiredBy = new Date(simNow.getTime() + 30 * 86_400_000);
         missingDocuments.push({
           document_type: reqType,
           required_by: requiredBy.toISOString(),

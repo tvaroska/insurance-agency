@@ -29,7 +29,7 @@ const PATHS = ["/v1/claims", "/v1/claims/fnol"];
 for (const path of PATHS) {
   describe(`CLM-R10: POST ${path}`, () => {
     test("CLM-R19, CLM-R21: creates a reported claim and one timeline row, and nothing else", async () => {
-      const before = Date.now();
+      const simMs = (await ctx.svc.now()).getTime();
       const { result: res, diff } = await ctx.svc.changes(() =>
         ctx.api.post(path, fnolBody({ loss_location: "12 Elm St", notes: "Caller was the tenant." })),
       );
@@ -53,7 +53,7 @@ for (const path of PATHS) {
         created_at: expect.stringMatching(ISO_UTC),
         updated_at: res.body.created_at,
       });
-      expect(Date.parse(res.body.created_at)).toBeGreaterThanOrEqual(before - 1000);
+      expect(Math.abs(Date.parse(res.body.created_at) - simMs)).toBeLessThan(60_000);
 
       expect(Object.keys(diff).sort()).toEqual(["claim_timeline", "claims"]);
       expect(diff.claims.added).toEqual([res.body]);
@@ -189,7 +189,8 @@ for (const path of PATHS) {
     });
 
     test("CLM-R17: a loss_date after today (UTC) is out of range, today is accepted", async () => {
-      const tomorrow = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+      const simMs = (await ctx.svc.now()).getTime();
+      const tomorrow = new Date(simMs + 2 * 86_400_000).toISOString().slice(0, 10);
       const { result, diff } = await ctx.svc.changes(() => ctx.api.post(path, fnolBody({ loss_date: tomorrow })));
       expectError(result, 400, "VALIDATION_ERROR", { field: "loss_date", code: "out_of_range" });
       expect(diff).toEqual({});
@@ -251,7 +252,7 @@ for (const path of PATHS) {
     });
 
     test("CLM-R20: claim ids are CLM-<current year>-<six digit sequence>, starting at 000001", async () => {
-      const year = new Date().getFullYear();
+      const year = (await ctx.svc.now()).getUTCFullYear();
       const first = await ctx.api.post(path, fnolBody());
       const second = await ctx.api.post(path, fnolBody());
       expect(first.body.claim_id).toBe(`CLM-${year}-000001`);
@@ -259,7 +260,7 @@ for (const path of PATHS) {
     });
 
     test("CLM-R20: the sequence continues after the highest id of the current year and ignores other years", async () => {
-      const year = new Date().getFullYear();
+      const year = (await ctx.svc.now()).getUTCFullYear();
       await ctx.svc.seed({
         tables: seedTables([
           claim({ claim_id: `CLM-${year}-000041` }),
@@ -272,7 +273,7 @@ for (const path of PATHS) {
     });
 
     test("CLM-R20: when the id that sorts last is not numeric, the count of this year's ids sets the sequence", async () => {
-      const year = new Date().getFullYear();
+      const year = (await ctx.svc.now()).getUTCFullYear();
       await ctx.svc.seed({
         tables: seedTables([claim({ claim_id: `CLM-${year}-000001` }), claim({ claim_id: `CLM-${year}-zzzzzz` })]),
       });
@@ -281,7 +282,7 @@ for (const path of PATHS) {
     });
 
     test("CLM-R20: the count wins when it is larger than the highest number", async () => {
-      const year = new Date().getFullYear();
+      const year = (await ctx.svc.now()).getUTCFullYear();
       await ctx.svc.seed({
         tables: seedTables([
           claim({ claim_id: `CLM-${year}-00000a` }),

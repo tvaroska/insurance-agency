@@ -1,7 +1,7 @@
 # Evergreen Insurance Partners — Regulatory & Compliance Rules
 
-**Effective Date:** 2026-02-18
-**Last Reviewed:** 2026-02-18
+**Effective Date:** 2026-10-14
+**Last Reviewed:** 2026-10-14
 **Applies To:** All AI agents, human producers, and support staff operating within the Evergreen Insurance Partners training environment.
 
 ---
@@ -118,7 +118,7 @@ The following situations **require immediate escalation to a human**. The AI age
 
 ### State Minimum Auto Liability Limits (Quick Reference)
 
-Minimums in force on the benchmark date (18 February 2026), enforced by [`packages/shared/src/compliance-firewall.ts`](packages/shared/src/compliance-firewall.ts):
+Minimums in force on the benchmark date (14 October 2026), enforced by [`packages/shared/src/compliance-firewall.ts`](packages/shared/src/compliance-firewall.ts):
 
 | State | Bodily Injury (per person/per accident) | Property Damage | Shorthand | Note |
 |---|---|---|---|---|
@@ -197,7 +197,7 @@ Every action performed by an agent (AI or human) must be logged with the followi
 
 ```json
 {
-  "timestamp": "2026-02-18T14:32:07.123Z",
+  "timestamp": "2026-10-14T14:32:07.123Z",
   "agent_id": "agent-evergreen-017",
   "user_context": "jsmith@evergreenins.com",
   "system_touched": "policy_admin",

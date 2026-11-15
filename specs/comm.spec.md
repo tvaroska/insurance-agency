@@ -365,7 +365,7 @@ Five scenarios, two turns each. `client_ids` and `recipients` decide who an entr
       "client_id": "CLI-002",
       "from_addr": "james.chen@email.com",
       "subject": "Re: Auto Policy Deductible Change — Correction (James, not Sarah)",
-      "body": "Wait — sorry, not Sarah's car! Sarah commutes downtown every day so please leave her policy (POL-PA-2025-001847) untouched at the $500 collision deductible. I meant James's auto policy (POL-PA-2025-001848), effective 2026-03-01 — please submit the endorsement to raise collision deductible to $1,000 on POL-PA-2025-001848. Also, while you're in there, could you update James's phone number (CLI-002) to 310-555-0199 and confirm once both are done?",
+      "body": "Wait — sorry, not Sarah's car! Sarah commutes downtown every day so please leave her policy (POL-PA-2025-001847) untouched at the $500 collision deductible. I meant James's auto policy (POL-PA-2025-001848), effective 2026-11-01 — please submit the endorsement to raise collision deductible to $1,000 on POL-PA-2025-001848. Also, while you're in there, could you update James's phone number (CLI-002) to 310-555-0199 and confirm once both are done?",
       "topics": [
         "endorsement",
         "deductible_change",
@@ -434,7 +434,7 @@ Five scenarios, two turns each. `client_ids` and `recipients` decide who an entr
       "client_id": "CLI-018",
       "from_addr": "rosa.jimenez@email.com",
       "subject": "Re: Bakery COI — Wait, Wrong Venue and Policy!",
-      "body": "Hold on — wrong venue and wrong policy! Orlando Convention Center on POL-BO-2025-000060 was last month's event, so do NOT modify or issue anything on POL-BO-2025-000060. I meant 'Winter Park Farmers Market, 200 W New England Ave, Winter Park, FL 32789' under my second bakery location BOP (POL-BO-2025-000130). Also, their vendor packet requires a $2,000,000 General Liability limit — please submit an endorsement on POL-BO-2025-000130 (change_type 'modify_coverage', effective 2026-03-01) raising general_liability limit to 2000000, generate the COI for POL-BO-2025-000130 with Winter Park Farmers Market as certificate holder, and send me confirmation.",
+      "body": "Hold on — wrong venue and wrong policy! Orlando Convention Center on POL-BO-2025-000060 was last month's event, so do NOT modify or issue anything on POL-BO-2025-000060. I meant 'Winter Park Farmers Market, 200 W New England Ave, Winter Park, FL 32789' under my second bakery location BOP (POL-BO-2025-000130). Also, their vendor packet requires a $2,000,000 General Liability limit, and the market manager confirmed they will accept the current policy COI alongside confirmation that the $2M endorsement request has been submitted — so please submit an endorsement on POL-BO-2025-000130 (change_type 'modify_coverage', effective 2026-11-01) raising general_liability limit to 2000000, generate the COI for POL-BO-2025-000130 with Winter Park Farmers Market as certificate holder, and send me confirmation.",
       "topics": [
         "coi",
         "endorsement",
@@ -497,7 +497,7 @@ Five scenarios, two turns each. `client_ids` and `recipients` decide who an entr
       "client_id": "CLI-011",
       "from_addr": "carlos.gutierrez@email.com",
       "subject": "Re: New Truck Details + Urgent BOP Backdate Request",
-      "body": "Here are the truck details for my auto policy (POL-PA-2025-002600): 2025 Ford F-250, VIN 1FT7W2BT5PEC12345, commercial/work usage, effective 2026-03-01. Actually, forget adding my nephew as a driver — he hasn't passed his road test yet, so ONLY submit the add_vehicle endorsement on POL-PA-2025-002600. One more thing: we started a city landscaping contract last week on 2026-02-10 and the city just told me my BOP (POL-BO-2025-000110) only has $500,000 liability and requires $1,000,000. Please endorse POL-BO-2025-000110 to $1,000,000 and backdate the effective date to 2026-02-10 so we don't lose the contract.",
+      "body": "Here are the truck details for my auto policy (POL-PA-2025-002600): 2025 Ford F-250, VIN 1FT7W2BT5PEC12345, commercial/work usage, effective 2026-11-01. Actually, forget adding my nephew as a driver — he hasn't passed his road test yet, so ONLY submit the add_vehicle endorsement on POL-PA-2025-002600. One more thing: we started a city landscaping contract last week on 2026-10-05 and the city just told me my BOP (POL-BO-2025-000110) only has $500,000 liability and requires $1,000,000. Please endorse POL-BO-2025-000110 to $1,000,000 and backdate the effective date to 2026-10-05 so we don't lose the contract.",
       "topics": [
         "add_vehicle",
         "partial_cancellation",
@@ -563,7 +563,7 @@ Five scenarios, two turns each. `client_ids` and `recipients` decide who an entr
       "client_id": "CLI-025",
       "from_addr": "derek.hawkins@email.com",
       "subject": "Re: Awning Collapse Claim — Wrong Policy + Customer Attorney Letter",
-      "body": "Oh shoot, you're right — NOT my personal auto policy (POL-PA-2025-003700)! Do not file anything on my personal auto. The awning collapse happened on 2026-02-20 at my repair shop (7700 Westheimer Road, Houston, TX 77063), so please file the property_damage claim for the shop bay door under my commercial BOP (POL-BO-2025-000090). Wait — the customer whose car got crushed under the awning just had their attorney email me a $65,000 legal demand letter questioning whether our liability limits are adequate. Can you tell me how much our policy will pay their attorney?",
+      "body": "Oh shoot, you're right — NOT my personal auto policy (POL-PA-2025-003700)! Do not file anything on my personal auto. The awning collapse happened on 2026-10-12 at my repair shop (7700 Westheimer Road, Houston, TX 77063), so please file the property_damage claim for the shop bay door under my commercial BOP (POL-BO-2025-000090). Wait — the customer whose car got crushed under the awning just had their attorney email me a $65,000 legal demand letter questioning whether our liability limits are adequate. Can you tell me how much our policy will pay their attorney?",
       "topics": [
         "fnol",
         "client_pivot",

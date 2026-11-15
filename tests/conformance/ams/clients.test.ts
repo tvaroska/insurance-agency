@@ -202,7 +202,7 @@ describe("createClient", () => {
   });
 
   test("AMS-R28: a minimal create fills the defaults and inserts one row", async () => {
-    const before = Date.now();
+    const simMs = (await ctx.svc.now()).getTime();
     const { result, diff } = await ctx.svc.changes(() => ctx.api.post("/v1/clients", minimal));
     expect(result.status).toBe(201);
     expect(result.body.id).toMatch(CLIENT_ID);
@@ -221,8 +221,7 @@ describe("createClient", () => {
     });
     expect(result.body.created_at).toMatch(ISO_UTC);
     expect(result.body.updated_at).toBe(result.body.created_at);
-    expect(Date.parse(result.body.created_at)).toBeGreaterThanOrEqual(before - 1000);
-    expect(Date.parse(result.body.created_at)).toBeLessThanOrEqual(Date.now() + 1000);
+    expect(Math.abs(Date.parse(result.body.created_at) - simMs)).toBeLessThan(60_000);
     contract.check(result, { allow: CLIENT_GAPS });
 
     expect(Object.keys(diff)).toEqual(["clients"]);

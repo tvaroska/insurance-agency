@@ -8,7 +8,7 @@
     "body": "Hi, I noticed my auto premium went up from $1,280 to $1,450 this renewal. Can someone explain what changed? We haven't had any claims or tickets. Thanks, Sarah",
     "from": "sarah.chen@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2025-08-15T09:30:00Z",
+    "timestamp": "2026-04-15T09:30:00Z",
     "read": true
   },
   {
@@ -20,7 +20,7 @@
     "body": "Hi Sarah, thank you for reaching out. The increase is primarily due to rising repair costs and regional rate adjustments in California. Your driving record remains clean and you continue to receive your multi-policy discount. Please let me know if you have any other questions. Best regards, Evergreen Insurance",
     "from": "service@evergreen-ins.com",
     "to": "sarah.chen@email.com",
-    "timestamp": "2025-08-15T14:00:00Z",
+    "timestamp": "2026-04-15T14:00:00Z",
     "read": true
   },
   {
@@ -38,7 +38,7 @@
       "workers_comp",
       "bop"
     ],
-    "timestamp": "2026-01-10T14:00:00Z"
+    "timestamp": "2026-09-10T14:00:00Z"
   },
   {
     "message_id": "MSG-004",
@@ -48,7 +48,7 @@
     "body": "Hey, my auto renewal came in way higher than expected. $1560 vs $1290 last time. Can we shop this around?",
     "from": "305-555-0401",
     "to": "800-555-EVER",
-    "timestamp": "2025-09-20T18:45:00Z",
+    "timestamp": "2026-05-20T18:45:00Z",
     "read": true
   },
   {
@@ -59,7 +59,7 @@
     "body": "Hi Marcus! Absolutely, we can run comparative quotes for you. Are you available for a quick call this week to review your coverage needs? We may also be able to find a multi-policy discount if you bundle.",
     "from": "800-555-EVER",
     "to": "305-555-0401",
-    "timestamp": "2025-09-21T10:15:00Z",
+    "timestamp": "2026-05-21T10:15:00Z",
     "read": true
   },
   {
@@ -75,7 +75,7 @@
       "coi_request",
       "add_driver"
     ],
-    "timestamp": "2025-10-05T11:30:00Z"
+    "timestamp": "2026-06-05T11:30:00Z"
   },
   {
     "message_id": "MSG-007",
@@ -86,7 +86,7 @@
     "body": "Hi there, I'm thinking about buying a condo in Brooklyn. If I become a homeowner, what happens to my renters policy? Do I just switch it over? Also wondering what kind of coverage I'd need. This would be my first home purchase. Thanks! Angela",
     "from": "angela.foster@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2025-11-20T16:00:00Z",
+    "timestamp": "2026-07-20T16:00:00Z",
     "read": true
   },
   {
@@ -105,7 +105,7 @@
       "business_expansion",
       "workers_comp"
     ],
-    "timestamp": "2025-12-15T09:00:00Z"
+    "timestamp": "2026-08-15T09:00:00Z"
   },
   {
     "message_id": "MSG-009",
@@ -115,7 +115,7 @@
     "body": "Hi can I get my auto ID card resent? I can't find my current one",
     "from": "323-555-0901",
     "to": "800-555-EVER",
-    "timestamp": "2026-01-20T12:30:00Z",
+    "timestamp": "2026-09-20T12:30:00Z",
     "read": true
   },
   {
@@ -126,7 +126,7 @@
     "body": "Hi Natasha! Your auto ID cards have been sent to your email at natasha.brooks@email.com. You can also access them anytime through your online account. Let us know if you need anything else!",
     "from": "800-555-EVER",
     "to": "323-555-0901",
-    "timestamp": "2026-01-20T13:00:00Z",
+    "timestamp": "2026-09-20T13:00:00Z",
     "read": false
   },
   {
@@ -135,10 +135,10 @@
     "direction": "inbound",
     "channel": "email",
     "subject": "Getting married - insurance changes?",
-    "body": "Hello, I wanted to let you know that I'm getting married in April! My fiance and I will be combining households. He has his own auto and renters insurance through another agency. What should we think about in terms of combining our policies? Also, we're planning to buy a house later this year. Thanks, Emily Nakamura",
+    "body": "Hello, I wanted to let you know that I'm getting married in December! My fiance and I will be combining households. He has his own auto and renters insurance through another agency. What should we think about in terms of combining our policies? Also, we're planning to buy a house later this year. Thanks, Emily Nakamura",
     "from": "emily.nakamura@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2026-01-25T10:00:00Z",
+    "timestamp": "2026-09-25T10:00:00Z",
     "read": true
   },
   {
@@ -150,7 +150,7 @@
     "body": "Hi, I had a pipe burst in my kitchen over the weekend and there's significant water damage to the flooring and cabinets. I need to file a claim on my homeowners policy. What's the process? Do I need to get estimates first or will an adjuster come out? Thanks, Daniel Reeves",
     "from": "daniel.reeves@email.com",
     "to": "claims@evergreen-ins.com",
-    "timestamp": "2026-02-03T08:15:00Z",
+    "timestamp": "2026-10-02T13:54:37Z",
     "read": true
   },
   {
@@ -162,7 +162,7 @@
     "body": "Hi Daniel, I'm sorry to hear about the water damage. I've initiated a claim on your homeowners policy (POL-HO-2025-000850). Your claim number is CLM-2026-0203. An adjuster will contact you within 24-48 hours to schedule an inspection. In the meantime, please take photos of all damage, prevent further damage if possible, and keep receipts for any emergency repairs. Your deductible is $1,000. Please don't hesitate to reach out if you have questions.",
     "from": "claims@evergreen-ins.com",
     "to": "daniel.reeves@email.com",
-    "timestamp": "2026-02-03T10:30:00Z",
+    "timestamp": "2026-10-02T15:25:36Z",
     "read": true
   },
   {
@@ -180,17 +180,17 @@
       "shopping",
       "renewal"
     ],
-    "timestamp": "2026-01-15T16:00:00Z"
+    "timestamp": "2026-09-15T16:00:00Z"
   },
   {
     "message_id": "MSG-015",
     "client_id": "CLI-003",
     "direction": "inbound",
     "channel": "sms",
-    "body": "My policy renews 3/15. Can we start shopping early? Want to make sure I'm getting a good rate.",
+    "body": "My policy renews 11/15. Can we start shopping early? Want to make sure I'm getting a good rate.",
     "from": "713-555-0201",
     "to": "800-555-EVER",
-    "timestamp": "2026-02-05T14:20:00Z",
+    "timestamp": "2026-10-04T02:21:36Z",
     "read": true
   },
   {
@@ -201,7 +201,7 @@
     "body": "Hi Maria! Great idea to start early. I'll run some comparative quotes this week. Quick question - have there been any changes to your driving situation or vehicles since your last renewal?",
     "from": "800-555-EVER",
     "to": "713-555-0201",
-    "timestamp": "2026-02-05T15:00:00Z",
+    "timestamp": "2026-10-04T02:48:34Z",
     "read": false
   },
   {
@@ -218,7 +218,7 @@
       "coverage_increase",
       "endorsement"
     ],
-    "timestamp": "2025-11-08T10:00:00Z"
+    "timestamp": "2026-07-08T10:00:00Z"
   },
   {
     "message_id": "MSG-018",
@@ -229,7 +229,7 @@
     "body": "Hi, I received the notice about the annual workers comp audit. Attached are the payroll records you requested for the past policy year. I also added two new employees in October — Miguel Sanchez and Ray Torres. Let me know if you need anything else. Brian Lawson, Lawson Plumbing LLC",
     "from": "brian.lawson@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2025-12-20T08:00:00Z",
+    "timestamp": "2026-08-20T08:00:00Z",
     "read": true
   },
   {
@@ -241,7 +241,7 @@
     "body": "Good morning, my auto policy is up for renewal in May. I'd like to review my options. Also, I recently moved from Oakland to San Jose — same house at 3345 Telegraph was actually my old address. My new address is 1200 The Alameda, San Jose, CA 95126. Please update my records. Thanks, Priya Patel",
     "from": "priya.patel@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2026-02-10T07:45:00Z",
+    "timestamp": "2026-10-07T06:47:53Z",
     "read": true
   },
   {
@@ -259,7 +259,7 @@
       "life_insurance",
       "coverage_review"
     ],
-    "timestamp": "2026-01-22T15:30:00Z"
+    "timestamp": "2026-09-22T15:30:00Z"
   },
   {
     "message_id": "MSG-021",
@@ -269,7 +269,7 @@
     "body": "Just bought a house! Moving from my rental in about 6 weeks. Going to need homeowners insurance. Can we get quotes going?",
     "from": "619-555-1301",
     "to": "800-555-EVER",
-    "timestamp": "2025-09-10T19:30:00Z",
+    "timestamp": "2026-05-10T19:30:00Z",
     "read": true
   },
   {
@@ -280,7 +280,7 @@
     "body": "Congrats on the new home, Ashley! We'd love to help with homeowners coverage. Can you send me the address so I can start running quotes? We can also look at bundling your auto+home for a multi-policy discount!",
     "from": "800-555-EVER",
     "to": "619-555-1301",
-    "timestamp": "2025-09-11T09:00:00Z",
+    "timestamp": "2026-05-11T09:00:00Z",
     "read": true
   },
   {
@@ -298,7 +298,7 @@
       "catering",
       "coverage_review"
     ],
-    "timestamp": "2026-02-01T11:00:00Z"
+    "timestamp": "2026-10-01T07:24:49Z"
   },
   {
     "message_id": "MSG-024",
@@ -309,7 +309,7 @@
     "body": "Hello, I have auto and homeowners through you and I also have an umbrella policy. My homeowners premium went up and I'm wondering if it makes sense to still keep the umbrella. Can someone explain what exactly it covers and whether I really need it? I'm a widower living alone now. Thanks, William Okafor",
     "from": "william.okafor@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2025-10-15T13:00:00Z",
+    "timestamp": "2026-06-15T13:00:00Z",
     "read": true
   },
   {
@@ -318,10 +318,10 @@
     "direction": "inbound",
     "channel": "email",
     "subject": "Renewal coming up - looking at options",
-    "body": "Hi, my auto and renters policies expire on 2/20. I'd like to renew but also want to compare rates. I haven't had any accidents or tickets. I'm also starting a small interior design business from home — do I need any special coverage for that? Thanks, Samantha West",
+    "body": "Hi, my auto and renters policies expire on 10/20. I'd like to renew but also want to compare rates. I haven't had any accidents or tickets. I'm also starting a small interior design business from home — do I need any special coverage for that? Thanks, Samantha West",
     "from": "samantha.west@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2026-02-05T11:00:00Z",
+    "timestamp": "2026-10-04T00:06:49Z",
     "read": true
   },
   {
@@ -332,7 +332,7 @@
     "body": "Hey, I got a notice about some form I need to sign for uninsured motorist coverage? What is that about?",
     "from": "904-555-1901",
     "to": "800-555-EVER",
-    "timestamp": "2026-02-12T17:00:00Z",
+    "timestamp": "2026-10-08T21:22:56Z",
     "read": true
   },
   {
@@ -343,7 +343,7 @@
     "body": "Hi Megan! Your state requires a signed election form for uninsured/underinsured motorist coverage. We need this on file for your auto policy. I'll send a DocuSign link to your email shortly — it only takes a minute to sign.",
     "from": "800-555-EVER",
     "to": "904-555-1901",
-    "timestamp": "2026-02-12T17:30:00Z",
+    "timestamp": "2026-10-08T21:43:09Z",
     "read": false
   },
   {
@@ -355,7 +355,7 @@
     "body": "Hi! I just bought a 2025 Honda Civic. I need to swap it onto my policy replacing my old 2018 Toyota Corolla. The VIN for the new car is 2HGFE2F59SH012345. Also, I'm finishing grad school in May and starting a full-time job, so my income situation will be changing. Let me know what you need from me. Thanks, Rachel",
     "from": "rachel.adams@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2026-02-08T14:30:00Z",
+    "timestamp": "2026-10-06T02:59:51Z",
     "read": true
   },
   {
@@ -365,14 +365,14 @@
     "channel": "phone",
     "call_id": "CALL-008",
     "duration_seconds": 280,
-    "transcript": "Agent: Evergreen Insurance, Tom speaking.\nCaller: Hi Tom, Kevin Tran here. Quick question — my auto and homeowners and umbrella all renew at the end of February. I just want to make sure everything is set to renew. I don't want any gaps.\nAgent: Let me check, Kevin. Yes, I see your policies all expire 2/28. We've already received renewal offers from Summit Fire & Casualty. Your auto is going from $1,180 to $1,250, homeowners from $1,850 to $1,980, and umbrella stays about the same at $360.\nCaller: Those increases aren't bad. Let's just go ahead and renew everything.\nAgent: Sounds good. I'll process the renewals and send you the new dec pages.\nCaller: Great, thanks Tom.",
+    "transcript": "Agent: Evergreen Insurance, Tom speaking.\nCaller: Hi Tom, Kevin Tran here. Quick question — my auto and homeowners and umbrella all renew at the end of October. I just want to make sure everything is set to renew. I don't want any gaps.\nAgent: Let me check, Kevin. Yes, I see your policies all expire 2/28. We've already received renewal offers from Summit Fire & Casualty. Your auto is going from $1,180 to $1,250, homeowners from $1,850 to $1,980, and umbrella stays about the same at $360.\nCaller: Those increases aren't bad. Let's just go ahead and renew everything.\nAgent: Sounds good. I'll process the renewals and send you the new dec pages.\nCaller: Great, thanks Tom.",
     "sentiment": "positive",
     "topics": [
       "renewal",
       "multi_policy",
       "rate_confirmation"
     ],
-    "timestamp": "2026-02-14T09:00:00Z"
+    "timestamp": "2026-10-10T00:20:26Z"
   },
   {
     "message_id": "MSG-030",
@@ -380,10 +380,10 @@
     "direction": "outbound",
     "channel": "email",
     "subject": "Your auto and homeowners policies - renewal reminder",
-    "body": "Dear George, this is a friendly reminder that your auto policy (POL-PA-2025-002850) and homeowners policy (POL-HO-2025-000610) are both coming up for renewal on 2/28/2026. We'd love to review your coverage and make sure you have the best rates available. Please give us a call at 800-555-EVER or reply to this email to schedule a review. Best regards, Evergreen Insurance Partners",
+    "body": "Dear George, this is a friendly reminder that your auto policy (POL-PA-2025-002850) and homeowners policy (POL-HO-2025-000610) are both coming up for renewal on 10/28/2026. We'd love to review your coverage and make sure you have the best rates available. Please give us a call at 800-555-EVER or reply to this email to schedule a review. Best regards, Evergreen Insurance Partners",
     "from": "service@evergreen-ins.com",
     "to": "george.papa@email.com",
-    "timestamp": "2026-02-01T08:00:00Z",
+    "timestamp": "2026-10-01T05:23:30Z",
     "read": false
   },
   {
@@ -393,7 +393,7 @@
     "channel": "phone",
     "call_id": "CALL-009",
     "duration_seconds": 520,
-    "transcript": "Agent: Evergreen Insurance, Lisa speaking.\nCaller: Hey Lisa, Derek Hawkins. I need to talk about my policies. Everything renews in March and I've got some things changing.\nAgent: Sure, Derek. What's going on?\nCaller: Well, the shop is doing great. We're actually buying the building next door to expand the service bays. So the property value for the business is going up.\nAgent: That's great news. We'll need to increase your business property coverage and possibly your general liability limits with the expanded space.\nCaller: Yeah. And I'm bringing on a new service manager, so that's another employee for workers comp.\nAgent: Noted. We'll update the payroll estimate on your workers comp. Anything else changing?\nCaller: Actually yeah — I'm getting divorced. So my home and personal auto situation is going to be different. My wife was on the auto policy.\nAgent: I'm sorry to hear that. We can absolutely help you adjust your personal policies. Once the divorce is finalized, we'll remove her from the auto policy and review your homeowners situation.\nCaller: Thanks Lisa. Let's set up a full review meeting.",
+    "transcript": "Agent: Evergreen Insurance, Lisa speaking.\nCaller: Hey Lisa, Derek Hawkins. I need to talk about my policies. Everything renews in November and I've got some things changing.\nAgent: Sure, Derek. What's going on?\nCaller: Well, the shop is doing great. We're actually buying the building next door to expand the service bays. So the property value for the business is going up.\nAgent: That's great news. We'll need to increase your business property coverage and possibly your general liability limits with the expanded space.\nCaller: Yeah. And I'm bringing on a new service manager, so that's another employee for workers comp.\nAgent: Noted. We'll update the payroll estimate on your workers comp. Anything else changing?\nCaller: Actually yeah — I'm getting divorced. So my home and personal auto situation is going to be different. My wife was on the auto policy.\nAgent: I'm sorry to hear that. We can absolutely help you adjust your personal policies. Once the divorce is finalized, we'll remove her from the auto policy and review your homeowners situation.\nCaller: Thanks Lisa. Let's set up a full review meeting.",
     "sentiment": "neutral",
     "topics": [
       "renewal",
@@ -402,7 +402,7 @@
       "coverage_review",
       "workers_comp"
     ],
-    "timestamp": "2026-02-10T13:00:00Z"
+    "timestamp": "2026-10-07T10:20:11Z"
   },
   {
     "message_id": "MSG-032",
@@ -412,7 +412,7 @@
     "body": "Hi, can you confirm our homeowners deductible? We might need to file a claim for some fence damage from the storm last week.",
     "from": "310-555-0102",
     "to": "800-555-EVER",
-    "timestamp": "2026-01-28T11:15:00Z",
+    "timestamp": "2026-09-28T11:15:00Z",
     "read": true
   },
   {
@@ -423,7 +423,7 @@
     "body": "Hi James! Your homeowners deductible is $1,000. If the fence damage exceeds that, it would be worth filing a claim. Want me to get the claims process started, or would you like to get a repair estimate first?",
     "from": "800-555-EVER",
     "to": "310-555-0102",
-    "timestamp": "2026-01-28T11:45:00Z",
+    "timestamp": "2026-09-28T11:45:00Z",
     "read": true
   },
   {
@@ -431,10 +431,10 @@
     "client_id": "CLI-011",
     "direction": "inbound",
     "channel": "sms",
-    "body": "All my policies renew March 1. Wanted to check - is everything good for renewal? Don't want any lapse.",
+    "body": "All my policies renew November 1. Wanted to check - is everything good for renewal? Don't want any lapse.",
     "from": "813-555-0801",
     "to": "800-555-EVER",
-    "timestamp": "2026-02-15T08:00:00Z",
+    "timestamp": "2026-10-10T15:50:30Z",
     "read": true
   },
   {
@@ -451,7 +451,7 @@
       "pet_disclosure",
       "homeowners"
     ],
-    "timestamp": "2026-02-12T14:00:00Z"
+    "timestamp": "2026-10-08T19:21:38Z"
   },
   {
     "message_id": "MSG-036",
@@ -461,7 +461,7 @@
     "body": "Hi Angela, your renters policy renews in May. Would you like to schedule a review? Reply YES to confirm.",
     "from": "800-555-EVER",
     "to": "718-555-0701",
-    "timestamp": "2026-02-15T10:00:00Z",
+    "timestamp": "2026-10-10T17:11:22Z",
     "status": "delivered",
     "topics": [
       "renewal_reminder"
@@ -474,10 +474,10 @@
     "direction": "outbound",
     "channel": "email",
     "subject": "Your auto and homeowners renewal",
-    "body": "Dear George, your policies are renewing on 2/28. Please review the attached renewal offers and let us know if you have any questions.",
+    "body": "Dear George, your policies are renewing on 10/28. Please review the attached renewal offers and let us know if you have any questions.",
     "from": "service@evergreen-ins.com",
     "to": "george.papa@email.com",
-    "timestamp": "2026-02-10T08:00:00Z",
+    "timestamp": "2026-10-07T06:58:00Z",
     "read": true,
     "status": "delivered",
     "topics": [
@@ -493,7 +493,7 @@
     "body": "Hi, we are bidding on a municipal plumbing maintenance project next month and will need an updated certificate of insurance showing our current general liability and workers comp policies. Could you let me know if anything else is needed on file? Thanks, Brian Lawson, Lawson Plumbing LLC",
     "from": "brian.lawson@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2026-02-19T08:30:00Z",
+    "timestamp": "2026-10-13T08:52:43Z",
     "read": true,
     "topics": [
       "coi_request",
@@ -515,7 +515,7 @@
       "safety_documentation",
       "equipment_schedule"
     ],
-    "timestamp": "2026-02-19T14:00:00Z"
+    "timestamp": "2026-10-13T12:35:08Z"
   },
   {
     "message_id": "MSG-042",
@@ -523,10 +523,10 @@
     "direction": "inbound",
     "channel": "email",
     "subject": "Billing schedule question for commercial policies",
-    "body": "Hello, could you confirm whether my commercial BOP and general liability policies are set to monthly EFT billing for the upcoming March renewal? Thanks, Derek Hawkins, Hawkins Auto Repair",
+    "body": "Hello, could you confirm whether my commercial BOP and general liability policies are set to monthly EFT billing for the upcoming November renewal? Thanks, Derek Hawkins, Hawkins Auto Repair",
     "from": "derek.hawkins@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2026-02-18T07:00:00Z",
+    "timestamp": "2026-10-12T15:41:34Z",
     "read": true,
     "topics": [
       "billing",
@@ -546,7 +546,7 @@
       "coi_request",
       "commercial"
     ],
-    "timestamp": "2026-02-18T09:00:00Z"
+    "timestamp": "2026-10-12T17:02:26Z"
   },
   {
     "message_id": "MSG-044",
@@ -557,7 +557,7 @@
     "body": "Hello, during my annual financial planning review I decided I'd like to look at pricing options for higher personal umbrella limits at my next renewal. Could someone call me next week to go over pricing tiers? Thanks, William Okafor",
     "from": "william.okafor@email.com",
     "to": "service@evergreen-ins.com",
-    "timestamp": "2026-02-17T11:00:00Z",
+    "timestamp": "2026-10-12T02:12:49Z",
     "read": true,
     "topics": [
       "umbrella",

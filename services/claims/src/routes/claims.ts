@@ -12,6 +12,8 @@ import {
   checkRange,
   checkMaxLength,
   throwIfErrors,
+  getSimulatedNow,
+  getSimulatedToday,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -64,7 +66,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 // ── Helper: generate next claim ID ──
 
 async function generateClaimId(): Promise<string> {
-  const year = new Date().getFullYear();
+  const year = getSimulatedNow().getUTCFullYear();
   const prefix = `CLM-${year}-`;
   const latest = await prisma.claim.findFirst({
     where: { claim_id: { startsWith: prefix } },
@@ -99,7 +101,7 @@ async function addTimelineEvent(opts: {
       old_value: opts.old_value ?? null,
       new_value: opts.new_value ?? null,
       created_by: opts.created_by ?? null,
-      created_at: new Date().toISOString(),
+      created_at: getSimulatedNow().toISOString(),
     },
   });
 }
@@ -153,7 +155,7 @@ async function createFnolClaim(rawBody: Record<string, unknown>) {
   ]);
 
   // Validate loss_date is not in the future
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getSimulatedToday();
   if ((body.loss_date as string) > today) {
     throw validationError([
       {
@@ -183,7 +185,7 @@ async function createFnolClaim(rawBody: Record<string, unknown>) {
     }
   }
 
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
   const claim_id = await generateClaimId();
 
   const newClaim = {
@@ -397,7 +399,7 @@ claimsRouter.post(
       ]);
     }
 
-    const now = new Date().toISOString();
+    const now = getSimulatedNow().toISOString();
     const updates: Record<string, unknown> = {
       adjuster_id: body.adjuster_id,
       updated_at: now,
@@ -509,7 +511,7 @@ claimsRouter.patch(
       }
     }
 
-    const now = new Date().toISOString();
+    const now = getSimulatedNow().toISOString();
     const updates: Record<string, unknown> = { updated_at: now };
 
     if (body.status !== undefined) updates.status = body.status;
@@ -623,7 +625,7 @@ claimsRouter.post(
       throw notFoundError("claim");
     }
 
-    const now = new Date().toISOString();
+    const now = getSimulatedNow().toISOString();
     const document_id = `DOC-${crypto.randomUUID().slice(0, 8)}`;
 
     const newDoc = {

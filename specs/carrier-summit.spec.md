@@ -242,7 +242,7 @@ SMT-R41 and SMT-R42 cannot be completed with the UI as shipped; see Known gaps 7
   | Underwriting status at seed | 9 `pending_review`, 4 `declined`, 1 `approved` |
   | Policies | 17: 15 `active`, 2 `expired` |
   | Documents | 51 |
-  | `QT-001-SMIT` | client `CLI-003`, `personal_auto`, annual 1085, monthly 94.5, `quoted`, `pending_review`, valid until `2026-03-08` |
+  | `QT-001-SMIT` | client `CLI-003`, `personal_auto`, annual 1085, monthly 94.5, `quoted`, `pending_review`, valid until `2026-11-08` |
   | `QT-002-SMIT` | `declined` / `declined`, premiums null, with a decline reason |
   | `QT-007-SMIT` | `bound` / `approved` |
   | `POL-PA-2025-001847` | documents `SDOC-001` to `SDOC-003`; `SDOC-001` is `pol_pa_2025_001847_declarations.pdf`, 182674 bytes |
@@ -254,7 +254,7 @@ SMT-R41 and SMT-R42 cannot be completed with the UI as shipped; see Known gaps 7
   - every policy with `status` `active` and an `expiration_date` earlier than the simulated date becomes `expired`, and its `updated_at` becomes the simulated time
 
   The response's `transitions` is `{ "quotes_expired": <count>, "policies_expired": <count> }`. Dates equal to the simulated date do not expire. Quotes in any other status, and quotes without `valid_until`, are untouched.
-- **SMT-R47** Nothing else follows the simulated clock. Ids, `submitted_at`, `inspection_scheduled_at`, `decided_at` and session lifetimes use the wall clock, also after time travel. Reset and seed return the simulated clock to the wall clock.
+- **SMT-R47** API operations follow the shared simulated clock (`getSimulatedNow()`, `nextSimulatedEpochMs()`, anchored at `2026-10-14T12:00:00.000Z` unless `SIMULATED_TODAY` overrides it): monotonic epoch-millisecond ids, `submitted_at`, `inspection_scheduled_at` and `decided_at` advance with `/sim/time-travel`. Portal session and bootstrap cookie lifetimes continue to use 3600s of wall-clock time. Reset and seed return the simulated clock to `2026-10-14T12:00:00.000Z` (`clock_offset_ms` = 0).
 
 ## Simulation control plane and request log
 

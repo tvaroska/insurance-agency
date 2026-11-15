@@ -33,32 +33,25 @@ function formatCurrency(value: number | null): string {
   return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// Simple VIN decode simulation - extracts vehicle info from VIN structure
+// VIN decode matching services/carrier-coastal/src/routes/quickquote.ts
 function decodeVin(vin: string): VehicleInfo {
-  const makes: Record<string, string> = {
-    "1": "Chevrolet", "2": "Ford", "3": "Toyota", "4": "Honda",
-    "5": "Nissan", "J": "Toyota", "W": "BMW", "S": "Subaru",
+  const vinMakes: Record<string, { make: string; models: string[] }> = {
+    "1HG": { make: "Honda", models: ["Civic", "Accord", "CR-V"] },
+    "1FA": { make: "Ford", models: ["Mustang", "Fusion", "F-150"] },
+    "1G1": { make: "Chevrolet", models: ["Malibu", "Equinox", "Silverado"] },
+    "5YJ": { make: "Tesla", models: ["Model 3", "Model Y", "Model S"] },
+    "WBA": { make: "BMW", models: ["3 Series", "5 Series", "X3"] },
+    "JTD": { make: "Toyota", models: ["Camry", "RAV4", "Corolla"] },
   };
-  const firstChar = vin.charAt(0).toUpperCase();
-  const make = makes[firstChar] || "Honda";
-  const yearCode = vin.charAt(9);
-  const yearMap: Record<string, string> = {
-    "L": "2020", "M": "2021", "N": "2022", "P": "2023",
-    "R": "2024", "S": "2025", "T": "2026",
-  };
-  const year = yearMap[yearCode.toUpperCase()] || "2023";
-  const models: Record<string, string[]> = {
-    Chevrolet: ["Malibu", "Equinox", "Silverado"],
-    Ford: ["Escape", "F-150", "Explorer"],
-    Toyota: ["Camry", "RAV4", "Corolla"],
-    Honda: ["Civic", "Accord", "CR-V"],
-    Nissan: ["Altima", "Rogue", "Sentra"],
-    BMW: ["3 Series", "X3", "X5"],
-    Subaru: ["Outback", "Forester", "Crosstrek"],
-  };
-  const modelList = models[make] || ["Sedan"];
-  const modelIdx = parseInt(vin.charAt(7) || "0", 36) % modelList.length;
-  return { year, make, model: modelList[modelIdx] };
+  const prefix = vin.substring(0, 3).toUpperCase();
+  const entry = vinMakes[prefix] || { make: "Generic", models: ["Sedan"] };
+  let hash = 0;
+  for (let i = 0; i < vin.length; i++) {
+    hash = (hash * 31 + vin.charCodeAt(i)) & 0x7fffffff;
+  }
+  const year = String(2018 + (hash % 8));
+  const model = entry.models[hash % entry.models.length];
+  return { year, make: entry.make, model };
 }
 
 export default function QuickQuote() {

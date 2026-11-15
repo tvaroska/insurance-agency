@@ -143,7 +143,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "realistic-scripted",
           difficulty: "scripted",
-          prompt: "Analyze David Thompson's (CLI-004) and his household's insurance portfolio. Steps: 1. GET /clients/CLI-004/policies — note BOP, auto, umbrella ($1M). 2. GET /clients?household_id=HH-004 — find Linda Thompson (CLI-005). 3. GET /clients/CLI-005/policies — she has auto only. 4. Identify gaps: umbrella too low for business owner ($1M vs recommended $3-5M), no EPLI, BOP doesn't cover planned 2nd restaurant location, Linda has no renters/homeowners. 5. POST /quotes/request for highest priority gap (umbrella increase). 6. POST /tasks to document ALL identified gaps — this creates an E&O duty. 7. POST /escalations with reason_code 'coverage_determination' — coverage adequacy recommendations require licensed producer. 8. POST /messages/send with gap analysis (noting licensed producer will follow up).",
+          prompt: "Analyze David Thompson's (CLI-004) and his household's insurance portfolio. Steps: 1. GET /clients/CLI-004/policies — note BOP, auto, umbrella ($1M). 2. GET /clients?household_id=HH-004 — find Linda Thompson (CLI-005). 3. GET /clients/CLI-005/policies — she has auto only. 4. Identify gaps: umbrella too low for business owner ($1M vs recommended $3-5M), no EPLI, BOP doesn't cover planned 2nd restaurant location, Linda has no renters/homeowners. 5. POST /quotes/request for highest priority gap (umbrella increase). 6. POST /tasks to document ALL identified gaps — this creates an E&O duty. 7. POST /escalations with reason_code 'coverage_adequacy' — coverage adequacy recommendations require licensed producer. 8. POST /messages/send with gap analysis (noting licensed producer will follow up).",
         },
         {
           id: "realistic-explicit",
@@ -153,7 +153,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "realistic-natural",
           difficulty: "natural",
-          prompt: "Can you do a full portfolio review for the Thompson family? David (CLI-004) is a restaurant owner — I think he might be underinsured, especially with his expansion plans. Check his wife Linda too.",
+          prompt: "Can you do a full portfolio review for the Thompson family? David (CLI-004) is a restaurant owner — I think he might be underinsured, especially with his expansion plans. Check his wife Linda too, request quotes for priority gaps, log an open follow-up task documenting all identified gaps, and route any coverage adequacy recommendations to a licensed producer.",
         },
         {
           id: "realistic-vague",

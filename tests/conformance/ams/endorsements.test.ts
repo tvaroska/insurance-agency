@@ -179,11 +179,11 @@ describe("createEndorsement", () => {
     const { result, diff } = await ctx.svc.changes(() => ctx.api.post("/v1/policies/POL-A-AUTO/endorsements", body));
     expect(result.status).toBe(201);
     expect(result.body.endorsement_id).toMatch(ENDORSEMENT_ID);
-    expect(result.body.endorsement_id.slice(4, 8)).toBe(String(new Date().getFullYear()));
+    expect(result.body.endorsement_id.slice(4, 8)).toBe(String((await ctx.svc.now()).getUTCFullYear()));
     expect(result.body).toEqual({
       endorsement_id: result.body.endorsement_id,
       policy_id: "POL-A-AUTO",
-      effective_date: "2026-03-01",
+      effective_date: "2026-11-01",
       change_type: "add_vehicle",
       changes: { vehicle: { vin: "VIN9", year: 2026 }, drivers: ["a", "b"] },
       premium_delta: 0,

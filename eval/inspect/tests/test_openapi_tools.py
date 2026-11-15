@@ -270,3 +270,39 @@ def test_base_urls_default_to_localhost_and_follow_env(monkeypatch: pytest.Monke
     token, claims = services.requests
     assert str(token.url) == "http://gym:9000/oauth/token"
     assert str(claims.url) == "http://gym:9007/v1/claims"
+
+
+def test_permissive_modality_exposes_prefixed_carrier_portal_tools():
+    strict_ops = load_operations(modality_mode="strict")
+    permissive_ops = load_operations(modality_mode="permissive")
+    assert len(strict_ops) == 56
+    assert len(permissive_ops) == 68
+    assert len({op.operation_id for op in permissive_ops}) == 68
+    assert Counter(op.service for op in permissive_ops) == {
+        "ams": 19,
+        "rater": 6,
+        "crm": 9,
+        "ecm": 13,
+        "claims": 9,
+        "summit-fire": 6,
+        "coastal-star": 6,
+    }
+
+    urls = {
+        **BASE_URLS,
+        "summit-fire": "http://summit.test",
+        "coastal-star": "http://coastal.test",
+    }
+    services = FakeServices()
+    tools = {t.name: t for t in build_rest_tools(services.client(urls), modality_mode="permissive")}
+    assert "summit_submitProperty" in tools
+    assert "summit_getPolicyDocuments" in tools
+    assert "coastal_bindQuote" in tools
+    assert "coastal_getRiskAssessment" in tools
+    assert "bindQuote" in tools  # Rater bindQuote remains collision-free
+
+    call(tools["summit_getPolicyDocuments"], {"policy_id": "POL-HO-2025-000312"})
+    call(tools["coastal_getRiskAssessment"], {"quote_id": "QT-002-CSTL"})
+    summit_req, coastal_req = services.api_requests()
+    assert str(summit_req.url) == "http://summit.test/v1/summit/policies/POL-HO-2025-000312/documents"
+    assert str(coastal_req.url) == "http://coastal.test/v1/coastal/quotes/QT-002-CSTL/risk-assessment"

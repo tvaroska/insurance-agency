@@ -126,7 +126,7 @@
     "risk_score": 90,
     "rate_increase_pct": 0,
     "months_since_contact": 3,
-    "email_open_rate": 0.10,
+    "email_open_rate": 0.1,
     "policies_count": 1,
     "recommended_action": "URGENT: Policy lapsed 67 days ago on 2025-12-15. Client may be driving without insurance. Immediate outreach required. May need SR-22 filing to reinstate.",
     "assigned_producer": "prod_77f2ad10"

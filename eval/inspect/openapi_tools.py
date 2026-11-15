@@ -26,6 +26,11 @@ from langchain_core.tools import StructuredTool
 
 SPECS_DIR = Path(__file__).resolve().parents[2] / "specs"
 REST_SERVICES = ("ams", "rater", "crm", "ecm", "claims")
+PERMISSIVE_CARRIER_SPECS = (
+    ("carrier-summit", "summit-fire", "summit_"),
+    ("carrier-coastal", "coastal-star", "coastal_"),
+)
+_SKIP_CARRIER_PATHS = frozenset({"/health", "/auth/dev-token", "/auth/portal-session"})
 SERVICE_PORTS = {
     "ams": 3000,
     "rater": 3001,
@@ -81,8 +86,9 @@ class Operation:
 
 
 @cache
-def load_operations(specs_dir: Path = SPECS_DIR):
-    """Parse every operation of the five REST service specs."""
+def load_operations(specs_dir: Path = SPECS_DIR, modality_mode: str = "strict"):
+    """Parse every operation of the five REST service specs (plus carrier REST tools in permissive mode)."""
+    norm_mode = (modality_mode or "strict").strip().lower()
     operations: list[Operation] = []
     for service in REST_SERVICES:
         spec = yaml.safe_load((specs_dir / f"{service}.yaml").read_text())
@@ -95,6 +101,22 @@ def load_operations(specs_dir: Path = SPECS_DIR):
                             spec, service, method, base_path + path, item.get("parameters", []), item[method]
                         )
                     )
+    if norm_mode == "permissive":
+        for spec_name, service_key, op_prefix in PERMISSIVE_CARRIER_SPECS:
+            spec = yaml.safe_load((specs_dir / f"{spec_name}.yaml").read_text())
+            base_path = urlparse(spec["servers"][0]["url"]).path.rstrip("/")
+            for path, item in spec["paths"].items():
+                if path in _SKIP_CARRIER_PATHS or path.startswith("/auth/"):
+                    continue
+                for method in HTTP_METHODS:
+                    if method in item:
+                        op_def = dict(item[method])
+                        op_def["operationId"] = f"{op_prefix}{op_def['operationId']}"
+                        operations.append(
+                            _parse_operation(
+                                spec, service_key, method, base_path + path, item.get("parameters", []), op_def
+                            )
+                        )
     return tuple(operations)
 
 
@@ -307,9 +329,14 @@ def format_response(resp: httpx.Response):
     return f"HTTP {resp.status_code}\n{body}"
 
 
-def build_rest_tools(client: RestClient, operations: tuple[Operation, ...] | None = None):
+def build_rest_tools(
+    client: RestClient,
+    operations: tuple[Operation, ...] | None = None,
+    modality_mode: str = "strict",
+):
     """One LangChain tool per operation, sharing the client's HTTP session and token."""
-    return [_tool(client, op) for op in (operations if operations is not None else load_operations())]
+    resolved = operations if operations is not None else load_operations(modality_mode=modality_mode)
+    return [_tool(client, op) for op in resolved]
 
 
 def _tool(client: RestClient, op: Operation):

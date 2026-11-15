@@ -226,7 +226,7 @@ describe("POST /v1/quotes/request: effects", () => {
   test("RTR-R21, RTR-R22, RTR-R24: stores the request, one quote per eligible carrier, and answers 202", async () => {
     await ctx.svc.seed({ tables: { carriers: CARRIERS } });
     const body = quoteRequestBody({ business: { employees: 3 }, client_id: "CLI-55" });
-    const before = Date.now();
+    const simMs = (await ctx.svc.now()).getTime();
     const { result: res, diff } = await ctx.svc.changes(() => submit(body));
     expect(res.status).toBe(202);
     contract.check(res);
@@ -240,7 +240,7 @@ describe("POST /v1/quotes/request: effects", () => {
     const eta = Date.parse(res.body.estimated_completion) - Date.parse(res.body.created_at);
     expect(eta).toBeGreaterThanOrEqual(120_000);
     expect(eta).toBeLessThan(125_000);
-    expect(Date.parse(res.body.created_at)).toBeGreaterThanOrEqual(before - 1000);
+    expect(Math.abs(Date.parse(res.body.created_at) - simMs)).toBeLessThan(60_000);
 
     expect(Object.keys(diff).sort()).toEqual(["carrier_quotes", "quote_requests"]);
     expect(diff.quote_requests.added).toEqual([

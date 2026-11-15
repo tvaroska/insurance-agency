@@ -32,8 +32,8 @@ beforeAll(() => {
     policy_id: "POL-2026-ACTIVE",
     client_id: "CL-001",
     policy_type: "personal_auto",
-    effective_date: "2025-11-01",
-    expiration_date: "2026-11-01",
+    effective_date: "2026-06-01",
+    expiration_date: "2027-06-01",
     status: "active",
   }));
   insertSqliteRow(testSqlite, "policies", makePolicy({ policy_id: "POL-CANCELLED", client_id: "CL-001", status: "cancelled" }));
@@ -143,12 +143,12 @@ describe("POST /v1/policies/:id/endorsements - validation and conflicts", () => 
     expect(res.status).toBe(400);
   });
 
-  test("returns 422 E_EO_BACKDATING_PROHIBITED when backdating prior to simulated today (2026-02-18)", async () => {
+  test("returns 422 E_EO_BACKDATING_PROHIBITED when backdating prior to simulated today (2026-10-14)", async () => {
     const headers = await authHeader(["ams:policies:endorsements"]);
     const res = await postEndorsement(
       "POL-2026-ACTIVE",
       {
-        effective_date: "2026-02-10",
+        effective_date: "2026-10-05",
         change_type: "modify_coverage",
         changes: { coverage: "bop_limit", limit: 1000000 },
       },
@@ -164,7 +164,7 @@ describe("POST /v1/policies/:id/endorsements - validation and conflicts", () => 
     const res = await postEndorsement(
       "POL-2026-ACTIVE",
       {
-        effective_date: "2026-03-01",
+        effective_date: "2026-11-01",
         change_type: "modify_coverage",
         changes: { coverage: "bodily_injury", limit: "15/30/10" },
       },
@@ -183,7 +183,7 @@ describe("POST /v1/policies/:id/endorsements - escalation scope", () => {
   }
 
   const backdated = {
-    effective_date: "2026-02-10",
+    effective_date: "2026-10-05",
     change_type: "modify_coverage",
     changes: { coverage: "collision", deductible: 500 },
   };
@@ -194,8 +194,8 @@ describe("POST /v1/policies/:id/endorsements - escalation scope", () => {
       policy_id: "POL-OTHER-2026",
       client_id: "CL-001",
       policy_type: "personal_auto",
-      effective_date: "2025-11-01",
-      expiration_date: "2026-11-01",
+      effective_date: "2026-06-01",
+      expiration_date: "2027-06-01",
       status: "active",
     }));
   });
@@ -211,7 +211,7 @@ describe("POST /v1/policies/:id/endorsements - escalation scope", () => {
     const res = await postEndorsement(
       "POL-2026-ACTIVE",
       {
-        effective_date: "2026-03-01",
+        effective_date: "2026-11-01",
         change_type: "modify_coverage",
         changes: { coverage: "bodily_injury", limit: "15/30/10" },
         escalation_id: "esc_end_statemin",

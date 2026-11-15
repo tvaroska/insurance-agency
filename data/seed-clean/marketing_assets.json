@@ -7,7 +7,7 @@
     "mime_type": "application/pdf",
     "url": "https://cdn.evergreen-insurance.com/assets/welcome-kit-personal.pdf",
     "version": "2.1",
-    "published_date": "2025-03-15T00:00:00Z"
+    "published_date": "2025-11-15T00:00:00Z"
   },
   {
     "asset_id": "AST-002",
@@ -17,7 +17,7 @@
     "mime_type": "application/pdf",
     "url": "https://cdn.evergreen-insurance.com/assets/welcome-kit-commercial.pdf",
     "version": "1.4",
-    "published_date": "2025-04-01T00:00:00Z"
+    "published_date": "2025-12-01T00:00:00Z"
   },
   {
     "asset_id": "AST-003",
@@ -27,7 +27,7 @@
     "mime_type": "application/pdf",
     "url": "https://cdn.evergreen-insurance.com/assets/bundle-savings-flyer.pdf",
     "version": "3.0",
-    "published_date": "2025-05-10T00:00:00Z"
+    "published_date": "2026-01-10T00:00:00Z"
   },
   {
     "asset_id": "AST-004",
@@ -37,7 +37,7 @@
     "mime_type": "application/pdf",
     "url": "https://cdn.evergreen-insurance.com/assets/umbrella-explainer.pdf",
     "version": "1.2",
-    "published_date": "2025-02-20T00:00:00Z"
+    "published_date": "2025-10-20T00:00:00Z"
   },
   {
     "asset_id": "AST-005",
@@ -47,7 +47,7 @@
     "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "url": "https://cdn.evergreen-insurance.com/assets/rate-comparison-template.xlsx",
     "version": "4.0",
-    "published_date": "2025-06-01T00:00:00Z"
+    "published_date": "2026-02-01T00:00:00Z"
   },
   {
     "asset_id": "AST-006",
@@ -57,7 +57,7 @@
     "mime_type": "application/pdf",
     "url": "https://cdn.evergreen-insurance.com/assets/price-comparison-one-pager.pdf",
     "version": "2.0",
-    "published_date": "2025-05-20T00:00:00Z"
+    "published_date": "2026-01-20T00:00:00Z"
   },
   {
     "asset_id": "AST-007",
@@ -67,7 +67,7 @@
     "mime_type": "image/png",
     "url": "https://cdn.evergreen-insurance.com/assets/social-storm-prep.png",
     "version": "1.0",
-    "published_date": "2025-05-01T00:00:00Z"
+    "published_date": "2026-01-01T00:00:00Z"
   },
   {
     "asset_id": "AST-008",
@@ -77,6 +77,6 @@
     "mime_type": "image/png",
     "url": "https://cdn.evergreen-insurance.com/assets/social-referral-program.png",
     "version": "1.1",
-    "published_date": "2025-04-15T00:00:00Z"
+    "published_date": "2025-12-15T00:00:00Z"
   }
 ]

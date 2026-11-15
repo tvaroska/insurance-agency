@@ -2,9 +2,28 @@
   {
     "carrier_code": "CSTL",
     "carrier_name": "Coastal Star Insurance",
-    "states": ["IL", "IN", "WI", "OH", "MI", "FL", "TX", "CA", "NY", "PA"],
-    "policy_types": ["personal_auto", "homeowners", "umbrella"],
-    "risk_categories": ["preferred", "standard", "non_standard"],
+    "states": [
+      "IL",
+      "IN",
+      "WI",
+      "OH",
+      "MI",
+      "FL",
+      "TX",
+      "CA",
+      "NY",
+      "PA"
+    ],
+    "policy_types": [
+      "personal_auto",
+      "homeowners",
+      "umbrella"
+    ],
+    "risk_categories": [
+      "preferred",
+      "standard",
+      "non_standard"
+    ],
     "appetite_level": "high",
     "min_driver_age": 16,
     "max_vehicles": 8,
@@ -17,9 +36,30 @@
   {
     "carrier_code": "SMIT",
     "carrier_name": "Summit Fire & Casualty",
-    "states": ["IL", "IN", "OH", "PA", "NY", "CT", "MA", "FL", "TX", "CA"],
-    "policy_types": ["personal_auto", "homeowners", "umbrella", "bop", "workers_comp", "general_liability"],
-    "risk_categories": ["preferred", "standard"],
+    "states": [
+      "IL",
+      "IN",
+      "OH",
+      "PA",
+      "NY",
+      "CT",
+      "MA",
+      "FL",
+      "TX",
+      "CA"
+    ],
+    "policy_types": [
+      "personal_auto",
+      "homeowners",
+      "umbrella",
+      "bop",
+      "workers_comp",
+      "general_liability"
+    ],
+    "risk_categories": [
+      "preferred",
+      "standard"
+    ],
     "appetite_level": "medium",
     "min_driver_age": 18,
     "max_vehicles": 5,
@@ -27,14 +67,34 @@
     "surplus_lines_only": false,
     "sr22_available": false,
     "citizens_eligible": false,
-    "state_restrictions": ["FL"]
+    "state_restrictions": [
+      "FL"
+    ]
   },
   {
     "carrier_code": "HRTF",
     "carrier_name": "Hartland Commercial",
-    "states": ["IL", "IN", "OH", "PA", "NY", "CT", "FL", "TX"],
-    "policy_types": ["bop", "workers_comp", "general_liability", "professional_liability", "homeowners"],
-    "risk_categories": ["preferred", "standard"],
+    "states": [
+      "IL",
+      "IN",
+      "OH",
+      "PA",
+      "NY",
+      "CT",
+      "FL",
+      "TX"
+    ],
+    "policy_types": [
+      "bop",
+      "workers_comp",
+      "general_liability",
+      "professional_liability",
+      "homeowners"
+    ],
+    "risk_categories": [
+      "preferred",
+      "standard"
+    ],
     "appetite_level": "medium",
     "min_driver_age": 21,
     "max_vehicles": 4,
@@ -47,9 +107,29 @@
   {
     "carrier_code": "ERIE",
     "carrier_name": "Erie Basin Mutual",
-    "states": ["IL", "IN", "OH", "PA", "NY", "WI", "MD", "VA", "WV", "NC"],
-    "policy_types": ["personal_auto", "homeowners", "umbrella", "workers_comp", "general_liability"],
-    "risk_categories": ["preferred", "standard"],
+    "states": [
+      "IL",
+      "IN",
+      "OH",
+      "PA",
+      "NY",
+      "WI",
+      "MD",
+      "VA",
+      "WV",
+      "NC"
+    ],
+    "policy_types": [
+      "personal_auto",
+      "homeowners",
+      "umbrella",
+      "workers_comp",
+      "general_liability"
+    ],
+    "risk_categories": [
+      "preferred",
+      "standard"
+    ],
     "appetite_level": "high",
     "min_driver_age": 18,
     "max_vehicles": 6,
@@ -62,9 +142,30 @@
   {
     "carrier_code": "NTNW",
     "carrier_name": "National Shield",
-    "states": ["IL", "IN", "OH", "PA", "NY", "FL", "TX", "CA", "GA", "NC"],
-    "policy_types": ["personal_auto", "homeowners", "umbrella", "bop", "workers_comp", "general_liability"],
-    "risk_categories": ["preferred", "standard"],
+    "states": [
+      "IL",
+      "IN",
+      "OH",
+      "PA",
+      "NY",
+      "FL",
+      "TX",
+      "CA",
+      "GA",
+      "NC"
+    ],
+    "policy_types": [
+      "personal_auto",
+      "homeowners",
+      "umbrella",
+      "bop",
+      "workers_comp",
+      "general_liability"
+    ],
+    "risk_categories": [
+      "preferred",
+      "standard"
+    ],
     "appetite_level": "medium",
     "min_driver_age": 17,
     "max_vehicles": 6,
@@ -77,9 +178,29 @@
   {
     "carrier_code": "SAFECO",
     "carrier_name": "SafeHarbor",
-    "states": ["IL", "IN", "OH", "PA", "NY", "FL", "TX", "CA", "WA", "OR"],
-    "policy_types": ["personal_auto", "homeowners", "umbrella", "renters"],
-    "risk_categories": ["preferred", "standard", "non_standard"],
+    "states": [
+      "IL",
+      "IN",
+      "OH",
+      "PA",
+      "NY",
+      "FL",
+      "TX",
+      "CA",
+      "WA",
+      "OR"
+    ],
+    "policy_types": [
+      "personal_auto",
+      "homeowners",
+      "umbrella",
+      "renters"
+    ],
+    "risk_categories": [
+      "preferred",
+      "standard",
+      "non_standard"
+    ],
     "appetite_level": "high",
     "min_driver_age": 16,
     "max_vehicles": 7,
@@ -92,9 +213,28 @@
   {
     "carrier_code": "LIBT",
     "carrier_name": "Liberty Crest",
-    "states": ["IL", "IN", "OH", "PA", "NY", "FL", "TX", "CA", "MA", "NJ"],
-    "policy_types": ["personal_auto", "homeowners", "umbrella", "renters"],
-    "risk_categories": ["preferred", "standard"],
+    "states": [
+      "IL",
+      "IN",
+      "OH",
+      "PA",
+      "NY",
+      "FL",
+      "TX",
+      "CA",
+      "MA",
+      "NJ"
+    ],
+    "policy_types": [
+      "personal_auto",
+      "homeowners",
+      "umbrella",
+      "renters"
+    ],
+    "risk_categories": [
+      "preferred",
+      "standard"
+    ],
     "appetite_level": "medium",
     "min_driver_age": 18,
     "max_vehicles": 5,

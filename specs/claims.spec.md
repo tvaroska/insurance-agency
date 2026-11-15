@@ -171,8 +171,8 @@ Two other things change status: assigning an adjuster moves `reported` to `assig
 
 - **CLM-R110** `POST /sim/time-travel` that moves the clock forward (positive `days`, or a `target_date` after the current simulated time) sets every claim whose status is `reported` or `assigned` (or the legacy value `open`) to `investigating` and its `updated_at` to the new simulated time. No timeline row is written. The response's `transitions` is `{ "claims_advanced": <number of claims changed> }`.
 - **CLM-R111** With zero or negative days no row changes and `claims_advanced` is 0.
-- **CLM-R112** Request handling does not read the simulated clock. `reported_date`, the future-date check of CLM-R17, the year in `claim_id`, and every timestamp written by an operation use the real clock.
-- **CLM-R113** `POST /sim/seed` and `POST /sim/reset` return the simulated clock to real time.
+- **CLM-R112** Request handling reads the shared simulated clock (`getSimulatedNow()` / `getSimulatedToday()`, anchored at `2026-10-14T12:00:00.000Z` unless `SIMULATED_TODAY` overrides it): `reported_date`, the future-date check of CLM-R17, the year in `claim_id`, and every timestamp written by an operation follow the simulated clock and advance with `POST /sim/time-travel`.
+- **CLM-R113** `POST /sim/seed` and `POST /sim/reset` reset `clock_offset_ms` to `0` (`2026-10-14T12:00:00.000Z`).
 
 ## 9. Calls to other services
 
@@ -202,5 +202,5 @@ Places where a durable contract and the running service disagree, or where the b
 | CLM-G02 | `claims.behavior.yaml` names the length error code `max_length`. The service sends `too_long` (CLM-R15, CLM-R61, CLM-R80). |
 | CLM-G03 | `loss_date` is checked by pattern only (CLM-R14), so a stored value such as `2024-02-31` breaks `format: date` in `claims.yaml`. |
 | CLM-G04 | `claims.yaml` describes FNOL `adjuster_id` as assigning "immediately". The service stores the adjuster but keeps status `reported`, writes no `assignment` event and skips the capacity check (CLM-R18, CLM-R19, CLM-R21). |
-| CLM-G05 | Operations ignore the simulated clock (CLM-R112), so a claim filed after time travel is stamped with real time, and time travel changes status without a timeline row (CLM-R110). |
+| CLM-G05 | Time travel changes claim status without writing a timeline row (CLM-R110). |
 | CLM-G06 | Timeline order is by `created_at` only (CLM-R70). Two events written in the same millisecond, as in CLM-R54, have no guaranteed order. |

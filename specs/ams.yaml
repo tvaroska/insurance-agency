@@ -960,6 +960,8 @@ components:
             - principal_review
             - backdating
             - attorney_involvement
+            - claims_specialist
+            - claim_specialist
           description: Reason code for the escalation.
           example: premium_threshold
         summary:
@@ -1006,6 +1008,13 @@ components:
           nullable: true
         reason:
           type: string
+          description: >-
+            Reason code for the escalation (use claims_specialist for standard FNOL claim routing,
+            attorney_involvement when counsel or a legal demand is involved, coverage_adequacy when
+            coverage sufficiency or applicability is questioned, state_minimum_violation for limits
+            below statutory floors, premium_threshold above $10,000 annual premium, backdating for
+            retroactive effective dates, surplus_lines for non-admitted placements, or
+            principal_review for underwriting/appointment/unsigned-application review).
           enum:
             - premium_threshold
             - state_minimum_violation
@@ -1014,6 +1023,8 @@ components:
             - principal_review
             - backdating
             - attorney_involvement
+            - claims_specialist
+            - claim_specialist
         summary:
           type: string
           maxLength: 2000
@@ -2218,6 +2229,12 @@ paths:
         - oauth2:
             - ams:accounting:read
       parameters:
+        - name: policy_id
+          in: query
+          description: Filter by policy ID.
+          required: false
+          schema:
+            type: string
         - name: carrier_code
           in: query
           description: Filter by carrier.

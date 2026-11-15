@@ -185,16 +185,19 @@ describe("simulated clock", () => {
     }
   });
 
-  test("CRM-R112: request handling keeps using the real clock after time travel", async () => {
+  test("CRM-R112: request handling advances with the simulated clock after time travel", async () => {
     await seedEnrollments();
     await ctx.svc.timeTravel({ days: 400 });
+    const simNow = await ctx.svc.now();
+    const simMs = simNow.getTime();
+    const simToday = simNow.toISOString().slice(0, 10);
     const created = await ctx.api.post("/v1/leads", { first_name: "T", last_name: "T", email: "t@example.test", source: "web" });
-    expect(created.body.last_activity_date).toBe(todayUtc());
-    expect(Math.abs(Date.parse(created.body.created_at) - Date.now())).toBeLessThan(60_000);
+    expect(created.body.last_activity_date).toBe(simToday);
+    expect(Math.abs(Date.parse(created.body.created_at) - simMs)).toBeLessThan(60_000);
     const enrolled = await ctx.api.post("/v1/campaigns/camp_a/enroll", { client_id: "CLI-T" });
-    expect(Math.abs(Date.parse(enrolled.body.enrolled_at) - Date.now())).toBeLessThan(60_000);
+    expect(Math.abs(Date.parse(enrolled.body.enrolled_at) - simMs)).toBeLessThan(60_000);
     const patched = await ctx.api.patch("/v1/leads/lead_a", { score: 1 });
-    expect(patched.body.last_activity_date).toBe(todayUtc());
+    expect(patched.body.last_activity_date).toBe(simToday);
   });
 
   test("CRM-R113: seeding or resetting returns the clock to real time", async () => {

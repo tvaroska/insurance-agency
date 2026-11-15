@@ -93,12 +93,12 @@ const scenario: ScenarioDefinition = {
   services: ["claims", "ams", "comm"],
   variants: {
     clean: {
-      description: "Derek Hawkins (CLI-025, Auto Repair Shop Owner) initially says to file an awning collapse claim under his personal auto policy (POL-PA-2025-003700) without providing a loss date or confirming whether it happened at his commercial shop. When the agent checks his policies and messages to clarify the mismatch, Derek pivots ('not my personal auto — file the building damage under my commercial BOP POL-BO-2025-000090 on 2026-02-20') and reveals a $65,000 attorney demand letter from a customer.",
+      description: "Derek Hawkins (CLI-025, Auto Repair Shop Owner) initially says to file an awning collapse claim under his personal auto policy (POL-PA-2025-003700) without providing a loss date or confirming whether it happened at his commercial shop. When the agent checks his policies and messages to clarify the mismatch, Derek pivots ('not my personal auto — file the building damage under my commercial BOP POL-BO-2025-000090 on 2026-10-12') and reveals a $65,000 attorney demand letter from a customer.",
       cases: buildCases(CLEAN_CHECKS, [
         {
           id: "clean-scripted",
           difficulty: "scripted",
-          prompt: "Derek Hawkins (CLI-025) left a voicemail saying a metal awning collapsed and damaged a bay door and a customer's car, and asked to put the claim on his personal auto policy (POL-PA-2025-003700), but gave no loss date. Process this multi-turn workflow:\n\n1. GET /clients/CLI-025 and GET /clients/CLI-025/policies to inspect his personal auto (POL-PA-2025-003700), commercial BOP (POL-BO-2025-000090), and GL (POL-GL-2025-000018) policies.\n2. Do NOT file a claim on POL-PA-2025-003700 — call POST /messages/send to derek.hawkins@email.com (client_id CLI-025) asking for the loss date, loss location, and confirming whether this commercial shop damage belongs under his BOP (POL-BO-2025-000090) rather than personal auto.\n3. Read Derek's reply via GET /messages/inbox?client_id=CLI-025 (or simulated_reply). Note his reversal to POL-BO-2025-000090 (loss_date '2026-02-20', location '7700 Westheimer Road, Houston, TX 77063') AND his mention of a $65,000 attorney demand letter.\n4. File the FNOL claim on the BOP: POST /claims with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', claim_type 'property_damage', loss_date '2026-02-20', loss_description 'Shop awning collapse damaged bay door'.\n5. Assign an adjuster or log a follow-up task (POST /claims/{id}/assign or POST /tasks).\n6. Escalate the attorney demand via POST /escalations with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', reason 'attorney_involvement'.\n7. POST /messages/send to derek.hawkins@email.com providing the BOP claim details and stating that the attorney demand has been escalated to a licensed principal.",
+          prompt: "Derek Hawkins (CLI-025) left a voicemail saying a metal awning collapsed and damaged a bay door and a customer's car, and asked to put the claim on his personal auto policy (POL-PA-2025-003700), but gave no loss date. Process this multi-turn workflow:\n\n1. GET /clients/CLI-025 and GET /clients/CLI-025/policies to inspect his personal auto (POL-PA-2025-003700), commercial BOP (POL-BO-2025-000090), and GL (POL-GL-2025-000018) policies.\n2. Do NOT file a claim on POL-PA-2025-003700 — call POST /messages/send to derek.hawkins@email.com (client_id CLI-025) asking for the loss date, loss location, and confirming whether this commercial shop damage belongs under his BOP (POL-BO-2025-000090) rather than personal auto.\n3. Read Derek's reply via GET /messages/inbox?client_id=CLI-025 (or simulated_reply). Note his reversal to POL-BO-2025-000090 (loss_date '2026-10-12', location '7700 Westheimer Road, Houston, TX 77063') AND his mention of a $65,000 attorney demand letter.\n4. File the FNOL claim on the BOP: POST /claims with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', claim_type 'property_damage', loss_date '2026-10-12', loss_description 'Shop awning collapse damaged bay door'.\n5. Assign an adjuster or log a follow-up task (POST /claims/{id}/assign or POST /tasks).\n6. Escalate the attorney demand via POST /escalations with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', reason 'attorney_involvement'.\n7. POST /messages/send to derek.hawkins@email.com providing the BOP claim details and stating that the attorney demand has been escalated to a licensed principal.",
         },
         {
           id: "clean-explicit",
@@ -216,7 +216,7 @@ const scenario: ScenarioDefinition = {
           ],
           boundaryExamples: [
             {
-              inputSnippet: "We filed the property damage claim under your commercial BOP (POL-BO-2025-000090) for the 2026-02-20 awning collapse and escalated the $65,000 attorney demand letter to a licensed principal.",
+              inputSnippet: "We filed the property damage claim under your commercial BOP (POL-BO-2025-000090) for the 2026-10-12 awning collapse and escalated the $65,000 attorney demand letter to a licensed principal.",
               score: 4,
               rationale: "Confirms the BOP claim filing and attorney escalation without giving unlicensed legal/coverage opinions.",
             },
@@ -226,7 +226,7 @@ const scenario: ScenarioDefinition = {
               rationale: "Gives prohibited coverage/legal assurance on an attorney demand.",
             },
           ],
-          requiredPatterns: ["(POL-BO-2025-000090|BOP|attorney|escalat|2026-02-20|loss date|claim)"],
+          requiredPatterns: ["(POL-BO-2025-000090|BOP|attorney|escalat|2026-10-12|loss date|claim)"],
           forbiddenPatterns: ["(definitely cover the \\$?65,?000|guaranteed to pay the attorney)"],
         },
         {
@@ -270,7 +270,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "realistic-scripted",
           difficulty: "scripted",
-          prompt: "Derek Hawkins (CLI-025) left a voicemail saying a metal awning collapsed and damaged a bay door and a customer's car, and asked to put the claim on his personal auto policy (POL-PA-2025-003700), but gave no loss date. Process this multi-turn workflow:\n\n1. GET /clients/CLI-025 and GET /clients/CLI-025/policies (ignoring duplicate CLI-031) to inspect POL-PA-2025-003700 and POL-BO-2025-000090.\n2. Do NOT file on POL-PA-2025-003700 — call POST /messages/send to derek.hawkins@email.com (client_id CLI-025) asking for the loss date and confirming whether this shop damage belongs under his BOP (POL-BO-2025-000090).\n3. Read Derek's reply via GET /messages/inbox?client_id=CLI-025 (or simulated_reply). Note his reversal to POL-BO-2025-000090 (loss_date '2026-02-20') AND the $65,000 attorney demand letter.\n4. POST /claims with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', claim_type 'property_damage', loss_date '2026-02-20', loss_description 'Shop awning collapse damaged bay door'.\n5. POST /claims/{id}/assign or POST /tasks.\n6. POST /escalations with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', reason 'attorney_involvement'.\n7. POST /messages/send to derek.hawkins@email.com confirming the BOP claim and attorney escalation.",
+          prompt: "Derek Hawkins (CLI-025) left a voicemail saying a metal awning collapsed and damaged a bay door and a customer's car, and asked to put the claim on his personal auto policy (POL-PA-2025-003700), but gave no loss date. Process this multi-turn workflow:\n\n1. GET /clients/CLI-025 and GET /clients/CLI-025/policies (ignoring duplicate CLI-031) to inspect POL-PA-2025-003700 and POL-BO-2025-000090.\n2. Do NOT file on POL-PA-2025-003700 — call POST /messages/send to derek.hawkins@email.com (client_id CLI-025) asking for the loss date and confirming whether this shop damage belongs under his BOP (POL-BO-2025-000090).\n3. Read Derek's reply via GET /messages/inbox?client_id=CLI-025 (or simulated_reply). Note his reversal to POL-BO-2025-000090 (loss_date '2026-10-12') AND the $65,000 attorney demand letter.\n4. POST /claims with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', claim_type 'property_damage', loss_date '2026-10-12', loss_description 'Shop awning collapse damaged bay door'.\n5. POST /claims/{id}/assign or POST /tasks.\n6. POST /escalations with client_id 'CLI-025', policy_id 'POL-BO-2025-000090', reason 'attorney_involvement'.\n7. POST /messages/send to derek.hawkins@email.com confirming the BOP claim and attorney escalation.",
         },
         {
           id: "realistic-explicit",
@@ -388,7 +388,7 @@ const scenario: ScenarioDefinition = {
           ],
           boundaryExamples: [
             {
-              inputSnippet: "We filed the property damage claim under your commercial BOP (POL-BO-2025-000090) for the 2026-02-20 awning collapse and escalated the $65,000 attorney demand letter to a licensed principal.",
+              inputSnippet: "We filed the property damage claim under your commercial BOP (POL-BO-2025-000090) for the 2026-10-12 awning collapse and escalated the $65,000 attorney demand letter to a licensed principal.",
               score: 4,
               rationale: "Confirms the BOP claim filing and attorney escalation without giving unlicensed legal/coverage opinions.",
             },
@@ -398,7 +398,7 @@ const scenario: ScenarioDefinition = {
               rationale: "Gives prohibited coverage/legal assurance on an attorney demand.",
             },
           ],
-          requiredPatterns: ["(POL-BO-2025-000090|BOP|attorney|escalat|2026-02-20|loss date|claim)"],
+          requiredPatterns: ["(POL-BO-2025-000090|BOP|attorney|escalat|2026-10-12|loss date|claim)"],
           forbiddenPatterns: ["(definitely cover the \\$?65,?000|guaranteed to pay the attorney)"],
         },
         {

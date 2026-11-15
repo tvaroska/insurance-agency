@@ -26,13 +26,14 @@ def test_load_deterministic_scenarios_and_samples_filtering():
         "DT-08",
         "DT-09",
         "DT-10",
+        "DT-11",
     ]
     for item in scenarios:
         assert len(item["turns"]) >= 2
         assert item["start_state"]["base"] in {"empty", "clean", "realistic"}
 
     all_samples = ed.load_deterministic_samples()
-    assert len(all_samples) == 10
+    assert len(all_samples) == 11
     assert all_samples[0].id == "DT-01-household-endorsement-swap"
     assert all_samples[0].metadata["scenario_id"] == "DT-01"
     assert len(all_samples[0].metadata["turns"]) == 3
@@ -49,6 +50,7 @@ def test_load_deterministic_scenarios_and_samples_filtering():
         "DT-08",
         "DT-09",
         "DT-10",
+        "DT-11",
     ]
 
 
@@ -290,7 +292,7 @@ def test_prepare_and_multiturn_agent_pass_turns_via_store_not_agent_state_metada
 
     monkeypatch.setattr(ed, "store", lambda: _FakeStore())
     monkeypatch.setattr(ed, "open_mcp_tools", _fake_open_mcp)
-    monkeypatch.setattr(ed, "build_rest_tools", lambda rc: [])
+    monkeypatch.setattr(ed, "build_rest_tools", lambda rc, **kw: [])
     monkeypatch.setattr(ed, "create_agent", lambda model, tools, system_prompt: object())
     monkeypatch.setattr(ed, "agent_bridge", lambda st, **kw: _FakeBridge(st))
     monkeypatch.setattr(ed, "run_multiturn_conversation", _fake_run_mt)

@@ -106,7 +106,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           difficulty: "scripted",
-          prompt: "A message came in from the Chen household on 742 Maple Drive asking to raise their auto collision deductible to $1,000. Process this multi-turn workflow:\n\n1. GET /clients?last_name=Chen and GET /clients/CLI-001/policies & GET /clients/CLI-002/policies to inspect both spouses' auto policies (POL-PA-2025-001847 and POL-PA-2025-001848).\n2. Because the effective date and target spouse policy are unconfirmed, do NOT endorse yet — call POST /messages/send to sarah.chen@email.com (client_id CLI-001) asking to confirm which policy and effective date they want.\n3. Read the client's reply via GET /messages/inbox?client_id=CLI-002 (or from simulated_reply). Note the client's reversal: leave Sarah's policy (POL-PA-2025-001847) untouched, endorse James's policy (POL-PA-2025-001848) to a $1,000 collision deductible effective 2026-03-01, and update James's phone (CLI-002) to 310-555-0199.\n4. POST /policies/POL-PA-2025-001848/endorsements with change_type 'modify_coverage', effective_date '2026-03-01', and changes { coverage: 'collision', deductible: 1000 }.\n5. PATCH /clients/CLI-002 with { phone: '310-555-0199' }.\n6. POST /messages/send to james.chen@email.com confirming the endorsement on POL-PA-2025-001848 and phone update.",
+          prompt: "A message came in from the Chen household on 742 Maple Drive asking to raise their auto collision deductible to $1,000. Process this multi-turn workflow:\n\n1. GET /clients?last_name=Chen and GET /clients/CLI-001/policies & GET /clients/CLI-002/policies to inspect both spouses' auto policies (POL-PA-2025-001847 and POL-PA-2025-001848).\n2. Because the effective date and target spouse policy are unconfirmed, do NOT endorse yet — call POST /messages/send to sarah.chen@email.com (client_id CLI-001) asking to confirm which policy and effective date they want.\n3. Read the client's reply via GET /messages/inbox?client_id=CLI-002 (or from simulated_reply). Note the client's reversal: leave Sarah's policy (POL-PA-2025-001847) untouched, endorse James's policy (POL-PA-2025-001848) to a $1,000 collision deductible effective 2026-11-01, and update James's phone (CLI-002) to 310-555-0199.\n4. POST /policies/POL-PA-2025-001848/endorsements with change_type 'modify_coverage', effective_date '2026-11-01', and changes { coverage: 'collision', deductible: 1000 }.\n5. PATCH /clients/CLI-002 with { phone: '310-555-0199' }.\n6. POST /messages/send to james.chen@email.com confirming the endorsement on POL-PA-2025-001848 and phone update.",
         },
         {
           id: "clean-explicit",
@@ -200,7 +200,7 @@ const scenario: ScenarioDefinition = {
           ],
           boundaryExamples: [
             {
-              inputSnippet: "Per your reply, we left Sarah's policy untouched, updated James's policy POL-PA-2025-001848 to a $1,000 collision deductible effective 2026-03-01, and updated his phone to 310-555-0199.",
+              inputSnippet: "Per your reply, we left Sarah's policy untouched, updated James's policy POL-PA-2025-001848 to a $1,000 collision deductible effective 2026-11-01, and updated his phone to 310-555-0199.",
               score: 4,
               rationale: "Explicitly reflects the Turn-2 pivot to POL-PA-2025-001848, effective date, and phone update.",
             },
@@ -221,7 +221,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "realistic-scripted",
           difficulty: "scripted",
-          prompt: "A message came in from the Chen household on 742 Maple Drive asking to raise their auto collision deductible to $1,000. Process this multi-turn workflow:\n\n1. GET /clients?last_name=Chen and inspect active policies for CLI-001 (POL-PA-2025-001847) and CLI-002 (POL-PA-2025-001848), ignoring duplicate CLI-030.\n2. Do NOT endorse yet — call POST /messages/send to sarah.chen@email.com (client_id CLI-001) asking to confirm which spouse's auto policy and effective date they want.\n3. Read the client's reply via GET /messages/inbox?client_id=CLI-002 (or from simulated_reply). Note the reversal: leave Sarah's policy (POL-PA-2025-001847) untouched, endorse James's policy (POL-PA-2025-001848) to a $1,000 collision deductible effective 2026-03-01, and update James's phone (CLI-002) to 310-555-0199.\n4. POST /policies/POL-PA-2025-001848/endorsements with change_type 'modify_coverage', effective_date '2026-03-01', and changes { coverage: 'collision', deductible: 1000 }.\n5. PATCH /clients/CLI-002 with { phone: '310-555-0199' }.\n6. POST /messages/send to james.chen@email.com confirming completion.",
+          prompt: "A message came in from the Chen household on 742 Maple Drive asking to raise their auto collision deductible to $1,000. Process this multi-turn workflow:\n\n1. GET /clients?last_name=Chen and inspect active policies for CLI-001 (POL-PA-2025-001847) and CLI-002 (POL-PA-2025-001848), ignoring duplicate CLI-030.\n2. Do NOT endorse yet — call POST /messages/send to sarah.chen@email.com (client_id CLI-001) asking to confirm which spouse's auto policy and effective date they want.\n3. Read the client's reply via GET /messages/inbox?client_id=CLI-002 (or from simulated_reply). Note the reversal: leave Sarah's policy (POL-PA-2025-001847) untouched, endorse James's policy (POL-PA-2025-001848) to a $1,000 collision deductible effective 2026-11-01, and update James's phone (CLI-002) to 310-555-0199.\n4. POST /policies/POL-PA-2025-001848/endorsements with change_type 'modify_coverage', effective_date '2026-11-01', and changes { coverage: 'collision', deductible: 1000 }.\n5. PATCH /clients/CLI-002 with { phone: '310-555-0199' }.\n6. POST /messages/send to james.chen@email.com confirming completion.",
         },
         {
           id: "realistic-explicit",
@@ -315,7 +315,7 @@ const scenario: ScenarioDefinition = {
           ],
           boundaryExamples: [
             {
-              inputSnippet: "Per your reply, we left Sarah's policy untouched, updated James's policy POL-PA-2025-001848 to a $1,000 collision deductible effective 2026-03-01, and updated his phone to 310-555-0199.",
+              inputSnippet: "Per your reply, we left Sarah's policy untouched, updated James's policy POL-PA-2025-001848 to a $1,000 collision deductible effective 2026-11-01, and updated his phone to 310-555-0199.",
               score: 4,
               rationale: "Explicitly reflects the Turn-2 pivot to POL-PA-2025-001848, effective date, and phone update.",
             },

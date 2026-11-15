@@ -1,4 +1,5 @@
 import { createHmac } from "crypto";
+import { getSimulatedNow } from "@evergreen/shared";
 
 export function signPayload(payload: string, secret: string): string {
   return createHmac("sha256", secret).update(payload).digest("hex");
@@ -8,7 +9,7 @@ export function buildWebhookEnvelope(eventType: string, data: unknown) {
   return {
     event_id: `evt_${crypto.randomUUID()}`,
     event_type: eventType,
-    timestamp: new Date().toISOString(),
+    timestamp: getSimulatedNow().toISOString(),
     data,
   };
 }

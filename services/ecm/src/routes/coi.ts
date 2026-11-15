@@ -5,6 +5,8 @@ import {
   throwIfErrors,
   validationError,
   notFoundError,
+  getSimulatedNow,
+  nextSimulatedEpochMs,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -64,13 +66,13 @@ async function handleGenerateCoi(c: Context<{ Variables: AppVariables }>) {
 
   // Generate COI document record + real ACORD 25 PDF bytes
   const documentId = `doc_${Math.random().toString(36).slice(2, 10)}`;
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
   const holderAddr = certificateHolder.address ?? {};
 
   const coiDescription =
     body.description ??
     `Certificate of Insurance for ${client.first_name} ${client.last_name}`;
-  const filename = `COI-${policy.policy_id}-${Date.now()}.pdf`;
+  const filename = `COI-${policy.policy_id}-${nextSimulatedEpochMs()}.pdf`;
 
   const pdfBytes = await generateAcord25({
     client,

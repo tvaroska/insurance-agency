@@ -367,7 +367,7 @@ describe("seed data", () => {
       premium_monthly: 94.5,
       status: "quoted",
       underwriting_status: "pending_review",
-      valid_until: "2026-03-08",
+      valid_until: "2026-11-08",
     });
     const q2 = await ctx.api.get(`${API}/quotes/QT-002-SMIT`);
     expect(q2.body).toMatchObject({ status: "declined", underwriting_status: "declined", premium_annual: null, premium_monthly: null });
@@ -442,18 +442,19 @@ describe("simulated clock", () => {
     expect((await ctx.svc.timeTravel({ days: 1 })).transitions).toEqual({ quotes_expired: 0, policies_expired: 0 });
   });
 
-  test("SMT-R47: after time travel ids and timestamps still follow the wall clock, and reseeding resets the clock", async () => {
+  test("SMT-R47: after time travel ids and timestamps advance with the simulated clock, and reseeding resets the clock", async () => {
+    const baseMs = Date.parse("2026-10-14T12:00:00.000Z");
     await ctx.svc.timeTravel({ days: 365 });
-    expect((await ctx.svc.now()).getTime() - Date.now()).toBeGreaterThan(360 * 86_400_000);
-    const before = Date.now();
+    const simNow = (await ctx.svc.now()).getTime();
+    expect(simNow - baseMs).toBeGreaterThan(360 * 86_400_000);
     const sub = await submit(ctx.api);
-    expect(Math.abs(Number(sub.body.quote_id.slice("QT-SMIT-".length)) - before)).toBeLessThan(60_000);
-    expect(Math.abs(Date.parse(sub.body.submitted_at) - before)).toBeLessThan(60_000);
-    expect(Math.abs(Date.parse(sub.body.inspection_scheduled_at) - before - 7 * 86_400_000)).toBeLessThan(60_000);
+    expect(Math.abs(Number(sub.body.quote_id.slice("QT-SMIT-".length)) - simNow)).toBeLessThan(60_000);
+    expect(Math.abs(Date.parse(sub.body.submitted_at) - simNow)).toBeLessThan(60_000);
+    expect(Math.abs(Date.parse(sub.body.inspection_scheduled_at) - simNow - 7 * 86_400_000)).toBeLessThan(60_000);
     const decided = await ctx.api.post(`${API}/underwriting/${sub.body.quote_id}/decision`, { decision: "refer" });
-    expect(Math.abs(Date.parse(decided.body.decided_at) - before)).toBeLessThan(60_000);
+    expect(Math.abs(Date.parse(decided.body.decided_at) - simNow)).toBeLessThan(60_000);
     await ctx.svc.seed(SEED);
-    expect(Math.abs((await ctx.svc.now()).getTime() - Date.now())).toBeLessThan(60_000);
+    expect(Math.abs((await ctx.svc.now()).getTime() - baseMs)).toBeLessThan(60_000);
     expect((await ctx.svc.status()).clock_offset_ms).toBe(0);
   });
 });

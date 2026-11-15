@@ -3,6 +3,8 @@ import {
   requireScopes,
   checkRequired,
   throwIfErrors,
+  getSimulatedNow,
+  nextSimulatedEpochMs,
   simRandom,
   type AuthVariables,
   type CorrelationVariables,
@@ -44,9 +46,10 @@ function computeInstantPremium(vehicleYear: number, driverDob: string): {
   semi_annual: number;
   monthly: number;
 } {
+  const simNow = getSimulatedNow();
   const vehicleAge = 2026 - vehicleYear;
   const driverAge = driverDob
-    ? Math.floor((Date.now() - new Date(driverDob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+    ? Math.floor((simNow.getTime() - new Date(driverDob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : 35;
 
   // Base rate
@@ -84,9 +87,10 @@ quickQuoteRouter.post(
       checkRequired("driver_name", body.driver_name),
     ]);
 
-    const now = new Date().toISOString();
-    const quoteId = `QT-CSTL-${Date.now()}`;
-    const requestId = `QR-${Date.now()}`;
+    const now = getSimulatedNow().toISOString();
+    const epochMs = nextSimulatedEpochMs();
+    const quoteId = `QT-CSTL-${epochMs}`;
+    const requestId = `QR-${epochMs}`;
 
     // Decode VIN
     const vehicle = decodeVin(body.vin);

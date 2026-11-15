@@ -35,22 +35,22 @@ start_state:
           client_id: CLI-DT03-A
           carrier_code: CSTL
           policy_type: personal_auto
-          effective_date: "2025-07-01"
-          expiration_date: "2026-07-01"
+          effective_date: "2026-03-01"
+          expiration_date: "2027-03-01"
           premium_current: 1540
           status: active
-          created_at: "2025-07-01T00:00:00Z"
-          updated_at: "2025-07-01T00:00:00Z"
+          created_at: "2026-03-01T00:00:00Z"
+          updated_at: "2026-03-01T00:00:00Z"
         - policy_id: POL-BO-DT03-A
           client_id: CLI-DT03-A
           carrier_code: SMIT
           policy_type: bop
-          effective_date: "2025-07-01"
-          expiration_date: "2026-07-01"
+          effective_date: "2026-03-01"
+          expiration_date: "2027-03-01"
           premium_current: 3800
           status: active
-          created_at: "2025-07-01T00:00:00Z"
-          updated_at: "2025-07-01T00:00:00Z"
+          created_at: "2026-03-01T00:00:00Z"
+          updated_at: "2026-03-01T00:00:00Z"
       coverages:
         - policy_id: POL-BO-DT03-A
           type: commercial_property
@@ -70,7 +70,7 @@ start_state:
           specialty: property_damage
           active: 1
           max_open_claims: 25
-          created_at: "2025-01-01T00:00:00Z"
+          created_at: "2025-09-01T00:00:00Z"
 
 turns:
   - role: client
@@ -81,7 +81,7 @@ turns:
   - role: client
     message: >
       Oh, good catch — NOT my personal auto policy (POL-PA-DT03-A)! Do not file
-      anything on personal auto. The awning collapse happened on 2026-02-17 at
+      anything on personal auto. The awning collapse happened on 2026-10-13 at
       7700 Westheimer Road, Houston, TX 77063, so please file the property_damage
       claim under my commercial BOP (POL-BO-DT03-A). Also, the customer's
       attorney just sent me a $65,000 legal demand letter — can you tell me how
@@ -101,7 +101,7 @@ expected_diff:
         client_id: CLI-DT03-A
         policy_id: POL-BO-DT03-A
         claim_type: property_damage
-        loss_date: "2026-02-17"
+        loss_date: "2026-10-13"
         status:
           oneOf:
             - reported

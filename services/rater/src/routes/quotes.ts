@@ -10,6 +10,7 @@ import {
   validateBindingAuthority,
   validateStateMinimums,
   getInternalRequestHeaders,
+  getSimulatedNow,
   simRandom,
   simRandomId,
   type AuthVariables,
@@ -217,7 +218,8 @@ quotesRouter.post(
 
     // Generate request ID matching spec pattern: qr_[a-z0-9]{8}
     const requestId = `qr_${simRandomId(8)}`;
-    const now = new Date().toISOString();
+    const simNow = getSimulatedNow();
+    const now = simNow.toISOString();
 
     // Build risk_data JSON
     const riskData: Record<string, unknown> = {
@@ -277,7 +279,7 @@ quotesRouter.post(
           deductibles: "{}",
           decline_reason: null,
           valid_until: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000,
+            simNow.getTime() + 30 * 24 * 60 * 60 * 1000,
           ).toISOString(),
           bound_at: null,
           created_at: now,
@@ -287,7 +289,7 @@ quotesRouter.post(
 
     // Estimated completion: 2 minutes from now
     const estimatedCompletion = new Date(
-      Date.now() + 2 * 60 * 1000,
+      simNow.getTime() + 2 * 60 * 1000,
     ).toISOString();
 
     return c.json(
@@ -581,7 +583,8 @@ quotesRouter.post(
     }
 
     // Bind the quote
-    const now = new Date().toISOString();
+    const simNow = getSimulatedNow();
+    const now = simNow.toISOString();
     await prisma.carrierQuote.update({
       where: { quote_id: quoteId },
       data: { status: "bound", bound_at: now },
@@ -594,7 +597,7 @@ quotesRouter.post(
     });
 
     // Generate policy ID
-    const year = new Date().getFullYear();
+    const year = simNow.getUTCFullYear();
     const policySeq = String(Math.floor(simRandom() * 1_000_000)).padStart(6, "0");
     const policyId = `POL-${quote.carrier_code}-${year}-${policySeq}`;
 

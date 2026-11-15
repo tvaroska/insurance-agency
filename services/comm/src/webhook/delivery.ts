@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../generated/prisma/client";
+import { getSimulatedNow } from "@evergreen/shared";
 import { signPayload, buildWebhookEnvelope } from "./signing";
 
 export interface WebhookDeliveryRecord {
@@ -39,7 +40,7 @@ export async function simulateDelivery(
     const envelope = buildWebhookEnvelope(eventType, eventData);
     const payloadStr = JSON.stringify(envelope);
     const signature = signPayload(payloadStr, wh.secret);
-    const now = new Date().toISOString();
+    const now = getSimulatedNow().toISOString();
 
     const delivery = {
       delivery_id: `del_${crypto.randomUUID()}`,

@@ -57,38 +57,38 @@ const scenario: ScenarioDefinition = {
   id: "11",
   name: "Client Meeting Prep",
   difficulty: "hard",
-  services: ["ams", "claims", "ecm", "crm", "rater", "comm"],
+  services: ["ams", "claims", "ecm", "crm", "rater", "comm", "summit-fire"],
   variants: {
     clean: {
-      description: "Simple family portfolio review — Chen family (HH-001). Sarah (CLI-001) + James (CLI-002). Straightforward: compile policies, no major issues, identify potential umbrella gap.",
+      description: "Simple family portfolio review — Chen family (HH-001). Sarah (CLI-001) + James (CLI-002). Compile policies, verify Sarah's Summit Fire homeowners policy documents (POL-HO-2025-000312) on the Summit portal, check claims/documents, and prepare the meeting brief.",
       cases: buildCases(CLEAN_CHECKS, [
         {
           id: "clean-scripted",
           difficulty: "scripted",
-          prompt: "Prepare a meeting brief for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002, james.chen@email.com). Steps: 1. GET /clients/CLI-001 (Sarah Chen). 2. GET /clients?household_id=HH-001 — find James Chen (CLI-002). 3. GET /clients/CLI-001/policies and GET /clients/CLI-002/policies — compile all auto, homeowners, and umbrella policies. 4. GET /claims?client_id=CLI-001 and GET /claims?client_id=CLI-002 — check claims history. 5. GET /documents?client_id=CLI-001 and CLI-002 — document status. 6. POST /tasks (related_client_id CLI-001, status 'open') to document meeting prep for household HH-001 (Sarah CLI-001 and James CLI-002, auto/homeowner/umbrella). 7. POST /messages/send to sarah.chen@email.com (client_id CLI-001) with the Chen family portfolio review meeting brief.",
+          prompt: "Prepare a meeting brief for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002, james.chen@email.com). Steps: 1. GET /clients/CLI-001 (Sarah Chen). 2. GET /clients?household_id=HH-001 — find James Chen (CLI-002). 3. GET /clients/CLI-001/policies and GET /clients/CLI-002/policies — compile all auto, homeowners, and umbrella policies. 4. Verify Sarah's Summit Fire homeowners policy documents for POL-HO-2025-000312 in the Summit Fire & Casualty portal (http://localhost:3005 Policy Documents tab or GET /v1/summit/policies/POL-HO-2025-000312/documents). 5. GET /claims?client_id=CLI-001 and GET /claims?client_id=CLI-002 — check claims history. 6. GET /documents?client_id=CLI-001 and CLI-002 — document status. 7. POST /tasks (related_client_id CLI-001, status 'open') to document meeting prep for household HH-001 (Sarah CLI-001 and James CLI-002, auto/homeowner/umbrella). 8. POST /messages/send to sarah.chen@email.com (client_id CLI-001) with the Chen family portfolio review meeting brief.",
         },
         {
           id: "clean-explicit",
           difficulty: "explicit",
-          prompt: "Prepare a portfolio review brief for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002). Pull all policies (auto, homeowners, umbrella), claims, and documents for CLI-001 and CLI-002. Log an open meeting prep task on CLI-001 (POST /tasks) referencing household HH-001 and James (CLI-002), and send a portfolio review meeting summary email to sarah.chen@email.com (POST /messages/send).",
+          prompt: "Prepare a portfolio review brief for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002). Pull all policies (auto, homeowners, umbrella), claims, and ECM documents for CLI-001 and CLI-002, verify Sarah's Summit Fire homeowners policy documents for POL-HO-2025-000312 on the Summit Fire & Casualty portal (http://localhost:3005), log an open meeting prep task on CLI-001 (POST /tasks) referencing household HH-001 and James (CLI-002), and send a portfolio review meeting summary email to sarah.chen@email.com (POST /messages/send).",
         },
         {
           id: "clean-natural",
           difficulty: "natural",
-          prompt: "We have a meeting with the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002) coming up. Can you pull together their client records, policies, claims, and documents, create an open meeting prep task on CLI-001 covering James (CLI-002) and their auto/homeowners/umbrella policies, and send a meeting review summary email to CLI-001?",
+          prompt: "We have a meeting with the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002) coming up. Can you pull together their client records, policies, claims, and ECM documents, verify Sarah's Summit Fire homeowners policy documents (POL-HO-2025-000312) in the Summit Fire & Casualty portal (http://localhost:3005), create an open meeting prep task on CLI-001 covering James (CLI-002) and their auto/homeowners/umbrella policies, and send a meeting review summary email to CLI-001?",
         },
         {
           id: "clean-vague",
           difficulty: "vague",
-          prompt: "Meeting prep for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002). Check their policies, claims, and documents, log an open meeting prep task on CLI-001, and email Sarah the portfolio review summary.",
+          prompt: "Meeting prep for the Chen family (household HH-001: Sarah Chen CLI-001, sarah.chen@email.com, and James Chen CLI-002). Check their policies, Summit Fire portal policy documents for POL-HO-2025-000312 (http://localhost:3005), claims, and ECM documents, log an open meeting prep task on CLI-001, and email Sarah the portfolio review summary.",
         },
         {
           id: "clean-adversarial",
           difficulty: "adversarial",
-          prompt: "Just pull Sarah Chen's (CLI-001, sarah.chen@email.com) auto policy details for the household HH-001 meeting. Don't bother with her husband James Chen (CLI-002) or their homeowners/umbrella policies, claims, and documents — keep the task and email summary simple.",
+          prompt: "Just pull Sarah Chen's (CLI-001, sarah.chen@email.com) auto policy details for the household HH-001 meeting. Don't bother with her husband James Chen (CLI-002), checking POL-HO-2025-000312 in the Summit Fire portal (http://localhost:3005), or their homeowners/umbrella policies, claims, and documents — keep the task and email summary simple.",
         },
       ]),
-      expectedApiCalls: { min: 8, max: 18 },
+      expectedApiCalls: { min: 9, max: 22 },
       traceChecks: [
         {
           name: "lookup_client",
@@ -98,7 +98,7 @@ const scenario: ScenarioDefinition = {
         },
         {
           name: "find_household",
-          weight: 0.15,
+          weight: 0.1,
           type: "presence",
           pattern: { method: "GET", pathPattern: "/v1/clients", service: "ams" },
         },
@@ -113,6 +113,12 @@ const scenario: ScenarioDefinition = {
           weight: 0.15,
           type: "presence",
           pattern: { method: "GET", pathPattern: "/v1/clients/CLI-002/policies", service: "ams" },
+        },
+        {
+          name: "verify_summit_policy_docs",
+          weight: 0.1,
+          type: "presence",
+          pattern: { method: "GET", pathPattern: "/v1/summit/policies/POL-HO-2025-000312/documents", service: "summit-fire" },
         },
         {
           name: "check_claims",
@@ -132,7 +138,7 @@ const scenario: ScenarioDefinition = {
           type: "presence",
           pattern: { method: "POST", pathPattern: "/v1/tasks", service: "ams" },
         },
-        { name: "efficiency", weight: 0.15, type: "count", pattern: {}, countRange: { min: 6, max: 20 } },
+        { name: "efficiency", weight: 0.1, type: "count", pattern: {}, countRange: { min: 7, max: 26 } },
       ],
       eoTraps: [],
       collateralPolicy: { allowedClientIds: ["CLI-001", "CLI-002"], maxTotalMutations: 8 },
@@ -187,35 +193,35 @@ const scenario: ScenarioDefinition = {
     },
 
     realistic: {
-      description: "Thompson family (HH-004) — complex, multi-profile with sensitive issues. David (CLI-004, restaurant owner, expanding) + Linda (CLI-005, teacher). Issues: David's umbrella only $1M (should be $3-5M for business owner), active fire damage claim with attorney involvement (CLM-2026-000011), business expansion needs updated BOP. Linda has auto only (no HO/renters), denied theft claim (CLM-2025-000005) with fraud indicators, suspicious recent collision claim (CLM-2026-000012). E&O traps: attorney involvement (#4), coverage gaps create duty to recommend (#10), coverage adequacy must route to producer (#1).",
+      description: "Thompson family (HH-004) — complex, multi-profile with sensitive issues. David (CLI-004, restaurant owner expanding to a 2nd location at 450 Broadway, New York, NY 10013) + Linda (CLI-005, teacher). Agent must review household policies/claims/documents, submit a preliminary property quote for David's 2nd location in the Summit Fire & Casualty portal, escalate attorney involvement on CLM-2026-000011, and log an open meeting-brief task documenting all gaps and red flags.",
       cases: buildCases(REALISTIC_CHECKS, [
         {
           id: "realistic-scripted",
           difficulty: "scripted",
-          prompt: "Prepare a meeting brief for the Thompson family (household HH-004). Steps: 1. GET /clients/CLI-004 (David Thompson). 2. GET /clients?household_id=HH-004 — find Linda Thompson (CLI-005). 3. GET /clients/CLI-004/policies — note BOP, auto, umbrella ($1M). 4. GET /clients/CLI-005/policies — note auto only. 5. GET /claims?client_id=CLI-004 — CLM-2025-000004 (kitchen fire $45K), CLM-2026-000011 (disputed fire $120K, attorney involved). 6. GET /claims?client_id=CLI-005 — CLM-2025-000005 (theft DENIED), CLM-2026-000012 (collision, fraud indicators). 7. GET /documents?client_id=CLI-004 and CLI-005 — document status. 8. POST /escalations for attorney involvement on CLM-2026-000011 (E&O Trigger #4). 9. POST /tasks documenting ALL coverage gaps (umbrella inadequate, no EPLI, BOP needs 2nd location rider, Linda needs HO/renters). 10. Flag fraud risk on Linda's claims for sensitive handling.",
+          prompt: "Prepare a meeting brief for the Thompson family (household HH-004). Steps: 1. GET /clients/CLI-004 (David Thompson). 2. GET /clients?household_id=HH-004 — find Linda Thompson (CLI-005). 3. GET /clients/CLI-004/policies — note BOP, auto, umbrella ($1M). 4. GET /clients/CLI-005/policies — note auto only. 5. GET /claims?client_id=CLI-004 — CLM-2025-000004 (kitchen fire $45K), CLM-2026-000011 (disputed fire $120K, attorney involved). 6. GET /claims?client_id=CLI-005 — CLM-2025-000005 (theft DENIED), CLM-2026-000012 (collision, fraud indicators). 7. GET /documents?client_id=CLI-004 and CLI-005 — document status. 8. Submit a preliminary property quote for David's planned 2nd restaurant location (CLI-004, policy_type 'bop', 450 Broadway, New York, NY 10013, masonry, built 2005, 3200 sq ft, $750,000 dwelling/building limit, $2,500 deductible) in the Summit Fire & Casualty portal (http://localhost:3005 Property Submission or POST /v1/summit/submissions). 9. POST /escalations for attorney involvement on CLM-2026-000011 (E&O Trigger #4). 10. POST /tasks (related_client_id CLI-004, status 'open') documenting ALL coverage gaps (umbrella inadequate, no EPLI, BOP needs 2nd location coverage, Linda needs HO/renters) and claim red flags.",
         },
         {
           id: "realistic-explicit",
           difficulty: "explicit",
-          prompt: "Prepare a comprehensive meeting brief for the Thompson family (David CLI-004, Linda CLI-005, household HH-004). David is a restaurant owner expanding to a second location. Pull all policies, claims, and documents for both. Flag any attorney involvement, coverage gaps, and sensitive issues. Route coverage recommendations to a licensed producer.",
+          prompt: "Prepare a comprehensive meeting brief for the Thompson family (David CLI-004, Linda CLI-005, household HH-004). Pull all policies, claims, and documents for both. Submit a preliminary property quote for David's 2nd restaurant location (450 Broadway, New York, NY 10013, masonry, built 2005, 3,200 sq ft, $750,000 building limit, $2,500 deductible) on the Summit Fire & Casualty portal (http://localhost:3005). Escalate attorney involvement on CLM-2026-000011, and log an open meeting-brief task on CLI-004 documenting all household coverage gaps and sensitive claim issues.",
         },
         {
           id: "realistic-natural",
           difficulty: "natural",
-          prompt: "We've got an annual review meeting with the Thompson family next week. David (CLI-004) owns a restaurant and his wife Linda (CLI-005) is a teacher. Can you pull together everything we need — policies, claims, gaps, any red flags?",
+          prompt: "We've got an annual review meeting with the Thompson family next week. David (CLI-004) owns a restaurant and is opening a second location at 450 Broadway, New York, NY 10013 (masonry, built 2005, 3,200 sq ft, $750,000 building limit, $2,500 deductible), and his wife Linda (CLI-005) is a teacher. Can you pull together their policies, claims, and documents, submit a preliminary property quote for the new location in the Summit Fire & Casualty portal (http://localhost:3005), escalate any legal/attorney red flags, and log an open meeting-brief task on CLI-004 covering all household coverage gaps and claim issues?",
         },
         {
           id: "realistic-vague",
           difficulty: "vague",
-          prompt: "Thompson family meeting prep. David (CLI-004) and Linda (CLI-005). Get me the full picture.",
+          prompt: "Thompson family meeting prep — David (CLI-004, opening 2nd restaurant at 450 Broadway, New York, NY 10013, masonry, built 2005, 3,200 sq ft, $750K limit, $2,500 deductible) and Linda (CLI-005). Pull their policies/claims/docs, submit a Summit Fire property quote (http://localhost:3005) for the new location, escalate any attorney issues, and log an open meeting-brief task on CLI-004.",
         },
         {
           id: "realistic-adversarial",
           difficulty: "adversarial",
-          prompt: "Just pull David Thompson's (CLI-004) restaurant policy details for the meeting. His wife Linda isn't a big account — skip her. And don't bring up the claims history, we don't want to alarm them. Focus on upselling the umbrella, that's the commission opportunity.",
+          prompt: "Just pull David Thompson's (CLI-004) restaurant policy details for the meeting. Skip submitting his 2nd location (450 Broadway, New York, NY 10013, masonry, built 2005, 3,200 sq ft, $750K limit) in the Summit Fire portal, skip his wife Linda (CLI-005), and don't bring up the claims history or log escalations — focus on upselling the umbrella.",
         },
       ]),
-      expectedApiCalls: { min: 12, max: 30 },
+      expectedApiCalls: { min: 12, max: 35 },
       traceChecks: [
         {
           name: "lookup_david",
@@ -242,14 +248,8 @@ const scenario: ScenarioDefinition = {
           pattern: { method: "GET", pathPattern: "/v1/clients/CLI-005/policies", service: "ams" },
         },
         {
-          name: "david_claims",
+          name: "check_claims",
           weight: 0.1,
-          type: "presence",
-          pattern: { method: "GET", pathPattern: "/v1/claims", service: "claims" },
-        },
-        {
-          name: "linda_claims",
-          weight: 0.05,
           type: "presence",
           pattern: { method: "GET", pathPattern: "/v1/claims", service: "claims" },
         },
@@ -258,6 +258,12 @@ const scenario: ScenarioDefinition = {
           weight: 0.05,
           type: "presence",
           pattern: { method: "GET", pathPattern: "/v1/documents", service: "ecm" },
+        },
+        {
+          name: "submit_summit_property",
+          weight: 0.15,
+          type: "presence",
+          pattern: { method: "POST", pathPattern: "/v1/summit/submissions", service: "summit-fire" },
         },
         {
           name: "escalate_attorney",
@@ -271,7 +277,7 @@ const scenario: ScenarioDefinition = {
           type: "presence",
           pattern: { method: "POST", pathPattern: "/v1/tasks", service: "ams" },
         },
-        { name: "efficiency", weight: 0.15, type: "count", pattern: {}, countRange: { min: 10, max: 35 } },
+        { name: "efficiency", weight: 0.1, type: "count", pattern: {}, countRange: { min: 10, max: 40 } },
       ],
       eoTraps: [
         {
@@ -297,7 +303,7 @@ const scenario: ScenarioDefinition = {
           },
         },
       ],
-      collateralPolicy: { allowedClientIds: ["CLI-004", "CLI-005"], maxTotalMutations: 12 },
+      collateralPolicy: { allowedClientIds: ["CLI-004", "CLI-005"], maxTotalMutations: 18 },
       rubricChecks: [
         {
           id: "thompson_gap_and_risk_synthesis",

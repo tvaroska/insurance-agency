@@ -60,11 +60,11 @@ describe("Service-Layer E&O & 10-State Statutory Compliance Firewall", () => {
   });
 
   test("validateBackdating rejects retroactive effective dates prior to reference date", () => {
-    const backdated = validateBackdating("2026-02-10", "2026-02-18");
+    const backdated = validateBackdating("2026-10-05", "2026-10-14");
     expect(backdated.valid).toBe(false);
     expect(backdated.errorCode).toBe("E_EO_BACKDATING_PROHIBITED");
 
-    const prospective = validateBackdating("2026-03-01", "2026-02-18");
+    const prospective = validateBackdating("2026-11-01", "2026-10-14");
     expect(prospective.valid).toBe(true);
   });
 

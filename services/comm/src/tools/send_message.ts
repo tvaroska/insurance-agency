@@ -1,5 +1,6 @@
 import type { PrismaClient } from "../generated/prisma/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { getSimulatedNow } from "@evergreen/shared";
 import { simulateDelivery } from "../webhook/delivery";
 import { processSimulatedReply } from "../simulator/engine";
 
@@ -75,7 +76,7 @@ export async function handleSendMessage(
   }
 
   const messageId = `msg_${crypto.randomUUID()}`;
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
 
   await db.message.create({
     data: {

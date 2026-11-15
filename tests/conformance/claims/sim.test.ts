@@ -70,7 +70,7 @@ describe("seed data", () => {
 
   test("CLM-R102, CLM-R20: the first claim filed on the realistic data set continues the current year's sequence", async () => {
     await ctx.svc.reset("realistic");
-    const year = new Date().getFullYear();
+    const year = (await ctx.svc.now()).getUTCFullYear();
     const existing = (await ctx.svc.table("claims"))
       .map((c) => c.claim_id as string)
       .filter((id) => id.startsWith(`CLM-${year}-`))
@@ -115,14 +115,15 @@ describe("simulated clock", () => {
       expect(change.after.status).toBe("investigating");
       expect(change.after.updated_at).toBe(result.simulated_time);
     }
-    const drift = Date.parse(result.simulated_time) - Date.now() - 3 * 86_400_000;
+    const baseMs = Date.parse("2026-10-14T12:00:00.000Z");
+    const drift = Date.parse(result.simulated_time) - baseMs - 3 * 86_400_000;
     expect(Math.abs(drift)).toBeLessThan(60_000);
     expect(before).toHaveLength(7);
   });
 
   test("CLM-R110: a target_date in the future has the same effect", async () => {
     await seedAllStatuses();
-    const target = new Date(Date.now() + 10 * 86_400_000).toISOString();
+    const target = new Date(Date.parse("2026-10-14T12:00:00.000Z") + 10 * 86_400_000).toISOString();
     const result = await ctx.svc.timeTravel({ target_date: target });
     expect(result.transitions).toEqual({ claims_advanced: 3 });
     expect(result.simulated_time).toBe(target);
@@ -137,22 +138,26 @@ describe("simulated clock", () => {
     }
   });
 
-  test("CLM-R112: request handling keeps using the real clock after time travel", async () => {
+  test("CLM-R112: request handling advances with the simulated clock after time travel", async () => {
+    const baseMs = Date.parse("2026-10-14T12:00:00.000Z");
     await ctx.svc.seed({ tables: seedTables() });
     await ctx.svc.timeTravel({ days: 400 });
-    expect((await ctx.svc.now()).getTime()).toBeGreaterThan(Date.now() + 399 * 86_400_000);
+    const simNow = await ctx.svc.now();
+    const simMs = simNow.getTime();
+    const simToday = simNow.toISOString().slice(0, 10);
+    const simYear = simNow.getUTCFullYear();
+    expect(simMs).toBeGreaterThan(baseMs + 399 * 86_400_000);
 
-    const year = new Date().getFullYear();
     const filed = await ctx.api.post("/v1/claims/fnol", fnolBody());
     expect(filed.status).toBe(201);
-    expect(filed.body.reported_date).toBe(todayUtc());
-    expect(filed.body.claim_id).toBe(`CLM-${year}-000001`);
-    expect(Math.abs(Date.parse(filed.body.created_at) - Date.now())).toBeLessThan(60_000);
+    expect(filed.body.reported_date).toBe(simToday);
+    expect(filed.body.claim_id).toBe(`CLM-${simYear}-000001`);
+    expect(Math.abs(Date.parse(filed.body.created_at) - simMs)).toBeLessThan(60_000);
     const event = (await ctx.svc.table("claim_timeline"))[0];
-    expect(Math.abs(Date.parse(event.created_at) - Date.now())).toBeLessThan(60_000);
+    expect(Math.abs(Date.parse(event.created_at) - simMs)).toBeLessThan(60_000);
 
-    const inSimulatedPast = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
-    const future = await ctx.api.post("/v1/claims/fnol", fnolBody({ loss_date: inSimulatedPast }));
+    const beyondSimulatedToday = new Date(simMs + 30 * 86_400_000).toISOString().slice(0, 10);
+    const future = await ctx.api.post("/v1/claims/fnol", fnolBody({ loss_date: beyondSimulatedToday }));
     expect(future.status).toBe(400);
     expect(future.body.details[0]).toMatchObject({ field: "loss_date", code: "out_of_range" });
   });

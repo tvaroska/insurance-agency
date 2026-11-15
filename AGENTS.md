@@ -1,6 +1,6 @@
 # Evergreen Insurance Agency (`AGENTS.md`)
 
-> **Scope Guardrail (Agent Evaluation & Training Gym, Not Production SaaS):** Evergreen is a deterministic multi-service benchmark and RL/eval environment (`v0.8`), **not** production brokerage software. Isolated SQLite databases, seeded anomalies, and deterministic carrier-portal state transitions exist intentionally to test agent tool use, state verification, and E&O escalation; evaluate changes on benchmark validity, determinism, and anti-reward-hacking rigor rather than production SaaS infrastructure checklists.
+> **Scope Guardrail (Agent Evaluation & Training Gym, Not Production SaaS):** Evergreen is a deterministic multi-service benchmark and RL/eval environment (`v0.8`, simulated clock frozen at `2026-10-14T12:00:00.000Z`), **not** production brokerage software. Isolated SQLite databases, seeded anomalies, and deterministic carrier-portal state transitions exist intentionally to test agent tool use, state verification, and E&O escalation; evaluate changes on benchmark validity, determinism, and anti-reward-hacking rigor rather than production SaaS infrastructure checklists.
 
 ## 1. Services & Execution
 
@@ -27,7 +27,7 @@ bun run showcase --strict                        # strict modality + portal sess
 proj-test insurance-agency inspect-baseline --scenario 01,03,07,14,19,20 --difficulty natural
 proj-test insurance-agency inspect-summary eval/results/v0.7/realistic-natural --clean-logs eval/results/v0.7/clean-natural --include-anchors
 
-# Deterministic multi-turn DB-state suite (eval/deterministic/DT-01..DT-10):
+# Deterministic multi-turn DB-state suite (eval/deterministic/DT-01..DT-11):
 bun eval/run-state-scenarios.ts --verify-reference
 python3 eval/inspect/summarize_deterministic.py eval/results/deterministic-v1/logs --artifacts-dir eval/results/deterministic-v1/artifacts
 

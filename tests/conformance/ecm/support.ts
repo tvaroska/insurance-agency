@@ -38,7 +38,7 @@ export const ENVELOPE_ID = /^env_[a-z0-9]{1,8}$/;
 export const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 export function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10);
+  return "2026-10-14";
 }
 
 /** A document as the API returns it. Use `documentRow` for the database form (`tags` as JSON text). */

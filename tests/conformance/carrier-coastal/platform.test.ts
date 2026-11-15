@@ -403,8 +403,8 @@ describe("seed data", () => {
     expect(tables.quotes.find((q) => q.quote_id === "QT-014-CSTL")).toMatchObject({ status: "assessed", premium_annual: null, premium_monthly: null });
     expect(tables.policies.find((p) => p.policy_id === "POL-PA-2025-002103")).toMatchObject({
       client_id: "CLI-003",
-      effective_date: "2025-09-15",
-      expiration_date: "2026-03-15",
+      effective_date: "2026-05-15",
+      expiration_date: "2026-11-15",
       status: "active",
     });
     expectError(await ctx.api.post(`${API}/quotes/submit`, { quote_id: "QT-001-CSTL" }), 409, "CONFLICT");
@@ -464,22 +464,22 @@ describe("simulated clock", () => {
     expect(res.transitions).toEqual({ quotes_expired: 0, policies_expired: 8 });
   });
 
-  test("CST-R54: after time travel ids, timestamps and the driver's age still follow the wall clock; reseeding resets the clock", async () => {
+  test("CST-R54: after time travel ids, timestamps and the driver's age advance with the simulated clock; reseeding resets the clock", async () => {
+    const baseMs = Date.parse("2026-10-14T12:00:00.000Z");
     await ctx.svc.timeTravel({ days: 3650 });
-    expect((await ctx.svc.now()).getTime() - Date.now()).toBeGreaterThan(3600 * 86_400_000);
-    const before = Date.now();
-    const twentyFour = new Date(Date.now() - 24.5 * 365.25 * 86_400_000).toISOString().slice(0, 10);
+    const simNow = (await ctx.svc.now()).getTime();
+    expect(simNow - baseMs).toBeGreaterThan(3600 * 86_400_000);
+    const twentyFour = new Date(simNow - 24.5 * 365.25 * 86_400_000).toISOString().slice(0, 10);
     const quick = await spaced(() =>
       ctx.api.post(`${API}/quotes/quick`, { vin: "1HGCM82633A004352", client_id: "CLI-003", driver_name: "Driver", driver_dob: twentyFour }),
     );
-    expect(Math.abs(Number(quick.body.quote_id.slice("QT-CSTL-".length)) - before)).toBeLessThan(60_000);
-    expect(Math.abs(Date.parse(quick.body.assessed_at) - before)).toBeLessThan(60_000);
-    // Still under 25 by the wall clock; ten simulated years later the driver would be 34.
+    expect(Math.abs(Number(quick.body.quote_id.slice("QT-CSTL-".length)) - simNow)).toBeLessThan(60_000);
+    expect(Math.abs(Date.parse(quick.body.assessed_at) - simNow)).toBeLessThan(60_000);
     expect(quick.body.premium.annual).toBe(1680);
-    const bound = await spaced(() => ctx.api.post(`${API}/quotes/QT-ASSESSED/bind`, { effective_date: "2026-04-01" }));
-    expect(Math.abs(Date.parse(bound.body.bound_at) - before)).toBeLessThan(60_000);
+    const bound = await spaced(() => ctx.api.post(`${API}/quotes/QT-ASSESSED/bind`, { effective_date: "2036-11-01" }));
+    expect(Math.abs(Date.parse(bound.body.bound_at) - simNow)).toBeLessThan(60_000);
     const card = await ctx.api.get(`${API}/policies/${bound.body.policy_id}/id-card`);
-    expect(Math.abs(Date.parse(card.body.issued_at) - before)).toBeLessThan(60_000);
+    expect(Math.abs(Date.parse(card.body.issued_at) - simNow)).toBeLessThan(60_000);
     await ctx.svc.seed(SEED);
     expect((await ctx.svc.status()).clock_offset_ms).toBe(0);
   });

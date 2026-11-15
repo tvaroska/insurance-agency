@@ -114,7 +114,7 @@ describe("POST /v1/quotes/{quote_id}/bind: success", () => {
     const { result: res, diff } = await ctx.svc.changes(() => bind("QT-1", bindBody({ notes: "ignored" })));
     expect(res.status).toBe(201);
     contract.check(res);
-    const year = new Date().getFullYear();
+    const year = (await ctx.svc.now()).getUTCFullYear();
     expect(res.body).toEqual({
       policy_id: expect.stringMatching(new RegExp(`^POL-ERIE-${year}-\\d{6}$`)),
       quote_id: "QT-1",

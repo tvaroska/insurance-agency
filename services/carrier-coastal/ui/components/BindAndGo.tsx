@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api";
 
 interface BindResult {
@@ -42,12 +42,36 @@ export default function BindAndGo() {
   const [paymentPlan, setPaymentPlan] = useState("annual");
   const [effectiveDate, setEffectiveDate] = useState("");
   const [result, setResult] = useState<BindResult | null>(null);
+  const [quotePreviewAnnual, setQuotePreviewAnnual] = useState<number | null>(null);
   const [idCard, setIdCard] = useState<IdCardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const trimmed = quoteId.trim();
+    if (!trimmed) {
+      setQuotePreviewAnnual(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .recalculatePremium(trimmed, [])
+      .then((data: any) => {
+        if (!cancelled) {
+          const annual = data?.original_premium?.annual ?? data?.adjusted_premium?.annual ?? null;
+          setQuotePreviewAnnual(typeof annual === "number" ? annual : null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setQuotePreviewAnnual(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [quoteId]);
+
   // Estimated prices for display - derived from bind response or prior quote lookup
-  const estimatedAnnual = result?.premium_annual ?? result?.premium_current ?? null;
+  const estimatedAnnual = result?.premium_annual ?? result?.premium_current ?? quotePreviewAnnual;
   const estimatedSemiAnnual =
     result?.premium_semi_annual ??
     (estimatedAnnual != null ? Math.round(estimatedAnnual * 0.52 * 100) / 100 : null);

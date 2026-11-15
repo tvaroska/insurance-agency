@@ -36,22 +36,22 @@ start_state:
           client_id: CLI-DT05-A
           carrier_code: SMIT
           policy_type: bop
-          effective_date: "2025-06-01"
-          expiration_date: "2026-06-01"
+          effective_date: "2026-02-01"
+          expiration_date: "2027-02-01"
           premium_current: 2100
           status: active
-          created_at: "2025-06-01T00:00:00Z"
-          updated_at: "2025-06-01T00:00:00Z"
+          created_at: "2026-02-01T00:00:00Z"
+          updated_at: "2026-02-01T00:00:00Z"
         - policy_id: POL-BO-DT05-NEW
           client_id: CLI-DT05-A
           carrier_code: SMIT
           policy_type: bop
-          effective_date: "2025-09-01"
-          expiration_date: "2026-09-01"
+          effective_date: "2026-05-01"
+          expiration_date: "2027-05-01"
           premium_current: 2350
           status: active
-          created_at: "2025-09-01T00:00:00Z"
-          updated_at: "2025-09-01T00:00:00Z"
+          created_at: "2026-05-01T00:00:00Z"
+          updated_at: "2026-05-01T00:00:00Z"
       coverages:
         - policy_id: POL-BO-DT05-OLD
           type: general_liability
@@ -74,7 +74,7 @@ turns:
       (POL-BO-DT05-OLD)! I need this under my second bakery location BOP
       (POL-BO-DT05-NEW). Their vendor packet also requires $2,000,000 General
       Liability, so please submit a modify_coverage endorsement on
-      POL-BO-DT05-NEW effective 2026-03-01 raising general_liability limit to
+      POL-BO-DT05-NEW effective 2026-11-01 raising general_liability limit to
       2000000, and generate the COI on POL-BO-DT05-NEW with certificate holder
       "Winter Park Farmers Market", address 200 W New England Ave, Winter Park,
       FL 32789.
@@ -91,7 +91,7 @@ expected_diff:
       where:
         policy_id: POL-BO-DT05-NEW
         change_type: modify_coverage
-        effective_date: "2026-03-01"
+        effective_date: "2026-11-01"
         changes:
           regex: "2,?000,?000|2000000|2M"
     - label: winter_park_coi_document

@@ -134,7 +134,7 @@ export function runtimeContractTests(opts: RuntimeContractOptions): void {
         chaos: { enabled: false, error_rate: 0, status_code: 503, latency_ms: 0 },
         modality_mode: "permissive",
       });
-      expect(Math.abs(Date.parse(status.simulated_time) - Date.now())).toBeLessThan(60_000);
+      expect(status.simulated_time).toMatch(/^2026-10-14T12:00:00\.\d{3}Z$/);
 
       const snapshot = await svc.http.get("/sim/snapshot");
       expect(snapshot.body).toMatchObject({ service });

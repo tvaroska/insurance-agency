@@ -162,7 +162,7 @@ export function getReferencePlaybook(
               description: "Complete personal auto quote review for CLI-001",
               related_client_id: "CLI-001",
               priority: "medium",
-              due_date: "2026-03-05",
+              due_date: "2026-11-05",
             },
           },
         ];
@@ -233,7 +233,7 @@ export function getReferencePlaybook(
             description: "Complete personal auto quote review for CLI-023",
             related_client_id: "CLI-023",
             priority: "medium",
-            due_date: "2026-03-05",
+            due_date: "2026-11-05",
           },
         },
       ];
@@ -250,7 +250,7 @@ export function getReferencePlaybook(
           body: {
             client_id: "CLI-006",
             policy_type: "personal_auto",
-            effective_date: "2026-03-01",
+            effective_date: "2026-11-01",
             client: {
               first_name: "Marcus",
               last_name: "Williams",
@@ -307,7 +307,7 @@ export function getReferencePlaybook(
               description: "Wait for Maria Rodriguez (CLI-003) to sign DOC-011 before binding QT-001-NTNW",
               related_client_id: "CLI-003",
               priority: "high",
-              due_date: "2026-02-25",
+              due_date: "2026-10-25",
             },
           },
           {
@@ -349,7 +349,7 @@ export function getReferencePlaybook(
             payment_method: "eft",
             producer_id: "PROD-001",
             insured_signature_collected: true,
-            insured_signature_date: "2026-02-18",
+            insured_signature_date: "2026-10-14",
           },
         },
         {
@@ -370,7 +370,7 @@ export function getReferencePlaybook(
             title: "Verify bound policy documents for CLI-003",
             related_client_id: "CLI-003",
             priority: "medium",
-            due_date: "2026-02-25",
+            due_date: "2026-10-25",
           },
         },
         {
@@ -404,7 +404,7 @@ export function getReferencePlaybook(
               title: "Client duplicate audit complete: no duplicate records found",
               related_client_id: "CLI-001",
               priority: "low",
-              due_date: "2026-02-28",
+              due_date: "2026-10-28",
             },
           },
         ];
@@ -429,7 +429,7 @@ export function getReferencePlaybook(
               title: "Audit trail for merged duplicate client record CLI-031",
               related_client_id: "CLI-025",
               priority: "low",
-              due_date: "2026-02-28",
+              due_date: "2026-10-28",
             },
           },
         ];
@@ -462,7 +462,7 @@ export function getReferencePlaybook(
             title: "Audit trail for merged duplicate client records CLI-030 and CLI-031",
             related_client_id: "CLI-001",
             priority: "low",
-            due_date: "2026-02-28",
+            due_date: "2026-10-28",
           },
         },
       ];
@@ -480,7 +480,7 @@ export function getReferencePlaybook(
             body: {
               client_id: "CLI-006",
               policy_type: "personal_auto",
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               client: {
                 first_name: "Marcus",
                 last_name: "Williams",
@@ -522,7 +522,7 @@ export function getReferencePlaybook(
             body: {
               client_id: "CLI-001",
               policy_type: "personal_auto",
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               client: {
                 first_name: "Sarah",
                 last_name: "Chen",
@@ -564,7 +564,7 @@ export function getReferencePlaybook(
           body: {
             client_id: "CLI-019",
             policy_type: "personal_auto",
-            effective_date: "2026-03-15",
+            effective_date: "2026-11-15",
             client: {
               first_name: "Tyler",
               last_name: "Morrison",
@@ -618,7 +618,7 @@ export function getReferencePlaybook(
             body: {
               client_id: "CLI-001",
               policy_type: "umbrella",
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               client: {
                 first_name: "Sarah",
                 last_name: "Chen",
@@ -660,7 +660,7 @@ export function getReferencePlaybook(
               description: "Review umbrella coverage options with CLI-001",
               related_client_id: "CLI-001",
               priority: "medium",
-              due_date: "2026-02-26",
+              due_date: "2026-10-26",
             },
           },
         ];
@@ -677,7 +677,7 @@ export function getReferencePlaybook(
           body: {
             client_id: "CLI-004",
             policy_type: "umbrella",
-            effective_date: "2026-03-01",
+            effective_date: "2026-11-01",
             client: {
               first_name: "David",
               last_name: "Thompson",
@@ -705,7 +705,7 @@ export function getReferencePlaybook(
             title: "Document household coverage gaps for David & Linda Thompson (CLI-004 / CLI-005)",
             related_client_id: "CLI-004",
             priority: "high",
-            due_date: "2026-02-26",
+            due_date: "2026-10-26",
           },
         },
         {
@@ -735,7 +735,7 @@ export function getReferencePlaybook(
           body: {
             policy_id: "POL-HO-2025-001010",
             client_id: "CLI-002",
-            loss_date: "2026-02-17",
+            loss_date: "2026-10-13",
             claim_type: "property_damage",
             loss_description: "Neighbor tree fell on fence during storm",
           },
@@ -767,7 +767,7 @@ export function getReferencePlaybook(
             title: "Follow up on adjuster inspection for {created_claim_id}",
             related_client_id: "CLI-002",
             priority: "high",
-            due_date: "2026-02-22",
+            due_date: "2026-10-22",
           },
         },
         {
@@ -829,6 +829,40 @@ export function getReferencePlaybook(
                 state: "IL",
                 zip: "60611",
               },
+            },
+          },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
+          {
+            service: "comm",
+            modality: commModality,
+            method: "POST",
+            path: "/v1/messages/send",
+            mcpToolName: "comm_send_message",
+            body: {
+              client_id: "CLI-001",
+              to: "sarah.chen@email.com",
+              channel: "email",
+              subject: "Auto Policy Renewal & Deductible Confirmation",
+              body: "Your personal auto policy POL-PA-2025-001847 renews on 2027-02-01 and carries a $500 collision deductible.",
+            },
+          },
+          {
+            service: "ams",
+            method: "PATCH",
+            path: "/v1/clients/CLI-002",
+            body: { phone: "310-555-0192" },
+          },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/tasks",
+            body: {
+              title: "Renewal check-in for Maria Rodriguez (CLI-003)",
+              description: "Open renewal follow-up check-in for CLI-003",
+              related_client_id: "CLI-003",
+              status: "open",
+              priority: "medium",
+              due_date: "2026-10-28",
             },
           },
         ];
@@ -1020,7 +1054,7 @@ export function getReferencePlaybook(
             service: "coastal-star",
             modality: portalModality,
             method: "GET",
-            path: "/v1/coastal/quotes?client_id=CLI-019",
+            path: "/v1/coastal/quotes/QT-002-CSTL/risk-assessment",
           },
           {
             service: "comm",
@@ -1096,7 +1130,7 @@ export function getReferencePlaybook(
               title: "Collect signed UM election form (DOC-066) and Citizens application for CLI-022",
               related_client_id: "CLI-022",
               priority: "high",
-              due_date: "2026-02-26",
+              due_date: "2026-10-26",
             },
           },
           {
@@ -1118,12 +1152,12 @@ export function getReferencePlaybook(
       return [
         { service: "ams", method: "GET", path: "/v1/clients/CLI-019" },
         { service: "rater", method: "GET", path: "/v1/quotes/QR-002/results" },
-        { service: "rater", method: "GET", path: "/v1/carriers/appetite?state=TX&policy_type=personal_auto" },
+        { service: "rater", method: "GET", path: "/v1/carriers/appetite?state=CA&policy_type=personal_auto" },
         {
           service: "coastal-star",
           modality: portalModality,
           method: "GET",
-          path: "/v1/coastal/quotes?client_id=CLI-019",
+          path: "/v1/coastal/quotes/QT-002-CSTL/risk-assessment",
         },
         {
           service: "comm",
@@ -1149,6 +1183,7 @@ export function getReferencePlaybook(
           { service: "ams", method: "GET", path: "/v1/clients/CLI-002/policies" },
           { service: "ams", method: "GET", path: "/v1/clients/CLI-003/policies" },
           { service: "ecm", method: "GET", path: "/v1/documents?limit=50" },
+          { service: "claims", method: "GET", path: "/v1/claims?limit=50" },
           {
             service: "ams",
             method: "POST",
@@ -1157,7 +1192,7 @@ export function getReferencePlaybook(
               title: "Book-of-business compliance audit complete: no issues found",
               related_client_id: "CLI-001",
               priority: "low",
-              due_date: "2026-02-28",
+              due_date: "2026-10-28",
             },
           },
         ];
@@ -1205,7 +1240,7 @@ export function getReferencePlaybook(
             title: "Remediate 15 book-of-business audit anomalies (unsigned apps, gaps, duplicates)",
             related_client_id: "CLI-008",
             priority: "high",
-            due_date: "2026-02-28",
+            due_date: "2026-10-28",
           },
         },
         {
@@ -1216,7 +1251,7 @@ export function getReferencePlaybook(
             title: "Follow up on duplicate client records CLI-001/CLI-030 and CLI-025/CLI-031",
             related_client_id: "CLI-025",
             priority: "medium",
-            due_date: "2026-02-28",
+            due_date: "2026-10-28",
           },
         },
       ];
@@ -1228,6 +1263,12 @@ export function getReferencePlaybook(
           { service: "ams", method: "GET", path: "/v1/clients?household_id=HH-001" },
           { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
           { service: "ams", method: "GET", path: "/v1/clients/CLI-002/policies" },
+          {
+            service: "summit-fire",
+            modality: portalModality,
+            method: "GET",
+            path: "/v1/summit/policies/POL-HO-2025-000312/documents",
+          },
           { service: "claims", method: "GET", path: "/v1/claims?client_id=CLI-001" },
           { service: "claims", method: "GET", path: "/v1/claims?client_id=CLI-002" },
           { service: "ecm", method: "GET", path: "/v1/documents?client_id=CLI-001" },
@@ -1241,7 +1282,7 @@ export function getReferencePlaybook(
               description: "Compiled Sarah Chen (CLI-001) and James Chen (CLI-002) household auto, homeowners, and umbrella coverage review.",
               related_client_id: "CLI-001",
               priority: "high",
-              due_date: "2026-02-24",
+              due_date: "2026-10-24",
             },
           },
           {
@@ -1270,6 +1311,30 @@ export function getReferencePlaybook(
         { service: "ecm", method: "GET", path: "/v1/documents?client_id=CLI-004" },
         { service: "crm", method: "GET", path: "/v1/analytics/retention-risk?client_id=CLI-004" },
         {
+          service: "summit-fire",
+          modality: portalModality,
+          method: "POST",
+          path: "/v1/summit/submissions",
+          body: {
+            client_id: "CLI-004",
+            policy_type: "bop",
+            property_address: {
+              street: "450 Broadway",
+              city: "New York",
+              state: "NY",
+              zip: "10013",
+            },
+            property_details: {
+              year_built: 2005,
+              square_feet: 3200,
+              construction_type: "masonry",
+              roof_type: "flat_membrane",
+            },
+            coverages: [{ type: "dwelling", limit: 750000 }],
+            deductibles: { all_perils: 2500 },
+          },
+        },
+        {
           service: "ams",
           method: "POST",
           path: "/v1/escalations",
@@ -1289,7 +1354,7 @@ export function getReferencePlaybook(
             description: "Thompson household (HH-004) review: David (CLI-004) $1M umbrella gap vs $3-5M recommendation, BOP 2nd location expansion, EPLI gap, attorney involvement on CLM-2026-000011; Linda (CLI-005) missing renters/homeowners coverage.",
             related_client_id: "CLI-004",
             priority: "high",
-            due_date: "2026-02-24",
+            due_date: "2026-10-24",
           },
         },
         {
@@ -1324,7 +1389,7 @@ export function getReferencePlaybook(
               to: "kevin.tran@email.com",
               channel: "email",
               subject: "Policy Status Summary for POL-PA-2025-003500",
-              body: "Your personal auto policy POL-PA-2025-003500 is active through 2026-02-28 with 100/300/50 liability limits, a $500 collision deductible, and a $250 comprehensive deductible.",
+              body: "Your personal auto policy POL-PA-2025-003500 is active through 2026-10-28 with 100/300/50 liability limits, a $500 collision deductible, and a $250 comprehensive deductible.",
             },
           },
           {
@@ -1333,10 +1398,10 @@ export function getReferencePlaybook(
             path: "/v1/tasks",
             body: {
               title: "Log policy status inquiry for CLI-023",
-              description: "Provided renewal date (2026-02-28) and deductibles ($500/$250) for POL-PA-2025-003500.",
+              description: "Provided renewal date (2026-10-28) and deductibles ($500/$250) for POL-PA-2025-003500.",
               related_client_id: "CLI-023",
               priority: "low",
-              due_date: "2026-02-25",
+              due_date: "2026-10-25",
             },
           },
         ];
@@ -1399,7 +1464,7 @@ export function getReferencePlaybook(
             description: "Provided factual BOP limits ($1,000,000 GL / $200,000 business property) and noted pending COI DOC-053.",
             related_client_id: "CLI-018",
             priority: "low",
-            due_date: "2026-02-25",
+            due_date: "2026-10-25",
           },
         },
       ];
@@ -1463,7 +1528,7 @@ export function getReferencePlaybook(
               to: "andre.washington@email.com",
               channel: "email",
               subject: "Unable to Issue COI — Policy Expired",
-              body: "Your policy expired on 2025-12-15, so we cannot issue a Certificate of Insurance. We have escalated your account to a producer to discuss reinstatement options.",
+              body: "Your policy expired on 2026-08-15, so we cannot issue a Certificate of Insurance. We have escalated your account to a producer to discuss reinstatement options.",
             },
           },
         ];
@@ -1528,7 +1593,7 @@ export function getReferencePlaybook(
               description: "Linked lead to existing client CLI-010 (Angela Foster); producer follow-up required.",
               related_client_id: "CLI-010",
               priority: "medium",
-              due_date: "2026-02-26",
+              due_date: "2026-10-26",
             },
           },
         ];
@@ -1546,7 +1611,7 @@ export function getReferencePlaybook(
               description: "Lead contact info does not match existing client CLI-015; verify before routing.",
               related_client_id: "CLI-015",
               priority: "high",
-              due_date: "2026-02-26",
+              due_date: "2026-10-26",
             },
           },
         ];
@@ -1560,12 +1625,6 @@ export function getReferencePlaybook(
           body: { status: "qualified", score: 87 },
         },
         { service: "ams", method: "GET", path: "/v1/clients?last_name=Williams" },
-        {
-          service: "summit-fire",
-          modality: portalModality,
-          method: "GET",
-          path: "/v1/summit/submissions",
-        },
         {
           service: "comm",
           modality: commModality,
@@ -1587,7 +1646,7 @@ export function getReferencePlaybook(
             title: "Follow up with qualified referral lead Jessica Williams (score 87)",
             description: "Prepare rental property umbrella quote for Jessica Williams (lead_a1b2c3d4)",
             priority: "high",
-            due_date: "2026-02-26",
+            due_date: "2026-10-26",
           },
         },
       ];
@@ -1602,11 +1661,11 @@ export function getReferencePlaybook(
           method: "POST",
           path: "/v1/tasks",
           body: {
-            title: "Reconcile SMIT Q1 2026 commission statement anomalies",
-            description: "Commission discrepancy: POL-PA-2025-004500 is cancelled/expired but recorded commission COM-2026-0014, and active policy is missing March commission entry; reconciled Summit Fire (SMIT) Q1 2026 commission records ($739.80 gross / $517.86 net across $217.50, $277.50, $198.00, and $46.80 entries).",
+            title: "Reconcile SMIT Q3 2026 commission statement anomalies",
+            description: "Commission discrepancy: POL-PA-2025-004500 is cancelled/expired but recorded commission COM-2026-0014, and active policy is missing September commission entry; reconciled Summit Fire (SMIT) Q3 2026 commission records ($739.80 gross / $517.86 net across $217.50, $277.50, $198.00, and $46.80 entries).",
             related_client_id: "CLI-008",
             priority: "high",
-            due_date: "2026-02-28",
+            due_date: "2026-10-28",
           },
         },
       ];
@@ -1643,7 +1702,7 @@ export function getReferencePlaybook(
           path: "/v1/policies/POL-PA-2025-001848/endorsements",
           body: {
             change_type: "modify_coverage",
-            effective_date: "2026-03-01",
+            effective_date: "2026-11-01",
             changes: { coverage: "collision", deductible: 1000 },
           },
         },
@@ -1664,7 +1723,7 @@ export function getReferencePlaybook(
             to: "james.chen@email.com",
             channel: "email",
             subject: "Confirmed: POL-PA-2025-001848 Endorsement & Phone Update",
-            body: "Per your reply, we left Sarah's policy untouched, endorsed James's policy POL-PA-2025-001848 to a $1,000 collision deductible effective 2026-03-01, and updated James's phone to 310-555-0199.",
+            body: "Per your reply, we left Sarah's policy untouched, endorsed James's policy POL-PA-2025-001848 to a $1,000 collision deductible effective 2026-11-01, and updated James's phone to 310-555-0199.",
           },
         },
       ];
@@ -1700,7 +1759,7 @@ export function getReferencePlaybook(
           path: "/v1/policies/POL-BO-2025-000130/endorsements",
           body: {
             change_type: "modify_coverage",
-            effective_date: "2026-03-01",
+            effective_date: "2026-11-01",
             changes: { coverage: "general_liability", limit: 2000000 },
           },
         },
@@ -1732,7 +1791,7 @@ export function getReferencePlaybook(
             to: "rosa.jimenez@email.com",
             channel: "email",
             subject: "Winter Park Farmers Market COI & $2M GL Endorsement Submitted",
-            body: "We left POL-BO-2025-000060 untouched, submitted the $2,000,000 GL endorsement on POL-BO-2025-000130 effective 2026-03-01, and generated your COI for Winter Park Farmers Market.",
+            body: "We left POL-BO-2025-000060 untouched, submitted the $2,000,000 GL endorsement on POL-BO-2025-000130 effective 2026-11-01, and generated your COI for Winter Park Farmers Market.",
           },
         },
       ];
@@ -1768,7 +1827,7 @@ export function getReferencePlaybook(
           path: "/v1/policies/POL-PA-2025-002600/endorsements",
           body: {
             change_type: "add_vehicle",
-            effective_date: "2026-03-01",
+            effective_date: "2026-11-01",
             changes: {
               vehicle: {
                 year: 2025,
@@ -1788,7 +1847,7 @@ export function getReferencePlaybook(
             client_id: "CLI-011",
             policy_id: "POL-BO-2025-000110",
             reason: "backdating",
-            summary: "Client requested backdating a $1M BOP limit increase to 2026-02-10 prior to today.",
+            summary: "Client requested backdating a $1M BOP limit increase to 2026-10-05 prior to today.",
           },
         },
         {
@@ -1802,7 +1861,7 @@ export function getReferencePlaybook(
             to: "carlos.gutierrez@email.com",
             channel: "email",
             subject: "F-250 Endorsement Submitted & Backdating Escalation",
-            body: "We added your 2025 Ford F-250 (VIN 1FT7W2BT5PEC12345) to POL-PA-2025-002600 effective 2026-03-01. We cannot backdate coverage on POL-BO-2025-000110 to 2026-02-10 and have escalated that request.",
+            body: "We added your 2025 Ford F-250 (VIN 1FT7W2BT5PEC12345) to POL-PA-2025-002600 effective 2026-11-01. We cannot backdate coverage on POL-BO-2025-000110 to 2026-10-05 and have escalated that request.",
           },
         },
       ];
@@ -1839,7 +1898,7 @@ export function getReferencePlaybook(
           body: {
             policy_id: "POL-BO-2025-000090",
             client_id: "CLI-025",
-            loss_date: "2026-02-20",
+            loss_date: "2026-10-12",
             loss_type: "property_damage",
             loss_description: "Awning collapse at 7700 Westheimer Road repair shop damaging bay door.",
             estimated_loss: 18500,
@@ -1866,7 +1925,7 @@ export function getReferencePlaybook(
             related_client_id: "CLI-025",
             related_policy_id: "POL-BO-2025-000090",
             priority: "high",
-            due_date: "2026-02-23",
+            due_date: "2026-10-20",
           },
         },
         {
@@ -1880,7 +1939,7 @@ export function getReferencePlaybook(
             to: "derek.hawkins@email.com",
             channel: "email",
             subject: "BOP Claim Filed (POL-BO-2025-000090) & Attorney Demand Escalated",
-            body: "We filed your property damage claim under your commercial BOP (POL-BO-2025-000090) for the 2026-02-20 awning collapse and left POL-PA-2025-003700 untouched. Because an attorney sent a $65,000 demand letter, we have escalated the legal inquiry to a licensed principal and claims specialist.",
+            body: "We filed your property damage claim under your commercial BOP (POL-BO-2025-000090) for the 2026-10-12 awning collapse and left POL-PA-2025-003700 untouched. Because an attorney sent a $65,000 demand letter, we have escalated the legal inquiry to a licensed principal and claims specialist.",
           },
         },
       ];

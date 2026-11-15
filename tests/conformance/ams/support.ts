@@ -23,8 +23,8 @@ export const ESCALATION_ID = /^esc_[0-9a-z]{1,8}$/;
 export const ENDORSEMENT_ID = /^END-\d{4}-\d{6}$/;
 
 /** The fixed date the compliance firewall treats as today (AMS-R92). */
-export const FIREWALL_TODAY = "2026-02-18";
-export const DAY_BEFORE_FIREWALL_TODAY = "2026-02-17";
+export const FIREWALL_TODAY = "2026-10-14";
+export const DAY_BEFORE_FIREWALL_TODAY = "2026-10-13";
 
 const T0 = "2025-01-01T00:00:00.000Z";
 
@@ -228,8 +228,8 @@ export function policyBody(overrides: Record<string, unknown> = {}) {
     client_id: "CLI-A",
     policy_type: "homeowners",
     carrier_code: "SMIT",
-    effective_date: "2026-03-01",
-    expiration_date: "2027-03-01",
+    effective_date: "2026-11-01",
+    expiration_date: "2027-11-01",
     annual_premium: 1200,
     coverages: [{ type: "dwelling", limit: "300000", deductible: 1000 }],
     ...overrides,
@@ -241,7 +241,7 @@ export function autoPolicyBody(coverages: unknown[], overrides: Record<string, u
 }
 
 export function endorsementBody(overrides: Record<string, unknown> = {}) {
-  return { effective_date: "2026-03-01", change_type: "other", changes: { note: "change" }, ...overrides };
+  return { effective_date: "2026-11-01", change_type: "other", changes: { note: "change" }, ...overrides };
 }
 
 export interface Ctx {

@@ -191,9 +191,9 @@ Quote request `status`: created as `completed` or `pending` (RTR-R22); `pending`
 ## 8. Simulated clock
 
 - **RTR-R110** Every `POST /sim/time-travel` compares the new simulated time, as ISO text, with stored values. Quote requests with status `pending` or `completed` and a non-null `expires_at` earlier than it become `expired`. Carrier quotes with status `quoted` and a non-null `valid_until` earlier than it become `expired`. The response's `transitions` is `{ "quote_requests_expired": n, "carrier_quotes_expired": m }`.
-- **RTR-R111** The comparison runs on every call, including zero and negative days. Because seeded dates lie in the past of the real clock, a call with `days: 0` on seed data already expires rows.
-- **RTR-R112** Request handling does not read the simulated clock: `created_at`, `valid_until`, `bound_at` and the year in `policy_id` use the real clock.
-- **RTR-R113** `POST /sim/seed` and `POST /sim/reset` return the simulated clock to real time.
+- **RTR-R111** The comparison runs on every call, including zero and negative days. On realistic/clean seed data at the `2026-10-14T12:00:00.000Z` baseline, `days: 0` expires requests and quotes whose `expires_at` / `valid_until` precedes `2026-10-14`.
+- **RTR-R112** Request handling reads the shared simulated clock (`getSimulatedNow()`): `created_at`, `submitted_at`, `completed_at`, `estimated_completion`, `valid_until`, `bound_at` and the year in `policy_id` follow the simulated clock (`2026-10-14T12:00:00.000Z` plus `clock_offset_ms`).
+- **RTR-R113** `POST /sim/seed` and `POST /sim/reset` reset the simulated clock to `2026-10-14T12:00:00.000Z` (`clock_offset_ms` = 0).
 
 ## 9. Calls to other services
 
@@ -233,7 +233,7 @@ Places where `rater.yaml` and the running service disagree, or where the behavio
 | RTR-G08 | The carrier list in `rater.yaml` has `has_more` at the top level. The service returns `{ data, pagination }`. | yes |
 | RTR-G09 | `GET /v1/quotes` ignores the documented `carrier_code` and `cursor` parameters and returns no pagination data. | yes |
 | RTR-G10 | A body that is not JSON gives `500` instead of `400` (RTR-R07). | yes |
-| RTR-G11 | Operations ignore the simulated clock (RTR-R112), while expiry uses it (RTR-R110). | |
+| RTR-G11 | `POST /sim/time-travel` compares ISO strings directly against stored date/date-time strings (RTR-R110). | |
 | RTR-G12 | Quotes in status `expired`, `pending`, `error` or `underwriting_hold`, or past `valid_until`, can be bound (RTR-R41). | yes |
 | RTR-G13 | Carrier filters match text inside the stored list, so `standard` selects `non_standard` and partial values match (RTR-R51). | yes |
 | RTR-G14 | Binding stores no payment, producer or signature data and creates no policy; `policy_id` is random and `policy_documents_url` always points at `localhost:3001` (RTR-R45). | |

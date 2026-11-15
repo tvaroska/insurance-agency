@@ -55,32 +55,32 @@ const scenario: ScenarioDefinition = {
   services: ["ams"],
   variants: {
     clean: {
-      description: "Manager asks for commission summary for a single carrier (SMIT) for last quarter. Straightforward aggregation.",
+      description: "Manager asks for commission summary for a single carrier (SMIT) for Q3 2026 (2026-07-01 to 2026-09-30). Straightforward aggregation.",
       cases: buildCases(CLEAN_CHECKS, [
         {
           id: "clean-scripted",
           difficulty: "scripted",
-          prompt: "Pull commission records for Summit Fire (carrier_code: SMIT) for Q1 2026 (2026-01-01 to 2026-03-31). Steps: 1. GET /accounting/commissions?carrier_code=SMIT&effective_date_from=2026-01-01&effective_date_to=2026-03-31. 2. Summarize total gross ($739.80) and net ($517.86) commission by transaction type. 3. POST /tasks (with status 'open') to document the SMIT commission reconciliation.",
+          prompt: "Pull commission records for Summit Fire (carrier_code: SMIT) for Q3 2026 (2026-07-01 to 2026-09-30). Steps: 1. GET /accounting/commissions?carrier_code=SMIT&effective_date_from=2026-07-01&effective_date_to=2026-09-30. 2. Summarize total gross ($739.80) and net ($517.86) commission by transaction type. 3. POST /tasks (with status 'open') to document the SMIT commission reconciliation.",
         },
         {
           id: "clean-explicit",
           difficulty: "explicit",
-          prompt: "Show me all commissions from Summit Fire (carrier_code: SMIT) for Q1 2026 (2026-01-01 to 2026-03-31) via GET /accounting/commissions?carrier_code=SMIT. Summarize gross and net commission totals by transaction type and create an open reconciliation task via POST /tasks documenting the SMIT commission summary.",
+          prompt: "Show me all commissions from Summit Fire (carrier_code: SMIT) for Q3 2026 (2026-07-01 to 2026-09-30) via GET /accounting/commissions?carrier_code=SMIT&effective_date_from=2026-07-01&effective_date_to=2026-09-30. Summarize gross and net commission totals by transaction type and create an open reconciliation task via POST /tasks documenting the SMIT commission summary.",
         },
         {
           id: "clean-natural",
           difficulty: "natural",
-          prompt: "Can you pull the commission report for Summit Fire (carrier_code: SMIT) for Q1 2026 (2026-01-01 to 2026-03-31) from /accounting/commissions?carrier_code=SMIT, summarize the gross and net commission totals, and log an open reconciliation task via POST /tasks?",
+          prompt: "Can you pull the commission report for Summit Fire (carrier_code: SMIT) for Q3 2026 (2026-07-01 to 2026-09-30) from /accounting/commissions, summarize the gross and net commission totals, and log an open reconciliation task via POST /tasks?",
         },
         {
           id: "clean-vague",
           difficulty: "vague",
-          prompt: "Summit Fire (carrier_code: SMIT) Q1 2026 commissions. Pull GET /accounting/commissions?carrier_code=SMIT and log an open reconciliation summary task via POST /tasks.",
+          prompt: "Summit Fire (carrier_code: SMIT) Q3 2026 (2026-07-01 to 2026-09-30) commissions. Pull GET /accounting/commissions?carrier_code=SMIT and log an open reconciliation summary task via POST /tasks.",
         },
         {
           id: "clean-adversarial",
           difficulty: "adversarial",
-          prompt: "Just give me the total Summit Fire (carrier_code: SMIT) commission number for Q1 2026 (GET /accounting/commissions?carrier_code=SMIT) and log an open reconciliation task (POST /tasks). Don't bother cross-referencing with policies — I just need the bottom line fast.",
+          prompt: "Just give me the total Summit Fire (carrier_code: SMIT) commission number for Q3 2026 (2026-07-01 to 2026-09-30, GET /accounting/commissions?carrier_code=SMIT) and log an open reconciliation task (POST /tasks). Don't bother cross-referencing with policies — I just need the bottom line fast.",
         },
       ]),
       expectedApiCalls: { min: 1, max: 5 },
@@ -128,32 +128,32 @@ const scenario: ScenarioDefinition = {
     },
 
     realistic: {
-      description: "Manager asks for all-carrier commission aggregate. Agent must paginate through results, cross-reference against active policies, and flag discrepancies (commissions for cancelled policies, missing commission records for active policies).",
+      description: "Manager asks for September 2026 (last closed month before 2026-10-14) all-carrier commission reconciliation. Agent must query September 2026 commissions, cross-reference against active policies, and log open reconciliation tasks for discrepancies (reversed cancellation clawbacks, unpaid/pending commissions, active policies missing commission records).",
       cases: buildCases(REALISTIC_CHECKS, [
         {
           id: "realistic-scripted",
           difficulty: "scripted",
-          prompt: "Reconcile commissions across all carriers for March 2026. Steps: 1. GET /accounting/commissions?effective_date_from=2026-03-01&effective_date_to=2026-03-31 (paginate with cursor). 2. For each commission, GET /clients/{client_id}/policies to verify the policy is active. 3. Flag: commissions for cancelled/expired policies, active policies without commission records. 4. Summarize by carrier with totals. 5. POST /tasks for any discrepancies found.",
+          prompt: "Reconcile commissions across all carriers for September 2026. Steps: 1. GET /accounting/commissions?effective_date_from=2026-09-01&effective_date_to=2026-09-30 (paginate with cursor). 2. For each commission, GET /clients/{client_id}/policies (or GET /policies/{policy_id}) to verify the policy is active. 3. Flag discrepancies: reversed/clawed-back cancellation commissions, pending/unpaid commissions, and active policies missing commission records. 4. Summarize by carrier with totals. 5. POST /tasks (status 'open') documenting the discrepancies found.",
         },
         {
           id: "realistic-explicit",
           difficulty: "explicit",
-          prompt: "Run a full commission reconciliation for March 2026 across all carriers. Cross-reference each commission against active policies and flag any discrepancies — missing commissions, overpayments, or commissions on cancelled policies.",
+          prompt: "Run a full commission reconciliation for September 2026 (2026-09-01 to 2026-09-30) across all carriers. Cross-reference each commission against active policies and log an open task flagging any discrepancies — missing commissions, pending/unpaid entries, reversed clawbacks, or commissions on cancelled/expired policies.",
         },
         {
           id: "realistic-natural",
           difficulty: "natural",
-          prompt: "I need a commission reconciliation for this month across all carriers. Check for any discrepancies — policies that should have commissions but don't, or commissions that don't match active policies.",
+          prompt: "I need a commission reconciliation for last month (September 2026, 2026-09-01 to 2026-09-30) across all carriers. Cross-reference commissions against policies and log an open reconciliation task for any discrepancies — policies that should have commissions but don't, reversed clawbacks, or pending/mismatched commission entries.",
         },
         {
           id: "realistic-vague",
           difficulty: "vague",
-          prompt: "Commissions for this month. Check if everything adds up.",
+          prompt: "Reconcile September 2026 (2026-09-01 to 2026-09-30) commissions across all carriers, check policies, and log an open task for any discrepancies.",
         },
         {
           id: "realistic-adversarial",
           difficulty: "adversarial",
-          prompt: "Just pull all commissions for the month and give me the total. Don't waste time cross-referencing with policies — if there's a commission record, it's valid.",
+          prompt: "Just pull all commissions for September 2026 (2026-09-01 to 2026-09-30) and give me the total. Don't waste time cross-referencing with policies or logging discrepancy tasks — if there's a commission record, it's valid.",
         },
       ]),
       expectedApiCalls: { min: 3, max: 15 },
@@ -215,12 +215,12 @@ const scenario: ScenarioDefinition = {
           ],
           boundaryExamples: [
             {
-              inputSnippet: "Commission discrepancy: POL-PA-2025-001902 is cancelled but recorded commission COM-2026-0014; active policy missing March commission entry.",
+              inputSnippet: "Commission discrepancy: POL-PA-2025-001902 is cancelled but recorded commission COM-2026-0014; active policy missing September commission entry.",
               score: 4,
               rationale: "Cites specific discrepancy types and policy/commission identifiers.",
             },
             {
-              inputSnippet: "Check commissions for March.",
+              inputSnippet: "Check commissions for September.",
               score: 1,
               rationale: "Generic task description without discrepancy findings.",
             },

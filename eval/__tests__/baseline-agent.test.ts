@@ -84,7 +84,9 @@ describe("Playable Reference Baseline Agent (eval/agents/baseline-agent.ts)", ()
       return c.html("<html><body>Coastal Star Portal</body></html>");
     });
     carrier.use("/v1/*", strictModalityGuard("web-portal"));
-    carrier.get("/v1/coastal/quotes", (c) => c.json({ data: [] }));
+    carrier.get("/v1/coastal/quotes/:quote_id/risk-assessment", (c) =>
+      c.json({ quote_id: c.req.param("quote_id"), risk_score: 62 }),
+    );
 
     const mockFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);

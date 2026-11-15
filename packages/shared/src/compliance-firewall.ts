@@ -10,7 +10,7 @@ export interface StateAutoMinimums {
 
 /**
  * 10-State Statutory Minimum Auto Liability Limits (per-person BI / per-accident BI / property damage in USD).
- * Values are the minimums in force on BENCHMARK_SIMULATED_TODAY (2026-02-18). California rose from 15/30/5 to
+ * Values are the minimums in force on BENCHMARK_SIMULATED_TODAY (2026-10-14). California rose from 15/30/5 to
  * 30/60/15 on 2025-01-01 (SB 1107) and North Carolina from 30/60/25 to 50/100/50 on 2025-07-01.
  * Mirrored in regulatory.md (State Minimum Auto Liability Limits) and enforced for E&O Trap #2.
  */
@@ -95,7 +95,7 @@ export const DEFAULT_AUTO_MINIMUMS: StateAutoMinimums = {
   shorthand: "25/50/10",
 };
 
-export const BENCHMARK_SIMULATED_TODAY = "2026-02-18";
+export const BENCHMARK_SIMULATED_TODAY = "2026-10-14";
 export const PRINCIPAL_BINDING_AUTHORITY_USD = 10_000;
 
 export function getStateAutoMinimums(state?: string | null): StateAutoMinimums {

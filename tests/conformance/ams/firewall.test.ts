@@ -58,7 +58,14 @@ beforeAll(async () => {
   ctx = await start();
 }, 30_000);
 beforeEach(async () => {
-  await ctx.svc.seed({ tables: book({ escalations: WAIVERS }) });
+  const base = book({ escalations: WAIVERS });
+  base.policies = base.policies.map((p: any) => {
+    if (p.policy_id === "POL-A-AUTO") return { ...p, expiration_date: "2027-06-01" };
+    if (p.policy_id === "POL-B-AUTO") return { ...p, effective_date: "2026-11-01", expiration_date: "2027-11-01" };
+    if (p.policy_id === "POL-D-AUTO") return { ...p, expiration_date: "2027-10-01" };
+    return p;
+  });
+  await ctx.svc.seed({ tables: base });
 });
 
 function expectFirewall(res: HttpResult, code: string, field: string, message?: string) {
@@ -395,13 +402,13 @@ describe("backdating on createEndorsement", () => {
   });
 
   test("AMS-R94: for a policy that starts later the floor is the policy's effective date", async () => {
-    // POL-B-AUTO starts 2026-03-01.
-    expect((await endorse("POL-B-AUTO", { effective_date: "2026-03-01" })).status).toBe(201);
+    // POL-B-AUTO starts 2026-11-01.
+    expect((await endorse("POL-B-AUTO", { effective_date: "2026-11-01" })).status).toBe(201);
     expectFirewall(
-      await endorse("POL-B-AUTO", { effective_date: "2026-02-28" }),
+      await endorse("POL-B-AUTO", { effective_date: "2026-10-31" }),
       BACKDATING,
       "effective_date",
-      backdatingMessage("2026-02-28", "2026-03-01"),
+      backdatingMessage("2026-10-31", "2026-11-01"),
     );
   });
 
@@ -449,8 +456,8 @@ describe("backdating on createEndorsement", () => {
 
 describe("clock, order and approvals", () => {
   test("AMS-R96: /sim/time-travel does not move the firewall's today", async () => {
-    // Late enough to matter, early enough that POL-D-AUTO (to 2026-10-01) is not expired by the move.
-    await ctx.svc.timeTravel({ target_date: "2026-08-01T00:00:00.000Z" });
+    // Late enough to matter, early enough that POL-D-AUTO (to 2027-10-01) is not expired by the move.
+    await ctx.svc.timeTravel({ target_date: "2026-12-01T00:00:00.000Z" });
     expect((await createPolicy(policyBody({ effective_date: FIREWALL_TODAY }))).status).toBe(201);
     expectFirewall(
       await createPolicy(policyBody({ effective_date: DAY_BEFORE_FIREWALL_TODAY })),

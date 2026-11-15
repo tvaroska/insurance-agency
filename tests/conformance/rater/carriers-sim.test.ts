@@ -193,7 +193,8 @@ describe("seed data", () => {
 });
 
 describe("simulated clock", () => {
-  const at = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
+  const baseMs = Date.parse("2026-10-14T12:00:00.000Z");
+  const at = (days: number) => new Date(baseMs + days * 86_400_000).toISOString();
   const seed = () =>
     ctx.svc.seed({
       tables: {
@@ -244,18 +245,21 @@ describe("simulated clock", () => {
     expect(back.transitions).toEqual({ quote_requests_expired: 0, carrier_quotes_expired: 0 });
   });
 
-  test("RTR-R112: request handling keeps using the real clock after time travel", async () => {
+  test("RTR-R112: request handling advances with the simulated clock after time travel", async () => {
     await ctx.svc.seed({
       tables: { carriers: [carrierRow()], quote_requests: [requestRow()], carrier_quotes: [quoteRow()] },
     });
     await ctx.svc.timeTravel({ days: 400 });
+    const simNow = await ctx.svc.now();
+    const simMs = simNow.getTime();
+    const simYear = simNow.getUTCFullYear();
     const submitted = await ctx.api.post("/v1/quotes/request", quoteRequestBody());
-    expect(Math.abs(Date.parse(submitted.body.created_at) - Date.now())).toBeLessThan(60_000);
+    expect(Math.abs(Date.parse(submitted.body.created_at) - simMs)).toBeLessThan(60_000);
     const quote = (await ctx.svc.table("carrier_quotes")).find((q) => q.request_id === submitted.body.request_id)!;
-    expect(Math.abs(Date.parse(quote.valid_until) - Date.now() - 30 * 86_400_000)).toBeLessThan(60_000);
+    expect(Math.abs(Date.parse(quote.valid_until) - simMs - 30 * 86_400_000)).toBeLessThan(60_000);
     const bound = await ctx.api.post("/v1/quotes/QT-1/bind", bindBody());
-    expect(Math.abs(Date.parse(bound.body.bound_at) - Date.now())).toBeLessThan(60_000);
-    expect(bound.body.policy_id).toContain(`-${new Date().getFullYear()}-`);
+    expect(Math.abs(Date.parse(bound.body.bound_at) - simMs)).toBeLessThan(60_000);
+    expect(bound.body.policy_id).toContain(`-${simYear}-`);
   });
 
   test("RTR-R113: seeding or resetting returns the clock to real time", async () => {

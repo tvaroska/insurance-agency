@@ -54,7 +54,7 @@ describe("Pivot Agent (Cross-Sell) — E2E", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         policy_type: "personal_auto",
-        effective_date: "2026-07-01",
+        effective_date: "2026-11-01",
         client: {
           first_name: client.first_name,
           last_name: client.last_name,
@@ -128,7 +128,7 @@ describe("Pivot Agent (Cross-Sell) — E2E", () => {
           payment_method: "eft",
           producer_id: "prod_44e1bc90",
           insured_signature_collected: true,
-          insured_signature_date: "2026-02-20",
+          insured_signature_date: "2026-10-14",
         }),
       },
     );

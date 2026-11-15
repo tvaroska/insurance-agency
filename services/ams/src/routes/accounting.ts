@@ -48,6 +48,7 @@ accountingRouter.get("/commissions", requireScopes("ams:accounting:read"), async
 
   // Build filter conditions
   const filters: Record<string, unknown>[] = [];
+  if (query.policy_id) filters.push({ policy_id: query.policy_id });
   if (query.carrier_code) filters.push({ carrier_code: query.carrier_code });
   if (query.transaction_type) filters.push({ transaction_type: query.transaction_type });
   if (query.status) filters.push({ status: query.status });

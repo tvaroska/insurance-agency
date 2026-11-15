@@ -12,6 +12,7 @@ import {
   checkRange,
   checkMaxLength,
   throwIfErrors,
+  getSimulatedNow,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -216,7 +217,7 @@ leadsRouter.post(
         : null,
     ]);
 
-    const now = new Date().toISOString();
+    const now = getSimulatedNow().toISOString();
     const leadId = `lead_${Math.random().toString(36).slice(2, 10)}`;
 
     const record = {
@@ -299,7 +300,7 @@ leadsRouter.patch(
     }
 
     // Build update object
-    const now = new Date().toISOString();
+    const now = getSimulatedNow().toISOString();
     const updates: Record<string, unknown> = {
       updated_at: now,
       last_activity_date: now.split("T")[0],
@@ -378,7 +379,7 @@ leadsRouter.post(
 
     // Create enrollment
     const enrollmentId = `enr_${Math.random().toString(36).slice(2, 10)}`;
-    const enrolledAt = new Date().toISOString();
+    const enrolledAt = getSimulatedNow().toISOString();
 
     await prisma.campaignEnrollment.create({
       data: {

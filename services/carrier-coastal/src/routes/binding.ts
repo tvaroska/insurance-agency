@@ -7,6 +7,8 @@ import {
   checkRequired,
   checkEnum,
   throwIfErrors,
+  getSimulatedNow,
+  nextSimulatedEpochMs,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -57,11 +59,11 @@ bindingRouter.post(
       ]);
     }
 
-    const now = new Date().toISOString();
+    const now = getSimulatedNow().toISOString();
     const effectiveDate = body.effective_date;
     const [year, month, day] = effectiveDate.split("-").map(Number);
     const expirationDate = `${year + 1}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const policyId = `POL-CSTL-${Date.now()}`;
+    const policyId = `POL-CSTL-${nextSimulatedEpochMs()}`;
 
     // Create policy
     await prisma.policy.create({

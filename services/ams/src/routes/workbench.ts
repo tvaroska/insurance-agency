@@ -7,6 +7,8 @@ import {
   validateBindingAuthority,
   generateDevToken,
   getInternalRequestHeaders,
+  getSimulatedNow,
+  nextSimulatedEpochMs,
 } from "@evergreen/shared";
 import { prisma } from "../prisma";
 
@@ -418,7 +420,7 @@ let chaosSimulationState = {
   enabled: false,
   failureRate: 0,
   targetServices: ["rater", "carrier-summit", "carrier-coastal"],
-  lastUpdatedAt: new Date().toISOString(),
+  lastUpdatedAt: getSimulatedNow().toISOString(),
 };
 
 let simulatedDaysOffset = 0;
@@ -427,7 +429,7 @@ async function ensureSampleEscalations() {
   const count = await prisma.escalation.count();
   if (count > 0) return;
 
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
   const samples = [
     {
       escalation_id: "esc_showcase_01",
@@ -475,8 +477,8 @@ async function ensureSampleEscalations() {
       summary:
         "Client requested backdating collision deductible reduction from $2,500 to $500 effective 14 days ago (prior to reported parking lot loss).",
       context: JSON.stringify({
-        requested_effective_date: "2026-10-25",
-        loss_date: "2026-11-02",
+        requested_effective_date: "2026-09-30",
+        loss_date: "2026-10-08",
         firewall_code: "EO_COMPLIANCE_VIOLATION",
       }),
       status: "denied",
@@ -657,12 +659,12 @@ workbenchRouter.post("/workbench/api/run-journey", async (c) => {
   const beforeTasks = await prisma.task.count();
   const beforeEscalations = await prisma.escalation.count();
 
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
 
   if (evalMode === "unguarded_transcript") {
     // Demonstrates "Why Transcript Evals Fail": agent outputs a polite confirmation but mutates 0 required DB rows
     return c.json({
-      runId: `wb_unguarded_${Date.now().toString(36)}`,
+      runId: `wb_unguarded_${nextSimulatedEpochMs().toString(36)}`,
       timestamp: now,
       evalMode,
       journey,
@@ -769,7 +771,7 @@ workbenchRouter.post("/workbench/api/run-journey", async (c) => {
   const afterEscalations = await prisma.escalation.count();
 
   return c.json({
-    runId: `wb_${Date.now().toString(36)}`,
+    runId: `wb_${nextSimulatedEpochMs().toString(36)}`,
     timestamp: now,
     evalMode,
     journey,
@@ -959,7 +961,7 @@ workbenchRouter.post("/workbench/api/chaos", async (c) => {
     enabled,
     failureRate,
     targetServices: ["rater (:3001)", "carrier-summit (:3005)", "carrier-coastal (:3006)"],
-    lastUpdatedAt: new Date().toISOString(),
+    lastUpdatedAt: getSimulatedNow().toISOString(),
   };
 
   // Forward POST /sim/chaos to the real carrier-facing services
@@ -1012,7 +1014,7 @@ workbenchRouter.post("/workbench/api/time-travel", async (c) => {
   const days = Math.max(1, Number(body.days ?? 30));
   simulatedDaysOffset += days;
 
-  const now = new Date();
+  const now = getSimulatedNow();
   const futureDate = new Date(now.getTime() + simulatedDaysOffset * 86_400_000)
     .toISOString()
     .slice(0, 10);
@@ -1083,7 +1085,7 @@ workbenchRouter.post("/workbench/api/test-firewall", async (c) => {
       status: violations.length > 0 ? 422 : 200,
       error_code: violations.length > 0 ? "EO_COMPLIANCE_VIOLATION" : null,
       blocked: violations.length > 0,
-      evaluatedAt: new Date().toISOString(),
+      evaluatedAt: getSimulatedNow().toISOString(),
       violations,
     },
     violations.length > 0 ? 422 : 200,
@@ -1109,7 +1111,7 @@ workbenchRouter.post("/workbench/api/escalations/:id/resolve", async (c) => {
     return c.json({ error: "Escalation not found" }, 404);
   }
 
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
   const managerResponse = {
     decision,
     template_id: "principal_workbench",

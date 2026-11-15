@@ -389,7 +389,8 @@ describe("simulated clock", () => {
     created_at: "2026-01-01T00:00:00.000Z",
     ...overrides,
   });
-  const inHours = (h: number) => new Date(Date.now() + h * 3_600_000).toISOString();
+  const baseMs = Date.parse("2026-10-14T12:00:00.000Z");
+  const inHours = (h: number) => new Date(baseMs + h * 3_600_000).toISOString();
 
   test("COMM-R46: time travel fails pending deliveries whose retry time has passed, and only those", async () => {
     await ctx.svc.seed({
@@ -428,16 +429,16 @@ describe("simulated clock", () => {
     expect((await ctx.svc.table("webhook_deliveries"))[0].status).toBe("delivered");
   });
 
-  test("COMM-R47: after time travel new rows are still stamped with the wall clock", async () => {
+  test("COMM-R47: after time travel new rows are stamped with the simulated clock", async () => {
     await tool(ctx.api, "manage_webhook", { action: "subscribe", url: "https://hooks.example.com/x", events: ["message.delivered"] });
     await ctx.svc.timeTravel({ days: 365 });
-    expect((await ctx.svc.now()).getTime() - Date.now()).toBeGreaterThan(360 * 86_400_000);
-    const before = Date.now();
+    const simMs = (await ctx.svc.now()).getTime();
+    expect(simMs - baseMs).toBeGreaterThan(360 * 86_400_000);
     const sent = await tool(ctx.api, "send_message", { to: "+15550006666", channel: "sms", body: "x" });
     const hook = await tool(ctx.api, "manage_webhook", { action: "subscribe", url: "https://hooks.example.com/y", events: ["call.missed"] });
     const row = (await ctx.svc.table("webhook_deliveries"))[0];
     for (const stamp of [sent.timestamp, hook.created_at, row.created_at, JSON.parse(row.payload).timestamp]) {
-      expect(Math.abs(Date.parse(stamp) - before)).toBeLessThan(60_000);
+      expect(Math.abs(Date.parse(stamp) - simMs)).toBeLessThan(60_000);
     }
     expect((await ctx.svc.table("messages")).find((m) => m.message_id === "P1")).toBeDefined();
   });

@@ -11,6 +11,7 @@ import {
   checkEnum,
   checkMaxLength,
   throwIfErrors,
+  getSimulatedNow,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -115,7 +116,7 @@ campaignsRouter.post(
 
     // Create enrollment
     const enrollmentId = `enr_${Math.random().toString(36).slice(2, 10)}`;
-    const enrolledAt = new Date().toISOString();
+    const enrolledAt = getSimulatedNow().toISOString();
 
     await prisma.campaignEnrollment.create({
       data: {

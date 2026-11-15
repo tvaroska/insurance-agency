@@ -188,8 +188,8 @@ Document `status`: `uploaded` on upload (ECM-R11) and `generated` for a COI (ECM
 - **ECM-R102** `POST /sim/reset` and `POST /sim/seed` rebuild all three tables, discarding earlier writes.
 - **ECM-R110** Every `POST /sim/time-travel` sets to `expired` each envelope whose status is `created` or `sent` and whose `expiration_date`, compared as text, is earlier than the new simulated time in ISO form. The response's `transitions` is `{ "envelopes_expired": n }`. Documents are not touched.
 - **ECM-R111** The comparison runs on every call, including zero and negative days.
-- **ECM-R112** Request handling does not read the simulated clock: `upload_date`, `created_at`, envelope `expiration_date`, `required_by`, the audit's expiry check (ECM-R32) and the `Generated:` date in PDFs use the real clock.
-- **ECM-R113** `POST /sim/seed` and `POST /sim/reset` return the simulated clock to real time.
+- **ECM-R112** Request handling reads the shared simulated clock (`getSimulatedNow()` / `getSimulatedToday()`, `nextSimulatedEpochMs()`): `upload_date`, `created_at`, envelope `expiration_date`, `required_by`, the audit's expiry check (ECM-R32), COI filename epoch stamps and the `Generated:` date in PDFs follow the simulated clock (`2026-10-14T12:00:00.000Z` plus `clock_offset_ms`).
+- **ECM-R113** `POST /sim/seed` and `POST /sim/reset` reset the simulated clock to `2026-10-14T12:00:00.000Z` (`clock_offset_ms` = 0).
 
 ## 10. Runtime contract
 
@@ -222,6 +222,6 @@ Places where `ecm.yaml` and the running service disagree, or where the behaviour
 | ECM-G09 | Certificates are kept in process memory, so a certificate generated before a seed, reset or restart is still served, or replaced by the placeholder of ECM-R67. The download filename of a placeholder differs between the first and later downloads. The placeholder shows fixed values (carrier `SMIT`, premium `$2,400.00`) and takes its policy number from the second dash-separated part of the filename. | |
 | ECM-G10 | The audit answers `404` when the `status` filter matches nothing, although the client has documents (ECM-R30). | |
 | ECM-G11 | Creating an envelope does not check that the documents belong to the client and does not set the documents to `pending_signature` (ECM-R43, ECM-R44). | |
-| ECM-G12 | Operations ignore the simulated clock (ECM-R112), while envelope expiry uses it (ECM-R110). | |
+| ECM-G12 | `POST /sim/time-travel` expires envelopes (ECM-R110) without mutating document `status` rows. | |
 | ECM-G14 | `expiration_date` of a document is a date-time in `ecm.yaml`. COI documents store the policy's date-only expiration date (ECM-R64), and some seeded documents hold date-only text too. | yes |
 | ECM-G13 | Values of the wrong JSON type, and a `file` part sent as text, are not validated; their outcome is not part of this contract. | |

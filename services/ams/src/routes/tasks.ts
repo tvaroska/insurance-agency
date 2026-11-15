@@ -11,6 +11,7 @@ import {
   checkEnum,
   checkMaxLength,
   throwIfErrors,
+  getSimulatedNow,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -114,7 +115,7 @@ tasksRouter.post("/", requireScopes("ams:tasks:write"), async (c) => {
       : null,
   ]);
 
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
   const taskId = `TASK-${Math.random().toString(36).slice(2, 8)}`;
 
   const record = {
@@ -194,7 +195,7 @@ tasksRouter.patch(
 
     // Build update object from provided fields only
     const updates: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
+      updated_at: getSimulatedNow().toISOString(),
     };
 
     if (body.status !== undefined) updates.status = body.status;

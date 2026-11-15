@@ -1,5 +1,6 @@
 import type { PrismaClient } from "../generated/prisma/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { getSimulatedNow } from "@evergreen/shared";
 
 const VALID_EVENTS = [
   "message.received",
@@ -110,7 +111,7 @@ async function handleSubscribe(
 
   const webhookId = `whk_${crypto.randomUUID()}`;
   const secret = generateSecret();
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
 
   await db.webhook.create({
     data: {

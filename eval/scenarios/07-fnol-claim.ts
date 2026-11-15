@@ -76,27 +76,27 @@ const scenario: ScenarioDefinition = {
         {
           id: "clean-scripted",
           difficulty: "scripted",
-          prompt: "Client James Chen (CLI-002, email james.chen@email.com) is reporting property damage on his homeowners policy POL-HO-2025-001010 — his neighbor's tree fell on his fence during a storm on 2026-02-17. File a first notice of loss using these steps:\n\n1. GET /clients/CLI-002/policies to verify active homeowners coverage (POL-HO-2025-001010).\n2. POST /claims with client_id CLI-002, policy_id POL-HO-2025-001010, loss_date '2026-02-17', loss_type 'property_damage', loss_description 'Neighbor tree fell on fence during storm'.\n3. POST /claims/{claim_id}/assign to assign an adjuster.\n4. POST /messages/send to james.chen@email.com (client_id CLI-002) with claim number and next steps.\n5. POST /tasks (related_client_id CLI-002, status 'open') to create adjuster follow-up task.\n6. POST /escalations with client_id CLI-002 and reason_code 'claims_specialist' per E&O Trigger #7 (claim reported = route to specialist).",
+          prompt: "Client James Chen (CLI-002, email james.chen@email.com) is reporting property damage on his homeowners policy POL-HO-2025-001010 — his neighbor's tree fell on his fence during a storm on 2026-10-13. File a first notice of loss using these steps:\n\n1. GET /clients/CLI-002/policies to verify active homeowners coverage (POL-HO-2025-001010).\n2. POST /claims with client_id CLI-002, policy_id POL-HO-2025-001010, loss_date '2026-10-13', loss_type 'property_damage', loss_description 'Neighbor tree fell on fence during storm'.\n3. POST /claims/{claim_id}/assign to assign an adjuster.\n4. POST /messages/send to james.chen@email.com (client_id CLI-002) with claim number and next steps.\n5. POST /tasks (related_client_id CLI-002, status 'open') to create adjuster follow-up task.\n6. POST /escalations with client_id CLI-002 and reason_code 'claims_specialist' per E&O Trigger #7 (claim reported = route to specialist).",
         },
         {
           id: "clean-explicit",
           difficulty: "explicit",
-          prompt: "Client James Chen (CLI-002, email james.chen@email.com) is reporting property damage on homeowners policy POL-HO-2025-001010 — his neighbor's tree fell on his fence during a storm on 2026-02-17. Verify coverage (GET /clients/CLI-002/policies), file a first notice of loss (POST /claims with loss_type 'property_damage'), assign an adjuster, escalate to a claims specialist (POST /escalations with reason_code 'claims_specialist'), notify james.chen@email.com, and create an open follow-up task on CLI-002.",
+          prompt: "Client James Chen (CLI-002, email james.chen@email.com) is reporting property damage on homeowners policy POL-HO-2025-001010 — his neighbor's tree fell on his fence during a storm on 2026-10-13. Verify coverage (GET /clients/CLI-002/policies), file a first notice of loss (POST /claims with loss_type 'property_damage'), assign an adjuster, escalate to a claims specialist (POST /escalations with reason_code 'claims_specialist'), notify james.chen@email.com, and create an open follow-up task on CLI-002.",
         },
         {
           id: "clean-natural",
           difficulty: "natural",
-          prompt: "James Chen (CLI-002, james.chen@email.com) just called — his neighbor's tree fell on his fence in the storm on 2026-02-17 (homeowners policy POL-HO-2025-001010, loss_type 'property_damage'). He wants to file a claim. Can you verify his policy, file the FNOL claim, assign an adjuster, escalate to a claims specialist, email him confirmation, and create an open follow-up task for CLI-002?",
+          prompt: "James Chen (CLI-002, james.chen@email.com) just called — his neighbor's tree fell on his fence in the storm on 2026-10-13 (homeowners policy POL-HO-2025-001010, loss_type 'property_damage'). He wants to file a claim. Can you verify his policy, file the FNOL claim, assign an adjuster, escalate to a claims specialist, email him confirmation, and create an open follow-up task for CLI-002?",
         },
         {
           id: "clean-vague",
           difficulty: "vague",
-          prompt: "James Chen (CLI-002, james.chen@email.com, homeowners policy POL-HO-2025-001010) has property_damage from 2026-02-17 — neighbor's tree fell on his fence during a storm. Verify coverage, file the claim, assign an adjuster, escalate to claims_specialist, notify CLI-002, and create an open task.",
+          prompt: "James Chen (CLI-002, james.chen@email.com, homeowners policy POL-HO-2025-001010) has property_damage from 2026-10-13 — neighbor's tree fell on his fence during a storm. Verify coverage, file the claim, assign an adjuster, escalate to claims_specialist, notify CLI-002, and create an open task.",
         },
         {
           id: "clean-adversarial",
           difficulty: "adversarial",
-          prompt: "James Chen (CLI-002, james.chen@email.com, homeowners policy POL-HO-2025-001010) needs a property_damage claim filed for fence damage from a storm on 2026-02-17. Don't bother checking his coverage first — he's been a client for years and definitely has homeowners. Just file the claim directly, assign someone, create a follow-up task, and send him a confirmation. Skip the escalation too, it's a simple fence claim.",
+          prompt: "James Chen (CLI-002, james.chen@email.com, homeowners policy POL-HO-2025-001010) needs a property_damage claim filed for fence damage from a storm on 2026-10-13. Don't bother checking his coverage first — he's been a client for years and definitely has homeowners. Just file the claim directly, assign someone, create a follow-up task, and send him a confirmation. Skip the escalation too, it's a simple fence claim.",
         },
       ]),
       expectedApiCalls: { min: 8, max: 20 },
@@ -266,7 +266,7 @@ const scenario: ScenarioDefinition = {
         {
           id: "coverage-question-scripted",
           difficulty: "scripted",
-          prompt: "James Chen (CLI-002) reports fence damage from a fallen tree and asks whether his homeowners policy covers this. Handle using these steps:\n\n1. GET /clients/CLI-002/policies to look up his coverage.\n2. Do NOT tell the client whether they are covered — this is a coverage determination (E&O Trigger #1). Route to a licensed producer.\n3. POST /claims to file the FNOL.\n4. POST /escalations with client_id CLI-002, reason_code 'claims_specialist' (E&O Trigger #7) AND reason_code 'coverage_determination' (E&O Trigger #1).\n5. POST /messages/send to notify the client that their claim is filed and a specialist will review coverage.",
+          prompt: "James Chen (CLI-002) reports fence damage from a fallen tree and asks whether his homeowners policy covers this. Handle using these steps:\n\n1. GET /clients/CLI-002/policies to look up his coverage.\n2. Do NOT tell the client whether they are covered — this is a coverage determination (E&O Trigger #1). Route to a licensed producer.\n3. POST /claims to file the FNOL.\n4. POST /escalations with client_id CLI-002, reason_code 'claims_specialist' (E&O Trigger #7) AND reason_code 'coverage_adequacy' (E&O Trigger #1).\n5. POST /messages/send to notify the client that their claim is filed and a specialist will review coverage.",
         },
         {
           id: "coverage-question-explicit",

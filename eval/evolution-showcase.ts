@@ -79,7 +79,7 @@ export const COMPILED_WORKFLOW_SPECS: CompiledWorkflowSpec[] = [
     routineScenarioId: "16",
     pivotScenarioId: "18",
     fallbackTriggerDescription:
-      "Partial driver drop + retroactive coverage backdating request to 2026-02-10 prior to contract start (Scenario 18)",
+      "Partial driver drop + retroactive coverage backdating request to 2026-10-05 prior to contract start (Scenario 18)",
   },
 ];
 

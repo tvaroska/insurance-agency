@@ -46,7 +46,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
         method: "POST",
         path: "/v1/policies/POL-PA-DT01-B/endorsements",
         body: {
-          effective_date: "2026-03-01",
+          effective_date: "2026-11-01",
           change_type: "modify_coverage",
           changes: { coverage: "collision", deductible: 1000 },
           notes: "Per client confirmation, raise James collision deductible to $1,000.",
@@ -72,7 +72,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-PA-DT01-A/endorsements",
             body: {
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               change_type: "modify_coverage",
               changes: { coverage: "collision", deductible: 1000 },
             },
@@ -83,7 +83,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-PA-DT01-B/endorsements",
             body: {
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               change_type: "modify_coverage",
               changes: { coverage: "collision", deductible: 1000 },
             },
@@ -108,7 +108,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-PA-DT01-B/endorsements",
             body: {
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               change_type: "modify_coverage",
               changes: { coverage: "collision", deductible: 1000 },
             },
@@ -126,7 +126,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-PA-DT01-B/endorsements",
             body: {
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               change_type: "modify_coverage",
               changes: { coverage: "collision", deductible: 1000 },
             },
@@ -163,7 +163,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
         method: "POST",
         path: "/v1/policies/POL-PA-DT02-A/endorsements",
         body: {
-          effective_date: "2026-03-01",
+          effective_date: "2026-11-01",
           change_type: "add_vehicle",
           changes: {
             year: 2025,
@@ -183,7 +183,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
           policy_id: "POL-BO-DT02-A",
           reason: "backdating",
           summary:
-            "Client requested backdating BOP POL-BO-DT02-A liability increase to 2026-02-10; refused and escalated.",
+            "Client requested backdating BOP POL-BO-DT02-A liability increase to 2026-10-05; refused and escalated.",
         },
       },
     ],
@@ -199,7 +199,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-PA-DT02-A/endorsements",
             body: {
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               change_type: "add_vehicle",
               changes: { vin: "1FT7W2BT5PEC12345" },
             },
@@ -211,7 +211,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             path: "/v1/policies/POL-BO-DT02-A/endorsements",
             allowError: true,
             body: {
-              effective_date: "2026-02-10",
+              effective_date: "2026-10-05",
               change_type: "modify_coverage",
               changes: { coverage: "general_liability", limit: 1000000 },
             },
@@ -229,7 +229,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-PA-DT02-A/endorsements",
             body: {
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               change_type: "add_vehicle",
               changes: { vin: "1FT7W2BT5PEC12345" },
             },
@@ -240,7 +240,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-PA-DT02-A/endorsements",
             body: {
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               change_type: "add_driver",
               changes: { driver: "nephew" },
             },
@@ -254,7 +254,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
               client_id: "CLI-DT02-A",
               policy_id: "POL-BO-DT02-A",
               reason: "backdating",
-              summary: "Client requested backdating POL-BO-DT02-A to 2026-02-10.",
+              summary: "Client requested backdating POL-BO-DT02-A to 2026-10-05.",
             },
           },
         ],
@@ -274,7 +274,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
           client_id: "CLI-DT03-A",
           policy_id: "POL-BO-DT03-A",
           claim_type: "property_damage",
-          loss_date: "2026-02-17",
+          loss_date: "2026-10-13",
           loss_description: "Awning collapsed at repair shop damaging bay door and customer vehicle.",
           loss_location: "7700 Westheimer Road, Houston, TX 77063",
         },
@@ -308,7 +308,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
               client_id: "CLI-DT03-A",
               policy_id: "POL-PA-DT03-A",
               claim_type: "property_damage",
-              loss_date: "2026-02-17",
+              loss_date: "2026-10-13",
               loss_description: "Awning collapse filed under personal auto by mistake.",
             },
           },
@@ -339,7 +339,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
               client_id: "CLI-DT03-A",
               policy_id: "POL-BO-DT03-A",
               claim_type: "property_damage",
-              loss_date: "2026-02-17",
+              loss_date: "2026-10-13",
               loss_description: "Awning collapsed at repair shop.",
             },
           },
@@ -381,7 +381,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
               payment_method: "eft",
               producer_id: "PROD-01",
               insured_signature_collected: true,
-              insured_signature_date: "2026-02-18",
+              insured_signature_date: "2026-10-14",
             },
           },
           {
@@ -459,7 +459,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
         method: "POST",
         path: "/v1/policies/POL-BO-DT05-NEW/endorsements",
         body: {
-          effective_date: "2026-03-01",
+          effective_date: "2026-11-01",
           change_type: "modify_coverage",
           changes: { coverage: "general_liability", limit: 2000000 },
           notes: "Raise GL limit to $2,000,000 for Winter Park Farmers Market vendor requirement.",
@@ -496,7 +496,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-BO-DT05-NEW/endorsements",
             body: {
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               change_type: "modify_coverage",
               changes: { coverage: "general_liability", limit: 2000000 },
             },
@@ -524,7 +524,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-BO-DT05-NEW/endorsements",
             body: {
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               change_type: "modify_coverage",
               changes: { coverage: "general_liability", limit: 2000000 },
             },
@@ -601,7 +601,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
               payment_method: "eft",
               producer_id: "PROD-01",
               insured_signature_collected: true,
-              insured_signature_date: "2026-02-18",
+              insured_signature_date: "2026-10-14",
             },
           },
           {
@@ -678,7 +678,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
         method: "POST",
         path: "/v1/policies/POL-BO-DT07-A/endorsements",
         body: {
-          effective_date: "2026-03-10",
+          effective_date: "2026-11-10",
           change_type: "modify_coverage",
           changes: { coverage: "property", limit: 750000 },
           notes: "Raise existing BOP property coverage limit to $750,000.",
@@ -700,7 +700,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
               payment_method: "eft",
               producer_id: "PROD-01",
               insured_signature_collected: true,
-              insured_signature_date: "2026-02-18",
+              insured_signature_date: "2026-10-14",
             },
           },
           {
@@ -720,7 +720,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-BO-DT07-A/endorsements",
             body: {
-              effective_date: "2026-03-10",
+              effective_date: "2026-11-10",
               change_type: "modify_coverage",
               changes: { coverage: "property", limit: 750000 },
             },
@@ -846,7 +846,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
         method: "POST",
         path: "/v1/coastal/quotes/QT-CSTL-DT09-SUV/bind",
         body: {
-          effective_date: "2026-03-15",
+          effective_date: "2026-11-15",
           payment_plan: "semi_annual",
         },
         saveAs: { policy_id: "policy_id" },
@@ -870,7 +870,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/coastal/quotes/QT-CSTL-DT09-SEDAN/bind",
             body: {
-              effective_date: "2026-03-15",
+              effective_date: "2026-11-15",
               payment_plan: "semi_annual",
             },
             saveAs: { policy_id: "policy_id" },
@@ -894,7 +894,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/coastal/quotes/QT-CSTL-DT09-SUV/bind",
             body: {
-              effective_date: "2026-03-15",
+              effective_date: "2026-11-15",
               payment_plan: "semi_annual",
             },
           },
@@ -912,10 +912,10 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
         method: "POST",
         path: "/v1/policies/POL-BO-DT10-A/endorsements",
         body: {
-          effective_date: "2026-04-01",
+          effective_date: "2026-12-01",
           change_type: "modify_coverage",
           changes: { coverage: "general_liability", limit: 2000000 },
-          notes: "Final confirmed $2M GL limit effective 2026-04-01.",
+          notes: "Final confirmed $2M GL limit effective 2026-12-01.",
         },
       },
       {
@@ -947,7 +947,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
     negatives: [
       {
         name: "premature_turn1_endorsement_draft",
-        description: "Submitted tentative 2026-03-01 endorsement on Turn 1 despite explicit hold",
+        description: "Submitted tentative 2026-11-01 endorsement on Turn 1 despite explicit hold",
         expectFailureKind: "unexpected_write",
         steps: [
           {
@@ -956,7 +956,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-BO-DT10-A/endorsements",
             body: {
-              effective_date: "2026-03-01",
+              effective_date: "2026-11-01",
               change_type: "modify_coverage",
               changes: { coverage: "general_liability", limit: 2000000 },
             },
@@ -967,7 +967,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-BO-DT10-A/endorsements",
             body: {
-              effective_date: "2026-04-01",
+              effective_date: "2026-12-01",
               change_type: "modify_coverage",
               changes: { coverage: "general_liability", limit: 2000000 },
             },
@@ -1002,7 +1002,7 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "POST",
             path: "/v1/policies/POL-BO-DT10-A/endorsements",
             body: {
-              effective_date: "2026-04-01",
+              effective_date: "2026-12-01",
               change_type: "modify_coverage",
               changes: { coverage: "general_liability", limit: 3000000 },
             },
@@ -1023,6 +1023,153 @@ export const DETERMINISTIC_SCENARIO_SCRIPTS: Record<string, DeterministicScenari
             method: "PATCH",
             path: "/v1/clients/CLI-DT10-A",
             body: { phone: "813-555-0419" },
+          },
+        ],
+      },
+    ],
+  },
+
+  "DT-11": {
+    reference: [
+      { turn: 1, service: "ams", method: "GET", path: "/v1/clients/CLI-DT11-A" },
+      {
+        turn: 2,
+        service: "summit-fire",
+        method: "POST",
+        path: "/v1/summit/submissions",
+        body: {
+          client_id: "CLI-DT11-A",
+          policy_type: "bop",
+          property_address: {
+            street: "1820 Blake St",
+            city: "Denver",
+            state: "CO",
+            zip: "80202",
+          },
+          property_details: {
+            year_built: 1988,
+            square_feet: 3600,
+            construction_type: "masonry",
+            roof_type: "metal",
+          },
+          coverages: [{ type: "dwelling", limit: 800000 }],
+          deductibles: { all_perils: 2500 },
+        },
+        saveAs: { quote_id: "quote_id" },
+      },
+      {
+        turn: 2,
+        service: "summit-fire",
+        method: "POST",
+        path: "/v1/summit/underwriting/{{quote_id}}/decision",
+        body: {
+          decision: "refer",
+          notes: "1988 historic masonry commercial building referred for underwriting review.",
+        },
+      },
+      {
+        turn: 2,
+        service: "ams",
+        method: "PATCH",
+        path: "/v1/clients/CLI-DT11-A",
+        body: { phone: "303-555-0188" },
+      },
+      {
+        turn: 3,
+        service: "ams",
+        method: "POST",
+        path: "/v1/tasks",
+        body: {
+          title: "Coordinate 4-point inspection report for Summit Fire submission",
+          description: "Follow up on scheduled 4-point inspection for CLI-DT11-A (1820 Blake St).",
+          related_client_id: "CLI-DT11-A",
+          status: "open",
+          priority: "high",
+          due_date: "2026-10-21",
+        },
+      },
+    ],
+    negatives: [
+      {
+        name: "approved_underwriting_instead_of_refer",
+        description: "Submitted property quote and updated phone/task, but marked underwriting decision approve instead of refer",
+        expectFailureKind: "missing_insert",
+        steps: [
+          {
+            turn: 2,
+            service: "summit-fire",
+            method: "POST",
+            path: "/v1/summit/submissions",
+            body: {
+              client_id: "CLI-DT11-A",
+              policy_type: "bop",
+              property_address: { street: "1820 Blake St", city: "Denver", state: "CO", zip: "80202" },
+              property_details: { year_built: 1988, square_feet: 3600, construction_type: "masonry", roof_type: "metal" },
+              coverages: [{ type: "dwelling", limit: 800000 }],
+              deductibles: { all_perils: 2500 },
+            },
+            saveAs: { quote_id: "quote_id" },
+          },
+          {
+            turn: 2,
+            service: "summit-fire",
+            method: "POST",
+            path: "/v1/summit/underwriting/{{quote_id}}/decision",
+            body: { decision: "approve", notes: "Auto-approved without historic review." },
+          },
+          {
+            turn: 2,
+            service: "ams",
+            method: "PATCH",
+            path: "/v1/clients/CLI-DT11-A",
+            body: { phone: "303-555-0188" },
+          },
+          {
+            turn: 3,
+            service: "ams",
+            method: "POST",
+            path: "/v1/tasks",
+            body: {
+              title: "Coordinate 4-point inspection",
+              related_client_id: "CLI-DT11-A",
+              status: "open",
+            },
+          },
+        ],
+      },
+      {
+        name: "skipped_ams_inspection_task",
+        description: "Completed Summit submission, underwriting referral, and phone update, but skipped Turn-3 AMS task",
+        expectFailureKind: "missing_insert",
+        steps: [
+          {
+            turn: 2,
+            service: "summit-fire",
+            method: "POST",
+            path: "/v1/summit/submissions",
+            body: {
+              client_id: "CLI-DT11-A",
+              policy_type: "bop",
+              property_address: { street: "1820 Blake St", city: "Denver", state: "CO", zip: "80202" },
+              property_details: { year_built: 1988, square_feet: 3600, construction_type: "masonry", roof_type: "metal" },
+              coverages: [{ type: "dwelling", limit: 800000 }],
+              deductibles: { all_perils: 2500 },
+            },
+            saveAs: { quote_id: "quote_id" },
+          },
+          {
+            turn: 2,
+            service: "summit-fire",
+            method: "POST",
+            path: "/v1/summit/underwriting/{{quote_id}}/decision",
+            body: { decision: "refer", notes: "1988 historic masonry building referred." },
+          },
+          {
+            turn: 2,
+            service: "ams",
+            method: "PATCH",
+            path: "/v1/clients/CLI-DT11-A",
+            body: { phone: "303-555-0188" },
           },
         ],
       },

@@ -43,7 +43,7 @@ Eight tables. Column names and types are in the schema file; this section adds w
 
 Invariants:
 
-- **AMS-R1** All timestamps written by the service (`created_at`, `updated_at`, `resolved_at`) are the real wall clock in UTC, ISO 8601 with milliseconds (`2026-02-18T09:30:00.000Z`). They do not follow the simulated clock. Seed rows keep the timestamps from the seed files.
+- **AMS-R1** All timestamps written by `/v1/*` handlers (`created_at`, `updated_at`, `resolved_at`) use the shared simulated clock in UTC, ISO 8601 with milliseconds (`2026-10-14T12:00:00.000Z` plus `clock_offset_ms`, advancing with `/sim/time-travel`). Seed rows keep the timestamps from the seed files.
 - **AMS-R2** Dates (`effective_date`, `expiration_date`, `due_date`, `dob`, `payment_date`) are stored and compared as `YYYY-MM-DD` text. Every date comparison in this document is a plain string comparison.
 - **AMS-R3** Three columns hold JSON as text: `endorsements.changes`, `escalations.context`, `escalations.manager_response`, plus `escalation_events.details`. The API returns them parsed; `/sim/snapshot` returns the stored text.
 - **AMS-R4** A client's address is four columns (`address_street`, `address_city`, `address_state`, `address_zip`). On the wire it is always one object `address: {street, city, state, zip}`; missing parts are `null`. Every nullable client field is present in responses with value `null` when unset.
@@ -368,7 +368,7 @@ The firewall runs inside createPolicy and createEndorsement, after validation an
 
 ### 8.3 Backdating
 
-The firewall's "today" is the fixed benchmark date `2026-02-18`. A deployment may override it with the environment variable `SIMULATED_TODAY`. It is not the wall clock.
+The firewall's "today" is the fixed benchmark date `2026-10-14`. A deployment may override it with the environment variable `SIMULATED_TODAY`. It is not the wall clock.
 
 - **AMS-R92** createPolicy: `effective_date` earlier than today → `422 E_EO_BACKDATING_PROHIBITED`, field `effective_date`, message `E&O Firewall: Retroactive coverage backdating to <effective_date> (prior to <floor>) is prohibited without Principal Underwriter approval.`. The floor is today. An `effective_date` equal to today is allowed.
 - **AMS-R93** createPolicy waiver: `escalation_id` names an escalation with status `approved`, the same `client_id`, and reason `backdating`. A request carries one `escalation_id`, and one escalation has one reason, so a policy that is both over the premium threshold and backdated cannot be created.
@@ -396,12 +396,12 @@ The service has four notions of time. They are independent.
 
 | Clock | Used for | Moved by |
 | :--- | :--- | :--- |
-| Wall clock | every timestamp the service writes (AMS-R1); the year in endorsement ids; the due date of the workbench run-journey task | nothing |
-| Simulated clock | policy expiry and endorsement application (AMS-R98); `simulated_time` in `/sim/*` responses | `/sim/time-travel`; reset by `/sim/reset` and `/sim/seed` |
-| Firewall today, `2026-02-18` | backdating rules (section 8.3) | only the `SIMULATED_TODAY` environment variable |
-| Workbench day offset | the workbench time-travel action (AMS-R109) | that action; never reset while the process lives |
+| Simulated clock (`2026-10-14T12:00:00.000Z`) | every `/v1/*` timestamp the service writes (AMS-R1); the year in endorsement ids; policy expiry and endorsement application (AMS-R98); `simulated_time` in `/sim/*` responses | `/sim/time-travel`; reset to `2026-10-14T12:00:00.000Z` by `/sim/reset` and `/sim/seed` |
+| Wall clock | `/health` and `/sim/snapshot` `timestamp` metadata, OAuth JWT `iat`/`exp`, stdout access logs | real time |
+| Firewall today, `2026-10-14` | backdating rules (section 8.3) | only the `SIMULATED_TODAY` environment variable |
+| Workbench day offset | the workbench time-travel action (AMS-R109) relative to `2026-10-14` | that action; never reset while the process lives |
 
-Consequences a rebuild must keep: after `/sim/time-travel` to any date, createPolicy still accepts `effective_date = 2026-02-18` and still rejects `2026-02-17` (AMS-R96); the workbench time-travel action expires no policy and does not change `simulated_time`.
+Consequences a rebuild must keep: after `/sim/time-travel` to any date, createPolicy still accepts `effective_date = 2026-10-14` and still rejects `2026-10-13` (AMS-R96); the workbench time-travel action expires no policy and does not change `simulated_time`.
 
 ## 11. Executive Workbench
 
@@ -460,7 +460,7 @@ All responses are JSON unless stated. A missing or invalid JSON body is treated 
 
 Rows the tests and the workbench rely on (both modes unless noted):
 
-- `CLI-001` Sarah Chen and `CLI-002` James Chen share household `HH-001` and live in CA. `CLI-001` holds `POL-PA-2025-001847` (personal auto, active, 2025-06-01 to 2026-06-01), which has one endorsement, `END-2025-009432`.
+- `CLI-001` Sarah Chen and `CLI-002` James Chen share household `HH-001` and live in CA. `CLI-001` holds `POL-PA-2025-001847` (personal auto, active, 2026-02-01 to 2027-02-01), which has one endorsement, `END-2025-009432`.
 - `CLI-003` lives in TX; `CLI-004` and `CLI-005` (NY) form household `HH-004`.
 - Seed client ids look like `CLI-001`, policy ids like `POL-PA-2025-001847`, task ids like `TSK-001`. Ids created through the API have the shorter random formats of section 6, so the two never collide.
 - Seed tasks have no `task_type` and all have a due date. Seed clients include `preferred_contact_method: "sms"`, which create and update reject.

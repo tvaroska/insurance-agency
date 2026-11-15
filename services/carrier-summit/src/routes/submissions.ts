@@ -3,6 +3,8 @@ import {
   requireScopes,
   checkRequired,
   throwIfErrors,
+  getSimulatedNow,
+  nextSimulatedEpochMs,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -27,21 +29,23 @@ submissionsRouter.post(
       checkRequired("coverages", body.coverages),
     ]);
 
-    const now = new Date().toISOString();
-    const quoteId = `QT-SMIT-${Date.now()}`;
-    const requestId = `QR-${Date.now()}`;
+    const simNow = getSimulatedNow();
+    const now = simNow.toISOString();
+    const epochMs = nextSimulatedEpochMs();
+    const quoteId = `QT-SMIT-${epochMs}`;
+    const requestId = `QR-${epochMs}`;
 
     // Compute premium based on property details
     const details = body.property_details;
     const sqft = details.square_feet || 2000;
     const yearBuilt = details.year_built || 2000;
-    const ageDiscount = Math.max(0, 1 - (2026 - yearBuilt) * 0.005);
+    const ageDiscount = Math.max(0, 1 - (simNow.getUTCFullYear() - yearBuilt) * 0.005);
     const basePremium = sqft * 0.85;
     const annualPremium = Math.round(basePremium * ageDiscount * 100) / 100;
     const monthlyPremium = Math.round((annualPremium / 12) * 100) / 100;
 
     // Schedule inspection automatically
-    const inspectionDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const inspectionDate = new Date(simNow.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     await prisma.quote.create({
       data: {

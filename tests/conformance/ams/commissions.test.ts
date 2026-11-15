@@ -126,12 +126,12 @@ describe("listCommissions", () => {
       client_id: "CLI-A",
       policy_type: "homeowners",
       carrier_code: "SMIT",
-      effective_date: "2026-03-01",
-      expiration_date: "2027-03-01",
+      effective_date: "2026-11-01",
+      expiration_date: "2027-11-01",
       annual_premium: 1200,
       coverages: [{ type: "dwelling" }],
     });
-    await ctx.api.post("/v1/policies/POL-A-AUTO/endorsements", { effective_date: "2026-03-01", change_type: "other", changes: { a: 1 } });
+    await ctx.api.post("/v1/policies/POL-A-AUTO/endorsements", { effective_date: "2026-11-01", change_type: "other", changes: { a: 1 } });
     expect(await ctx.svc.table("commissions")).toEqual(before);
   });
 });

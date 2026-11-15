@@ -181,7 +181,7 @@ describe("POST /quotes/submit, new quote", () => {
   });
 
   test("CST-R26: a new quote is stored assessed, with risk from its id and a premium from its type and score", async () => {
-    const before = Date.now();
+    const before = (await ctx.svc.now()).getTime();
     const coverages = [{ type: "collision", deductible: 500 }];
     const { result: res, diff } = await ctx.svc.changes(() => post("/quotes/submit", { ...NEW, coverages }));
     expect(res.status).toBe(201);
@@ -286,7 +286,7 @@ describe("POST /quotes/submit, existing quote", () => {
   }
 
   test("CST-R29: a quoted quote becomes assessed; only the status and risk columns change", async () => {
-    const before = Date.now();
+    const before = (await ctx.svc.now()).getTime();
     const { result: res, diff } = await ctx.svc.changes(() =>
       post("/quotes/submit", { quote_id: "QT-RAW", client_id: "IGNORED", policy_type: "bop", coverages: [] }),
     );
@@ -369,7 +369,8 @@ describe("GET /quotes/{quote_id}/risk-assessment", () => {
 
 describe("POST /quotes/quick", () => {
   const QUICK = { vin: "1HGCM82633A004352", client_id: "CLI-003", driver_name: "Maria Rodriguez", driver_dob: "1985-05-05" };
-  const yearsAgo = (years: number) => new Date(Date.now() - years * 365.25 * 86_400_000 - 40 * 86_400_000).toISOString().slice(0, 10);
+  const baseMs = Date.parse("2026-10-14T12:00:00.000Z");
+  const yearsAgo = (years: number) => new Date(baseMs - years * 365.25 * 86_400_000 - 40 * 86_400_000).toISOString().slice(0, 10);
   const vinWithYear = (prefix: string, year: number) => {
     for (let i = 0; i < 10_000; i++) {
       const vin = `${prefix}${String(i).padStart(14, "0")}`;
@@ -507,7 +508,7 @@ describe("POST /quotes/quick", () => {
   });
 
   test("CST-R35: a quick quote stores an assessed personal auto quote with vehicle, driver and default coverages", async () => {
-    const before = Date.now();
+    const before = (await ctx.svc.now()).getTime();
     const { result: res, diff } = await ctx.svc.changes(() => post("/quotes/quick", { ...QUICK, driver_license: "TX-1234567" }));
     expect(res.status).toBe(201);
     expect(res.body.quote_id).toMatch(/^QT-CSTL-\d{13}$/);
@@ -726,7 +727,7 @@ describe("POST /quotes/{quote_id}/bind", () => {
   }
 
   test("CST-R40: binding inserts an active policy copied from the quote and marks the quote bound", async () => {
-    const before = Date.now();
+    const before = (await ctx.svc.now()).getTime();
     const { result: res, diff } = await ctx.svc.changes(() => bind("QT-ASSESSED", { effective_date: "2026-04-01", payment_plan: "monthly" }));
     expect(res.status).toBe(200);
     const policyId: string = res.body.policy_id;
@@ -828,7 +829,7 @@ describe("GET /policies/{policy_id}/id-card", () => {
   });
 
   test("CST-R42: the first read creates the card from the policy", async () => {
-    const before = Date.now();
+    const before = (await ctx.svc.now()).getTime();
     const { result: res, diff } = await ctx.svc.changes(() => spaced(() => ctx.api.get(`${API}/policies/POL-OLD/id-card`)));
     expect(res.status).toBe(200);
     expect(Object.keys(res.body)).toEqual(["card_id", "policy_id", "card_data", "issued_at"]);

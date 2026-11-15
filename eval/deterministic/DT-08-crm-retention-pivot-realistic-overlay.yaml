@@ -37,12 +37,12 @@ start_state:
           client_id: CLI-DT08-A
           carrier_code: CSTL
           policy_type: personal_auto
-          effective_date: "2025-04-01"
-          expiration_date: "2026-04-01"
+          effective_date: "2025-12-01"
+          expiration_date: "2026-12-01"
           premium_current: 1620
           status: active
-          created_at: "2025-04-01T00:00:00Z"
-          updated_at: "2025-04-01T00:00:00Z"
+          created_at: "2025-12-01T00:00:00Z"
+          updated_at: "2025-12-01T00:00:00Z"
       coverages:
         - policy_id: POL-PA-DT08-A
           type: bodily_injury
@@ -66,9 +66,9 @@ start_state:
           assigned_producer: PROD-01
           tags: ["auto", "renewal-review"]
           notes: "Renewal quote increased 18%; watching churn risk."
-          last_activity_date: "2026-02-01"
-          created_at: "2025-11-10T10:00:00Z"
-          updated_at: "2026-02-01T10:00:00Z"
+          last_activity_date: "2026-10-01"
+          created_at: "2026-07-10T10:00:00Z"
+          updated_at: "2026-10-01T10:00:00Z"
       retention_risks:
         - client_id: CLI-DT08-A
           client_name: David Ortega

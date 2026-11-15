@@ -234,7 +234,7 @@ describe("POST /v1/envelopes/create - Success", () => {
     const json = await res.json();
 
     const expDate = new Date(json.expiration_date);
-    const now = new Date();
+    const now = new Date(json.created_at);
     const diffDays =
       (expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
     expect(diffDays).toBeGreaterThan(29);

@@ -50,7 +50,8 @@ The scripted reference agent ([`eval/agents/baseline-agent.ts`](eval/agents/base
 
 - **Messy records.** The realistic seed has duplicate clients, unsigned documents, and 15 planted compliance and revenue anomalies across 80 policies. A clean seed (`SEED_MODE=clean`) is available for comparison.
 - **8 systems, no shared database.** The Agency Management System (AMS), the comparative rater, Customer Relationship Management (CRM), Enterprise Content Management (ECM), the messaging hub (Comm), claims, and 2 carrier portals each keep their own tables, 32 SQLite tables across the 8 services. A task is done only when every system that should change has changed.
-- **Three ways in.** 5 services speak REST, the messaging hub speaks Model Context Protocol (MCP), and 2 carriers only have browser portals. `MODALITY_MODE=strict` turns off REST shortcuts, so an agent has to use the interface each system actually offers.
+- **Three ways in.** 5 services speak REST, the messaging hub speaks Model Context Protocol (MCP), and 2 carriers only have browser portals (exercised directly in Scenarios 09 and 11, and in deterministic multi-turn tasks DT-09 and DT-11). `MODALITY_MODE=strict` turns off REST shortcuts, so an agent has to use the interface each system actually offers.
+- **Frozen simulated clock.** Every service anchors API timestamps, policy effective-date checks, and quote expirations to a deterministic simulated clock frozen at `2026-10-14T12:00:00.000Z` (`SIMULATED_TODAY=2026-10-14`, advanceable via `POST /sim/time-travel` and reset to zero offset by `POST /sim/reset` and `POST /sim/seed`), so live wall-clock dates never leak into responses or confuse backdating checks.
 - **Clients change their minds.** 5 workflows are multi-turn. A scripted customer replies through the messaging hub and changes the request mid-task.
 - **Legal traps.** 10 E&O triggers ([`regulatory.md`](regulatory.md)), from state minimum limits to attorney letters, must be refused or escalated. The services block 3 of them with HTTP 422: limits below the state minimum, binds above the agency's $10,000 binding authority, and backdated coverage. The other 7 depend on the agent's judgment.
 
@@ -163,7 +164,7 @@ Full comparison and packaging standards: [`docs/benchmark-landscape.md`](docs/be
 - Multi-turn customers are a scripted simulator: replies are reproducible but narrower than real clients.
 - The 259 tasks are 20 workflows written several ways. Treat claims about workflows as n = 20.
 - One industry so far: independent P&C insurance.
-- Statutory minimums reflect the law on the benchmark date, 18 February 2026 ([`regulatory.md`](regulatory.md)).
+- Statutory minimums reflect the law on the frozen benchmark date, 14 October 2026 ([`regulatory.md`](regulatory.md)). The v0.8 run in [`eval/results/v0.8/`](eval/results/v0.8/) was recorded against the earlier 18 February 2026 seed date before the service clock was frozen.
 - Model results cover one natural-language prompt per workflow (n = 20) at 5 trials, one harness, and one learning mechanism. Scenario 09 has no `realistic` variant, so its `moderate` variant stands in; the v0.8 clean control covered 18 workflows before clean natural-language tasks were added to Scenarios 08 and 09. `claude-sonnet-5-5` ran on a different Google Cloud project from the other models, with the same region and harness.
 
 ---

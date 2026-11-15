@@ -11,6 +11,7 @@ import {
   checkEnum,
   checkMaxLength,
   throwIfErrors,
+  getSimulatedNow,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -117,7 +118,7 @@ clientsRouter.post("/", requireScopes("ams:clients:write"), async (c) => {
     throw conflictError(`A client with email '${body.email}' already exists.`);
   }
 
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
   const clientId = `CL-${Math.random().toString(36).slice(2, 8)}`;
   const address = body.address ?? {};
 
@@ -211,7 +212,7 @@ clientsRouter.patch("/:id", requireScopes("ams:clients:write"), async (c) => {
 
   // Build update object
   const updates: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
+    updated_at: getSimulatedNow().toISOString(),
   };
 
   if (body.first_name !== undefined) updates.first_name = body.first_name;
@@ -405,7 +406,7 @@ clientsRouter.post("/:id/merge", requireScopes("ams:clients:write"), async (c) =
   });
 
   // Re-parent policies
-  const now = new Date().toISOString();
+  const now = getSimulatedNow().toISOString();
   if (policiesMoved > 0) {
     await prisma.policy.updateMany({
       where: { client_id: sourceId },

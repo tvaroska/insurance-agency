@@ -156,8 +156,8 @@ None. Lead `status` is free (CRM-R44). Campaign `status` is never changed by an 
 
 - **CRM-R110** `POST /sim/time-travel` that moves the clock forward by `d` days adds `max(1, floor(d / 7))` to `sequence_step` of every enrollment. The response's `transitions` is `{ "campaign_enrollments_advanced": <number of enrollments> }`.
 - **CRM-R111** With zero or negative days nothing changes and `campaign_enrollments_advanced` is 0.
-- **CRM-R112** Request handling does not read the simulated clock: `created_at`, `updated_at`, `last_activity_date` and `enrolled_at` use the real clock.
-- **CRM-R113** `POST /sim/seed` and `POST /sim/reset` return the simulated clock to real time.
+- **CRM-R112** Request handling reads the shared simulated clock (`getSimulatedNow()` / `getSimulatedToday()`): `created_at`, `updated_at`, `last_activity_date` and `enrolled_at` follow the simulated clock (`2026-10-14T12:00:00.000Z` plus `clock_offset_ms`).
+- **CRM-R113** `POST /sim/seed` and `POST /sim/reset` reset the simulated clock to `2026-10-14T12:00:00.000Z` (`clock_offset_ms` = 0).
 
 ## 9. Calls to other services
 
@@ -193,4 +193,4 @@ Places where `crm.yaml` and the running service disagree, or where the behaviour
 | CRM-G08 | `crm.yaml` documents `409` for `POST /v1/leads` and `PATCH /v1/leads/{id}`. The service never answers `409` there. |
 | CRM-G09 | `pagination.next_cursor` is returned but is not part of `CursorPagination` in `crm.yaml`. |
 | CRM-G10 | Values of the wrong JSON type are not validated. Their outcome is not part of this contract: for example a `score` sent as text, or a null `status` or `score`, gives `500`; a fractional `score` is stored without its fraction; and `tags` accepts any JSON value. `trigger_reason` is limited to 500 characters on one enroll path only (CRM-R70, not CRM-R51). |
-| CRM-G11 | Operations ignore the simulated clock (CRM-R112). |
+| CRM-G11 | Campaign enrollment `sequence_step` advances only via `/sim/time-travel` (CRM-R110). |

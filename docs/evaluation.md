@@ -42,7 +42,8 @@ Agent-emitted OpenTelemetry traces still work, and all benchmark harnesses are s
 
 - **Recorded:** requests to `/v1/*`, and MCP `tools/call` requests to `POST /mcp` on `comm` (tagged with `mcp.tool.name`).
 - **Not recorded:** internal service-to-service calls (`X-Evergreen-Internal: 1`, gated by `EVERGREEN_SCORER_SECRET` when configured), `/oauth/*`, `/auth/*`, `/sim/*`, `/health`, `/workbench*`, static assets, and MCP handshake (`initialize`), `tools/list`, and notification messages.
-- **Lifecycle:** `POST /sim/reset` reseeds the service's isolated SQLite database in `< 100ms` via in-process `seedDatabase()` and clears the request log; `GET /sim/trace` exports the OTLP JSON spans.
+- **Lifecycle & Frozen Simulated Clock:** `POST /sim/reset` (and `POST /sim/seed` for deterministic fixtures) reseeds the service's isolated SQLite database in `< 100ms`, clears the request log, and resets the simulation clock offset to `0` (`2026-10-14T12:00:00.000Z`, `BENCHMARK_SIMULATED_TODAY = "2026-10-14"`, overridable via `SIMULATED_TODAY` and advanceable via `POST /sim/time-travel`); `GET /sim/trace` exports the OTLP JSON spans. All `/v1/*` and `/mcp` business timestamps derive from the frozen simulation clock so live calendar dates never leak into responses or confuse backdating and expiration logic.
+- **Carrier Portal Workflows (`MODALITY_MODE=strict`):** Scenarios `09` (*Coastal Star Auto* `:3006`) and `11` (*Summit Fire & Casualty* `:3005`), along with deterministic multi-turn tasks `DT-09` and `DT-11`, require genuine browser execution (`/auth/portal-session` bootstrap cookie + `X-Portal-Session`) in `strict` mode, while `MODALITY_MODE=permissive` exposes the 12 carrier OpenAPI operations directly for GUI-vs-REST modality ablations.
 
 ```bash
 # End-to-end 20-scenario harness validation (isolated /tmp EVERGREEN_DATA_DIR):

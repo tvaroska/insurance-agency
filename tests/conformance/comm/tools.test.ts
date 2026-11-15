@@ -150,7 +150,7 @@ describe("manage_webhook subscribe", () => {
   });
 
   test("COMM-R31: subscribe stores an active webhook with a fresh secret and returns it once", async () => {
-    const before = Date.now();
+    const simMs = (await ctx.svc.now()).getTime();
     const { result, diff } = await ctx.svc.changes(() =>
       tool(ctx.api, "manage_webhook", {
         action: "subscribe",
@@ -164,7 +164,7 @@ describe("manage_webhook subscribe", () => {
     expect(result.url).toBe("https://hooks.example.com/in");
     expect(result.events).toEqual(["message.received", "call.completed"]);
     expect(result.created_at).toMatch(ISO_TIME);
-    expect(Date.parse(result.created_at)).toBeGreaterThanOrEqual(before - 1000);
+    expect(Math.abs(Date.parse(result.created_at) - simMs)).toBeLessThan(60_000);
     expect(diff).toEqual({
       webhooks: {
         added: [

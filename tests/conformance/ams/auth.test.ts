@@ -299,8 +299,8 @@ describe("error envelope", () => {
       client_id: "CLI-A",
       policy_type: "homeowners",
       carrier_code: "SMIT",
-      effective_date: "2026-03-01",
-      expiration_date: "2027-03-01",
+      effective_date: "2026-11-01",
+      expiration_date: "2027-11-01",
       annual_premium: 1200,
       coverages: [{ type: "dwelling" }],
     };

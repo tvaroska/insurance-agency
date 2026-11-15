@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import {
   requireScopes,
   notFoundError,
+  getSimulatedNow,
+  nextSimulatedEpochMs,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -41,8 +43,8 @@ idCardsRouter.get(
     }
 
     // Generate ID card on the fly
-    const now = new Date().toISOString();
-    const cardId = `IDC-${policyId.replace(/[^A-Z0-9]/g, "").substring(0, 8)}-${Date.now()}`;
+    const now = getSimulatedNow().toISOString();
+    const cardId = `IDC-${policyId.replace(/[^A-Z0-9]/g, "").substring(0, 8)}-${nextSimulatedEpochMs()}`;
     const coverages = JSON.parse(policy.coverages);
 
     const cardData = {

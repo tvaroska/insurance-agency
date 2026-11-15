@@ -70,12 +70,18 @@ def test_evergreen_py_delegates_to_evergreen_langchain_pipeline():
 def test_learning_mechanism_appends_domain_skill_sop_and_rejects_unknown():
     urls = service_base_urls()
     zero_shot = harness.system_prompt(urls, learning_mechanism="none")
+    policy_only = harness.system_prompt(urls, learning_mechanism="policy_prompt")
     with_sop = harness.system_prompt(urls, learning_mechanism="domain_skill")
 
-    assert len(with_sop) > len(zero_shot) + 1000
+    assert "Current agency operating date: 2026-10-14." in zero_shot
+    assert "Regulatory and E&O guardrails" not in zero_shot
+    assert "Regulatory and E&O guardrails" in policy_only
+    assert len(policy_only) > len(zero_shot) + 500
+    assert len(with_sop) > len(policy_only) + 1000
     assert "Customer Service Representative (CSR) Operational SOP" in with_sop
     assert "30/60/15" in with_sop and "30/60/25" in with_sop and "50/100/50" in with_sop
     assert "Customer Service Representative (CSR) Operational SOP" not in zero_shot
+    assert "Customer Service Representative (CSR) Operational SOP" not in policy_only
 
     with pytest.raises(ValueError, match="Unsupported learning_mechanism"):
         harness.evergreen_langchain(scenario="01", learning_mechanism="magic_oracle")
@@ -235,12 +241,15 @@ def test_seed_mode_maps_variants_to_realistic_data():
 def test_system_prompt_covers_all_10_regulatory_triggers_and_real_tools(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("EVERGREEN_BASE_PORT", raising=False)
     monkeypatch.delenv("EVERGREEN_BASE_URLS", raising=False)
-    prompt = harness.system_prompt(service_base_urls())
+    zero_prompt = harness.system_prompt(service_base_urls(), learning_mechanism="none")
+    prompt = harness.system_prompt(service_base_urls(), learning_mechanism="policy_prompt")
     operation_ids = {op.operation_id for op in load_operations()}
     assert "createEscalation" in operation_ids
-    assert "createEscalation" in prompt
-    assert "check the inbox with get_inbox for the client's reply" in prompt
-    assert "http://localhost:3005" in prompt and "http://localhost:3006" in prompt
+    assert "createEscalation" in zero_prompt
+    assert "2026-10-14" in zero_prompt
+    assert "check the inbox with get_inbox for the client's reply" in zero_prompt
+    assert "http://localhost:3005" in zero_prompt and "http://localhost:3006" in zero_prompt
+    assert "state_minimum_violation" not in zero_prompt
     for expected_token in (
         "coverage_adequacy",
         "state_minimum_violation",
@@ -249,10 +258,11 @@ def test_system_prompt_covers_all_10_regulatory_triggers_and_real_tools(monkeypa
         "principal_review",
         "backdating",
         "surplus_lines",
-        "claims specialist",
+        "claims_specialist",
         "appointment",
         "underwriting",
         "exclusions",
+        "2026-10-14",
     ):
         assert expected_token in prompt
 

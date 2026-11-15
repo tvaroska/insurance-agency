@@ -5,6 +5,8 @@ import {
   conflictError,
   checkRequired,
   throwIfErrors,
+  getSimulatedNow,
+  nextSimulatedEpochMs,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -71,9 +73,10 @@ quotesRouter.post(
         checkRequired("effective_date", body.effective_date),
       ]);
 
-      const now = new Date().toISOString();
-      const newQuoteId = `QT-CSTL-${Date.now()}`;
-      const requestId = `QR-${Date.now()}`;
+      const now = getSimulatedNow().toISOString();
+      const epochMs = nextSimulatedEpochMs();
+      const newQuoteId = `QT-CSTL-${epochMs}`;
+      const requestId = `QR-${epochMs}`;
 
       const coverages = body.coverages || [];
       const score = computeRiskScore(newQuoteId);
@@ -143,7 +146,7 @@ quotesRouter.post(
     const score = computeRiskScore(quoteId);
     const tier = riskTier(score);
     const factors = generateRiskFactors(score);
-    const now = new Date().toISOString();
+    const now = getSimulatedNow().toISOString();
 
     // Update quote with risk assessment
     await prisma.quote.update({

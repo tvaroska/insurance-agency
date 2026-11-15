@@ -6,6 +6,7 @@ import {
   checkRequired,
   checkEnum,
   throwIfErrors,
+  getSimulatedNow,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -57,7 +58,7 @@ underwritingRouter.post(
     };
 
     const newStatus = statusMap[body.decision];
-    const now = new Date().toISOString();
+    const now = getSimulatedNow().toISOString();
 
     // Update quote
     await prisma.quote.update({

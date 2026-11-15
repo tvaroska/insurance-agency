@@ -10,6 +10,7 @@ import {
   parsePaginationParams,
   applyPrismaCursorPagination,
   paginatedResponse,
+  getSimulatedNow,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -212,9 +213,9 @@ envelopesRouter.post(
 
     // Create envelope
     const envelopeId = `env_${Math.random().toString(36).slice(2, 10)}`;
-    const createdAt = new Date().toISOString();
-    const expirationDate = new Date();
-    expirationDate.setDate(expirationDate.getDate() + 30);
+    const simNow = getSimulatedNow();
+    const createdAt = simNow.toISOString();
+    const expirationDate = new Date(simNow.getTime() + 30 * 86_400_000);
 
     const signers = body.signers.map(
       (s: { name: string; email: string; role: string }) => ({

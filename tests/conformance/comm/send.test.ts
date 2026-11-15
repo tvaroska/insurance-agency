@@ -91,14 +91,13 @@ describe("send_message validation", () => {
 
 describe("send_message success", () => {
   test("COMM-R25: an SMS without client_id is stored as an outbound queued row from the agency number", async () => {
-    const before = Date.now();
+    const simMs = (await ctx.svc.now()).getTime();
     const { result, diff } = await ctx.svc.changes(() => send({ to: "+15550001111", channel: "sms", body: "Hello" }));
     expect(Object.keys(result)).toEqual(["message_id", "status", "channel", "timestamp"]);
     expect(result.message_id).toMatch(new RegExp(`^msg_${UUID}$`));
     expect(result).toMatchObject({ status: "queued", channel: "sms" });
     expect(result.timestamp).toMatch(ISO_TIME);
-    expect(Date.parse(result.timestamp)).toBeGreaterThanOrEqual(before - 1000);
-    expect(Date.parse(result.timestamp)).toBeLessThanOrEqual(Date.now() + 1000);
+    expect(Math.abs(Date.parse(result.timestamp) - simMs)).toBeLessThan(60_000);
     expect(Object.keys(diff)).toEqual(["messages"]);
     expect(diff.messages.added).toEqual([
       {
@@ -460,7 +459,7 @@ describe("reply simulator", () => {
 describe("webhook deliveries", () => {
   test("COMM-R36: a send records one delivered row per subscription to message.delivered", async () => {
     const hook = await subscribe(["message.delivered"]);
-    const before = Date.now();
+    const simMs = (await ctx.svc.now()).getTime();
     const { result, diff } = await ctx.svc.changes(() => send({ to: "+15550004444", channel: "sms", body: "ping" }));
     expect(diff.webhook_deliveries.added).toHaveLength(1);
     const row: any = diff.webhook_deliveries.added[0];
@@ -475,7 +474,7 @@ describe("webhook deliveries", () => {
     });
     expect(row.created_at).toMatch(ISO_TIME);
     expect(row.last_attempt_at).toBe(row.created_at);
-    expect(Date.parse(row.created_at)).toBeGreaterThanOrEqual(before - 1000);
+    expect(Math.abs(Date.parse(row.created_at) - simMs)).toBeLessThan(60_000);
 
     const envelope = JSON.parse(row.payload);
     expect(Object.keys(envelope)).toEqual(["event_id", "event_type", "timestamp", "data"]);

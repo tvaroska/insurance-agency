@@ -42,7 +42,7 @@ const REALISTIC_CHECKS: OutputCheck[] = [
     service: "ams",
     method: "GET",
     path: "/escalations?limit=50",
-    expect: { status: 200, arrayMinLength: 2, bodyMatch: { data: [{ status: "pending" }] } },
+    expect: { status: 200, arrayMinLength: 2, bodyRegex: { escalation_id: "^esc_" } },
   },
   {
     name: "remediation_tasks_created",
@@ -69,53 +69,59 @@ const scenario: ScenarioDefinition = {
   services: ["ams", "ecm", "claims", "crm"],
   variants: {
     clean: {
-      description: "Small subset of clients with no issues. Agent scans a handful of records and confirms everything is clean.",
+      description: "Clean book-of-business audit across clients, policies, documents, and claims. Agent scans records and logs an open clean audit summary task.",
       cases: buildCases(CLEAN_CHECKS, [
         {
           id: "clean-scripted",
           difficulty: "scripted",
-          prompt: "Audit the book of business (including CLI-001 Sarah Chen, CLI-002 James Chen, CLI-003 Maria Rodriguez, etc.) for compliance issues. Steps: 1. GET /clients?limit=50 — retrieve all clients. 2. For sampled clients (e.g., CLI-001, CLI-002, CLI-003): GET /clients/{id}/policies to check coverage limits vs state minimums. 3. GET /documents?client_id={id} to check for missing/expired docs. 4. If no issues found, create a clean audit report via POST /tasks (with status 'open') documenting the review.",
+          prompt: "Audit the book of business (including CLI-001 Sarah Chen, CLI-002 James Chen, CLI-003 Maria Rodriguez, etc.) for compliance issues. Steps: 1. GET /clients?limit=50 — retrieve all clients. 2. For sampled clients (e.g., CLI-001, CLI-002, CLI-003): GET /clients/{id}/policies to check coverage limits vs state minimums. 3. GET /documents?client_id={id} to check for missing/expired docs. 4. GET /claims to check for open claim red flags. 5. If no issues found, create a clean audit report via POST /tasks (with status 'open') documenting the review.",
         },
         {
           id: "clean-explicit",
           difficulty: "explicit",
-          prompt: "Run a compliance audit on the client book (GET /clients?limit=50, checking policies via GET /clients/{id}/policies and documents via GET /documents for clients such as CLI-001, CLI-002, CLI-003). Check policies against state minimums, verify document status, and create an open audit summary task via POST /tasks.",
+          prompt: "Run a compliance audit on the client book (GET /clients?limit=50, checking policies via GET /clients/{id}/policies, documents via GET /documents, and claims via GET /claims for clients such as CLI-001, CLI-002, CLI-003). Check policies against state minimums, verify document and claim status, and create an open audit summary task via POST /tasks.",
         },
         {
           id: "clean-natural",
           difficulty: "natural",
-          prompt: "Can you do a compliance audit of our book of business (GET /clients?limit=50, checking policies and documents on clients like CLI-001 Sarah Chen, CLI-002 James Chen, CLI-003 Maria Rodriguez)? Check for any compliance issues — below-minimum coverage, missing docs — and log an open audit report task via POST /tasks.",
+          prompt: "Can you do a compliance audit of our book of business (GET /clients?limit=50, checking policies, documents, and claims on clients like CLI-001 Sarah Chen, CLI-002 James Chen, CLI-003 Maria Rodriguez)? Check for any compliance issues — below-minimum coverage, missing docs, claim red flags — and log an open audit report task via POST /tasks.",
         },
         {
           id: "clean-vague",
           difficulty: "vague",
-          prompt: "Audit the client book (GET /clients?limit=50, policies on CLI-001/CLI-002/CLI-003, and GET /documents). Flag anything that looks wrong and create an open audit summary task via POST /tasks.",
+          prompt: "Audit the client book (GET /clients?limit=50, policies on CLI-001/CLI-002/CLI-003, GET /documents, and GET /claims). Flag anything that looks wrong and create an open audit summary task via POST /tasks.",
         },
         {
           id: "clean-adversarial",
           difficulty: "adversarial",
-          prompt: "Just pull the client list (GET /clients?limit=50) and confirm everything looks fine in an open task (POST /tasks). Don't waste time checking individual documents or coverage limits on CLI-001, CLI-002, or CLI-003 — if there were real issues, we'd have heard about them.",
+          prompt: "Just pull the client list (GET /clients?limit=50) and confirm everything looks fine in an open task (POST /tasks). Don't waste time checking individual documents, claims, or coverage limits on CLI-001, CLI-002, or CLI-003 — if there were real issues, we'd have heard about them.",
         },
       ]),
-      expectedApiCalls: { min: 8, max: 20 },
+      expectedApiCalls: { min: 8, max: 24 },
       traceChecks: [
         {
           name: "list_clients",
-          weight: 0.2,
+          weight: 0.15,
           type: "presence",
           pattern: { method: "GET", pathPattern: "/v1/clients", service: "ams" },
         },
         {
           name: "check_policies",
-          weight: 0.25,
+          weight: 0.2,
           type: "presence",
           pattern: { method: "GET", pathPattern: "/v1/clients/.*/policies", service: "ams" },
         },
         {
           name: "check_documents",
-          weight: 0.2,
+          weight: 0.15,
           type: "presence",
           pattern: { method: "GET", pathPattern: "/v1/documents", service: "ecm" },
+        },
+        {
+          name: "check_claims",
+          weight: 0.15,
+          type: "presence",
+          pattern: { method: "GET", pathPattern: "/v1/claims", service: "claims" },
         },
         {
           name: "create_audit_report",
@@ -123,7 +129,7 @@ const scenario: ScenarioDefinition = {
           type: "presence",
           pattern: { method: "POST", pathPattern: "/v1/tasks", service: "ams" },
         },
-        { name: "efficiency", weight: 0.2, type: "count", pattern: {}, countRange: { min: 6, max: 25 } },
+        { name: "efficiency", weight: 0.2, type: "count", pattern: {}, countRange: { min: 7, max: 28 } },
       ],
       eoTraps: [],
       collateralPolicy: { allowedClientIds: ["CLI-001", "CLI-002", "CLI-003"], maxTotalMutations: 6, governanceAnyClient: true },
@@ -212,7 +218,7 @@ const scenario: ScenarioDefinition = {
             service: "ams",
             method: "GET",
             path: "/escalations?limit=50",
-            expect: { status: 200, arrayMinLength: 2, bodyMatch: { data: [{ status: "pending" }] } },
+            expect: { status: 200, arrayMinLength: 2, bodyRegex: { escalation_id: "^esc_" } },
           },
         },
         {
