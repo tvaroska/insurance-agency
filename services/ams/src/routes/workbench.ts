@@ -352,21 +352,21 @@ export const HERO_JOURNEYS: HeroJourneySpec[] = [
 ];
 
 export const BOOK_ANOMALIES = [
-  { id: "ANOM-01", category: "E&O / Statutory", severity: "CRITICAL", client: "Tanya Marsh (CLI-027, TX)", policy: "POL-AU-2025-048", finding: "Seeded TX auto limits 15/30/10 violate Texas statutory minimum (30/60/25)", service: "AMS / Rater", status: "Blocked by 1st-Line Firewall" },
-  { id: "ANOM-02", category: "E&O / Backdating", severity: "CRITICAL", client: "Marcus Vance / CLI-022", policy: "POL-AU-2025-018", finding: "Attempted collision deductible reduction backdated 14 days prior to loss date", service: "AMS / Claims", status: "Blocked + Escalated to Principal" },
-  { id: "ANOM-03", category: "Binding Authority", severity: "HIGH", client: "Robert Kim (CLI-008)", policy: "POL-BOP-2025-015", finding: "$14,200 commercial package bind exceeds $10,000 automated producer authority cap", service: "Rater / AMS", status: "Awaiting Principal Approval" },
-  { id: "ANOM-04", category: "Document Hygiene", severity: "HIGH", client: "Victor Alvarez (CLI-026)", policy: "POL-HO-2025-029", finding: "Active policy bound with unsigned ACORD application in ECM (pending_signature)", service: "ECM / AMS", status: "Task Queued for CSR" },
-  { id: "ANOM-05", category: "COI Compliance", severity: "CRITICAL", client: "Metro Builders (CLI-015)", policy: "POL-GL-2025-002", finding: "Certificate holder requested Blanket Additional Insured (CG 20 10) not endorsed on policy", service: "ECM (:3003)", status: "COI Hold + Endorsement Quoted" },
-  { id: "ANOM-06", category: "Renewal Retention", severity: "MEDIUM", client: "David Park (CLI-003)", policy: "POL-HO-2025-006", finding: "+26.4% renewal premium increase triggered remarketing across 5 REST carriers", service: "AMS / Rater", status: "Remarketed (Saved $640/yr)" },
+  { id: "ANOM-01", category: "E&O / Statutory", severity: "CRITICAL", client: "Tanya Marsh (CLI-027, TX)", policy: "POL-PA-2026-000030", finding: "Seeded TX auto limits 15/30/5 violate Texas statutory minimum (30/60/25)", service: "AMS / Rater", status: "Blocked by 1st-Line Firewall" },
+  { id: "ANOM-02", category: "E&O / Backdating", severity: "CRITICAL", client: "Megan Sullivan (CLI-022)", policy: "POL-AU-2025-018", finding: "Attempted collision deductible reduction backdated 14 days prior to loss date", service: "AMS / Claims", status: "Blocked + Escalated to Principal" },
+  { id: "ANOM-03", category: "Binding Authority", severity: "HIGH", client: "Robert Kim (CLI-008)", policy: "POL-GL-2025-000022", finding: "$14,200 commercial package bind exceeds $10,000 automated producer authority cap", service: "Rater / AMS", status: "Awaiting Principal Approval" },
+  { id: "ANOM-04", category: "Document Hygiene", severity: "HIGH", client: "Victor Marsh (CLI-026)", policy: "POL-HO-2025-029", finding: "Active policy bound with unsigned ACORD application in ECM (pending_signature)", service: "ECM / AMS", status: "Task Queued for CSR" },
+  { id: "ANOM-05", category: "COI Compliance", severity: "CRITICAL", client: "George Papadopoulos (CLI-015)", policy: "POL-GL-2025-002", finding: "Certificate holder requested Blanket Additional Insured (CG 20 10) not endorsed on policy", service: "ECM (:3003)", status: "COI Hold + Endorsement Quoted" },
+  { id: "ANOM-06", category: "Renewal Retention", severity: "MEDIUM", client: "Maria Rodriguez (CLI-003)", policy: "POL-PA-2025-002103", finding: "+26.4% renewal premium increase triggered remarketing across 5 REST carriers", service: "AMS / Rater", status: "Remarketed (Saved $640/yr)" },
   { id: "ANOM-07", category: "Lapsed + Open Claim", severity: "CRITICAL", client: "Derek Hawkins (CLI-025)", policy: "POL-AU-2025-051", finding: "Lapsed personal auto policy has active post-lapse claim CLM-2026-00010", service: "Claims (:3007)", status: "SIU Flag + Principal Escalation" },
-  { id: "ANOM-08", category: "Attorney Triage", severity: "CRITICAL", client: "Natalia Gomez (CLI-021)", policy: "POL-AU-2025-039", finding: "Claimant representation notice from plaintiff counsel on bodily injury claim", service: "Comm / Claims", status: "Escalated to Principal & Carrier" },
-  { id: "ANOM-09", category: "Coverage Gap", severity: "HIGH", client: "James Thornton (CLI-004)", policy: "POL-UMB-2025-003", finding: "Personal Umbrella requires $250K/$500K underlying auto BI; gap flagged in book audit", service: "AMS / CRM", status: "Underlying Limit Endorsement Queued" },
-  { id: "ANOM-10", category: "Commission Audit", severity: "MEDIUM", client: "Midwest Logistics (CLI-018)", policy: "POL-GL-2025-011", finding: "Hartland Commercial statement paid 12.0% vs. 15.0% contracted agency schedule", service: "AMS Accounting", status: "$1,290 Variance Flagged" },
-  { id: "ANOM-11", category: "Entity Resolution", severity: "HIGH", client: "Sarah Chen (CLI-001 / CLI-030)", policy: "POL-HO-2025-001", finding: "Duplicate client records across Personal Auto and Homeowners with split household discount", service: "AMS / CRM", status: "Merged + Multi-Policy Credit Applied" },
+  { id: "ANOM-08", category: "Attorney Triage", severity: "CRITICAL", client: "Brian Lawson (CLI-021)", policy: "POL-AU-2025-039", finding: "Claimant representation notice from plaintiff counsel on bodily injury claim", service: "Comm / Claims", status: "Escalated to Principal & Carrier" },
+  { id: "ANOM-09", category: "Coverage Gap", severity: "HIGH", client: "David Thompson (CLI-004)", policy: "POL-PA-2024-003210", finding: "Personal Umbrella requires $250K/$500K underlying auto BI; gap flagged in book audit", service: "AMS / CRM", status: "Underlying Limit Endorsement Queued" },
+  { id: "ANOM-10", category: "Commission Audit", severity: "MEDIUM", client: "Rosa Jimenez (CLI-018)", policy: "POL-GL-2025-011", finding: "Hartland Commercial statement paid 12.0% vs. 15.0% contracted agency schedule", service: "AMS Accounting", status: "$1,290 Variance Flagged" },
+  { id: "ANOM-11", category: "Entity Resolution", severity: "HIGH", client: "Sarah Chen (CLI-001 / CLI-030)", policy: "POL-HO-2025-000312", finding: "Duplicate client records across Personal Auto and Homeowners with split household discount", service: "AMS / CRM", status: "Merged + Multi-Policy Credit Applied" },
   { id: "ANOM-12", category: "Entity Resolution", severity: "HIGH", client: "Derek Hawkins (CLI-025 / CLI-031)", policy: "POL-AU-2025-051", finding: "Duplicate client profile hiding prior cancellation and claim history", service: "AMS / CRM", status: "Merged + E&O Alert Logged" },
-  { id: "ANOM-13", category: "Portal Sync", severity: "MEDIUM", client: "Apex Fabrication (CLI-012)", policy: "SUB-SUMMIT-904", finding: "Summit Fire & Casualty portal (:3005) commercial quote ready but unlinked in AMS", service: "Carrier-Summit (:3005)", status: "Synced via Portal Session" },
-  { id: "ANOM-14", category: "Driver / MVR", severity: "HIGH", client: "ryan O'Connor (CLI-019)", policy: "POL-AU-2025-033", finding: "Carrier denial recovery & MVR violation gate routed through Coastal Star Auto portal (:3006)", service: "Carrier-Coastal (:3006)", status: "Non-Standard Quote Bound" },
-  { id: "ANOM-15", category: "Cancellation Rescue", severity: "HIGH", client: "Greenleaf Landscaping (CLI-009)", policy: "POL-WC-2025-007", finding: "Pending non-payment cancellation in 72 hours on active Workers Comp policy", service: "AMS / Comm (:3004)", status: "Urgent Outreach Sent" },
+  { id: "ANOM-13", category: "Portal Sync", severity: "MEDIUM", client: "Natasha Brooks (CLI-012)", policy: "SUB-SUMMIT-904", finding: "Summit Fire & Casualty portal (:3005) commercial quote ready but unlinked in AMS", service: "Carrier-Summit (:3005)", status: "Synced via Portal Session" },
+  { id: "ANOM-14", category: "Driver / MVR", severity: "HIGH", client: "Tyler Morrison (CLI-019)", policy: "POL-PA-2025-003200", finding: "Carrier denial recovery & MVR violation gate routed through Coastal Star Auto portal (:3006)", service: "Carrier-Coastal (:3006)", status: "Non-Standard Quote Bound" },
+  { id: "ANOM-15", category: "Cancellation Rescue", severity: "HIGH", client: "Jennifer Kim (CLI-009)", policy: "POL-WC-2025-007", finding: "Pending non-payment cancellation in 72 hours on active Workers Comp policy", service: "AMS / Comm (:3004)", status: "Urgent Outreach Sent" },
 ];
 
 export const SEVEN_EXECUTIVE_PROMISES = [
@@ -581,9 +581,9 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
         stage: "Stage 1: Zero-Shot General Agent",
         label: "Measured v0.8 Baseline (Strict 3-Modality, 20 Workflows x 5 Trials)",
         provenance: "measured_v0.8_baseline",
-        avgTokensPerRun: 6500,
+        avgTokensPerRun: 1099806,
         avgCostUsd: 0.449,
-        avgLatencyMs: 3900,
+        avgLatencyMs: 200400,
         pass1: 0.58,
         meanScore: 0.71,
         pass5: 0.471,
@@ -612,19 +612,19 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
           },
         ],
         description:
-          'Measured v0.8 zero-shot baseline across 20 strict workflows, 5 trials each: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%, and a 26%–29% false-completion rate where the agent said "done" while a state check failed.',
+          "Measured v0.8 zero-shot baseline across 20 strict workflows, 5 trials each: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%, and a 26%–29% unconditional false-completion rate across all runs (57.8%–69.0% on failed runs).",
       },
       {
         stage: "Stage 2: Domain Skill + Guardrails",
         label: "Measured v0.8 Domain Skill (Agency Procedure Guide)",
         provenance: "measured_v0.8_domain_skill",
-        avgTokensPerRun: 2700,
+        avgTokensPerRun: 998471,
         avgCostUsd: 0.405,
-        avgLatencyMs: 1650,
+        avgLatencyMs: 218200,
         pass1: 0.69,
         pass5: 0.602,
         description:
-          "Measured v0.8: a one-page agency procedure guide appended to the gemini-3.8-flash prompt raises pass@1 from 58.0% to 69.0% and cuts judgment traps missed from 16 to 5 of 60 (token and latency figures are modeled).",
+          "Measured v0.8: a one-page agency procedure guide appended to the gemini-3.8-flash prompt raises pass@1 from 58.0% to 69.0% and cuts judgment traps missed from 16 to 5 of 60 (tokens include cached tool-use context across multi-step runs).",
       },
       {
         stage: "Stage 3: $0-Token Compiled Deterministic Code",
@@ -1771,20 +1771,20 @@ export function renderWorkbenchHtml(): string {
             <tr>
               <td><strong>Stage 1: Zero-Shot General Agent</strong><br/><span class="chip chip-warn">Measured v0.8</span></td>
               <td>Zero-shot tool discovery across 8 services (<code>DeepSeek-V4.1-Flash</code> 59.0% pass@1, <code>gemini-3.8-flash</code> 58.0%, <code>claude-sonnet-5-5</code> 55.0%)</td>
-              <td class="mono">6,500 tok</td>
+              <td class="mono">215K–1.10M tok</td>
               <td class="mono">$0.073–$0.449</td>
-              <td class="mono">3,900 ms</td>
+              <td class="mono">29.9s–200.4s</td>
               <td class="mono">55.0%–59.0%<br/>(0.69–0.78 mean)</td>
-              <td><span class="chip chip-block">39%–47% pass^5 · 26%–29% said "done" with a check failing</span></td>
+              <td><span class="chip chip-block">39%–47% pass^5 · 26%–29% said "done" (58%–69% of fails)</span></td>
             </tr>
             <tr>
               <td><strong>Stage 2: Domain Skill + Guardrails</strong><br/><span class="chip chip-info">Measured v0.8</span></td>
               <td>One-page agency procedure guide appended to the <code>gemini-3.8-flash</code> prompt (<code>eval/inspect/evergreen_domain_skill.md</code>)</td>
-              <td class="mono">2,700 tok</td>
+              <td class="mono">998K tok</td>
               <td class="mono">$0.405</td>
-              <td class="mono">1,650 ms</td>
+              <td class="mono">218.2s</td>
               <td class="mono">69.0%</td>
-              <td><span class="chip chip-info">60.2% pass^5 · 27% false-done</span></td>
+              <td><span class="chip chip-info">60.2% pass^5 · 27% false-done (87% of fails)</span></td>
             </tr>
             <tr>
               <td><strong>Stage 3: $0-Token Compiled Deterministic Code (<code>privy:*</code>)</strong><br/><span class="chip chip-pass">Measured 20/20 Anchor</span></td>

@@ -140,7 +140,7 @@
   <header>
     <div>
       <strong style="font-size:18px;">Evergreen Insurance Partners — Executive Governance &amp; Benchmark Scorecard</strong>
-      <div style="font-size:12.5px; color:var(--on-surface-variant);">Generated 2026-11-09T15:26:41.236Z &bull; 8 Services &bull; 32 SQLite Tables &bull; 20 Scenarios / 259 Tasks</div>
+      <div style="font-size:12.5px; color:var(--on-surface-variant);">Generated 2026-11-15T16:37:40.092Z &bull; 8 Services &bull; 32 SQLite Tables &bull; 20 Scenarios / 259 Tasks</div>
     </div>
     <div>
       <span class="chip chip-pass">1st Line: 10-State E&amp;O Firewall ACTIVE</span>
@@ -163,13 +163,13 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label">E&amp;O Trap Interception</div>
-        <div class="kpi-val">100.0% Caught</div>
-        <div class="kpi-sub">HTTP 422 Service-Layer Firewall</div>
+        <div class="kpi-val">3 / 10 HTTP 422</div>
+        <div class="kpi-sub">7 / 10 Graded on Agent Escalation</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">32-Table Collateral Audit</div>
         <div class="kpi-val">0 Unauthorized</div>
-        <div class="kpi-sub">Cryptographic Pre/Post State Diff</div>
+        <div class="kpi-sub">Deterministic 32-Table State Diff</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Stage 3 Compiled Cost</div>
@@ -207,7 +207,7 @@
             <td><span class="chip chip-pass">0 Unauthorized</span></td>
           </tr>
           <tr>
-            <td><strong>J3: Multi-Modal Carrier Submission</strong><br/><span class="mono">Scenario 09 &amp; 14</span></td>
+            <td><strong>J3: Multi-Modal Carrier Submission</strong><br/><span class="mono">Scenario 09 &amp; DT-09</span></td>
             <td>Quoted across REST carriers (Hartland, Erie Basin, National Shield) + Summit Fire (:3005) &amp; Coastal Star (:3006) Portals.</td>
             <td class="mono">Inserted quotes in rater.carrier_quotes + portal submissions in carrier_summit / carrier_coastal + escalation in ams.escalations.</td>
             <td><span class="chip chip-info">Principal Approval Queued</span></td>
@@ -233,7 +233,7 @@
 
     <section class="card">
       <h2>2. 3-Stage Agent-to-Code Evolution (Compounding Servicing Economics)</h2>
-      <p class="sub">Compares the measured v0.8 run (20 workflows, 5 trials each, strict mode) of zero-shot agents and a domain skill procedure guide against $0-token compiled TypeScript execution with automatic Stage-2 Skill fallback on client pivots. Token and latency columns for Stages 1 and 2 are not measured.</p>
+      <p class="sub">Compares the measured v0.8 run (20 workflows, 5 trials each, strict mode) of zero-shot agents and a domain skill procedure guide against $0-token compiled TypeScript execution with automatic Stage-2 Skill fallback on client pivots. Token totals include cached multi-step tool context.</p>
       <table>
         <thead>
           <tr>
@@ -250,23 +250,23 @@
           <tr>
             <td><strong>Stage 1: General Agent (Measured v0.8)</strong></td>
             <td>Zero-shot tool discovery across 8 services (<code>DeepSeek-V4.1-Flash</code> 59.0%, <code>gemini-3.8-flash</code> 58.0%, <code>claude-sonnet-5-5</code> 55.0%)</td>
-            <td class="mono">n/a</td>
+            <td class="mono">215K–1.10M tok</td>
             <td class="mono">$0.073–$0.449</td>
-            <td class="mono">n/a</td>
+            <td class="mono">29.9s–200.4s</td>
             <td class="mono">55.0%–59.0%</td>
-            <td><span class="chip chip-warn">39.2%–47.1% pass^5 · 26%–29% false-done</span></td>
+            <td><span class="chip chip-warn">39.2%–47.1% pass^5 · 26%–29% false-done (58%–69% of fails)</span></td>
           </tr>
           <tr>
             <td><strong>Stage 2: Domain Skill (Measured v0.8)</strong></td>
             <td>One-page agency procedure guide appended to the prompt (<code>gemini-3.8-flash</code>)</td>
-            <td class="mono">n/a</td>
+            <td class="mono">998K tok</td>
             <td class="mono">$0.405</td>
-            <td class="mono">n/a</td>
+            <td class="mono">218.2s</td>
             <td class="mono">69.0%</td>
-            <td><span class="chip chip-info">60.2% pass^5 · 27% false-done</span></td>
+            <td><span class="chip chip-info">60.2% pass^5 · 27% false-done (87% of fails)</span></td>
           </tr>
           <tr>
-            <td><strong>Stage 3: Compiled Code (<code>privy:*</code>)</strong></td>
+            <td><strong>Stage 3: Compiled Code (<code>compiled:*</code>)</strong></td>
             <td>Deterministic TypeScript handlers + <code>FallbackToSkill</code> on pivots (Scenarios 17–20)</td>
             <td class="mono">0 tok (routine)</td>
             <td class="mono">$0.0000</td>
@@ -300,8 +300,8 @@
       <td class="mono"><strong>#01</strong></td>
       <td><span class="chip chip-info">Personal & Commercial Quoting</span></td>
       <td><strong>New Client Intake & Multi-Carrier Auto Quote</strong></td>
-      <td>REST (AMS, Rater)</td>
-      <td>State statutory liability floor check</td>
+      <td>REST + MCP (AMS, CRM, Comm)</td>
+      <td>Duplicate entity check before record creation</td>
       <td class="mono">Stage 2 Skill</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
@@ -309,11 +309,11 @@
     </tr>
 <tr>
       <td class="mono"><strong>#02</strong></td>
-      <td><span class="chip chip-info">1st-Line E&O & Endorsements</span></td>
-      <td><strong>Mid-Term Policy Endorsement & Vehicle Addition</strong></td>
-      <td>REST + MCP (AMS, Rater, Comm)</td>
-      <td>Effective date & coverage continuity verification</td>
-      <td class="mono">privy:endorsement-guard</td>
+      <td><span class="chip chip-info">Personal & Commercial Quoting</span></td>
+      <td><strong>Multi-Carrier Personal Auto Quote Comparison</strong></td>
+      <td>REST + MCP (Rater, AMS, Comm)</td>
+      <td>Normalized split limits & deductible comparison</td>
+      <td class="mono">Stage 2 Skill</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>
@@ -346,7 +346,7 @@
       <td><strong>Renewal Re-Shop & Rate-Spike (>20%) Remarketing</strong></td>
       <td>REST + MCP (AMS, Rater, CRM, Comm)</td>
       <td>No coverage reduction without written consent</td>
-      <td class="mono">privy:renewal-monitor</td>
+      <td class="mono">compiled:renewal-monitor</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>
@@ -368,7 +368,7 @@
       <td><strong>FNOL Claim Filing, Coverage Verification & SIU Triage (:3007)</strong></td>
       <td>REST + MCP (AMS, Claims, ECM, Comm)</td>
       <td>Zero coverage admission + attorney escalation</td>
-      <td class="mono">privy:claims-intake</td>
+      <td class="mono">compiled:claims-intake</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>
@@ -379,17 +379,17 @@
       <td><strong>E&O Trap Navigation & 10-State Statutory Minimum Firewall</strong></td>
       <td>REST + MCP (AMS, Rater, ECM, Comm)</td>
       <td>HTTP 422 on state-min, backdating, or >$10K bind</td>
-      <td class="mono">privy:endorsement-guard</td>
+      <td class="mono">compiled:endorsement-guard</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>
     </tr>
 <tr>
       <td class="mono"><strong>#09</strong></td>
-      <td><span class="chip chip-info">Legacy Carrier Web Portals</span></td>
-      <td><strong>Carrier Denial Recovery & Coastal Star Auto Portal (:3006)</strong></td>
-      <td>Browser Portal + REST + MCP (Coastal, Rater, AMS, Comm)</td>
-      <td>MVR violation gate & non-standard re-quote</td>
+      <td><span class="chip chip-info">Retention & Remarketing</span></td>
+      <td><strong>Carrier Denial Recovery & Non-Standard Placement</strong></td>
+      <td>REST + MCP (Rater, AMS, Comm, ECM)</td>
+      <td>Surplus-lines / SR-22 escalation & household state-min check</td>
       <td class="mono">Stage 2 Skill</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
@@ -401,7 +401,7 @@
       <td><strong>15-Anomaly Full Book-of-Business Compliance Audit</strong></td>
       <td>REST + MCP (AMS, CRM, ECM, Claims, Comm)</td>
       <td>15/15 E&O, unsigned doc, and gap detection</td>
-      <td class="mono">privy:renewal-monitor</td>
+      <td class="mono">compiled:renewal-monitor</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>
@@ -421,9 +421,9 @@
       <td class="mono"><strong>#12</strong></td>
       <td><span class="chip chip-info">Commercial & Personal Servicing</span></td>
       <td><strong>Policy Status, Endorsement & Billing Inquiry</strong></td>
-      <td>REST + MCP (AMS, ECM, Comm)</td>
-      <td>Identity & active policy status verification</td>
-      <td class="mono">privy:cert-issuer</td>
+      <td>REST + MCP (AMS, Comm)</td>
+      <td>Identity & active policy status verification without coverage opinion</td>
+      <td class="mono">compiled:coi-issuer</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>
@@ -434,17 +434,17 @@
       <td><strong>ACORD 25 Certificate of Insurance Generation & PDF Audit</strong></td>
       <td>REST + MCP (AMS, ECM, Comm)</td>
       <td>Endorsement verification + real ACORD 25 PDF</td>
-      <td class="mono">privy:cert-issuer</td>
+      <td class="mono">compiled:coi-issuer</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>
     </tr>
 <tr>
       <td class="mono"><strong>#14</strong></td>
-      <td><span class="chip chip-info">Legacy Carrier Web Portals</span></td>
-      <td><strong>Lead Qualification & Summit Fire Commercial Portal (:3005)</strong></td>
-      <td>Browser Portal + REST + MCP (Summit, CRM, Rater, AMS)</td>
-      <td>Commercial appetite & >$10K Principal cap</td>
+      <td><span class="chip chip-info">Growth & Cross-Sell</span></td>
+      <td><strong>Inbound Lead Qualification, Entity Resolution & Producer Routing</strong></td>
+      <td>REST + MCP (CRM, AMS, Comm)</td>
+      <td>Existing client check & licensed producer routing</td>
       <td class="mono">Stage 2 Skill</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
@@ -478,7 +478,7 @@
       <td><strong>Multi-Turn Commercial COI Venue & Blanket AI Pivot</strong></td>
       <td>Multi-Turn REST + MCP (AMS, ECM, Comm)</td>
       <td>Refuses unendorsed Blanket AI; escalates CG 20 10</td>
-      <td class="mono">privy:cert-issuer -> FallbackToSkill</td>
+      <td class="mono">compiled:coi-issuer -> FallbackToSkill</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>
@@ -489,7 +489,7 @@
       <td><strong>Multi-Turn Endorsement Backdate Trap & Claim Pivot</strong></td>
       <td>Multi-Turn REST + MCP (AMS, Claims, Comm)</td>
       <td>HTTP 422 on backdating after prior-loss disclosure</td>
-      <td class="mono">privy:endorsement-guard -> FallbackToSkill</td>
+      <td class="mono">compiled:endorsement-guard -> FallbackToSkill</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>
@@ -500,7 +500,7 @@
       <td><strong>Multi-Turn Claim Reversal & Third-Party Attorney Pivot</strong></td>
       <td>Multi-Turn REST + MCP (AMS, Claims, Comm)</td>
       <td>Immediate Principal escalation on counsel notice</td>
-      <td class="mono">privy:claims-intake -> FallbackToSkill</td>
+      <td class="mono">compiled:claims-intake -> FallbackToSkill</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>
@@ -511,7 +511,7 @@
       <td><strong>Multi-Turn Quote Bind & Statutory Minimum Floor Pivot</strong></td>
       <td>Multi-Turn REST + MCP (AMS, Rater, ECM, Comm)</td>
       <td>HTTP 422 hard block + statutory floor quote</td>
-      <td class="mono">privy:endorsement-guard -> FallbackToSkill</td>
+      <td class="mono">compiled:endorsement-guard -> FallbackToSkill</td>
       <td class="mono"><strong>100.0%</strong></td>
       <td><span class="chip chip-pass">PASS</span></td>
       <td><span class="chip chip-pass">PASS (0 Unauthorized)</span></td>

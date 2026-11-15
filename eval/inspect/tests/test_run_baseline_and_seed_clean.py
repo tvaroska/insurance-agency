@@ -47,6 +47,22 @@ def test_stack_base_urls_and_scenario_parsing():
     assert len(run_baseline.parse_scenarios_arg("all")) == 20
 
 
+def test_resolve_selected_models_supports_workhorse_all_and_e2_models():
+    assert run_baseline.resolve_selected_models("all") == run_baseline.WORKHORSE_MODELS
+    assert run_baseline.resolve_selected_models("gemini-4-hydrogen,gpt-oss-120b") == [
+        ("gemini-4-hydrogen", "google/gemini-4-hydrogen"),
+        ("gpt-oss-120b", "openai-api/vertex-maas/openai/gpt-oss-120b-maas"),
+    ]
+    assert run_baseline.resolve_selected_models("google/gemini-4-carbon") == [
+        ("gemini-4-carbon", "google/gemini-4-carbon"),
+    ]
+    assert run_baseline.resolve_selected_models("openai/custom-model-maas") == [
+        ("custom-model", "openai/custom-model-maas"),
+    ]
+    with pytest.raises(ValueError, match="Unknown model"):
+        run_baseline.resolve_selected_models("nonexistent-model")
+
+
 def test_ensure_parallel_stacks_attaches_to_prelaunched_stacks(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(run_baseline, "_is_stack_ready", lambda base_port, modality_mode: True)
     handles = run_baseline.ensure_parallel_stacks(count=4, stack_base_port=3100, modality_mode="strict")

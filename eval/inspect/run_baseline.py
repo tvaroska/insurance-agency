@@ -61,6 +61,54 @@ WORKHORSE_MODELS: list[tuple[str, str]] = [
     ("deepseek-v4.1-flash", "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas"),
 ]
 
+# Opt-in arms selectable by short name or full Inspect model ID without widening `--models all`.
+EXTRA_MODELS: list[tuple[str, str]] = [
+    ("gemini-4-hydrogen", "google/gemini-4-hydrogen"),
+    ("gemini-4-argon", "google/gemini-4-argon"),
+    ("gemini-4-carbon", "google/gemini-4-carbon"),
+    ("gpt-oss-120b", "openai-api/vertex-maas/openai/gpt-oss-120b-maas"),
+    ("gemma-4-26b-a4b-it", "openai-api/vertex-maas/google/gemma-4-26b-a4b-it-maas"),
+]
+
+MODEL_CATALOG: list[tuple[str, str]] = [*WORKHORSE_MODELS, *EXTRA_MODELS]
+
+
+def resolve_selected_models(raw: str) -> list[tuple[str, str]]:
+    """Resolve `--models` ('all', known short slugs, or full provider/model IDs)."""
+    tokens = [m.strip() for m in raw.split(",") if m.strip()]
+    if not tokens:
+        raise ValueError("No models specified")
+
+    by_slug = {slug: (slug, mid) for slug, mid in MODEL_CATALOG}
+    by_id = {mid: (slug, mid) for slug, mid in MODEL_CATALOG}
+
+    selected: list[tuple[str, str]] = []
+    seen_ids: set[str] = set()
+
+    def _add(pair: tuple[str, str]) -> None:
+        if pair[1] not in seen_ids:
+            seen_ids.add(pair[1])
+            selected.append(pair)
+
+    for tok in tokens:
+        if tok == "all":
+            for pair in WORKHORSE_MODELS:
+                _add(pair)
+        elif tok in by_slug:
+            _add(by_slug[tok])
+        elif tok in by_id:
+            _add(by_id[tok])
+        elif "/" in tok:
+            short = tok.split("/")[-1]
+            if short.endswith("-maas"):
+                short = short[: -len("-maas")]
+            _add((short, tok))
+        else:
+            known = ", ".join(sorted(by_slug))
+            raise ValueError(f"Unknown model {tok!r}; expected 'all', a provider/model ID, or one of: {known}")
+
+    return selected
+
 _AUTH_LOCK = threading.Lock()
 
 
@@ -317,7 +365,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--modality-mode", default="strict", help="Modality mode (default: strict)")
     parser.add_argument("--epochs", type=int, default=1, help="Number of epochs per sample (default: 1)")
     parser.add_argument("--turn-limit", type=int, default=60, help="Max model turns per sample (default: 60)")
-    parser.add_argument("--models", default="all", help="Comma-separated short names or 'all'")
+    parser.add_argument(
+        "--models",
+        default="all",
+        help="Comma-separated short names (e.g. gemini-4-hydrogen,gpt-oss-120b), full provider/model IDs, or 'all' (3 workhorse baseline models)",
+    )
     parser.add_argument(
         "--learning-mechanism",
         choices=["none", "domain_skill"],
@@ -355,12 +407,10 @@ def main(argv: list[str] | None = None) -> int:
     clean_dir = out_root / f"clean-{args.difficulty}"
     slug_suffix = "" if args.learning_mechanism == "none" else f"-{args.learning_mechanism}"
 
-    wanted = {m.strip() for m in args.models.split(",") if m.strip()}
-    selected_models = [
-        (slug, mid)
-        for slug, mid in WORKHORSE_MODELS
-        if "all" in wanted or slug in wanted or mid in wanted
-    ]
+    try:
+        selected_models = resolve_selected_models(args.models)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
     if args.parallel_stacks == 1:
         verify_services(args.modality_mode, base_port=3000)

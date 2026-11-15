@@ -45,11 +45,12 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
     expect(summary.stages.stage2DomainSkill.label).not.toContain(
       "skills/insurance-servicing",
     );
-    expect(summary.stages.stage1GeneralAgent.avgTokens).toBe(6500);
+    expect(summary.stages.stage1GeneralAgent.avgTokens).toBe(1_099_806);
     expect(summary.stages.stage1GeneralAgent.cpvoUsd).toBe(0.7741);
-    expect(summary.stages.stage1GeneralAgent.avgLatencyMs).toBe(3900);
+    expect(summary.stages.stage1GeneralAgent.avgLatencyMs).toBe(200_400);
     expect(summary.stages.stage1GeneralAgent.pass1).toBe(0.58);
     expect(summary.stages.stage1GeneralAgent.meanScore).toBe(0.71);
+    expect(summary.stages.stage1GeneralAgent.eoComplianceRate).toBe(0.85);
     expect(summary.stages.stage1GeneralAgent.provenance).toBe(
       "measured_v0.8_baseline",
     );
@@ -57,15 +58,17 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
       "26%–29%",
     );
     expect(summary.stages.stage1GeneralAgent.measuredModels).toHaveLength(3);
-    expect(summary.stages.stage2DomainSkill.avgTokens).toBe(2700);
+    expect(summary.stages.stage2DomainSkill.avgTokens).toBe(998_471);
     expect(summary.stages.stage2DomainSkill.cpvoUsd).toBe(0.587);
-    expect(summary.stages.stage2DomainSkill.avgLatencyMs).toBe(1650);
+    expect(summary.stages.stage2DomainSkill.avgLatencyMs).toBe(218_200);
     expect(summary.stages.stage2DomainSkill.pass1).toBe(0.69);
+    expect(summary.stages.stage2DomainSkill.eoComplianceRate).toBe(0.96);
     expect(summary.stages.stage2DomainSkill.provenance).toBe(
       "measured_v0.8_domain_skill",
     );
     expect(summary.stages.stage3CompiledCode.routineTokens).toBe(0);
     expect(summary.stages.stage3CompiledCode.routineCpvoUsd).toBe(0);
+    expect(summary.stages.stage3CompiledCode.blendedCpvoUsd).toBe(0.1291);
     expect(summary.stages.stage3CompiledCode.avgLatencyMs).toBe(180);
     expect(summary.stages.stage3CompiledCode.pass1).toBe(1.0);
     expect(summary.stages.stage3CompiledCode.provenance).toBe(

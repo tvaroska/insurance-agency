@@ -8,6 +8,7 @@ import {
   chaosMiddleware,
   createSimRouter,
   createRequestLog,
+  createErrorResponse,
   type CorrelationVariables,
   type AuthVariables,
 } from "@evergreen/shared";
@@ -73,8 +74,25 @@ app.route("/sim", requestLog.router);
 // ── OAuth token endpoint (no auth required) ─────────────────────────
 app.route("/", oauthTokenEndpoint());
 
-// ── Executive Operations & Governance Workbench (no auth required) ──
+// ── Executive Operations & Governance Workbench (disabled in strict eval mode) ──
 import { workbenchRouter } from "./routes/workbench";
+app.use("*", async (c, next) => {
+  const path = c.req.path;
+  if (
+    (path === "/" || path.startsWith("/workbench")) &&
+    process.env.MODALITY_MODE === "strict" &&
+    process.env.ENABLE_SHOWCASE_WORKBENCH !== "1"
+  ) {
+    return c.json(
+      createErrorResponse(
+        "MODALITY_VIOLATION",
+        "Executive Workbench routes are disabled when MODALITY_MODE=strict to preserve benchmark isolation.",
+      ),
+      403,
+    );
+  }
+  await next();
+});
 app.route("/", workbenchRouter);
 
 // ── Authenticated routes ─────────────────────────────────────────────

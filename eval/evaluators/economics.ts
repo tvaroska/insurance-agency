@@ -25,7 +25,7 @@ import { parseTrace } from "./trace";
 
 export type { EconomicsMetrics, ModalityCounts, ModelPricing };
 
-// ── Model Pricing Table (USD per 1M tokens, Vertex AI list rates calibrated 2026-11-11) ──
+// ── Model Pricing Table (USD per 1M tokens, Vertex AI list rates calibrated 2026-11-11 / 2026-11-13) ──
 
 export const DEFAULT_MODEL_PRICING: ModelPricing = {
   input: 1.5,
@@ -33,10 +33,12 @@ export const DEFAULT_MODEL_PRICING: ModelPricing = {
 };
 
 export const MODEL_PRICING_PER_1M: Record<string, ModelPricing> = {
-  // Customer-facing Gemini models (Vertex AI list price calibrated against Cloud Billing export)
+  // Customer-facing Gemini models (Vertex AI list price calibrated against Cloud Billing SKUs & export)
+  "gemini-4-hydrogen": { input: 1.5, output: 7.5 },
   "gemini-3.8-flash": { input: 1.5, output: 7.5 },
-  "gemini-4-argon": { input: 1.25, output: 5.0 },
-  "gemini-4.0-pro": { input: 1.25, output: 5.0 },
+  "gemini-4-argon": { input: 4.0, output: 20.0 },
+  "gemini-4-carbon": { input: 4.0, output: 20.0 },
+  "gemini-4.0-pro": { input: 4.0, output: 20.0 },
   "gemini-3.5-flash-lite": { input: 0.075, output: 0.3 },
   // Standard Anthropic Claude models on Vertex AI
   "claude-sonnet-5-5": { input: 2.0, output: 10.0 },
@@ -46,9 +48,13 @@ export const MODEL_PRICING_PER_1M: Record<string, ModelPricing> = {
   "claude-opus-4": { input: 15.0, output: 75.0 },
   "claude-3-haiku": { input: 0.25, output: 1.25 },
   "claude-3": { input: 3.0, output: 15.0 },
-  // DeepSeek models on Vertex AI MaaS
+  // Open-weight models on Vertex AI MaaS
   "deepseek-v4.1-flash-maas": { input: 0.3, output: 1.2 },
   "deepseek-v4.1-flash": { input: 0.3, output: 1.2 },
+  "gpt-oss-120b-maas": { input: 0.09, output: 0.36 },
+  "gpt-oss-120b": { input: 0.09, output: 0.36 },
+  "gemma-4-26b-a4b-it-maas": { input: 0.15, output: 0.6 },
+  "gemma-4-26b-a4b-it": { input: 0.15, output: 0.6 },
   // Standard OpenAI GPT / o-series models
   "gpt-4o": { input: 2.5, output: 10.0 },
   "gpt-4o-mini": { input: 0.15, output: 0.6 },

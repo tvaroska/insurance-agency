@@ -19,14 +19,17 @@
     "drop_clean_to_messy_pp": null,
     "mean_cost_usd": 0.4048,
     "pass_at_1_ci95": [
-      0.5937,
-      0.7722
+      0.52,
+      0.86
     ],
     "pass_hat_5_ci95": [
       0.4016,
       0.8011
     ],
-    "pass_hat_5_unbiased": 0.6
+    "pass_hat_5_unbiased": 0.6,
+    "said_done_given_failed_rate": 0.871,
+    "deferred_rate": 0.15,
+    "failed_deferred_rate": 0.02
   },
   {
     "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
@@ -48,14 +51,17 @@
     "drop_clean_to_messy_pp": -1.1,
     "mean_cost_usd": 0.073,
     "pass_at_1_ci95": [
-      0.492,
-      0.6813
+      0.43,
+      0.75
     ],
     "pass_hat_5_ci95": [
       0.1956,
       0.604
     ],
-    "pass_hat_5_unbiased": 0.35
+    "pass_hat_5_unbiased": 0.35,
+    "said_done_given_failed_rate": 0.6585,
+    "deferred_rate": 0.28,
+    "failed_deferred_rate": 0.13
   },
   {
     "model": "google/gemini-3.8-flash",
@@ -77,14 +83,17 @@
     "drop_clean_to_messy_pp": -21.1,
     "mean_cost_usd": 0.4491,
     "pass_at_1_ci95": [
-      0.4821,
-      0.672
+      0.39,
+      0.76
     ],
     "pass_hat_5_ci95": [
       0.256,
       0.6781
     ],
-    "pass_hat_5_unbiased": 0.45
+    "pass_hat_5_unbiased": 0.45,
+    "said_done_given_failed_rate": 0.6905,
+    "deferred_rate": 0.14,
+    "failed_deferred_rate": 0.08
   },
   {
     "model": "anthropic/vertex/claude-sonnet-5-5",
@@ -106,13 +115,16 @@
     "drop_clean_to_messy_pp": -20.0,
     "mean_cost_usd": 0.1111,
     "pass_at_1_ci95": [
-      0.4524,
-      0.6439
+      0.36,
+      0.74
     ],
     "pass_hat_5_ci95": [
       0.2554,
       0.6617
     ],
-    "pass_hat_5_unbiased": 0.45
+    "pass_hat_5_unbiased": 0.45,
+    "said_done_given_failed_rate": 0.5778,
+    "deferred_rate": 0.39,
+    "failed_deferred_rate": 0.19
   }
 ]

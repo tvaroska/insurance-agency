@@ -238,4 +238,35 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
     expect(data.status).toBe("approved");
     expect(data.manager_response.decision).toBe("approved");
   });
+
+  test("AMS service blocks / and /workbench/* with HTTP 403 MODALITY_VIOLATION under MODALITY_MODE=strict", async () => {
+    const { app: amsApp } = await import("../index");
+    const prevModality = process.env.MODALITY_MODE;
+    const prevEnable = process.env.ENABLE_SHOWCASE_WORKBENCH;
+    process.env.MODALITY_MODE = "strict";
+    delete process.env.ENABLE_SHOWCASE_WORKBENCH;
+    try {
+      const rootRes = await amsApp.request("/");
+      expect(rootRes.status).toBe(403);
+      expect((await rootRes.json()).error_code).toBe("MODALITY_VIOLATION");
+
+      const overviewRes = await amsApp.request("/workbench/api/overview");
+      expect(overviewRes.status).toBe(403);
+
+      const resolveRes = await amsApp.request(
+        "/workbench/api/escalations/esc_showcase_01/resolve",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ decision: "approved" }),
+        },
+      );
+      expect(resolveRes.status).toBe(403);
+    } finally {
+      if (prevModality === undefined) delete process.env.MODALITY_MODE;
+      else process.env.MODALITY_MODE = prevModality;
+      if (prevEnable === undefined) delete process.env.ENABLE_SHOWCASE_WORKBENCH;
+      else process.env.ENABLE_SHOWCASE_WORKBENCH = prevEnable;
+    }
+  });
 });

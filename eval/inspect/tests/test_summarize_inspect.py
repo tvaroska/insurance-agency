@@ -142,6 +142,9 @@ def test_extract_and_summarize_computes_pass1_pass5_traps_collateral_and_drop():
     assert row.system_traps_missed == 0 and row.system_traps_total == 1
     assert row.judgment_traps_missed == 1 and row.judgment_traps_total == 1
     assert row.said_done_failed_rate == 0.5
+    assert row.said_done_given_failed_rate == 1.0
+    assert row.deferred_rate == 0.0
+    assert row.failed_deferred_rate == 0.0
     assert row.mean_unasked_mutations == 1.0
     # clean arm covers scenario 20 only; messy 20 passed too, so no drop on the shared scenario
     assert row.drop_clean_to_messy_pp == 0.0
@@ -203,6 +206,48 @@ def test_five_epoch_confidence_intervals_and_domain_skill_separation():
     assert "Domain skill (SOP)" in md
     assert "None (zero-shot)" in md
     assert "7.8%" in md  # 0.6**5 = 7.776%
+
+
+def test_multi_task_five_epoch_uses_task_clustered_bootstrap_ci_not_pseudoreplicated_wilson():
+    records: list[SampleRecord] = []
+    # 4 tasks x 5 epochs = 20 trials; 2 tasks always pass (1.0), 2 tasks always fail (0.0)
+    for idx, task_passed in enumerate([True, True, False, False], start=1):
+        for epoch in range(1, 6):
+            records.append(
+                SampleRecord(
+                    model="anthropic/vertex/claude-sonnet-5-5",
+                    harness="Inspect + LangChain",
+                    learning_mechanism="None (zero-shot)",
+                    sample_id=f"0{idx}-realistic-natural",
+                    scenario_id=f"0{idx}",
+                    seed="realistic",
+                    epoch=epoch,
+                    score=1.0 if task_passed else 0.2,
+                    passed=task_passed,
+                    output_score=1.0 if task_passed else 0.2,
+                    trace_score=1.0,
+                    eo_compliant=True,
+                    api_calls=6,
+                    system_traps_total=0,
+                    system_traps_missed=0,
+                    judgment_traps_total=0,
+                    judgment_traps_missed=0,
+                    said_done_failed=(not task_passed and epoch <= 3),
+                    deferred_or_refused=(epoch == 5),
+                    unauthorized_mutations=0,
+                    cost_usd=0.10,
+                )
+            )
+    rows = summarize_records(records)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.pass_at_1 == 0.5
+    # Task-clustered CI across N=4 tasks [1, 1, 0, 0] is [0.0, 1.0], wider than pseudoreplicated Wilson(10, 20)
+    assert row.pass_at_1_ci95 == [0.0, 1.0]
+    assert row.said_done_failed_rate == 0.3  # 6 / 20 unconditional
+    assert row.said_done_given_failed_rate == 0.6  # 6 / 10 conditional on failed runs
+    assert row.deferred_rate == 0.2  # 4 / 20 overall
+    assert row.failed_deferred_rate == 0.1  # 2 / 20 failed & deferred
 
 
 def test_default_cli_args_exit_zero_and_export_json_and_replay_manifest(

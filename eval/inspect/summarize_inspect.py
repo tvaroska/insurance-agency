@@ -1,11 +1,13 @@
 """Aggregate UK AISI Inspect AI (.eval) logs into the Evergreen README Results table.
 
 Computes for each (model, harness, learning_mechanism) group:
-  - pass@1 (with 95% Wilson score confidence interval) and pass^5 (mean per-task (c/n)^5 across workflows)
+  - pass@1 (with task-clustered 95% bootstrap CI on multi-epoch runs, or 95% Wilson CI at k=1)
+    and pass^5 (mean per-task (c/n)^5 across workflows)
   - Legal traps missed, split into the 3 HTTP-422 system-caught traps
     (state minimum, >$10k binding authority, backdating) vs. 7 judgment traps
-  - "Said done, check failed": agent completion claims completion while
-    output_score < 1.0 or eo_compliant is False
+  - "Said done, check failed": unconditional rate across all trials (`said_done_failed_rate`)
+    and conditional rate among failed trials (`said_done_given_failed_rate`)
+  - Explicit producer/signature deferral rate (`deferred_rate` overall, `failed_deferred_rate` failed)
   - "Records changed unasked": unauthorized mutations from the 32-table state diff
   - "Drop, clean to messy": pass@1 change from clean to realistic
   - "Cost per task": USD per task from Inspect model_usage token counts
@@ -212,6 +214,7 @@ class SampleRecord:
     said_done_failed: bool
     unauthorized_mutations: int
     cost_usd: float
+    deferred_or_refused: bool = False
     artifacts_dir: str | None = None
     eval_log: str | None = None
 
@@ -239,6 +242,9 @@ class RowSummary:
     pass_at_1_ci95: list[float] | None = None
     pass_hat_5_ci95: list[float] | None = None
     pass_hat_5_unbiased: float | None = None
+    said_done_given_failed_rate: float | None = None
+    deferred_rate: float = 0.0
+    failed_deferred_rate: float = 0.0
 
 
 def _rel_if_in_repo(raw_path: str | Path | None) -> str | None:
@@ -322,6 +328,10 @@ def extract_records_from_log(
         answer_text = score_obj.answer
         if not answer_text and getattr(sample, "output", None):
             answer_text = getattr(sample.output, "completion", None)
+        trimmed_answer = (answer_text or "").strip()
+        deferred_or_refused = bool(
+            api_calls > 0 and trimmed_answer and _REFUSAL_OR_ABORT_RE.search(trimmed_answer)
+        )
 
         records.append(
             SampleRecord(
@@ -347,6 +357,7 @@ def extract_records_from_log(
                 ),
                 unauthorized_mutations=unauth,
                 cost_usd=sample_cost,
+                deferred_or_refused=deferred_or_refused,
                 artifacts_dir=_rel_if_in_repo(meta.get("artifacts_dir")),
                 eval_log=rel_eval_log,
             )
@@ -399,7 +410,14 @@ def summarize_records(
         judg_missed = sum(r.judgment_traps_missed for r in group)
         judg_total = sum(r.judgment_traps_total for r in group)
 
-        said_done_rate = sum(1 for r in group if r.said_done_failed) / n_trials if n_trials else 0.0
+        n_failed = n_trials - n_passed_trials
+        said_done_count = sum(1 for r in group if r.said_done_failed)
+        said_done_rate = said_done_count / n_trials if n_trials else 0.0
+        said_done_given_failed = (said_done_count / n_failed) if n_failed > 0 else None
+        deferred_rate = sum(1 for r in group if r.deferred_or_refused) / n_trials if n_trials else 0.0
+        failed_deferred_rate = (
+            sum(1 for r in group if (not r.passed) and r.deferred_or_refused) / n_trials if n_trials else 0.0
+        )
         unasked_rate = sum(1 for r in group if r.unauthorized_mutations > 0) / n_trials if n_trials else 0.0
         mean_unasked = sum(r.unauthorized_mutations for r in group) / n_trials if n_trials else 0.0
         mean_cost = sum(r.cost_usd for r in group) / n_trials if n_trials else 0.0
@@ -422,6 +440,12 @@ def summarize_records(
                 shared = {sc: c_by_scenario[sc] for sc in m_by_scenario}
                 drop_pp = (_mean_pass(m_by_scenario) - _mean_pass(shared)) * 100.0
 
+        pass1_ci = (
+            bootstrap_mean_ci95(task_pass1)
+            if k_per_task > 1 and len(task_pass1) > 1
+            else wilson_ci95(n_passed_trials, n_trials)
+        )
+
         summaries.append(
             RowSummary(
                 model=model,
@@ -442,13 +466,18 @@ def summarize_records(
                 mean_unasked_mutations=round(mean_unasked, 3),
                 drop_clean_to_messy_pp=round(drop_pp, 1) if drop_pp is not None else None,
                 mean_cost_usd=round(mean_cost, 4),
-                pass_at_1_ci95=wilson_ci95(n_passed_trials, n_trials),
+                pass_at_1_ci95=pass1_ci,
                 pass_hat_5_ci95=bootstrap_mean_ci95(task_pass5) if k_per_task >= 5 else None,
                 pass_hat_5_unbiased=(
                     round(sum(task_pass5_unbiased) / len(task_pass5_unbiased), 4)
                     if task_pass5_unbiased
                     else None
                 ),
+                said_done_given_failed_rate=(
+                    round(said_done_given_failed, 4) if said_done_given_failed is not None else None
+                ),
+                deferred_rate=round(deferred_rate, 4),
+                failed_deferred_rate=round(failed_deferred_rate, 4),
             )
         )
     summaries.sort(key=lambda r: (-r.pass_at_1, -r.mean_score, r.model, r.learning_mechanism))
@@ -595,10 +624,7 @@ def _read_log_for_summary(eval_file: Path) -> EvalLog:
             meta = score_obj.metadata or {}
             val = float(score_obj.value or 0.0)
             api_calls = int(meta.get("api_calls", 0) or 0)
-            out_score = float(meta.get("output_score", 0.0))
-            eo_ok = bool(meta.get("eo_compliant", False))
-            is_pass = (val >= 0.80) and eo_ok
-            if not is_pass and api_calls > 0 and (out_score < 1.0 or not eo_ok):
+            if api_calls > 0:
                 ans = score_obj.answer or ""
                 if not ans or (ans.endswith("...") and not _REFUSAL_OR_ABORT_RE.search(ans)):
                     needs_full = True

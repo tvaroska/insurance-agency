@@ -259,9 +259,9 @@ export function calculateAgencyRoi(overrides?: {
     ) / 10;
 
   const manualCsrCostPerTransactionUsd = 18.5;
-  const stage1GeneralAgentCpvoUsd = 0.0029;
-  const stage2SkillCpvoUsd = 0.0012;
-  const stage3BlendedCpvoUsd = 0.0003;
+  const stage1GeneralAgentCpvoUsd = 0.7741;
+  const stage2SkillCpvoUsd = 0.587;
+  const stage3BlendedCpvoUsd = 0.1291;
   const annualServicingTransactions = 42_000;
   const annualLaborHoursSaved = 11_800;
   const annualNetSavingsUsd = Math.round(
@@ -375,11 +375,9 @@ export async function runStageTrajectory(options: {
   const pass1 =
     options.stage === "stage_1_general_agent"
       ? 0.58
-      : options.stage === "stage_2_domain_skill"
+      : options.stage === "stage_2_domain_skill" || isFallback
         ? 0.69
-        : isFallback
-          ? 0.97
-          : 1.0;
+        : 1.0;
   const pass5 = passHatK(100, Math.round(pass1 * 100), 5);
 
   const provenance: StageProvenance =
@@ -403,10 +401,8 @@ export async function runStageTrajectory(options: {
     tokenProfile === "compiled_code"
       ? Math.max(1, econ.wallClockMs || 180)
       : options.stage === "stage_1_general_agent"
-        ? 3_900
-        : isFallback
-          ? 1_830
-          : 1_650;
+        ? 200_400
+        : 218_200;
 
   return {
     stage: options.stage,
@@ -514,15 +510,15 @@ export async function runEvolutionShowcase(options?: {
     stages: {
       stage1GeneralAgent: {
         label:
-          "Stage 1: Zero-Shot General Agent (Measured v0.8, 20 workflows x 5 trials: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%; 26%–29% false-completion rate)",
+          "Stage 1: Zero-Shot General Agent (Measured v0.8, 20 workflows x 5 trials: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%; 26%–29% unconditional false-done, 58%–69% on failed runs)",
         provenance: "measured_v0.8_baseline",
-        avgTokens: 6500,
+        avgTokens: 1_099_806,
         cpvoUsd: 0.7741,
-        avgLatencyMs: 3_900,
+        avgLatencyMs: 200_400,
         pass1: 0.58,
         meanScore: 0.71,
         pass5: 0.471,
-        eoComplianceRate: 0.75,
+        eoComplianceRate: 0.85,
         falseCompletionRateRange: "26%–29%",
         measuredModels: MEASURED_V08_STAGE1_MODELS,
       },
@@ -530,12 +526,12 @@ export async function runEvolutionShowcase(options?: {
         label:
           "Stage 2: Domain Skill Procedure Guide (Measured v0.8: gemini-3.8-flash 69.0% pass@1, 60.2% pass^5; eval/inspect/evergreen_domain_skill.md)",
         provenance: "measured_v0.8_domain_skill",
-        avgTokens: 2700,
+        avgTokens: 998_471,
         cpvoUsd: 0.587,
-        avgLatencyMs: 1_650,
+        avgLatencyMs: 218_200,
         pass1: 0.69,
         pass5: 0.602,
-        eoComplianceRate: 1.0,
+        eoComplianceRate: 0.96,
       },
       stage3CompiledCode: {
         label:
@@ -543,12 +539,12 @@ export async function runEvolutionShowcase(options?: {
         provenance: "measured_reference_verifier_with_projected_fallback",
         routineTokens: 0,
         routineCpvoUsd: 0.0,
-        blendedTokens: 594,
-        blendedCpvoUsd: 0.0003,
+        blendedTokens: 219_664,
+        blendedCpvoUsd: 0.1291,
         avgLatencyMs: 180,
         pass1: 1.0,
         pass5: passHatK(100, 100, 5),
-        eoComplianceRate: 1.0,
+        eoComplianceRate: 0.99,
         fallbackRatePct: 22.0,
       },
     },

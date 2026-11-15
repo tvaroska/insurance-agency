@@ -247,14 +247,18 @@ describe("S3-ECON-1 & S3-SIM-1: economics & turn-budget evaluator", () => {
     expect(normalizeModelName("gemini-3.5-flash-lite-ga")).toBe("gemini-3.5-flash-lite");
   });
 
-  test("calculateModelCost computes accurate pricing for gemini-3.8-flash and gemini-4-argon", () => {
+  test("calculateModelCost computes accurate pricing for gemini-3.8-flash, gemini-4-hydrogen, gemini-4-argon, and gpt-oss-120b", () => {
+    expect(MODEL_PRICING_PER_1M["gemini-4-hydrogen"]).toEqual({
+      input: 1.5,
+      output: 7.5,
+    });
     expect(MODEL_PRICING_PER_1M["gemini-3.8-flash"]).toEqual({
       input: 1.5,
       output: 7.5,
     });
     expect(MODEL_PRICING_PER_1M["gemini-4-argon"]).toEqual({
-      input: 1.25,
-      output: 5.0,
+      input: 4.0,
+      output: 20.0,
     });
     expect(MODEL_PRICING_PER_1M["claude-sonnet-5-5"]).toEqual({
       input: 2.0,
@@ -264,12 +268,19 @@ describe("S3-ECON-1 & S3-SIM-1: economics & turn-budget evaluator", () => {
       input: 0.3,
       output: 1.2,
     });
+    expect(MODEL_PRICING_PER_1M["gpt-oss-120b-maas"]).toEqual({
+      input: 0.09,
+      output: 0.36,
+    });
 
     // 1M input + 1M output on gemini-3.8-flash = $1.50 + $7.50 = $9.00
     expect(calculateModelCost("gemini-3.8-flash", 1_000_000, 1_000_000)).toBe(9.0);
 
-    // 100k input + 20k output on gemini-4-argon-001 = 0.1 * 1.25 + 0.02 * 5.0 = 0.125 + 0.10 = $0.225
-    expect(calculateModelCost("gemini-4-argon-001", 100_000, 20_000)).toBe(0.225);
+    // 100k input + 20k output on gemini-4-argon-001 = 0.1 * 4.0 + 0.02 * 20.0 = 0.40 + 0.40 = $0.80
+    expect(calculateModelCost("gemini-4-argon-001", 100_000, 20_000)).toBe(0.8);
+
+    // 1M input + 100k output on gpt-oss-120b-maas = $0.09 + $0.036 = $0.126
+    expect(calculateModelCost("gpt-oss-120b-maas", 1_000_000, 100_000)).toBe(0.126);
 
     // Unknown model falls back to default pricing
     expect(resolveModelPricing("unknown-custom-model")).toEqual({
@@ -415,12 +426,12 @@ describe("S3-ECON-1 & S3-SIM-1: economics & turn-budget evaluator", () => {
     expect(econ.retryRate).toBe(0.25); // 1 retry out of 4 HTTP calls
     // Cost:
     // Span 1 (gemini-3.8-flash): 0.1 * 1.50 + 0.01 * 7.50 = 0.15 + 0.075 = 0.225
-    // Span 2 (gemini-4-argon):   0.04 * 1.25 + 0.005 * 5.0 = 0.05 + 0.025 = 0.075
-    // Total = 0.300 USD
-    expect(econ.estimatedCostUsd).toBe(0.3);
+    // Span 2 (gemini-4-argon):   0.04 * 4.00 + 0.005 * 20.0 = 0.16 + 0.10 = 0.26
+    // Total = 0.485 USD
+    expect(econ.estimatedCostUsd).toBe(0.485);
     expect(econ.turnCount).toBe(1);
     expect(econ.turnBudgetScore).toBe(1.0);
-    expect(econ.paretoEfficiency).toBe(computeParetoEfficiency(0.9, 0.3));
+    expect(econ.paretoEfficiency).toBe(computeParetoEfficiency(0.9, 0.485));
     expect(econ.modelsUsed).toEqual(["gemini-3.8-flash", "gemini-4-argon"]);
   });
 
