@@ -1,5 +1,5 @@
 import type { PrismaClient } from "../generated/prisma/client";
-import { getSimulatedNow } from "@evergreen/shared";
+import { getActiveScenarioId, getSimulatedNow } from "@evergreen/shared";
 import { SIMULATOR_RULES, type SimulatorTurnRule } from "./rules";
 
 export interface SimulatedReplyInput {
@@ -60,12 +60,25 @@ export async function processSimulatedReply(
     return null;
   }
 
+  const rawEnvScenario = process.env.SCENARIO_ID?.trim();
+  const envScenario =
+    rawEnvScenario && /^\d+$/.test(rawEnvScenario)
+      ? rawEnvScenario.padStart(2, "0")
+      : rawEnvScenario || undefined;
+  const activeScenario = getActiveScenarioId() ?? envScenario;
+  const applicableRules = activeScenario
+    ? SIMULATOR_RULES.filter((r) => r.scenario_id === activeScenario)
+    : SIMULATOR_RULES;
+  if (applicableRules.length === 0) {
+    return null;
+  }
+
   const normalizedTo = normalizeRecipient(input.to);
   const combinedText = `${input.subject ?? ""} ${input.body}`.toLowerCase();
 
   // Find candidate scenarios matching client_id or recipient
   const candidateScenarios = new Set<string>();
-  for (const rule of SIMULATOR_RULES) {
+  for (const rule of applicableRules) {
     if (matchesRuleTarget(rule, input.clientId, normalizedTo)) {
       candidateScenarios.add(rule.scenario_id);
     }
@@ -83,7 +96,7 @@ export async function processSimulatedReply(
       },
     });
 
-    const rule = SIMULATOR_RULES.find(
+    const rule = applicableRules.find(
       (r) => r.scenario_id === scenarioId && r.turn_index === existingReplies,
     );
     if (!rule) continue;

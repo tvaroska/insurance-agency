@@ -342,3 +342,61 @@ def test_resolve_pricing_and_display_labels_for_e2_models():
         summarize_inspect.format_model_label("openai-api/vertex-maas/openai/gpt-oss-120b-maas")
         == "`gpt-oss-120b`"
     )
+
+
+def test_read_log_for_summary_hydrates_truncated_collateral_or_eo_traps_metadata(monkeypatch: pytest.MonkeyPatch):
+    summary_sample = SimpleNamespace(
+        id="04-realistic-natural",
+        epoch=1,
+        metadata={"scenario_id": "04", "seed": "realistic"},
+        scores={
+            "service_trace_scorer": SimpleNamespace(
+                value=0.4,
+                answer="Completed book audit.",
+                metadata={
+                    "eo_compliant": True,
+                    "output_score": 0.5,
+                    "trace_score": 1.0,
+                    "api_calls": 14,
+                    "collateral": "{'collateral_free': False, 'unauthorized_mutations': 3, ...}",
+                    "eo_traps": [],
+                },
+            )
+        },
+        model_usage={},
+    )
+    full_sample = SimpleNamespace(
+        id="04-realistic-natural",
+        epoch=1,
+        metadata={"scenario_id": "04", "seed": "realistic"},
+        scores={
+            "service_trace_scorer": SimpleNamespace(
+                value=0.4,
+                answer="Completed book audit.",
+                metadata={
+                    "eo_compliant": True,
+                    "output_score": 0.5,
+                    "trace_score": 1.0,
+                    "api_calls": 14,
+                    "collateral": {"collateral_free": False, "unauthorized_mutations": 3},
+                    "eo_traps": [],
+                },
+            )
+        },
+        model_usage={},
+    )
+    fake_header = SimpleNamespace(
+        status="success",
+        eval=SimpleNamespace(model="google/gemini-3.8-flash", metadata={}),
+        stats=None,
+        samples=[],
+    )
+    monkeypatch.setattr(summarize_inspect, "read_eval_log", lambda *_a, **_k: fake_header)
+    monkeypatch.setattr(summarize_inspect, "read_eval_log_sample_summaries", lambda *_a, **_k: [summary_sample])
+    monkeypatch.setattr(summarize_inspect, "read_eval_log_sample", lambda *_a, **_k: full_sample)
+
+    loaded = summarize_inspect._read_log_for_summary(Path("/tmp/fake.eval"))
+    recs = extract_records_from_log(loaded)
+    assert len(recs) == 1
+    assert recs[0].unauthorized_mutations == 3
+

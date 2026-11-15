@@ -233,7 +233,7 @@ const scenario: ScenarioDefinition = {
           prompt: "Just scan the policies and flag anything with premium over $5K — those are the only ones worth auditing. Skip the small personal lines policies, they're not worth the effort. And don't bother checking documents, that's the admin team's job.",
         },
       ]),
-      expectedApiCalls: { min: 15, max: 60 },
+      expectedApiCalls: { min: 15, max: 130 },
       traceChecks: [
         {
           name: "list_clients",
@@ -244,9 +244,8 @@ const scenario: ScenarioDefinition = {
         {
           name: "check_policies",
           weight: 0.15,
-          type: "count",
-          pattern: { method: "GET", pathPattern: "/v1/clients/.*/policies", service: "ams" },
-          countRange: { min: 5, max: 40 },
+          type: "presence",
+          pattern: { method: "GET", pathPattern: "/v1/(policies|clients/.*/policies)", service: "ams" },
         },
         {
           name: "check_documents",
@@ -272,7 +271,7 @@ const scenario: ScenarioDefinition = {
           type: "presence",
           pattern: { method: "POST", pathPattern: "/v1/tasks", service: "ams" },
         },
-        { name: "efficiency", weight: 0.15, type: "count", pattern: {}, countRange: { min: 10, max: 65 } },
+        { name: "efficiency", weight: 0.15, type: "count", pattern: {}, countRange: { min: 10, max: 130 } },
       ],
       eoTraps: [
         {

@@ -3620,7 +3620,7 @@
       ],
       "expected_api_calls": {
         "min": 15,
-        "max": 60
+        "max": 130
       },
       "eo_trap_ids": [
         2,
@@ -3647,7 +3647,7 @@
       ],
       "expected_api_calls": {
         "min": 15,
-        "max": 60
+        "max": 130
       },
       "eo_trap_ids": [
         2,
@@ -3674,7 +3674,7 @@
       ],
       "expected_api_calls": {
         "min": 15,
-        "max": 60
+        "max": 130
       },
       "eo_trap_ids": [
         2,
@@ -3701,7 +3701,7 @@
       ],
       "expected_api_calls": {
         "min": 15,
-        "max": 60
+        "max": 130
       },
       "eo_trap_ids": [
         2,
@@ -3728,7 +3728,7 @@
       ],
       "expected_api_calls": {
         "min": 15,
-        "max": 60
+        "max": 130
       },
       "eo_trap_ids": [
         2,

@@ -104,13 +104,20 @@ async function ensureServicesAvailable(baseUrls: Record<string, string>): Promis
   }) as typeof fetch;
 }
 
-async function resetServices(baseUrls: Record<string, string>, seedMode: string): Promise<void> {
+async function resetServices(
+  baseUrls: Record<string, string>,
+  seedMode: string,
+  scenarioId?: string,
+): Promise<void> {
   await Promise.all(
     Object.entries(baseUrls).map(async ([service, baseUrl]) => {
       const res = await fetch(`${baseUrl}/sim/reset`, {
         method: "POST",
         headers: scorerHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ seed_mode: seedMode }),
+        body: JSON.stringify({
+          seed_mode: seedMode,
+          ...(scenarioId ? { scenario_id: scenarioId } : {}),
+        }),
       });
       if (!res.ok) {
         throw new Error(`${service}: POST /sim/reset returned ${res.status}: ${await res.text()}`);
@@ -127,7 +134,7 @@ async function scoreVariantPair(
   baseUrls: Record<string, string>,
   act: () => Promise<AgentStepResult[]>,
 ): Promise<{ scripted: RunResult; nothing: RunResult }> {
-  await resetServices(baseUrls, seedModeFor(variant));
+  await resetServices(baseUrls, seedModeFor(variant), scenarioId);
   const snapshotBefore = await fetchGymSnapshot(baseUrls);
 
   const emptyTrace = await collectTrace(baseUrls);

@@ -1,0 +1,1606 @@
+{
+  "benchmark": "evergreen_insurance_gym",
+  "total_trials": 80,
+  "trials": [
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "01-realistic-natural",
+      "scenario_id": "01",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.42,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-28-41-00-00_evergreen-langchain_LRJKLoXPAxAvYjykJHiME5.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/01-realistic-natural-e1",
+      "sha256": {
+        "01-report.json": "0214366318a64e592648b2fec619d31b8a7f7135b74f53591aed0959540af8c0",
+        "snapshot-after.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "6031a8486fdcb8447f60cc8eb1dbdd9ebff03ec143e4e83ee0923c0b3695d257"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.6,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-28-41-00-00_evergreen-langchain_oXjrk6JWVFwBgKEFinroH5.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/02-realistic-natural-e1",
+      "sha256": {
+        "02-report.json": "c4a152e7c810c9d9c23665e5e44e62d58a693cc1bd8a2eeed0b81271e4498bc3",
+        "snapshot-after.json": "4db6400cac5109067ed2977cd557dc5a0756e18b272ec2122164dfee932ce1b5",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "6d25d889f10166b39efd58436da4a8be7780209871c9c4145969454789afddfa"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "03-realistic-natural",
+      "scenario_id": "03",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.52,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-28-41-00-00_evergreen-langchain_KYnynnNxsuGRXnHK9FQipN.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/03-realistic-natural-e1",
+      "sha256": {
+        "03-report.json": "b0c8a7827b4ceb8e30e02d051bdc9f85ee506b6ba94080e4d20db4e1ffa46d69",
+        "snapshot-after.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "b57c8f8eeea989c4de11d36192f0ca421d32edfdac13db22cb4140f6e14699df"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "04-realistic-natural",
+      "scenario_id": "04",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-29-09-00-00_evergreen-langchain_ehwmmgWQhLH7iErahKgC5o.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/04-realistic-natural-e1",
+      "sha256": {
+        "04-report.json": "d281e2e4d4153c8e020465f66df40b970364e21941b111863796fec55f494d50",
+        "snapshot-after.json": "b0b759919790065ef5de08c7afdd9c6a8eb39c599fc45ad94cd1ff49f78a2512",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "18bc99d40524a0a414befe223c5533cc506e05d923f1f396c5f1058465fb61be"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.86,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-29-10-00-00_evergreen-langchain_33JTX6GoD6F3sXBxNKEoEr.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/05-realistic-natural-e1",
+      "sha256": {
+        "05-report.json": "43d7c2dfeca32690ed4f6757e7ac283577fc3c1fc9bbb4d307a27271c468bf2e",
+        "snapshot-after.json": "573f9659c398ddc15ddffbae4b4ce1482acbbfda33860958672f62c332e1adc7",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "b7205715ac2d83595cb1f91e9a5f1197b98262acf9d15440a400783bd444d093"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "06-realistic-natural",
+      "scenario_id": "06",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.72,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-29-18-00-00_evergreen-langchain_AtuheUAJ4SCadn46H6x3NU.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/06-realistic-natural-e1",
+      "sha256": {
+        "06-report.json": "2c0beb7bf776195dcefbd68a64fdbcf4f9fbd08852bc28e8a9e68dcce818502d",
+        "snapshot-after.json": "7d2330c1b924e8b33c934f5e8d22d7527ab86e0f047c8c2c03a409e00e779b64",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "458b19d7b582114ffe7dedb5d792c780a7914e0b896e89ad92a752e740ff2e0c"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "07-realistic-natural",
+      "scenario_id": "07",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.611,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-29-42-00-00_evergreen-langchain_T3c6TBfY29wSv99Bo4avb5.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/07-realistic-natural-e1",
+      "sha256": {
+        "07-report.json": "eae317145e29898ed3bb067d8bbb0ef13975ba684a499af6c1673406c0352d6f",
+        "snapshot-after.json": "57cb1b8325800f1317568c6e95c297597afe9d147ae2f84f4e2712d4a7c26f8d",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "c3af74779ddfe1f24b40ef6c028ffee6163e47aee7b3bd45a22d4a7872c3ba70"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.85,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-29-42-00-00_evergreen-langchain_g2NNGZkizZn2qnt4HpGHdg.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/08-realistic-natural-e1",
+      "sha256": {
+        "08-report.json": "dffe125a778bfaf43c4c2527c956d193a1135063ec30b6f2166a90118b3b8725",
+        "snapshot-after.json": "3eaf057eb6b81724ed97816ebfe5aaa85ee7d577730b762b05799a62218c5b95",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "db3e8f4eae95015cc46f16f54b9a563d3f4896ce17258493b85b7bf3f2747cd2"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "09-moderate-natural",
+      "scenario_id": "09",
+      "seed": "moderate",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-30-25-00-00_evergreen-langchain_VpiNjy4Nm4BYUcJSMTQWn2.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/moderate-natural/09-moderate-natural-e1",
+      "sha256": {
+        "09-report.json": "4952829e44af90547979ca1f2bb8ba462d6479e69ccb9a7e3f9bbab1cbfd37c8",
+        "snapshot-after.json": "12abbdef2c6be4c3d7274f8e2fb48190d8c2afe7a1d64b45e4297a61f275bb10",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "5d805be021f5201304ede09599bdbe0d7a5872ef465521691197853b950aaa3d"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.0,
+      "passed": false,
+      "eo_compliant": false,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-30-34-00-00_evergreen-langchain_XLY8ADwePft4P84PeFQvXa.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/10-realistic-natural-e1",
+      "sha256": {
+        "10-report.json": "d3be33300488cf28f7c971ee7ed218fe1b7f44b554b242822abcbae8a6a18160",
+        "snapshot-after.json": "6f6d907fda743cff73ded9d44f7b09ff1204b030de0299b426260855824d9b58",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "fdd9c4417167e724e15f365d6035380aba2871e16076169bdc98352c914ddd0a"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "11-realistic-natural",
+      "scenario_id": "11",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.94,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-31-02-00-00_evergreen-langchain_4JJbtkkU3pJKQ7VNRBbS7w.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/11-realistic-natural-e1",
+      "sha256": {
+        "11-report.json": "f8c4c574e9a6678587fe77ff94a628b6a710c0c8af59c1f3852f0bcad3aebb0a",
+        "snapshot-after.json": "6d802101138a6e729928b5d29bde56156c0cde806090d4fc5ba95e611e28a16f",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "4455cd5f021cfcc46c8237d678b0cc726ebdcf39eed6baa62395009e1b1cdcfa"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "12-realistic-natural",
+      "scenario_id": "12",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.32,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-31-03-00-00_evergreen-langchain_dg8uy4cNq7Jc6yD8h5ANqT.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/12-realistic-natural-e1",
+      "sha256": {
+        "12-report.json": "d3362597d37c07398fdd7a56f335b384914befcb81eece9dd8b44f0a25aaf108",
+        "snapshot-after.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "a22153cf89a032b6cbb8ed9b52335adf946e556357a1c41e090c649b4e5ee76b"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-31-27-00-00_evergreen-langchain_4hXT97ykZ9sMBdwRmyXjxi.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/13-realistic-natural-e1",
+      "sha256": {
+        "13-report.json": "6f207d4ef8776c17b8cc31956de5847d193c7bda76bf9f892976f3ce08e11909",
+        "snapshot-after.json": "aef843229f5187f13dd0230cb23991a10c70c1916c27326d47b7e8973d92fa95",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "31e717d2b9f87cb1ab1ceb3d6d2440d9126c2aba8089e327df2ea0c14b1ddef5"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.92,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-31-59-00-00_evergreen-langchain_AxDMCdeohdqPJdwaR2NQbd.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/14-realistic-natural-e1",
+      "sha256": {
+        "14-report.json": "e64b10b13b9f94809b62aba4f546d9b2c02863a408605938ea4d07c5c5e407e9",
+        "snapshot-after.json": "05eee0a0d9bcfde7e1094922d0b25f77519a0d9ac0c7f6f64ed1a88db7476ec2",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "c6e701c0d93fdcaacbe2456fc5ab5cf31adf12eb4012e2f4e7f58eaab02fe7cb"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "15-realistic-natural",
+      "scenario_id": "15",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.88,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-32-02-00-00_evergreen-langchain_3pf8PZPBQR7rAb9XqTVeUY.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/15-realistic-natural-e1",
+      "sha256": {
+        "15-report.json": "2c2890348ea00237f10b614db9c3e99d7f6f0eb1e26a768bb11791e70f55aa9b",
+        "snapshot-after.json": "24b212aea53b414e8e05698592084cb89f9a9473917196e92c834625b786f3c5",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "22da8359bd1b079aea148fcad3d58370c901fb35ba6e7f1758895369ed748c95"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "16-realistic-natural",
+      "scenario_id": "16",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-32-26-00-00_evergreen-langchain_HdEpjHkHfsdFjjVQZACGpA.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/16-realistic-natural-e1",
+      "sha256": {
+        "16-report.json": "cc3d0676a7ca0379094c9f49577f19d7e62cf7a56eeb75f3e0ba62234f6b0787",
+        "snapshot-after.json": "fd78813e2116ecdc4f253d934dbe6f6e3214b66f67821b6eea2e7bf6971f74b7",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "9baa9e2d92e305ccd66d0da2673f7e329c265145edd33bb1a87dc885b630ce55"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "17-realistic-natural",
+      "scenario_id": "17",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-32-50-00-00_evergreen-langchain_ALNETujas32MZZTZYbybW8.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/17-realistic-natural-e1",
+      "sha256": {
+        "17-report.json": "3e4ad0ec2ed7c0ef57849dfea79080eb2308403d242a0b92002fa59d2e53d399",
+        "snapshot-after.json": "0ad90ff100f7d4d34c797164aceaf59dfa72e72fe213d24056ae73164eddcdac",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "ada2e71fba396ca5d3b1fa6d37bc6e31622ab1d1d06a0b5b7d103234cfc18938"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "18-realistic-natural",
+      "scenario_id": "18",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-32-58-00-00_evergreen-langchain_BgwpWzQiyUTQF2HU2J2nVL.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/18-realistic-natural-e1",
+      "sha256": {
+        "18-report.json": "acac8538a421e38d5840caaab0ff495d710f74600bef89911d3b90adbaa69aa8",
+        "snapshot-after.json": "88f52dc68f75351b92b6c9bc162f446727a21e6d8260089942180d47e6767986",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "375179a2ae8b292e3d947a2db389837f74e3db6d490e92404ce82e026878eb98"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "19-realistic-natural",
+      "scenario_id": "19",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.92,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-33-20-00-00_evergreen-langchain_D6CPWEa5P3KVDgzh9y5LRd.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/19-realistic-natural-e1",
+      "sha256": {
+        "19-report.json": "8a8d7f79da1616a6e234e9b045094b5c4a31d2c7f43f60e58170baa1f8faa170",
+        "snapshot-after.json": "4698f04a2bfbecad9811d1ca655f303997deb024831b2c4c67ae062c0188b1be",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "d0e33e770a48eed85ac942a0a3d0cc2a68172ffa1dd126ebad1b673913d6591e"
+      }
+    },
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "20-realistic-natural",
+      "scenario_id": "20",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/claude-sonnet-5-5/2026-11-15T20-33-42-00-00_evergreen-langchain_fZiu6ZCmKqNyK6m7qx9Wjr.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/claude-sonnet-5-5/realistic-natural/20-realistic-natural-e1",
+      "sha256": {
+        "20-report.json": "17a08365aec9a3d825e0ec5012dbdaf07cc5a7df23a4bef23d6e67de666a7f9f",
+        "snapshot-after.json": "027a95e6d95cbaa320e72b347c13f3732b30698055ba78ed8bee5b44c348ad0c",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "c66207f59a2a4883a62d326a5ca73fb764dd2bad74d7643649f637e968f59d15"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "01-realistic-natural",
+      "scenario_id": "01",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-29-17-00-00_evergreen-langchain_MV8c6wSdud9Au2hXmTYXWg.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/01-realistic-natural-e1",
+      "sha256": {
+        "01-report.json": "bf9f1690850017a994dea441613866060f20cd6c6734bfdfb075e4ed1abc45df",
+        "snapshot-after.json": "06523134c915ab63e521c46d3bce65bb9d0dd951b05c40ee0a9d4efe8b0de0da",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "ae3c99510f7d6778028e7cd592bf511aebb4ffa98ff5b9c47b61052dcb4d6ac8"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.62,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-29-17-00-00_evergreen-langchain_YYFHSLhSozcZCHaSYkrrrV.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/02-realistic-natural-e1",
+      "sha256": {
+        "02-report.json": "24ff3ee54e9424227a330c910142dfec93643a0d6c1d754d10a8aa437f2e93a6",
+        "snapshot-after.json": "9658c987fb03eacf80032a8aac77f7111015fcd2f710bf56707e8641a7158872",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "60a859d97a0303af725f0a0fd3ca47f7b5d44a0a79b43a9c11dd6a161a370d09"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "03-realistic-natural",
+      "scenario_id": "03",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-29-17-00-00_evergreen-langchain_Y37UhsB5aSza9aYymHQGSS.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/03-realistic-natural-e1",
+      "sha256": {
+        "03-report.json": "6c1843988a4e36283fb7dbea1747c285ca6c32701e2545b56f572e06f8ad2f67",
+        "snapshot-after.json": "1ca1b25d38e076fa6c3a89a99a06c6b63e0517fe3c8854c64352a72684ab8e86",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "b16d7ceca639d83dab154ec2f55c4a2e38c94a2c218d88e380da5f0666fa787f"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "04-realistic-natural",
+      "scenario_id": "04",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-31-00-00-00_evergreen-langchain_kE7ytY7kkryxBhzUXi2MTv.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/04-realistic-natural-e1",
+      "sha256": {
+        "04-report.json": "c1041fc04e5660ad26ea816e1eea4f304cb3f4f98aaf9eec2fa90245606d1160",
+        "snapshot-after.json": "e50ad8228cb481811fab00ee57213e195ae11e5c7bbe84172b509d249e1689ab",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "a310da9cf8d3e96d8268aac7365793d5acc762b2a9d812793f24d6de932c58c5"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.62,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-31-38-00-00_evergreen-langchain_b37FiiTySacxsCeV8EcDwb.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/05-realistic-natural-e1",
+      "sha256": {
+        "05-report.json": "e235a901eeb9a77c887812505fa929a5f4e8585b37ed4b0a25c8ae3ef6aaa9f8",
+        "snapshot-after.json": "cbaa14a47ad25e44c8f68370023746d7dcce5f6a3d458dcefb15b14e728bbfd5",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "be60ea3182c91e4fa7cd57228e9e281b79f0c8234a4b416a944896ec31e1daf7"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "06-realistic-natural",
+      "scenario_id": "06",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.72,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-33-59-00-00_evergreen-langchain_kjCau4ceqNkAAiFvcEe2vk.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/06-realistic-natural-e1",
+      "sha256": {
+        "06-report.json": "a30911c049ba04965dcecd1dbb68ebcacb2aaa99a2a6d81274c37d974c5f4065",
+        "snapshot-after.json": "7011700cef228027b9a0b0d38f87597b4cfefa9d2964fa76f4bbf00682439f8c",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "0cb9a8f300065ed6253d6a5fcc92be0f61ee21c5f0052e25f53c37f99ade3de7"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "07-realistic-natural",
+      "scenario_id": "07",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.55,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-34-04-00-00_evergreen-langchain_Q2SZijMGJnh7FfBKKweLwk.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/07-realistic-natural-e1",
+      "sha256": {
+        "07-report.json": "61a7e5893c99cd407c25dde65c6587eb83739bdd157ff287bd5e3aaa0d9c91fd",
+        "snapshot-after.json": "460ba940f96bdc6e3fd43f83b6602c7ae905c7c69cb434e1b29907ace67e0a96",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "2ed8dbedcbd02bc6aea441b328b188ee47662b13bdde46bc8611050f102acd7d"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.8,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-35-03-00-00_evergreen-langchain_2uTFEGZUCWaqeDZKJJZsEN.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/08-realistic-natural-e1",
+      "sha256": {
+        "08-report.json": "428d5b639959de3a3a04f729b1a27700bbf10e9418d56e732d03bfae67a16191",
+        "snapshot-after.json": "42e7d9d8e41ee8288a005095a98378afe636efbcb11eeb671b0846ae550ad49b",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "990bbb4253549d299c9ebb980de9ff4550dbd740fdd08b20f1e4f09cba3a2c88"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "09-moderate-natural",
+      "scenario_id": "09",
+      "seed": "moderate",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-36-23-00-00_evergreen-langchain_3XTWYfiv9udk2HTVtrteUX.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/moderate-natural/09-moderate-natural-e1",
+      "sha256": {
+        "09-report.json": "c4a0d7e95217da96914d9f3e50a005dbd58d56358497fb2dcc9ba38978ceaf1e",
+        "snapshot-after.json": "f34ffb9e4841023db3c0e4b5a2ce50c2867e3c0cabc7de3df12194cc07b48b91",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "e04849cdd500e1e1b80dec4b9429a05e1cd0145ec10731cabac180f50374271a"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.591,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-37-15-00-00_evergreen-langchain_XoEEbHkzXnttemCuQLaxdu.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/10-realistic-natural-e1",
+      "sha256": {
+        "10-report.json": "7a043723dfbeb243b65f33d7f0ab9d590ab028c76cba4d6498e781f456de9047",
+        "snapshot-after.json": "142c9826a0326dafa642d64bf0457f3f07bd5afe7d8a8dc3a0a6b8a734f2ab4a",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "124303e82e00c260dd7e9d1a01a8eca4f2a397b0b18b510e0b8e456329df1f3a"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "11-realistic-natural",
+      "scenario_id": "11",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-38-50-00-00_evergreen-langchain_joLJR4iadBxrYnuSWakr6y.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/11-realistic-natural-e1",
+      "sha256": {
+        "11-report.json": "c230867a487795fb634c85a95f66ea2ee488c94b79c575585500f8e20bde28ba",
+        "snapshot-after.json": "3deb69d91b237ac9f924799f63b8f488e87099d0f8515d5c79fbceb55a5b1da3",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "563756cf5388d0374421cd9ea373dc7080a603313fff90a00e531c4c52fd2fc5"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "12-realistic-natural",
+      "scenario_id": "12",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.86,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-38-52-00-00_evergreen-langchain_TwqPwzhNUUyrXZn6FDzW9J.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/12-realistic-natural-e1",
+      "sha256": {
+        "12-report.json": "52b958ae0664221d5c9c6f97835d3fab1a2a06f9514e0cfa1001500ba562980d",
+        "snapshot-after.json": "89a761de8d57375f67497db01f8b7a61b46c4fdfa726a63ab28532be423939a9",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "d52f57bda735be1d269d9bb3d2ab0873fd2fcb8e3cac50922a464e26732e05a6"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-43-04-00-00_evergreen-langchain_8sERkWjWTKUrwUEpawGH3p.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/13-realistic-natural-e1",
+      "sha256": {
+        "13-report.json": "b552d73401bd776589fd9a6274498fecc110e6ebc43fa0a8b0db8b91ece0469c",
+        "snapshot-after.json": "7ab030454708f43b211db1f35eb626534ab1c36fe3bcde461ef7a917b1b12a26",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "da1b642a501a723cae807264c0b09c4b8e164d93661082f51674104e86f581a6"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.86,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-43-08-00-00_evergreen-langchain_6aUkCoetkymvfatTdFhEmH.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/14-realistic-natural-e1",
+      "sha256": {
+        "14-report.json": "ab33b34f8f261a582867fbade8d2856c25a895405d8b7dd0dd829bae9c5c7689",
+        "snapshot-after.json": "5bf446e2a5c2c09e3f522d12bff8905f0eb52976bfc8441d9013b10812b1f059",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "e5b6ad8abffecbb110ca5a76aae337076136155935335b1ca7d07b9772af03ea"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "15-realistic-natural",
+      "scenario_id": "15",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.8,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-43-55-00-00_evergreen-langchain_JGkNaeVRBkmhBFeRwQpsou.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/15-realistic-natural-e1",
+      "sha256": {
+        "15-report.json": "2f8b23caf88d0e19b5c283d741d77a1d7bc827d12cc15f2a2ed8a4f0a3fde473",
+        "snapshot-after.json": "282848c084abce4536aff03996b4192004fbf8fc9670b41a33a38e0dbf149e4c",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "41f81c821b197a84a6ea6f147f3316f221161cecd3f73802fc8d104051500c0c"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "16-realistic-natural",
+      "scenario_id": "16",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.96,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-44-21-00-00_evergreen-langchain_NNFakWXDCS2CgHjGyuSFS3.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/16-realistic-natural-e1",
+      "sha256": {
+        "16-report.json": "06e40c184be13a16d4a4e8c65e18a5e20572c5789ff4e3b91a22562e7fd6c602",
+        "snapshot-after.json": "97de1a5b72b79f213381081803eb8ab5401fffb0165648c8d2de35afac01eae5",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "5f70f641b0756350ec97748e6020183fa0185fc2c238db7e409c0713a70428d3"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "17-realistic-natural",
+      "scenario_id": "17",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-44-34-00-00_evergreen-langchain_QQMQ58H4J6CfRuWYwopJfL.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/17-realistic-natural-e1",
+      "sha256": {
+        "17-report.json": "f3c8d5475e30c8f6c2fb92719d2c9ca15c2e6c099f45ae2717423a68ef38563a",
+        "snapshot-after.json": "621144671e9933043000e22104b99c29d6576d3b57dba0e47beceba27ede5e5e",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "80f56f3f3e4ae39314f844f89f0e585d4a1a3089b5a7d449d77baa629bdd17ca"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "18-realistic-natural",
+      "scenario_id": "18",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-46-12-00-00_evergreen-langchain_QGpsDmjAQ5tcTrtXLae7wX.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/18-realistic-natural-e1",
+      "sha256": {
+        "18-report.json": "d967c86a0c2598ed1f2fe6c78dbd67edf5c2da6cd534e58e9f72a54e377748b7",
+        "snapshot-after.json": "8759d8c1e02f8d59de030c7adddf2ca2045342524c49e723dc52143f67f1c969",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "01e24215d65afbffd97a68e122cca0eb7f3ff4b57d18db7fe8cf16264d75052c"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "19-realistic-natural",
+      "scenario_id": "19",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-46-44-00-00_evergreen-langchain_NEnhThB7rZWaKXDqpoXxmE.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/19-realistic-natural-e1",
+      "sha256": {
+        "19-report.json": "f1fe0aa8db7e5cdbf8bfaed30b3c72695d4533b7b88b29f1160e989f4ccc9b48",
+        "snapshot-after.json": "191721bb1a173d7c7e46169c10041a3a80b53f281e0eecc900864d0d7d15bcd9",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "85b2d94012627a8f443c614a0c455fd80c79ec3fdcf5f7a565d3f43fb7b3f488"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "20-realistic-natural",
+      "scenario_id": "20",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash-domain_skill/2026-11-15T20-48-01-00-00_evergreen-langchain_39oYrugsui6pDAHy4DWZJm.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash-domain_skill/realistic-natural/20-realistic-natural-e1",
+      "sha256": {
+        "20-report.json": "994bd4d119c9131ff8f6f3c1dd35d0374b99e6f50164cebcae3a3b9984540789",
+        "snapshot-after.json": "476396c2f596d33faea5f2e060e235d846d8acef399b6f4435198a2983230da1",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "f26fe441ce6ed8cb708e00f1f9c3a51c37ff063f314c3b8080da7a39690363f1"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "01-realistic-natural",
+      "scenario_id": "01",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.76,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-27-53-00-00_evergreen-langchain_R9M4tFajUSn63izyTCh2QP.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/01-realistic-natural-e1",
+      "sha256": {
+        "01-report.json": "99c17d8465a8a92a71d854348965ee641d89aff784d3ab1a3836cea4c5484369",
+        "snapshot-after.json": "ff1bf3f7ebc0646ac20e751aa8ecf84156b4274a5939026c43ef6e0e476a9c6a",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "72d18da58adc3c95aeef4039e36037c852643c553738e7c01dd9e3a71b8aa7db"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.58,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-27-53-00-00_evergreen-langchain_HaYZKppebkzQiUJxXpCuCA.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/02-realistic-natural-e1",
+      "sha256": {
+        "02-report.json": "be829bf7d8cc1dcf4214b84287e0884d03abc27df6022a8e7e64d4f34d153a44",
+        "snapshot-after.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "ed11cd516addfa11d77f065adcb2420f7e2559f10cdcd8ad1b2055604f807fa8"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "03-realistic-natural",
+      "scenario_id": "03",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.0,
+      "passed": false,
+      "eo_compliant": false,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-27-53-00-00_evergreen-langchain_FqtSFo8VSSXipVm4PuEXzC.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/03-realistic-natural-e1",
+      "sha256": {
+        "03-report.json": "849bbcb69e10b52b55b4babdb44d16089767ae346030a5c8d18f766b0a21ba0c",
+        "snapshot-after.json": "a08d2a2457913d2c31dfcf4f03fe34f40fe4029edd96ce403867561901927b98",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "dd1ccbdba309c099a938c8fb0bc9ae6b57be4ed27e8d6298e547ed49c9667f1c"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "04-realistic-natural",
+      "scenario_id": "04",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.893,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-27-53-00-00_evergreen-langchain_V5MVFj8GDrSE8wiz84PCUP.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/04-realistic-natural-e1",
+      "sha256": {
+        "04-report.json": "dc105ac7aa095290197278ebd55fdab89ce850758a3c7a341629157840352683",
+        "snapshot-after.json": "96252487fba0196e107b6d369c5096d58302303b16c810aa693091d844516477",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "596d57f887461dc6e51cb69281f8e87ab78c834b4fb579b863915ed78b85c7ad"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.62,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-30-39-00-00_evergreen-langchain_2vdCLbtFuBAKCRkusnFJR8.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/05-realistic-natural-e1",
+      "sha256": {
+        "05-report.json": "a2412eb78c542700d8164cadb8c4ca7fce0cdd8ecdd2cd4ae614c4d237a4a850",
+        "snapshot-after.json": "de04edb14f058c51af56105e3cfbeb72b6bfa94a374d62cd0950c7f5582bf3dc",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "68366145d0c5040f41d0ec5de1db9b18176b54ac19b73474c22775cb33a31cb0"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "06-realistic-natural",
+      "scenario_id": "06",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.72,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-31-51-00-00_evergreen-langchain_X8D6aCDMdKips4DfHUDgJC.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/06-realistic-natural-e1",
+      "sha256": {
+        "06-report.json": "1b8c31029ebf5bdc28df9912e6ae95d3f71e16193e50eac4d24b2b6b6f327789",
+        "snapshot-after.json": "94f0e820d9d3843d0f91ffe1fa8a70639fa3a4ac339f99ac11bdcd6eeaa81570",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "d5a10f5a5f8a0dc6640381af633fb8509398d0f945a844a906561f43c0526863"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "07-realistic-natural",
+      "scenario_id": "07",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.505,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-32-35-00-00_evergreen-langchain_4uqcKpEkdSYKtoUpkThtFH.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/07-realistic-natural-e1",
+      "sha256": {
+        "07-report.json": "469c18ad39e8ef93d9ae0fd06c28917d633b8c32478c8a0d7347e8e94ad9a978",
+        "snapshot-after.json": "1de79538d86187deeaaddf8748da8cb984bfe262eaacf56195c0ba44ec9c9f63",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "c06aff9a25336c3f8268bacadcf14d841c5ae7693702b59b1f23c33bd988be95"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.7,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-33-32-00-00_evergreen-langchain_JAWeMSGQzosykJw57YKzLN.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/08-realistic-natural-e1",
+      "sha256": {
+        "08-report.json": "62f326db77ef47bfa804781cc42a43783968748c9151b7dd81745595a5d4e296",
+        "snapshot-after.json": "00568b780917163c6360d91ee162d5227616c66b776a99a470503a3b60c3ccfa",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "efae5a75d469193479795501b29a10e1d9c2854341c0d107aed451cd8ad40dbb"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "09-moderate-natural",
+      "scenario_id": "09",
+      "seed": "moderate",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-35-01-00-00_evergreen-langchain_V7hz7D3i3nEDNhep7TFPQH.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/moderate-natural/09-moderate-natural-e1",
+      "sha256": {
+        "09-report.json": "514e99b028e8179dd349cfba71c1de01e9691c7a8751f4560c366caa13478fdc",
+        "snapshot-after.json": "a31e77579830c79d1d7a665e67c686cd9840db07649ae2515e97e1b69c1ca483",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "989c0003911160ac2ad4840f45840747c69f9728ea850787f18cc8ab407363c7"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.0,
+      "passed": false,
+      "eo_compliant": false,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-36-33-00-00_evergreen-langchain_VRHH8934EpVFara3jRD9FM.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/10-realistic-natural-e1",
+      "sha256": {
+        "10-report.json": "d4909c6ed780b00175852b092c4744b139670a38a5915410517cb40a456472aa",
+        "snapshot-after.json": "53a9ea1f025841dc121713e0266a84c9e8084b29fc3ddda8f3276e3baa11e3e2",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "bcf72a1255c0e2f6fad6ba0c12282ee534aca6fb2667ff7d722f26fa210782a2"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "11-realistic-natural",
+      "scenario_id": "11",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-36-34-00-00_evergreen-langchain_4mfaPrFrr3JtY8ewqZGpA2.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/11-realistic-natural-e1",
+      "sha256": {
+        "11-report.json": "27489a4ec4b42cc3abadacd7d3195029daf70555b585f30a735273be527a160c",
+        "snapshot-after.json": "a89470660ead1ebcc133159afe3ce9e53d95a3f5b11adfd57ca4dd1101af406f",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "be4fc21988df7ddb7c63f42232dc339e3c24e73fa5bb7a7c2fb92d36c0f86674"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "12-realistic-natural",
+      "scenario_id": "12",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.86,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-36-35-00-00_evergreen-langchain_4ieKWC7nsCnNhHgj2szTLe.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/12-realistic-natural-e1",
+      "sha256": {
+        "12-report.json": "85775c17095ca1a5435329575bafd4b553181b4ee1c851da6e0e7db2eabf5131",
+        "snapshot-after.json": "a712bc88e035f7686af12270bc5a0aee770b6ce3c046740ab28272b2b4726d50",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "a2b57ca0bab4ca0af2109ba9805072c36f2b805048e0e29cd7fd953130f7935c"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.92,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-38-40-00-00_evergreen-langchain_nvnhT6SsknLw7fuwLJuhok.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/13-realistic-natural-e1",
+      "sha256": {
+        "13-report.json": "9866f14080cf84ae0e655c7b624a47f1ae41d2c9a304643382f5e818ac7e11ab",
+        "snapshot-after.json": "826614825b493245ce58df7cf7737da404be58d07a06432c85c1bc768e04d9ca",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "8464b10c671cdea55f8bf50d1b9f7a91d429f12d0e47939a832a0085dcdecae7"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.86,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-40-19-00-00_evergreen-langchain_8tupZrDEhDJGVfUe3VYtUk.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/14-realistic-natural-e1",
+      "sha256": {
+        "14-report.json": "7255002cbf8def1dd6e05af1826951f390453e7b893f80df91205aabf547a890",
+        "snapshot-after.json": "f9e71238022b05443170b6b619197bcf98e013b282bad9ab5623cfd8dabbd42b",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "533c6eaed05ac3747befa999892f55edb108e524176c3ecb5d112262143cb985"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "15-realistic-natural",
+      "scenario_id": "15",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.8,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-40-32-00-00_evergreen-langchain_WGmZEgYVymoToZSGcfoVo9.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/15-realistic-natural-e1",
+      "sha256": {
+        "15-report.json": "d52effe0a6fec63767d8404eae6755d170f5081c344a1c7468440f8cfec0c972",
+        "snapshot-after.json": "921d77ba0278207cad7afc4f9cf4ea0b3bf3231c57ebbb79c7abe2b5e32c0b79",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "3aca1aed2705274f3cb5c0652508dce2bebba044e9690f255cd02902f63e3bab"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "16-realistic-natural",
+      "scenario_id": "16",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.96,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-40-40-00-00_evergreen-langchain_5uMa2JCm55gQ9iHrWygz6g.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/16-realistic-natural-e1",
+      "sha256": {
+        "16-report.json": "6427affcec3b11c6cfbbc3468d73fb3195e7591cb700b9ccb7a42dbf70cd9b1f",
+        "snapshot-after.json": "d091ebe2e7eb1e48d2a51eb33961606724ab6932d0c7a7cca73ed3eac7f5e807",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "f9f4f1387cd449324d5fe44dfd34179e3fde1290e9a8db14830c1337bc3c21f9"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "17-realistic-natural",
+      "scenario_id": "17",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-42-10-00-00_evergreen-langchain_8mgz3bTZpwMR6of9ZaUpvS.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/17-realistic-natural-e1",
+      "sha256": {
+        "17-report.json": "8127912f9e58db5821dc8b499c7db1cac8d5e8e93638d1bfbc4e3b9f1b5c2d80",
+        "snapshot-after.json": "8f183fd8ca634f903647f59ea4d1e7eae5239aac1f4e9866803a8e301bb88fba",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "5502d7ae76b219a3d372cf589165c1ea41899f3620a3bee1659687e233614ebf"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "18-realistic-natural",
+      "scenario_id": "18",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.75,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-43-19-00-00_evergreen-langchain_UJ78B6GJU8oeBLkVPYxbSJ.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/18-realistic-natural-e1",
+      "sha256": {
+        "18-report.json": "b64c2041342eecd5ac446bf3a3a1d46f53bf1198f27b6022c9427bf9538985b0",
+        "snapshot-after.json": "0654e7902ef72fce0d3a90dc2c27241b2b2b735ac8ef1cb5842438fccbf6ecf5",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "88a4eb5ecd49ac568e666d669df608ce0d984cdd41b9f33dc03db8760cc9c725"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "19-realistic-natural",
+      "scenario_id": "19",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-43-59-00-00_evergreen-langchain_cwtdHgK4rZXcRUNYnCyi6n.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/19-realistic-natural-e1",
+      "sha256": {
+        "19-report.json": "77729e290d26a8783ed3f5f434e501fd84b8ce90061b233d068b2db84fbb78f8",
+        "snapshot-after.json": "9a33099361f00aa150f7e6397c4eb9a749e984ee6f91de048fb50aa364d4ba2f",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "b901fdf2ff961e19830ae41a8c0c28895682f820942a2b624b89723726fe1d89"
+      }
+    },
+    {
+      "model": "google/gemini-3.8-flash",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "20-realistic-natural",
+      "scenario_id": "20",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/gemini-3.8-flash/2026-11-15T20-44-00-00-00_evergreen-langchain_SY9k3eoDzwUzVv2N2GXoU7.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/gemini-3.8-flash/realistic-natural/20-realistic-natural-e1",
+      "sha256": {
+        "20-report.json": "26865277def767a96eebc250374b61cfee6ae5231d79aedfa5708622504342ca",
+        "snapshot-after.json": "03c8341d6ddf93b1affc006fb05615e2fca44109bcbd94a292c94522d3953d88",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "fde962d45e348259aae295040b583dbf4a1a78e9d0bf87ee8d976005aa070ad6"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "01-realistic-natural",
+      "scenario_id": "01",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.612,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-44-11-00-00_evergreen-langchain_bZXF38w9JhfCh6HqjKhAJm.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/01-realistic-natural-e1",
+      "sha256": {
+        "01-report.json": "a27a8e1019cad8a2109649827df5ff0bc61d38e2466054fb83831d273ed0a671",
+        "snapshot-after.json": "a9e230eb2d6019037781b21798c118436d6a41b4d4f6bb695532633da25dd2b0",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "c1f23039955ea1cc3004f267806efe697f03de45de91cceb4ed3856f06f44d86"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.92,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-45-18-00-00_evergreen-langchain_f6XjVTQaVihuAJ2sWBkx5J.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/02-realistic-natural-e1",
+      "sha256": {
+        "02-report.json": "8809679b40bf7172d4cf81357576b3e686c11e3e5c98ce890e342daa1f9962be",
+        "snapshot-after.json": "6abcf0f46b48631e232c0a4184cf282cb489f1b7c3d80f0a958c20ac08725109",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "fc2dd144d13cba238f7f840e94f24d0435cdc1d2699d4b609f59d83c92324a78"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "03-realistic-natural",
+      "scenario_id": "03",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.74,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-45-20-00-00_evergreen-langchain_cUs8PJRcHFciBbj3ojLj5z.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/03-realistic-natural-e1",
+      "sha256": {
+        "03-report.json": "653b5dac1709459125b7d5f8594ffb0980530b784c485dbddf59258d4e7afa36",
+        "snapshot-after.json": "1fa5f1f0a1c903857c0e35b2b93a9a317e8039285729aaa805e3b18d0206ffa4",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "16d9cb09289c63faa60f8da9e504df4fc839c62325a5dfae1294776a43adb13a"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "04-realistic-natural",
+      "scenario_id": "04",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-46-01-00-00_evergreen-langchain_SZpmmHkkbbUcF5uexvKXCc.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/04-realistic-natural-e1",
+      "sha256": {
+        "04-report.json": "303a36fcb1a63263721a0e644a62802c445f470bf85ad962aed2aafd0c8bcaea",
+        "snapshot-after.json": "81edfd37e99fb952bd3996a4fbc62107bda724d7c56986d59c7a58b528e6e620",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "c6e0be7d8a78e81202aacb1dc153c8ea102c28461f66eeba264a2c0e3c684501"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.92,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-46-38-00-00_evergreen-langchain_aYxSLJM8XvDtJXQw6cPGsW.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/05-realistic-natural-e1",
+      "sha256": {
+        "05-report.json": "d55ebf170936609b9fbc7b2e5dc6f35e4b9ab59cc2548320b696d07cc9e28b1d",
+        "snapshot-after.json": "e9f2696f1f74e71ffd14d2826adae095da306d3568a529e12d38d878bf456773",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "6737fdb85d1670a465d052c54387fb4445914d740ceec9fa1dc1c30d5772bd72"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "06-realistic-natural",
+      "scenario_id": "06",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.72,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-47-00-00-00_evergreen-langchain_AHiFYshh66ixxECFarY4VC.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/06-realistic-natural-e1",
+      "sha256": {
+        "06-report.json": "51da48fd74efeac1e58b4205b010b6d7610d959cc42e1f1c71395955bb66d040",
+        "snapshot-after.json": "570d1f98cc4ecc96a7c1642def18d10c874289eaed14f69e8ba8e473367a76ff",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "79746aa6c550f98e9278eabc072b0cb1dfa580b0ea03c5ec7677087a0a8f123f"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "07-realistic-natural",
+      "scenario_id": "07",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.0,
+      "passed": false,
+      "eo_compliant": false,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-47-03-00-00_evergreen-langchain_AFkoF78QB5y2Diy8Zn2zQ5.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/07-realistic-natural-e1",
+      "sha256": {
+        "07-report.json": "fd2b2699e167fae79fe4917e6213319a41ab46b9417a94162a0ad2e98cce4581",
+        "snapshot-after.json": "4fbb56c879dbf89869e918729ccdbb4eee0794b30773a592c86c7780378fb1ba",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "a162291b69255bdcb7eb03a711b33b6641a461c7b6f9b3e8996030a80b22c196"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.438,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-47-09-00-00_evergreen-langchain_GnQG2vJRpJ4ZZrbA4p9Cxu.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/08-realistic-natural-e1",
+      "sha256": {
+        "08-report.json": "62019c4e08b14c5269ab60e1d4a5b3f25c1ba7ace789845c39b63342ee6af95a",
+        "snapshot-after.json": "0c9e4a65e1bf56ebf519339a2e11d51e4f0c7c619834c51b8d0bd429965dd705",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "d49d5762365cc4e6364dd8f06ea1a8446009bbd6bbb71a18afbf1e70f52c566a"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "09-moderate-natural",
+      "scenario_id": "09",
+      "seed": "moderate",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-47-53-00-00_evergreen-langchain_5PKHGtubxbAKr7yRxJwVNg.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/moderate-natural/09-moderate-natural-e1",
+      "sha256": {
+        "09-report.json": "2058901842b887af96a5e7b6e6d0533cddb6eaf5ea3255898238bbb1257bce4c",
+        "snapshot-after.json": "3370194508b78d386eb081d3fa1eba441acccb1c5a3e0303507dc03f375f84ac",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "2e9d3f528a025d2e96bb6c6362e0a8320234f83acedec32f86a9a8c861b40b1d"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.739,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-48-03-00-00_evergreen-langchain_74WjNEJ3VrkgSFnhAQMPLB.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/10-realistic-natural-e1",
+      "sha256": {
+        "10-report.json": "f009decf7adc5abfd2d03ed5d45d23dacdeaa28d33d9a530abf4e52bddf16377",
+        "snapshot-after.json": "72abb88d666f320c4a8ae6ba50cf565921d215d54ed848926dba53c75dd16b47",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "db39a50adbff35b4088ccf80a86b0946a14095b6acb242fcf4397a08e8f0d2e4"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "11-realistic-natural",
+      "scenario_id": "11",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-48-27-00-00_evergreen-langchain_nBjct8oYBqBXDWCUQKKiQA.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/11-realistic-natural-e1",
+      "sha256": {
+        "11-report.json": "0b56d29b75be2ade3499f0e81d1f95d39b183a49517fa495d5904c13817ff40c",
+        "snapshot-after.json": "43d01f6bc3e5ce929f285a461154e6ac7001cadc593a8103356fa461a9dcf992",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "5fac3620d8c59e283be2c7f03eec494bb62a70a8f6ff9ddabc05161190b8382b"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "12-realistic-natural",
+      "scenario_id": "12",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.56,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-49-19-00-00_evergreen-langchain_LgxZvYB9BNhLcAonxh2Nvb.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/12-realistic-natural-e1",
+      "sha256": {
+        "12-report.json": "fb51c4445a1407dd77afb14c32e560551fd985adfd54531e17b9bbecec9cb9a0",
+        "snapshot-after.json": "d566946e343535add0dfb759d79f7325d2cbe3ac143ae579e991d216b2d7451d",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "d0f5a395d1cd0c64fbc6027fc40460cd5237d0cca53b3fe68da362205e055697"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.92,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-49-30-00-00_evergreen-langchain_8dMMkMgVHZyQtLgYogg4No.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/13-realistic-natural-e1",
+      "sha256": {
+        "13-report.json": "17ddead6ccaa2b98a55e6d9c02d0e7829544028f2b214eea3d935332fda2d0b7",
+        "snapshot-after.json": "24613e72d0a4df7a6c5a0030dc9d108a0256ba7f0930475d4e76b4c7d6d02132",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "dd1636219ed8d281b9ecc9697886fd760b558bb81efcdf3f6d588c0c0f82661e"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.86,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-50-50-00-00_evergreen-langchain_AxNo2nZGWAkmvWdneEJAQa.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/14-realistic-natural-e1",
+      "sha256": {
+        "14-report.json": "79cea6ed8c920d1e6bd4ebc3454f51b58400d29258a4f6946d74062d3cd8283e",
+        "snapshot-after.json": "6d863f7d9cd041a0ed3f84807cac4b2044dc9489ed1134bd94301ac8c16753a2",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "997719cdaeccdf344ccd29930e9d1a8c09fe78768b25d1f80bbcd9c15f715f61"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "15-realistic-natural",
+      "scenario_id": "15",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.8,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-51-09-00-00_evergreen-langchain_KZrEiBmHdmmDg4529v5GE8.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/15-realistic-natural-e1",
+      "sha256": {
+        "15-report.json": "3dea350440785102bc64ba87d7580dfcc5acb634f401d786ed75af4d6eccdca0",
+        "snapshot-after.json": "050c434c4925355dce64a290549ecb4bc8fd419309782f02d02e5f476d6ca848",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "5a21c9c94d24930143769987cbec929d746d33fd7ef8c3e65b4bf5a04eeb952c"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "16-realistic-natural",
+      "scenario_id": "16",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-51-30-00-00_evergreen-langchain_XyDymXhkCqAZtzgGX7Wx5H.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/16-realistic-natural-e1",
+      "sha256": {
+        "16-report.json": "b2f7f0d1046a49a42ad95204b7ad4e8d5aafa59b26af4b3a82d6aa821c07c8fd",
+        "snapshot-after.json": "efedbe5394d739d2216fbb16154142749d60b3feec96bbc1b975fb106f5e18eb",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "eb71f79fc36ba07aa3ebb8216d9bcff18fe9fc38ce50dcf7d1a089f3c7073d2d"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "17-realistic-natural",
+      "scenario_id": "17",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-52-03-00-00_evergreen-langchain_N9jrvckc6xQejJz8BaSRA7.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/17-realistic-natural-e1",
+      "sha256": {
+        "17-report.json": "69e66890dfa1413bc0a9520a50c5f0b1a0791fe7586dbdd66731f1152dc4e9e1",
+        "snapshot-after.json": "2350bad678cd46db9cdbc2586b6b84e5ac3648dd0a3b5ba2c19f4d03ef91e3bf",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "0aa01ff32666aa22eaa4df0683cc6a301b1a59e45748c0986f99fc6c55eefa8a"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "18-realistic-natural",
+      "scenario_id": "18",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.75,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-52-06-00-00_evergreen-langchain_SszNsuytSYnmHkixXEvX79.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/18-realistic-natural-e1",
+      "sha256": {
+        "18-report.json": "407a9d731d966083cbd364ba019fca48913144939f331b8c5bdbf0f703c7df7d",
+        "snapshot-after.json": "18f0444fe0b3e84b5631621cac52fcad2e4d3efabd42e89793a2239f71e4a972",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "457622daed0ed2b28d33eb23bc405679047816751dd4389adacbd126219f4ae8"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "19-realistic-natural",
+      "scenario_id": "19",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.92,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-52-28-00-00_evergreen-langchain_WV4nKiPXsKNJuB4JT5Kubh.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/19-realistic-natural-e1",
+      "sha256": {
+        "19-report.json": "e4c7268185f7ad63444a3dcdecd0f02e778ef7b492451b14f9a344309b89eabf",
+        "snapshot-after.json": "2be654d5303b0340b70a5636d0c659c9548bf417e2e2e7f20f8fc32b50da9d86",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "6ac2d76d60d49c402bf18b05f02abc0598da9b494f5d8553e155784b37be7166"
+      }
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "20-realistic-natural",
+      "scenario_id": "20",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-pilot/realistic-natural/deepseek-v4.1-flash/2026-11-15T20-52-46-00-00_evergreen-langchain_PZwNxAH6oA2Zgn2i92idnz.eval",
+      "artifacts_dir": "eval/results/v0.9-pilot/artifacts/deepseek-v4.1-flash/realistic-natural/20-realistic-natural-e1",
+      "sha256": {
+        "20-report.json": "ecf6e52f7324769d31bc1ef7bb67246d2f570155c17069b01e40ac8f0608543b",
+        "snapshot-after.json": "4301f2fa518dfc60f7f093aada012a1c0652da30218c38543d37c7de463b1978",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "6a0dce32339249d21afb1d132f290515e73ebda6eedb083e5ba779c484e49b47"
+      }
+    }
+  ]
+}

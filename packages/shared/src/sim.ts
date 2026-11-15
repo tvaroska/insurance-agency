@@ -8,6 +8,27 @@ import { isAuthorizedScorerOrInternal } from "./request-log";
 
 let simulatedOffsetMs = 0;
 let simEpochSeq = 0;
+let activeScenarioId: string | undefined = undefined;
+
+/**
+ * Returns the active benchmark scenario ID (e.g. "07", "16") set by `/sim/reset`,
+ * or `undefined` when running outside a scenario-scoped episode.
+ */
+export function getActiveScenarioId(): string | undefined {
+  return activeScenarioId;
+}
+
+/**
+ * Sets or clears the active benchmark scenario ID for episode-scoped counterparty simulation.
+ */
+export function setActiveScenarioId(scenarioId?: string): void {
+  const trimmed = typeof scenarioId === "string" ? scenarioId.trim() : "";
+  if (!trimmed) {
+    activeScenarioId = undefined;
+    return;
+  }
+  activeScenarioId = /^\d+$/.test(trimmed) ? trimmed.padStart(2, "0") : trimmed;
+}
 
 const BASE36_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
 
@@ -510,7 +531,7 @@ export function createSimRouter(options: SimRouterOptions) {
 
   // POST /sim/reset
   router.post("/reset", async (c) => {
-    let body: { seed_mode?: string } = {};
+    let body: { seed_mode?: string; scenario_id?: string } = {};
     try {
       body = await c.req.json();
     } catch {
@@ -518,11 +539,13 @@ export function createSimRouter(options: SimRouterOptions) {
     }
 
     const seedMode = body.seed_mode || process.env.SEED_MODE || "realistic";
+    const scenarioId = body.scenario_id;
     const run = resetChain.then(async () => {
       resetChaosConfig();
       resetSimulatedClock();
       resetSimRandom(seedMode);
       resetPortalSessions();
+      setActiveScenarioId(scenarioId);
       if (options.onReset) {
         await options.onReset(seedMode);
       }
@@ -600,6 +623,7 @@ export function createSimRouter(options: SimRouterOptions) {
       resetSimulatedClock();
       resetSimRandom(base);
       resetPortalSessions();
+      setActiveScenarioId(undefined);
       if (options.onReset) {
         await options.onReset(base);
       }

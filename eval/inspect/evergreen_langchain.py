@@ -229,9 +229,18 @@ async def check_modality(http: httpx.AsyncClient, urls: dict[str, str], modality
             )
 
 
-async def reset_services(http: httpx.AsyncClient, urls: dict[str, str], seed: str):
+async def reset_services(
+    http: httpx.AsyncClient,
+    urls: dict[str, str],
+    seed: str,
+    scenario_id: str | None = None,
+):
+    payload: dict[str, Any] = {"seed_mode": seed_mode(seed)}
+    if scenario_id:
+        payload["scenario_id"] = str(scenario_id).strip().zfill(2)
+
     async def reset(url: str):
-        resp = await http.post(f"{url}/sim/reset", json={"seed_mode": seed_mode(seed)})
+        resp = await http.post(f"{url}/sim/reset", json=payload)
         resp.raise_for_status()
 
     await asyncio.gather(*(reset(url) for url in urls.values()))
@@ -267,7 +276,12 @@ def prepare_services():
         urls = service_base_urls()
         async with httpx.AsyncClient(timeout=120) as http:
             await check_modality(http, urls, state.metadata["modality_mode"])
-            await reset_services(http, urls, state.metadata["seed"])
+            await reset_services(
+                http,
+                urls,
+                state.metadata["seed"],
+                scenario_id=str(state.metadata.get("scenario_id") or ""),
+            )
             snapshot = await take_snapshot(http, urls)
         (work_dir / "snapshot-before.json").write_text(json.dumps(snapshot))
         return state

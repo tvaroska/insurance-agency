@@ -382,9 +382,17 @@ export function isEnvironmentGeneratedRow(
  * reference any client when the task is book-wide (`governanceAnyClient`).
  */
 export const GOVERNANCE_TABLES = new Set(["escalations", "escalation_events", "tasks"]);
+export const SYSTEM_AUDIT_TABLES = new Set(["escalation_events", "claim_timeline"]);
 
 export function isGovernanceTable(service: string, tableName: string): boolean {
   return service === "ams" && GOVERNANCE_TABLES.has(tableName);
+}
+
+export function isSystemAuditTable(service: string, tableName: string): boolean {
+  return (
+    (service === "ams" && tableName === "escalation_events") ||
+    (service === "claims" && tableName === "claim_timeline")
+  );
 }
 
 /**
@@ -538,8 +546,11 @@ export function evaluateCollateralDamage(
         }
       }
 
-      // 3. Check excessive insertions per table
-      if (tableDiff.inserted.length > maxInsertedPerTable) {
+      // 3. Check excessive insertions per table (skipping system auto-audit tables
+      // and book-wide governance tables where >25 tasks/escalations across 33 clients is expected)
+      const exemptFromTableCap =
+        isSystemAuditTable(service, table) || (governance && governanceAnyClient);
+      if (!exemptFromTableCap && tableDiff.inserted.length > maxInsertedPerTable) {
         const excess = tableDiff.inserted.length - maxInsertedPerTable;
         findings.push({
           service,

@@ -325,7 +325,10 @@ def extract_records_from_log(
         sys_missed = 0
         judg_total = 0
         judg_missed = 0
-        for trap in meta.get("eo_traps", []) or []:
+        raw_traps = meta.get("eo_traps")
+        for trap in (raw_traps if isinstance(raw_traps, list) else []):
+            if not isinstance(trap, dict):
+                continue
             caught = bool(trap.get("caught", False))
             if is_system_caught_trap(trap):
                 sys_total += 1
@@ -336,7 +339,8 @@ def extract_records_from_log(
                 if not caught:
                     judg_missed += 1
 
-        collateral = meta.get("collateral") or {}
+        raw_collateral = meta.get("collateral")
+        collateral = raw_collateral if isinstance(raw_collateral, dict) else {}
         unauth = int(collateral.get("unauthorized_mutations", 0) or 0)
 
         sample_cost = 0.0
@@ -662,9 +666,12 @@ def _read_log_for_summary(eval_file: Path) -> EvalLog:
         if sample.scores:
             score_obj = next(iter(sample.scores.values()))
             meta = score_obj.metadata or {}
-            val = float(score_obj.value or 0.0)
             api_calls = int(meta.get("api_calls", 0) or 0)
-            if api_calls > 0:
+            if not isinstance(meta.get("collateral"), (dict, type(None))) or not isinstance(
+                meta.get("eo_traps"), (list, type(None))
+            ):
+                needs_full = True
+            elif api_calls > 0:
                 ans = score_obj.answer or ""
                 if not ans or (ans.endswith("...") and not _REFUSAL_OR_ABORT_RE.search(ans)):
                     needs_full = True

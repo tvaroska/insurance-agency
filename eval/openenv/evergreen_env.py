@@ -140,7 +140,12 @@ class EvergreenGymEnv:
             port = self._service_port(canonical_port)
             url = f"{self.host}:{port}/sim/reset"
             status_code, payload = self._request_json(
-                "POST", url, {"seed_mode": effective_seed}
+                "POST",
+                url,
+                {
+                    "seed_mode": effective_seed,
+                    "scenario_id": str(self.current_task["scenario_id"]),
+                },
             )
             reset_statuses[service] = {"status_code": status_code, "response": payload}
 

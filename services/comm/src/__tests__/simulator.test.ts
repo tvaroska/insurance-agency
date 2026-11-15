@@ -1,4 +1,5 @@
-import { describe, expect, test, beforeEach } from "bun:test";
+import { describe, expect, test, beforeEach, afterEach } from "bun:test";
+import { setActiveScenarioId } from "@evergreen/shared";
 import { createTestDb } from "./setup";
 import { handleSendMessage } from "../tools/send_message";
 import { handleGetInbox } from "../tools/get_inbox";
@@ -6,8 +7,13 @@ import { handleGetInbox } from "../tools/get_inbox";
 let testPrisma: ReturnType<typeof createTestDb>["prisma"];
 
 beforeEach(() => {
+  setActiveScenarioId(undefined);
   const created = createTestDb();
   testPrisma = created.prisma;
+});
+
+afterEach(() => {
+  setActiveScenarioId(undefined);
 });
 
 describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
@@ -144,5 +150,35 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
     );
     const json = JSON.parse(res.content[0].text as string);
     expect(json.simulated_reply).toBeUndefined();
+  });
+
+  test("scopes simulated replies to activeScenarioId so single-turn scenarios (e.g. 07 on CLI-002) never trigger Scenario 16 pivots", async () => {
+    setActiveScenarioId("07");
+    const blockedRes = await handleSendMessage(
+      {
+        to: "james.chen@email.com",
+        channel: "email",
+        subject: "Storm Fence Claim Inquiry — James Chen",
+        body: "Hi James, can you confirm the storm date so we can file the claim?",
+        client_id: "CLI-002",
+      },
+      testPrisma,
+    );
+    expect(JSON.parse(blockedRes.content[0].text as string).simulated_reply).toBeUndefined();
+
+    setActiveScenarioId("16");
+    const allowedRes = await handleSendMessage(
+      {
+        to: "james.chen@email.com",
+        channel: "email",
+        subject: "Deductible Confirmation — James Chen",
+        body: "Hi James, please confirm which auto policy should get the deductible change?",
+        client_id: "CLI-002",
+      },
+      testPrisma,
+    );
+    const allowedJson = JSON.parse(allowedRes.content[0].text as string);
+    expect(allowedJson.simulated_reply).toBeDefined();
+    expect(allowedJson.simulated_reply.scenario_id).toBe("16");
   });
 });
