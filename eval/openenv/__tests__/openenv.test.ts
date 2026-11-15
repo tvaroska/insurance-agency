@@ -243,4 +243,55 @@ print(json.dumps({"span_names": span_names, "reset_ports": reset_ports, "snap_po
     expect(pyResult.has_initial_snap).toBe(true);
     expect(pyResult.span_names).toEqual(["POST /v1/summit/submissions", "POST /mcp"]);
   });
+
+  it("auto-acquires OAuth Bearer tokens, routes strict comm steps via /mcp, bootstraps portal sessions, and includes 09-moderate in realistic dataset", () => {
+    const pyResult = runPythonJson(`
+import json
+import evergreen_env
+
+calls = []
+
+def fake_http(method, url, body, headers):
+    calls.append({"method": method, "url": url, "body": body, "headers": dict(headers or {})})
+    if url.endswith("/oauth/token"):
+        return 200, {"access_token": "jwt-openenv-test"}
+    if url.endswith("/auth/portal-session"):
+        return 200, {"portal_session": "ps-coastal-test"}
+    if url.endswith("/mcp"):
+        return 200, {"jsonrpc": "2.0", "id": 1, "result": {"content": [{"type": "text", "text": json.dumps({"message_id": "msg_1", "status": "sent"})}]}}
+    return 200, {"ok": True}
+
+vf = evergreen_env.load_environment(seed="realistic", difficulty="natural")
+scenario_ids = sorted({item["scenario_id"] for item in vf.dataset})
+has_09 = any(item["task_id"] == "09-moderate-natural" for item in vf.dataset)
+
+env = evergreen_env.EvergreenGymEnv(task_id="09-moderate-natural", modality_mode="strict", http_handler=fake_http)
+env.reset()
+obs1, *_ = env.step({"service": "ams", "method": "GET", "path": "/v1/clients/CLI-019"})
+obs2, *_ = env.step({"service": "comm", "method": "POST", "path": "/v1/messages/send", "body": {"client_id": "CLI-019", "to": "t@ex.com", "body": "Hi"}})
+obs3, *_ = env.step({"service": "coastal-star", "method": "GET", "path": "/v1/coastal/quotes/QT-002-CSTL/risk-assessment"})
+
+ams_call = next(c for c in calls if "/v1/clients/CLI-019" in c["url"])
+mcp_call = next(c for c in calls if c["url"].endswith("/mcp"))
+portal_call = next(c for c in calls if "/v1/coastal/quotes/" in c["url"])
+
+print(json.dumps({
+    "scenario_count": len(scenario_ids),
+    "has_09": has_09,
+    "ams_auth": ams_call["headers"].get("Authorization"),
+    "mcp_auth": mcp_call["headers"].get("Authorization"),
+    "mcp_tool": mcp_call["body"]["params"]["name"],
+    "mcp_unwrapped": obs2["last_response"]["body"],
+    "portal_token": portal_call["headers"].get("X-Portal-Session"),
+}))
+`);
+
+    expect(pyResult.scenario_count).toBe(20);
+    expect(pyResult.has_09).toBe(true);
+    expect(pyResult.ams_auth).toBe("Bearer jwt-openenv-test");
+    expect(pyResult.mcp_auth).toBe("Bearer jwt-openenv-test");
+    expect(pyResult.mcp_tool).toBe("send_message");
+    expect(pyResult.mcp_unwrapped).toEqual({ message_id: "msg_1", status: "sent" });
+    expect(pyResult.portal_token).toBe("ps-coastal-test");
+  });
 });

@@ -119,7 +119,7 @@ Invariants:
 Checks run in this order and stop at the first failure.
 
 - **RTR-R40** Reported together: `payment_method` is required and must be a payment method (`invalid_enum`); `producer_id`, `insured_signature_collected` and `insured_signature_date` are required; `insured_signature_date` must match `^\d{4}-\d{2}-\d{2}$` (`invalid_format`). Then, as a separate step: `insured_signature_collected` must be exactly `true`, otherwise `400` with `insured_signature_collected` / `invalid_format`. Both steps run before the quote is looked up.
-- **RTR-R41** Unknown quote: `404 NOT_FOUND`, message `quote not found.` A quote with status `bound`: `409 CONFLICT`, message `Quote <quote_id> is already bound.` A quote with status `declined`: `409 CONFLICT`, message `Cannot bind declined quote <quote_id>.` Every other status proceeds, whatever `valid_until` says.
+- **RTR-R41** Unknown quote: `404 NOT_FOUND`, message `quote not found.` A quote with status `bound`: `409 CONFLICT`, message `Quote <quote_id> is already bound.` A quote with status `declined`: `409 CONFLICT`, message `Cannot bind declined quote <quote_id>.` Any other status besides `quoted` (`pending`, `expired`, `error`, `underwriting_hold`): `409 CONFLICT`, message `Cannot bind quote <quote_id> with status '<status>'.` A `quoted` row with a non-null `valid_until` whose `YYYY-MM-DD` date precedes the simulated agency date (`getSimulatedNow().toISOString().slice(0, 10)`): `409 CONFLICT`, message `Cannot bind expired quote <quote_id> (valid_until <valid_until>).` Only `quoted` rows with null or non-expired `valid_until` proceed.
 - **RTR-R42** Premium threshold. When the quote's `premium_annual` is above 10000 the bind needs a manager escalation. Exactly 10000 does not. Without a non-empty `escalation_id` in the body the answer is `422`:
 
   ```json
@@ -157,7 +157,7 @@ Checks run in this order and stop at the first failure.
   - `quote_id`, `carrier_code`, `carrier_name`, `premium_annual`, `premium_monthly` from the quote
   - `effective_date` = the request's effective date, and `expiration_date` = the same calendar day one year later (`YYYY-MM-DD`), rolling over when that day does not exist (`2028-02-29` gives `2029-03-01`); both null when the request has no effective date
   - `bind_status` = `bound`, `bound_at`
-  - `policy_documents_url` = `http://localhost:3001/v1/policies/<policy_id>/documents`
+  - `policy_documents_url` = `<ECM base URL>/v1/documents?client_id=<request.client_id, URL-encoded>` when the associated quote request has a `client_id`, otherwise `<ECM base URL>/v1/documents` (`ECM_BASE_URL`, else `ECM_URL`, else `http://localhost:3003`, without trailing slashes)
 - **RTR-R46** When the AMS cannot be reached in RTR-R44, the answer is `500 INTERNAL_ERROR` and the quote stays unbound.
 
 ### 5.5 Carrier directory: `GET /v1/carriers` and `GET /v1/carriers/appetite`
@@ -174,7 +174,7 @@ Carrier quote `status`:
 | From | To | Trigger |
 | :--- | :--- | :--- |
 | (none) | `quoted` | quote request submitted (RTR-R22) |
-| any except `bound`, `declined` | `bound` | bind (RTR-R41, RTR-R45) |
+| `quoted` (and `valid_until` not past simulated date) | `bound` | bind (RTR-R41, RTR-R45) |
 | `quoted` | `expired` | simulated clock passes `valid_until` (RTR-R110) |
 
 Quote request `status`: created as `completed` or `pending` (RTR-R22); `pending` or `completed` becomes `expired` when the simulated clock passes `expires_at` (RTR-R110). Binding does not change it.
@@ -234,8 +234,7 @@ Places where `rater.yaml` and the running service disagree, or where the behavio
 | RTR-G09 | `GET /v1/quotes` ignores the documented `carrier_code` and `cursor` parameters and returns no pagination data. | yes |
 | RTR-G10 | A body that is not JSON gives `500` instead of `400` (RTR-R07). | yes |
 | RTR-G11 | `POST /sim/time-travel` compares ISO strings directly against stored date/date-time strings (RTR-R110). | |
-| RTR-G12 | Quotes in status `expired`, `pending`, `error` or `underwriting_hold`, or past `valid_until`, can be bound (RTR-R41). | yes |
 | RTR-G13 | Carrier filters match text inside the stored list, so `standard` selects `non_standard` and partial values match (RTR-R51). | yes |
-| RTR-G14 | Binding stores no payment, producer or signature data and creates no policy; `policy_id` is random and `policy_documents_url` always points at `localhost:3001` (RTR-R45). | |
+| RTR-G14 | Binding stores no payment, producer or signature data and creates no AMS policy; `policy_id` is deterministic-random per episode and `policy_documents_url` points to ECM `/v1/documents` (RTR-R45). | |
 | RTR-G15 | An unreachable AMS gives `500` rather than an E&O refusal (RTR-R46). | |
 | RTR-G16 | Values of the wrong JSON type are not validated; their outcome is not part of this contract. | |

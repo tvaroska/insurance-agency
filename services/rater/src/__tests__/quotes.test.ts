@@ -72,6 +72,21 @@ beforeAll(() => {
         status: "bound",
         bound_at: new Date().toISOString(),
       }),);
+  insertSqliteRow(testSqlite, "carrier_quotes", makeCarrierQuote({
+        quote_id: "QT-PENDING",
+        request_id: "QR-001",
+        carrier_code: "LIBT",
+        carrier_name: "Liberty",
+        status: "pending",
+      }),);
+  insertSqliteRow(testSqlite, "carrier_quotes", makeCarrierQuote({
+        quote_id: "QT-PAST-VALID",
+        request_id: "QR-001",
+        carrier_code: "SAFECO",
+        carrier_name: "SafeHarbor",
+        status: "quoted",
+        valid_until: "2026-09-01",
+      }),);
 });
 
 const validQuoteBody = {
@@ -274,7 +289,7 @@ describe("GET /v1/quotes/:request_id/results - success", () => {
     expect(body.request_id).toBe("QR-001");
     expect(body.policy_type).toBe("personal_auto");
     expect(body.carriers).toBeArray();
-    expect(body.carriers.length).toBe(3);
+    expect(body.carriers.length).toBe(5);
   });
 
   test("returns parsed coverages and deductibles", async () => {
@@ -329,6 +344,7 @@ describe("POST /v1/quotes/:quote_id/bind - successful bind", () => {
     expect(body.bind_status).toBe("bound");
     expect(body.bound_at).toBeDefined();
     expect(body.premium_annual).toBe(1842.0);
+    expect(body.policy_documents_url).toContain("http://localhost:3003/v1/documents");
   });
 });
 
@@ -351,6 +367,17 @@ describe("POST /v1/quotes/:quote_id/bind - errors", () => {
     const headers = await authHeader(["rater:quotes:bind"]);
     const res = await postBind("QT-DECLINED", validBindBody, headers);
     expect(res.status).toBe(409);
+  });
+
+  test("returns 409 for non-quoted status (pending) and quotes past valid_until", async () => {
+    const headers = await authHeader(["rater:quotes:bind"]);
+    const pendingRes = await postBind("QT-PENDING", validBindBody, headers);
+    expect(pendingRes.status).toBe(409);
+    expect((await pendingRes.json()).error_code).toBe("CONFLICT");
+
+    const expiredRes = await postBind("QT-PAST-VALID", validBindBody, headers);
+    expect(expiredRes.status).toBe(409);
+    expect((await expiredRes.json()).error_code).toBe("CONFLICT");
   });
 
   test("returns 400 for missing payment_method", async () => {

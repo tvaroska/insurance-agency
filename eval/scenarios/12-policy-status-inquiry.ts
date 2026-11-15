@@ -144,7 +144,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?client_id=CLI-023&direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Does the response to Kevin Tran (CLI-023) state his active policy status, coverage limits, or deductibles factually without hallucinating terms?",
           scaleSteps: [
             {
@@ -171,10 +171,10 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "Your personal auto policy is active with 100/300/100 liability limits and a $500 collision deductible.",
-              score: 4,
+              score: 1,
               rationale: "Factually reports policy status, limits, and deductible.",
             },
-            { inputSnippet: "Your policy is active.", score: 2, rationale: "Omits coverage limits and deductibles." },
+            { inputSnippet: "Your policy is active.", score: 0.33, rationale: "Omits coverage limits and deductibles." },
           ],
           requiredPatterns: ["(active|limit|deductible|coverage|POL-|100/300|50/100|500|1,?000)"],
         },
@@ -335,7 +335,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?client_id=CLI-018&direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Does the response to Rosa Jimenez (CLI-018) state her bakery BOP coverage limits AND proactively mention her pending Certificate of Insurance (DOC-053)?",
           scaleSteps: [
             {
@@ -362,12 +362,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "Your bakery BOP carries $1,000,000 General Liability / $200,000 business property limits. Also, we see your pending COI request (DOC-053) for next week's vendor fair.",
-              score: 4,
+              score: 1,
               rationale: "States factual BOP limits and proactively flags pending COI DOC-053.",
             },
             {
               inputSnippet: "Your BOP policy is active.",
-              score: 1,
+              score: 0,
               rationale: "Omits both BOP limits and the pending COI.",
             },
           ],

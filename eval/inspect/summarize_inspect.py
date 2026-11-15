@@ -37,6 +37,25 @@ DEFAULT_RESULTS_CANDIDATES: tuple[Path, ...] = (
     GYM_ROOT / "eval" / "results" / "v0.7" / "realistic-natural",
 )
 
+# Stratified 10/10 workflow split for Domain Skill / prompt-evolution holdout evaluation (P2.5).
+# Balanced across difficulty, single-turn vs. multi-turn, E&O traps, and browser carrier portals (09 vs. 11).
+TRAIN_SCENARIOS: tuple[str, ...] = ("01", "02", "04", "06", "08", "09", "12", "14", "16", "18")
+HOLDOUT_SCENARIOS: tuple[str, ...] = ("03", "05", "07", "10", "11", "13", "15", "17", "19", "20")
+
+
+def filter_records_by_split(records: list["SampleRecord"], split: str = "all") -> list["SampleRecord"]:
+    """Filter SampleRecords to 'all', 'train' (10 workflows), or 'holdout' (10 workflows)."""
+    key = split.strip().lower()
+    if key == "all":
+        return list(records)
+    if key == "train":
+        allowed = set(TRAIN_SCENARIOS)
+    elif key == "holdout":
+        allowed = set(HOLDOUT_SCENARIOS)
+    else:
+        raise ValueError(f"Unknown split {split!r}; expected 'all', 'train', or 'holdout'.")
+    return [r for r in records if r.scenario_id in allowed]
+
 # USD per 1M tokens at Vertex AI list price (input, output, cache_read, cache_write), calibrated
 # against Cloud Billing SKUs & export (2026-11-11 / 2026-11-13). Gemini implicit caching has no
 # separate write charge, so its cache_write rate equals the input rate.
@@ -245,6 +264,8 @@ class RowSummary:
     said_done_given_failed_rate: float | None = None
     deferred_rate: float = 0.0
     failed_deferred_rate: float = 0.0
+    train_pass_at_1: float | None = None
+    holdout_pass_at_1: float | None = None
 
 
 def _rel_if_in_repo(raw_path: str | Path | None) -> str | None:
@@ -388,12 +409,21 @@ def summarize_records(
         task_pass1: list[float] = []
         task_pass5: list[float] = []
         task_pass5_unbiased: list[float] = []
+        train_task_pass1: list[float] = []
+        holdout_task_pass1: list[float] = []
+        train_set = set(TRAIN_SCENARIOS)
+        holdout_set = set(HOLDOUT_SCENARIOS)
         for sample_id in sorted(by_task):
             t_runs = by_task[sample_id]
             c_pass = sum(1 for r in t_runs if r.passed)
             p_rate = c_pass / len(t_runs)
             task_pass1.append(p_rate)
             task_pass5.append(p_rate**5)
+            sc_id = t_runs[0].scenario_id
+            if sc_id in train_set:
+                train_task_pass1.append(p_rate)
+            elif sc_id in holdout_set:
+                holdout_task_pass1.append(p_rate)
             u_p5 = unbiased_pass_hat_k(c_pass, len(t_runs), 5)
             if u_p5 is not None:
                 task_pass5_unbiased.append(u_p5)
@@ -478,6 +508,16 @@ def summarize_records(
                 ),
                 deferred_rate=round(deferred_rate, 4),
                 failed_deferred_rate=round(failed_deferred_rate, 4),
+                train_pass_at_1=(
+                    round(sum(train_task_pass1) / len(train_task_pass1), 4)
+                    if train_task_pass1
+                    else None
+                ),
+                holdout_pass_at_1=(
+                    round(sum(holdout_task_pass1) / len(holdout_task_pass1), 4)
+                    if holdout_task_pass1
+                    else None
+                ),
             )
         )
     summaries.sort(key=lambda r: (-r.pass_at_1, -r.mean_score, r.model, r.learning_mechanism))
@@ -665,6 +705,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Minimum overall score to count as a pass (default: 0.80)",
     )
     parser.add_argument(
+        "--split",
+        choices=["all", "train", "holdout"],
+        default="all",
+        help="Evaluate over all workflows, the 10-workflow train split, or the 10-workflow holdout split (default: all)",
+    )
+    parser.add_argument(
         "--include-anchors",
         action="store_true",
         help="Include scripted reference (100%) and do-nothing (0%) calibration rows",
@@ -694,6 +740,9 @@ def main(argv: list[str] | None = None) -> int:
         log = _read_log_for_summary(f)
         if log.status == "success":
             clean_records.extend(extract_records_from_log(log, pass_threshold=args.pass_threshold, eval_log_path=f))
+
+    records = filter_records_by_split(records, args.split)
+    clean_records = filter_records_by_split(clean_records, args.split)
 
     rows = summarize_records(records, clean_records=clean_records)
     if args.json_out:

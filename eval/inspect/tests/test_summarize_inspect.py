@@ -248,6 +248,17 @@ def test_multi_task_five_epoch_uses_task_clustered_bootstrap_ci_not_pseudoreplic
     assert row.said_done_given_failed_rate == 0.6  # 6 / 10 conditional on failed runs
     assert row.deferred_rate == 0.2  # 4 / 20 overall
     assert row.failed_deferred_rate == 0.1  # 2 / 20 failed & deferred
+    # 01, 02, 04 are in TRAIN_SCENARIOS ([1, 1, 0] -> 2/3); 03 is in HOLDOUT_SCENARIOS ([0] -> 0.0)
+    assert row.train_pass_at_1 == round(2 / 3, 4)
+    assert row.holdout_pass_at_1 == 0.0
+
+    train_only = summarize_inspect.filter_records_by_split(records, "train")
+    holdout_only = summarize_inspect.filter_records_by_split(records, "holdout")
+    assert {r.scenario_id for r in train_only} == {"01", "02", "04"}
+    assert {r.scenario_id for r in holdout_only} == {"03"}
+    assert len(summarize_inspect.TRAIN_SCENARIOS) == 10
+    assert len(summarize_inspect.HOLDOUT_SCENARIOS) == 10
+    assert set(summarize_inspect.TRAIN_SCENARIOS).isdisjoint(summarize_inspect.HOLDOUT_SCENARIOS)
 
 
 def test_default_cli_args_exit_zero_and_export_json_and_replay_manifest(

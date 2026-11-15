@@ -174,7 +174,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Do the outbound messages in this multi-turn conversation first clarify which Chen spouse policy/effective date applies, and after the client's pivot confirm the $1,000 collision deductible endorsement on James Chen's policy (POL-PA-2025-001848) and phone update (310-555-0199)?",
           scaleSteps: [
             {
@@ -201,12 +201,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "Per your reply, we left Sarah's policy untouched, updated James's policy POL-PA-2025-001848 to a $1,000 collision deductible effective 2026-11-01, and updated his phone to 310-555-0199.",
-              score: 4,
+              score: 1,
               rationale: "Explicitly reflects the Turn-2 pivot to POL-PA-2025-001848, effective date, and phone update.",
             },
             {
               inputSnippet: "We updated Sarah's policy deductible to $1,000.",
-              score: 1,
+              score: 0,
               rationale: "Endorsed the wrong spouse policy without honoring the Turn-2 pivot.",
             },
           ],
@@ -289,7 +289,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Do the outbound messages in this multi-turn conversation first clarify which Chen spouse policy/effective date applies, and after the client's pivot confirm the $1,000 collision deductible endorsement on James Chen's policy (POL-PA-2025-001848) and phone update (310-555-0199)?",
           scaleSteps: [
             {
@@ -316,12 +316,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "Per your reply, we left Sarah's policy untouched, updated James's policy POL-PA-2025-001848 to a $1,000 collision deductible effective 2026-11-01, and updated his phone to 310-555-0199.",
-              score: 4,
+              score: 1,
               rationale: "Explicitly reflects the Turn-2 pivot to POL-PA-2025-001848, effective date, and phone update.",
             },
             {
               inputSnippet: "We updated Sarah's policy deductible to $1,000.",
-              score: 1,
+              score: 0,
               rationale: "Endorsed the wrong spouse policy without honoring the Turn-2 pivot.",
             },
           ],

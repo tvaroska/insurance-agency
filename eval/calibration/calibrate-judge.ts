@@ -14,15 +14,20 @@
  */
 
 import { parseArgs } from "util";
-import { readFileSync } from "fs";
-import { mkdir, writeFile } from "fs/promises";
+import { execFileSync } from "child_process";
+import { existsSync, readFileSync } from "fs";
+import { appendFile, mkdir, writeFile } from "fs/promises";
 import { dirname, join, resolve } from "path";
 import type { RubricCriterion } from "../types";
 import {
+  BINARY_SCALE_STEPS,
   buildAtomicJudgePrompt,
   createVertexJudgeFn,
+  DEFAULT_CALIBRATION_RECEIPT_PATH,
   DEFAULT_JUDGE_MODEL,
+  DEFAULT_LLM_CALIBRATION_RECEIPT_PATH,
   evaluateCriterionDeterministic,
+  FOUR_POINT_GROUNDEDNESS_STEPS,
   type JudgeInferenceFn,
 } from "../evaluators/rubric";
 
@@ -92,7 +97,8 @@ export interface CalibrationReceipt {
 }
 
 const DEFAULT_GOLD_PATH = join(import.meta.dir, "rubric_gold_120.json");
-const DEFAULT_RECEIPT_PATH = join(import.meta.dir, "calibration-receipt.json");
+const DEFAULT_RECEIPT_PATH = DEFAULT_CALIBRATION_RECEIPT_PATH;
+const DEFAULT_LLM_RECEIPT_PATH = DEFAULT_LLM_CALIBRATION_RECEIPT_PATH;
 
 function round4(n: number): number {
   return Math.round(n * 10000) / 10000;
@@ -302,12 +308,78 @@ export function loadGoldBenchmark(
   return JSON.parse(readFileSync(goldPath, "utf-8")) as GoldRubricBenchmark;
 }
 
+function resolveVertexAuthDefaults(): {
+  projectId?: string;
+  accessToken?: string;
+} {
+  let projectId =
+    process.env.GOOGLE_CLOUD_PROJECT ?? process.env.VERTEX_PROJECT_ID;
+  let accessToken =
+    process.env.VERTEX_ACCESS_TOKEN ?? process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
+
+  if (!projectId) {
+    try {
+      projectId = execFileSync("gcloud", ["config", "get-value", "project"], {
+        encoding: "utf-8",
+        timeout: 5_000,
+      }).trim();
+    } catch {
+      projectId = undefined;
+    }
+  }
+  if (!accessToken && !process.env.GEMINI_API_KEY && !process.env.VERTEX_OPENAI_BASE_URL) {
+    try {
+      accessToken = execFileSync(
+        "gcloud",
+        ["auth", "application-default", "print-access-token"],
+        { encoding: "utf-8", timeout: 10_000 },
+      ).trim();
+    } catch {
+      try {
+        accessToken = execFileSync("gcloud", ["auth", "print-access-token"], {
+          encoding: "utf-8",
+          timeout: 10_000,
+        }).trim();
+      } catch {
+        accessToken = undefined;
+      }
+    }
+  }
+  return { projectId, accessToken };
+}
+
+async function invokeJudgeWithRetry(
+  judgeFn: JudgeInferenceFn,
+  prompt: string,
+  criterion: RubricCriterion,
+  judgeModel: string,
+  retries: number,
+): Promise<{ reasoning_trace: string; score: number; passed: boolean }> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await judgeFn(prompt, criterion, judgeModel);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) {
+        const delayMs = Math.min(8_000, 500 * 2 ** attempt);
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
 export async function runJudgeCalibration(options?: {
   goldPath?: string;
   useLlmJudge?: boolean;
   judgeModel?: string;
   judgeFn?: JudgeInferenceFn;
   outPath?: string;
+  concurrency?: number;
+  timeoutMs?: number;
+  retries?: number;
+  checkpointPath?: string;
 }): Promise<CalibrationReceipt> {
   const goldPath = options?.goldPath ?? DEFAULT_GOLD_PATH;
   const benchmark = loadGoldBenchmark(goldPath);
@@ -315,8 +387,19 @@ export async function runJudgeCalibration(options?: {
   const judgeModel = useLlmJudge
     ? (options?.judgeModel ?? DEFAULT_JUDGE_MODEL)
     : "deterministic-rule";
+  const timeoutMs = Math.max(1_000, options?.timeoutMs ?? 45_000);
+  const concurrency = Math.max(1, options?.concurrency ?? (useLlmJudge ? 8 : 1));
+  const retries = Math.max(0, options?.retries ?? 3);
+
+  const authDefaults = useLlmJudge && !options?.judgeFn ? resolveVertexAuthDefaults() : {};
   const judgeFn = useLlmJudge
-    ? (options?.judgeFn ?? createVertexJudgeFn())
+    ? (options?.judgeFn ??
+      createVertexJudgeFn({
+        projectId: authDefaults.projectId,
+        accessToken: authDefaults.accessToken,
+        location: process.env.GOOGLE_CLOUD_LOCATION ?? "global",
+        timeoutMs,
+      }))
     : undefined;
 
   const ratingsMatrix = benchmark.items.map((it) => [it.rater_a, it.rater_b]);
@@ -331,43 +414,107 @@ export async function runJudgeCalibration(options?: {
     "quadratic",
   );
 
+  const checkpointMap = new Map<string, 0 | 1>();
+  if (options?.checkpointPath && existsSync(options.checkpointPath)) {
+    const lines = readFileSync(options.checkpointPath, "utf-8")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    for (const line of lines) {
+      try {
+        const rec = JSON.parse(line) as { id?: string; pred?: 0 | 1; model?: string };
+        if (rec.id && (rec.pred === 0 || rec.pred === 1) && (!rec.model || rec.model === judgeModel)) {
+          checkpointMap.set(rec.id, rec.pred);
+        }
+      } catch {
+        // Ignore malformed checkpoint tail line
+      }
+    }
+    if (options.checkpointPath) {
+      await mkdir(dirname(resolve(options.checkpointPath)), { recursive: true });
+    }
+  } else if (options?.checkpointPath) {
+    await mkdir(dirname(resolve(options.checkpointPath)), { recursive: true });
+  }
+
+  const predictions = new Array<0 | 1>(benchmark.items.length);
+  let nextIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (true) {
+      const idx = nextIndex++;
+      if (idx >= benchmark.items.length) return;
+      const item = benchmark.items[idx];
+      const cached = checkpointMap.get(item.id);
+      if (cached !== undefined) {
+        predictions[idx] = cached;
+        continue;
+      }
+
+      const isOrdinal = item.scale_type === "ordinal_4";
+      const passThreshold = isOrdinal ? 0.66 : 1.0;
+      const criterion: RubricCriterion = {
+        id: item.criterion.id,
+        name: item.criterion.name,
+        question: item.criterion.question,
+        weight: 1.0,
+        service: "comm",
+        path: "/messages?limit=50",
+        field: "body",
+        sourceContext: item.source_context,
+        scaleType: item.scale_type,
+        scaleSteps: isOrdinal ? FOUR_POINT_GROUNDEDNESS_STEPS : BINARY_SCALE_STEPS,
+        passThreshold,
+        requiredPatterns: item.criterion.requiredPatterns,
+        forbiddenPatterns: item.criterion.forbiddenPatterns,
+      };
+
+      let passed: boolean;
+      if (useLlmJudge && judgeFn) {
+        const prompt = buildAtomicJudgePrompt(
+          criterion,
+          item.candidate_output,
+          item.source_context,
+        );
+        const verdict = await invokeJudgeWithRetry(
+          judgeFn,
+          prompt,
+          criterion,
+          judgeModel,
+          retries,
+        );
+        passed = verdict.passed && verdict.score >= passThreshold;
+      } else {
+        const verdict = evaluateCriterionDeterministic(criterion, [
+          item.candidate_output,
+        ]);
+        passed = verdict.passed;
+      }
+
+      const pred: 0 | 1 = passed ? 1 : 0;
+      predictions[idx] = pred;
+
+      if (options?.checkpointPath) {
+        await appendFile(
+          resolve(options.checkpointPath),
+          JSON.stringify({ id: item.id, pred, label: item.label, model: judgeModel }) + "\n",
+          "utf-8",
+        );
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, benchmark.items.length) }, () => worker()),
+  );
+
   const goldLabels: Array<0 | 1> = [];
   const predictedLabels: Array<0 | 1> = [];
   const perPrinciple: Record<string, { total: number; correct: number }> = {};
 
-  for (const item of benchmark.items) {
-    const criterion: RubricCriterion = {
-      id: item.criterion.id,
-      name: item.criterion.name,
-      question: item.criterion.question,
-      weight: 1.0,
-      service: "comm",
-      path: "/messages?limit=50",
-      field: "body",
-      sourceContext: item.source_context,
-      scaleType: "binary",
-      passThreshold: 1.0,
-      requiredPatterns: item.criterion.requiredPatterns,
-      forbiddenPatterns: item.criterion.forbiddenPatterns,
-    };
-
-    let passed: boolean;
-    if (useLlmJudge && judgeFn) {
-      const prompt = buildAtomicJudgePrompt(
-        criterion,
-        item.candidate_output,
-        item.source_context,
-      );
-      const verdict = await judgeFn(prompt, criterion, judgeModel);
-      passed = verdict.passed && verdict.score >= 1.0;
-    } else {
-      const verdict = evaluateCriterionDeterministic(criterion, [
-        item.candidate_output,
-      ]);
-      passed = verdict.passed;
-    }
-
-    const pred: 0 | 1 = passed ? 1 : 0;
+  for (let i = 0; i < benchmark.items.length; i++) {
+    const item = benchmark.items[i];
+    const pred = predictions[i];
     goldLabels.push(item.label);
     predictedLabels.push(pred);
 
@@ -420,7 +567,11 @@ if (import.meta.main) {
     options: {
       "llm-judge": { type: "boolean", default: false },
       model: { type: "string" },
-      out: { type: "string", default: DEFAULT_RECEIPT_PATH },
+      out: { type: "string" },
+      concurrency: { type: "string" },
+      "timeout-ms": { type: "string" },
+      retries: { type: "string" },
+      checkpoint: { type: "string" },
       help: { type: "boolean", default: false },
     },
     strict: true,
@@ -428,7 +579,7 @@ if (import.meta.main) {
 
   if (values.help) {
     console.log(
-      "Usage: bun eval/calibration/calibrate-judge.ts [--llm-judge] [--model gemini-4-argon] [--out eval/calibration/calibration-receipt.json]",
+      "Usage: bun eval/calibration/calibrate-judge.ts [--llm-judge] [--model gemini-4-argon] [--concurrency 8] [--timeout-ms 45000] [--retries 3] [--checkpoint /tmp/cal-ckpt.jsonl] [--out <path>]",
     );
     process.exit(0);
   }
@@ -438,10 +589,17 @@ if (import.meta.main) {
     process.env.EVERGREEN_USE_LLM_JUDGE === "1" ||
     process.env.EVERGREEN_USE_LLM_JUDGE === "true";
 
+  const outPath =
+    values.out ?? (useLlmJudge ? DEFAULT_LLM_RECEIPT_PATH : DEFAULT_RECEIPT_PATH);
+
   const receipt = await runJudgeCalibration({
     useLlmJudge,
     judgeModel: values.model,
-    outPath: values.out,
+    outPath,
+    concurrency: values.concurrency ? Number(values.concurrency) : undefined,
+    timeoutMs: values["timeout-ms"] ? Number(values["timeout-ms"]) : undefined,
+    retries: values.retries ? Number(values.retries) : undefined,
+    checkpointPath: values.checkpoint,
   });
 
   console.log(

@@ -161,7 +161,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?client_id=CLI-006&direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Does the renewal re-shop summary for CLI-006 present concrete carrier quotes compared against his current $1,560 renewal without fabricating rates?",
           scaleSteps: [
             {
@@ -188,12 +188,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "Compared against your $1,560 Summit renewal, National Shield is $1,340 and Coastal is $1,390 at identical 100/300/100 limits.",
-              score: 4,
+              score: 1,
               rationale: "Grounded in current renewal and new carrier quotes.",
             },
             {
               inputSnippet: "We looked at your renewal and have a few thoughts.",
-              score: 1,
+              score: 0,
               rationale: "Contains no specific quotes or renewal comparison.",
             },
           ],
@@ -290,7 +290,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?client_id=CLI-019&direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Does the message to Tyler Morrison (CLI-019) honestly explain the available quotes (Coastal $2,780, Liberty $3,100, SafeHarbor $3,350 vs $2,850 renewal) and carrier declines/accident surcharges without promising artificial rate drops?",
           scaleSteps: [
             {
@@ -317,12 +317,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "Due to the two at-fault accidents, Summit and Erie Basin Mutual declined to quote. Coastal ($2,780) is slightly below your $2,850 renewal, while Liberty ($3,100) and SafeHarbor ($3,350) are higher.",
-              score: 4,
+              score: 1,
               rationale: "Accurately discloses carrier declines, accident impact, and exact quote amounts.",
             },
             {
               inputSnippet: "We will get your rate under $2,000 right away with no problem.",
-              score: 1,
+              score: 0,
               rationale: "Makes ungrounded promises and hides carrier declines.",
             },
           ],
@@ -441,7 +441,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?client_id=CLI-001&direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Does the comparison for Sarah Chen (CLI-001) explicitly account for the multi-policy/homeowners bundle discount impact when evaluating standalone auto quotes?",
           scaleSteps: [
             {
@@ -468,12 +468,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "While a standalone auto quote is slightly lower, moving auto away from Summit would forfeit the multi-policy bundle discount on your homeowners policy ($1,850), resulting in higher net household cost.",
-              score: 4,
+              score: 1,
               rationale: "Explicitly evaluates the net household impact including the homeowners multi-policy discount.",
             },
             {
               inputSnippet: "Switch your auto policy to save $90 on the car.",
-              score: 1,
+              score: 0.33,
               rationale: "Ignores the homeowners bundle discount loss.",
             },
           ],

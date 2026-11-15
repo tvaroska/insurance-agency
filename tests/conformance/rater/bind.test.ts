@@ -98,14 +98,26 @@ describe("POST /v1/quotes/{quote_id}/bind: validation and lookup", () => {
     expectError(await bind("QT-1", bindBody()), 409, "CONFLICT");
   });
 
-  for (const status of ["quoted", "pending", "expired", "error", "underwriting_hold"]) {
-    test(`RTR-R41: a quote in status ${status} can be bound`, async () => {
-      await seedQuote({ status, valid_until: "2000-01-01T00:00:00.000Z" });
-      expect((await bind("QT-1", bindBody())).status).toBe(201);
+  for (const status of ["pending", "expired", "error", "underwriting_hold"]) {
+    test(`RTR-R41: a quote in status ${status} is refused with 409 CONFLICT`, async () => {
+      await seedQuote({ status });
+      const { result, diff } = await ctx.svc.changes(() => bind("QT-1", bindBody()));
+      expectError(result, 409, "CONFLICT");
+      expect(result.body.message).toBe(`Cannot bind quote QT-1 with status '${status}'.`);
+      expect(diff).toEqual({});
     });
   }
 
-  test.todo("RTR-G12: binding is refused for a quote that is expired, pending or past valid_until (the service binds it)");
+  test("RTR-R41: a quoted row whose valid_until precedes the simulated date is refused with 409 CONFLICT", async () => {
+    await seedQuote({ status: "quoted", valid_until: "2026-10-13T23:59:59.000Z" });
+    const { result, diff } = await ctx.svc.changes(() => bind("QT-1", bindBody()));
+    expectError(result, 409, "CONFLICT");
+    expect(result.body.message).toBe("Cannot bind expired quote QT-1 (valid_until 2026-10-13T23:59:59.000Z).");
+    expect(diff).toEqual({});
+
+    await seedQuote({ status: "quoted", valid_until: "2026-10-14" });
+    expect((await bind("QT-1", bindBody())).status).toBe(201);
+  });
 });
 
 describe("POST /v1/quotes/{quote_id}/bind: success", () => {
@@ -126,7 +138,7 @@ describe("POST /v1/quotes/{quote_id}/bind: success", () => {
       premium_monthly: 100,
       bind_status: "bound",
       bound_at: expect.stringMatching(ISO_UTC),
-      policy_documents_url: `http://localhost:3001/v1/policies/${res.body.policy_id}/documents`,
+      policy_documents_url: expect.stringMatching(/^https?:\/\/[^/]+\/v1\/documents\?client_id=CLI-1$/),
     });
     expect(Object.keys(diff)).toEqual(["carrier_quotes"]);
     expect(diff.carrier_quotes.changed).toHaveLength(1);

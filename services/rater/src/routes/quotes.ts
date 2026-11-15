@@ -426,6 +426,21 @@ quotesRouter.post(
       );
     }
 
+    // Only quotes in status 'quoted' that have not passed valid_until can be bound
+    if (quote.status !== "quoted") {
+      throw conflictError(
+        `Cannot bind quote ${quoteId} with status '${quote.status}'.`,
+      );
+    }
+
+    const simNow = getSimulatedNow();
+    const simToday = simNow.toISOString().slice(0, 10);
+    if (quote.valid_until && quote.valid_until.slice(0, 10) < simToday) {
+      throw conflictError(
+        `Cannot bind expired quote ${quoteId} (valid_until ${quote.valid_until}).`,
+      );
+    }
+
     // ── E&O Enforcement ──────────────────────────────────────────────
     const eoRules: { rule: string; message: string; error_code?: string }[] = [];
 
@@ -583,17 +598,10 @@ quotesRouter.post(
     }
 
     // Bind the quote
-    const simNow = getSimulatedNow();
     const now = simNow.toISOString();
     await prisma.carrierQuote.update({
       where: { quote_id: quoteId },
       data: { status: "bound", bound_at: now },
-    });
-
-    // Get the associated quote request for effective_date
-    const request = await prisma.quoteRequest.findUnique({
-      where: { request_id: quote.request_id },
-      select: { effective_date: true },
     });
 
     // Generate policy ID
@@ -602,13 +610,22 @@ quotesRouter.post(
     const policyId = `POL-${quote.carrier_code}-${year}-${policySeq}`;
 
     // Calculate expiration date (1 year from effective date)
-    const effectiveDate = request?.effective_date ?? null;
+    const effectiveDate = quoteRequest?.effective_date ?? null;
     let expirationDate: string | null = null;
     if (effectiveDate) {
       const expDate = new Date(effectiveDate);
       expDate.setFullYear(expDate.getFullYear() + 1);
       expirationDate = expDate.toISOString().split("T")[0];
     }
+
+    const ecmBase = (
+      process.env.ECM_BASE_URL ||
+      process.env.ECM_URL ||
+      "http://localhost:3003"
+    ).replace(/\/+$/, "");
+    const policyDocumentsUrl = quoteRequest?.client_id
+      ? `${ecmBase}/v1/documents?client_id=${encodeURIComponent(quoteRequest.client_id)}`
+      : `${ecmBase}/v1/documents`;
 
     return c.json(
       {
@@ -622,7 +639,7 @@ quotesRouter.post(
         premium_monthly: quote.premium_monthly,
         bind_status: "bound",
         bound_at: now,
-        policy_documents_url: `http://localhost:3001/v1/policies/${policyId}/documents`,
+        policy_documents_url: policyDocumentsUrl,
       },
       201,
     );

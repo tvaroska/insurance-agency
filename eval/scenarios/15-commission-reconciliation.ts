@@ -189,7 +189,7 @@ const scenario: ScenarioDefinition = {
           path: "/tasks?limit=50",
           field: "description",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Do the created reconciliation tasks specifically document policy/commission discrepancies (e.g., cancelled or expired policies receiving commissions, or active policies missing commission entries) with policy or commission IDs?",
           scaleSteps: [
             {
@@ -216,12 +216,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "Commission discrepancy: POL-PA-2025-001902 is cancelled but recorded commission COM-2026-0014; active policy missing September commission entry.",
-              score: 4,
+              score: 1,
               rationale: "Cites specific discrepancy types and policy/commission identifiers.",
             },
             {
               inputSnippet: "Check commissions for September.",
-              score: 1,
+              score: 0,
               rationale: "Generic task description without discrepancy findings.",
             },
           ],

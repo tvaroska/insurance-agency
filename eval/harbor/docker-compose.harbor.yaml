@@ -6,6 +6,47 @@ include:
   - ../../docker-compose.yml
 
 services:
+  harbor-snapshot-init:
+    image: oven/bun:1-debian
+    network_mode: "host"
+    environment:
+      - SEED_MODE=${SEED_MODE:-realistic}
+    volumes:
+      - harbor-traces:/workspace/traces
+    depends_on:
+      ams:
+        condition: service_healthy
+      rater:
+        condition: service_healthy
+      crm:
+        condition: service_healthy
+      ecm:
+        condition: service_healthy
+      comm:
+        condition: service_healthy
+      carrier-summit:
+        condition: service_healthy
+      carrier-coastal:
+        condition: service_healthy
+      claims:
+        condition: service_healthy
+    command:
+      - bun
+      - -e
+      - |
+        const map = [[3000,"ams"],[3001,"rater"],[3002,"crm"],[3003,"ecm"],[3004,"comm"],[3005,"summit-fire"],[3006,"coastal-star"],[3007,"claims"]];
+        const seed = process.env.SEED_MODE === "clean" ? "clean" : "realistic";
+        const headers = { "Content-Type": "application/json", "X-Eval-Scorer": "true", "X-Evergreen-Internal": "1" };
+        for (const [p] of map) {
+          await fetch("http://localhost:" + p + "/sim/reset", { method: "POST", headers, body: JSON.stringify({ seed_mode: seed }) });
+        }
+        const snap = {};
+        for (const [p, name] of map) {
+          const r = await fetch("http://localhost:" + p + "/sim/snapshot", { headers });
+          snap[name] = await r.json();
+        }
+        await Bun.write("/workspace/traces/snapshot-before.json", JSON.stringify(snap));
+
   harbor-agent:
     image: oven/bun:1-debian
     working_dir: /workspace
@@ -13,12 +54,16 @@ services:
     environment:
       - SEED_MODE=${SEED_MODE:-realistic}
       - MODALITY_MODE=${MODALITY_MODE:-strict}
+      - SIMULATED_TODAY=2026-10-14
       - OTEL_TRACES_PATH=/workspace/traces/trace.json
+      - HARBOR_SNAPSHOT_BEFORE=/workspace/traces/snapshot-before.json
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash}
     volumes:
       - ../../specs:/workspace/specs:ro
       - harbor-traces:/workspace/traces
     depends_on:
+      harbor-snapshot-init:
+        condition: service_completed_successfully
       ams:
         condition: service_healthy
       rater:

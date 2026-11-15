@@ -62,6 +62,7 @@ class EvergreenGymEnv:
         task_id: str = "01-realistic-natural",
         max_steps: int = 30,
         host: str = "http://localhost",
+        modality_mode: str | None = None,
         http_handler: Callable[[str, str, dict[str, Any] | None, dict[str, str]], tuple[int, Any]] | None = None,
         scorer_fn: Callable[[dict[str, Any], list[dict[str, Any]]], dict[str, Any]] | None = None,
     ) -> None:
@@ -72,11 +73,13 @@ class EvergreenGymEnv:
         self.current_task = self.tasks[task_id]
         self.max_steps = max_steps
         self.host = host.rstrip("/")
+        self.modality_mode = modality_mode or os.environ.get("MODALITY_MODE", "strict")
         self._http_handler = http_handler
         self._scorer_fn = scorer_fn
         self.step_count = 0
         self.recorded_spans: list[dict[str, Any]] = []
         self._bearer_token: str | None = None
+        self._portal_sessions: dict[str, dict[str, str]] = {}
         self._effective_seed: str = str(self.current_task["seed"])
         self._initial_snapshot: dict[str, Any] | None = None
 
@@ -128,6 +131,8 @@ class EvergreenGymEnv:
 
         self.step_count = 0
         self.recorded_spans = []
+        self._bearer_token = None
+        self._portal_sessions = {}
         self._effective_seed = effective_seed
 
         reset_statuses: dict[str, Any] = {}
@@ -156,6 +161,81 @@ class EvergreenGymEnv:
             "seed_mode": effective_seed,
         }
         return obs, info
+
+    def _ensure_bearer_token(self) -> str | None:
+        if self._bearer_token:
+            return self._bearer_token
+        ams_port = self._service_port("ams")
+        status_code, payload = self._request_json(
+            "POST",
+            f"{self.host}:{ams_port}/oauth/token",
+            {
+                "grant_type": "client_credentials",
+                "client_id": os.environ.get("EVERGREEN_CLIENT_ID", "agent-full"),
+                "client_secret": os.environ.get("EVERGREEN_CLIENT_SECRET", "dev-secret"),
+            },
+        )
+        if status_code == 200 and isinstance(payload, dict) and isinstance(payload.get("access_token"), str):
+            self._bearer_token = payload["access_token"]
+            return self._bearer_token
+        return None
+
+    def _ensure_portal_headers(self, service: str) -> dict[str, str]:
+        if service in self._portal_sessions:
+            return dict(self._portal_sessions[service])
+        port = self._service_port(service)
+        cookie_header = ""
+        if self._http_handler is None:
+            try:
+                with urllib.request.urlopen(f"{self.host}:{port}/", timeout=10) as boot_resp:
+                    raw_cookie = boot_resp.headers.get("Set-Cookie") or ""
+                    if raw_cookie:
+                        cookie_header = raw_cookie.split(";", 1)[0]
+            except Exception:
+                cookie_header = ""
+        boot_headers = {"Cookie": cookie_header} if cookie_header else {}
+        status_code, payload = self._request_json(
+            "POST",
+            f"{self.host}:{port}/auth/portal-session",
+            {"agent_code": "AG-EVERGREEN-01"},
+            boot_headers,
+        )
+        out_headers: dict[str, str] = {}
+        if cookie_header:
+            out_headers["Cookie"] = cookie_header
+        if status_code in (200, 201) and isinstance(payload, dict):
+            token = payload.get("portal_session") or payload.get("session_token") or payload.get("token")
+            if isinstance(token, str) and token:
+                out_headers["X-Portal-Session"] = token
+        self._portal_sessions[service] = out_headers
+        return dict(out_headers)
+
+    @staticmethod
+    def _resolve_comm_mcp_call(
+        method: str,
+        path: str,
+        body: dict[str, Any] | None,
+        explicit_mcp_tool: str | None,
+    ) -> tuple[str, dict[str, Any]] | None:
+        if explicit_mcp_tool:
+            tool_name = explicit_mcp_tool.removeprefix("comm_")
+            return tool_name, dict(body or {})
+        clean_path, _, query = path.partition("?")
+        params: dict[str, Any] = dict(body or {})
+        if query:
+            for pair in query.split("&"):
+                if "=" in pair:
+                    k, v = pair.split("=", 1)
+                    params.setdefault(k, urllib.request.unquote(v))
+        if method == "POST" and clean_path == "/v1/messages/send":
+            return "send_message", params
+        if method == "GET" and clean_path == "/v1/messages/inbox":
+            return "get_inbox", params
+        if method == "GET" and clean_path == "/v1/messages":
+            return "get_transcript", params
+        if clean_path.startswith("/v1/webhooks"):
+            return "manage_webhook", params
+        return None
 
     def step(
         self, action: dict[str, Any] | StepAction
@@ -194,16 +274,64 @@ class EvergreenGymEnv:
         path = str(act.get("path", "/v1/clients"))
         if not path.startswith("/"):
             path = "/" + path
-        url = f"{self.host}:{port}{path}"
+
+        req_headers = dict(act.get("headers") or {})
+        req_body = act.get("body")
+        effective_method = method
+        effective_path = path
+
+        # Automatically attach OAuth Bearer JWT or strict carrier portal session headers when omitted
+        if service in ("summit-fire", "coastal-star"):
+            if "X-Portal-Session" not in req_headers and "x-portal-session" not in req_headers:
+                for hk, hv in self._ensure_portal_headers(service).items():
+                    req_headers.setdefault(hk, hv)
+        elif "Authorization" not in req_headers and "authorization" not in req_headers:
+            token = self._ensure_bearer_token()
+            if token:
+                req_headers["Authorization"] = f"Bearer {token}"
+
+        # Route Comm Hub actions over Streamable HTTP MCP JSON-RPC under strict modality
+        explicit_mcp = act.get("mcp_tool")
+        if service == "comm" and (explicit_mcp or (self.modality_mode == "strict" and path != "/mcp")):
+            mcp_resolved = self._resolve_comm_mcp_call(
+                method, path, req_body if isinstance(req_body, dict) else None, str(explicit_mcp) if explicit_mcp else None
+            )
+            if mcp_resolved is not None:
+                mcp_tool_name, mcp_args = mcp_resolved
+                effective_method = "POST"
+                effective_path = "/mcp"
+                req_headers.setdefault("Accept", "application/json, text/event-stream")
+                req_body = {
+                    "jsonrpc": "2.0",
+                    "id": self.step_count,
+                    "method": "tools/call",
+                    "params": {"name": mcp_tool_name, "arguments": mcp_args},
+                }
+
+        url = f"{self.host}:{port}{effective_path}"
 
         start_ns = time.time_ns()
         status_code, response_body = self._request_json(
-            method,
+            effective_method,
             url,
-            act.get("body"),
-            act.get("headers"),
+            req_body,
+            req_headers,
         )
         end_ns = max(start_ns + 1_000_000, time.time_ns())
+
+        if (
+            effective_path == "/mcp"
+            and isinstance(response_body, dict)
+            and isinstance(response_body.get("result"), dict)
+        ):
+            content_items = response_body["result"].get("content")
+            if isinstance(content_items, list) and content_items and isinstance(content_items[0], dict):
+                raw_text = content_items[0].get("text")
+                if isinstance(raw_text, str):
+                    try:
+                        response_body = json.loads(raw_text)
+                    except Exception:
+                        response_body = {"text": raw_text}
 
         self.recorded_spans.append(
             {
@@ -457,12 +585,27 @@ class EvergreenVerifiersEnv:
             if scenario
             else None
         )
+        # Map `seed="realistic"` to each scenario's realistic variant or first non-clean messy variant in declaration order (e.g., 09-moderate)
+        messy_seed_by_scenario: dict[str, str] = {}
+        if seed == "realistic":
+            by_sc_seeds: dict[str, list[str]] = {}
+            for _tid, t_item in raw_tasks.items():
+                sc_id = t_item["scenario_id"]
+                s_val = t_item["seed"]
+                if s_val != "clean" and s_val not in by_sc_seeds.setdefault(sc_id, []):
+                    by_sc_seeds[sc_id].append(s_val)
+            for sc_id, seeds_list in by_sc_seeds.items():
+                messy_seed_by_scenario[sc_id] = "realistic" if "realistic" in seeds_list else seeds_list[0]
+
         self.dataset: list[dict[str, Any]] = []
-        for tid in sorted(raw_tasks.keys()):
-            t = raw_tasks[tid]
+        for tid, t in raw_tasks.items():
             if scenario_set and t["scenario_id"] not in scenario_set:
                 continue
-            if seed != "all" and t["seed"] != seed:
+            if seed == "realistic":
+                expected_seed = messy_seed_by_scenario.get(t["scenario_id"], "realistic")
+                if t["seed"] != expected_seed:
+                    continue
+            elif seed != "all" and t["seed"] != seed:
                 continue
             if difficulty and t["prompt_difficulty"] != difficulty and t["difficulty"] != difficulty:
                 continue

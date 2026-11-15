@@ -133,7 +133,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Does the outbound quote comparison accurately cite multiple carrier options and annual premiums without fabricating quote terms?",
           scaleSteps: [
             {
@@ -160,12 +160,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "We compared quotes from Summit ($1,120/yr), Coastal ($1,180/yr), and SafeHarbor ($1,240/yr) with 100/300/100 liability limits and $500 collision deductible.",
-              score: 4,
+              score: 1,
               rationale: "Cites specific carrier options, annual premiums, and normalized deductible/limit terms.",
             },
             {
               inputSnippet: "We got you a great quote, let us know if you want to bind.",
-              score: 1,
+              score: 0,
               rationale: "Lacks specific carrier names, premium figures, and coverage details.",
             },
           ],
@@ -293,7 +293,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?client_id=CLI-006&direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Does the outbound comparison for Marcus Williams (CLI-006) benchmark the new carrier quotes against his $1,560 Summit renewal and note coverage/deductible trade-offs?",
           scaleSteps: [
             {
@@ -320,12 +320,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "Your Summit renewal is $1,560 (up from $1,290). National Shield quoted $1,340 and Coastal quoted $1,390 at matching 100/300/100 limits and $500 deductible.",
-              score: 4,
+              score: 1,
               rationale: "Grounded in CLI-006's $1,560 renewal baseline and compares alternative carrier quotes with coverage context.",
             },
             {
               inputSnippet: "We found a cheaper carrier for your car insurance.",
-              score: 1,
+              score: 0,
               rationale: "Omits renewal baseline, carrier names, and dollar figures.",
             },
           ],

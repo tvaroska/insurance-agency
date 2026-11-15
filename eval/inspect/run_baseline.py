@@ -33,6 +33,8 @@ import httpx
 
 from evergreen import load_evergreen_samples
 from summarize_inspect import (
+    HOLDOUT_SCENARIOS,
+    TRAIN_SCENARIOS,
     collect_eval_files,
     extract_records_from_log,
     format_markdown_table,
@@ -294,8 +296,13 @@ def shutdown_stacks(handles: list[StackHandle]) -> None:
 
 def parse_scenarios_arg(raw: str) -> list[str]:
     cleaned = raw.strip()
-    if cleaned.lower() == "all":
+    lowered = cleaned.lower()
+    if lowered == "all":
         return list(ALL_SCENARIOS)
+    if lowered == "train":
+        return list(TRAIN_SCENARIOS)
+    if lowered == "holdout":
+        return list(HOLDOUT_SCENARIOS)
     return [s.strip().zfill(2) for s in cleaned.split(",") if s.strip()]
 
 

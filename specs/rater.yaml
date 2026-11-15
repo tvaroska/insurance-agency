@@ -389,15 +389,20 @@ paths:
       operationId: bindQuote
       summary: Bind a quoted policy
       description: |
-        Finalizes a policy with the selected carrier once the client has approved
-        the quoted premium and coverages. The `quote_id` identifies a specific
-        carrier's quote from the results array.
+        Finalizes a carrier binder once the client has approved the quoted premium
+        and coverages. The `quote_id` identifies a specific carrier's quote from
+        the results array.
 
-        Binding is **idempotent on the quote_id** — if the same quote has already
-        been bound, a `409 Conflict` is returned with the existing policy details.
+        Only quotes in status `quoted` whose `valid_until` is on or after the
+        simulated agency date (`2026-10-14`) can be bound. Quotes that are already
+        `bound`, `declined`, `expired`, `pending`, `error`, `underwriting_hold`,
+        or past `valid_until` return `409 Conflict`.
 
-        Upon success the carrier issues a binder and the policy is active as of
-        the `effective_date` on the original quote request.
+        **Service boundary note:** Binding updates `rater.carrier_quotes` (`status = "bound"`)
+        and issues a carrier binder `policy_id`; it does **not** automatically insert a
+        policy record into AMS (`http://localhost:3000/v1/policies`), which must be
+        recorded separately when AMS policy servicing is required. Client and policy
+        documents are retrieved from ECM (`http://localhost:3003/v1/documents`).
       tags:
         - Quotes
       security:
@@ -454,8 +459,8 @@ paths:
                     premium_annual: 1842.00
                     premium_monthly: 159.50
                     bind_status: bound
-                    bound_at: "2026-03-12T10:45:22Z"
-                    policy_documents_url: http://localhost:3001/policies/POL-PROG-2026-0041827/documents
+                    bound_at: "2026-10-14T12:00:00Z"
+                    policy_documents_url: http://localhost:3003/v1/documents?client_id=CLI-003
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':

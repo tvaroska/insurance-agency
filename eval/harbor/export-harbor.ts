@@ -55,9 +55,10 @@ export function buildInstruction(
   const servicesList = services.join(", ");
   return [
     "You are an insurance agency operations agent with access to the Evergreen Insurance API Gym (`MODALITY_MODE=strict`).",
+    "Simulated agency date/clock: `2026-10-14` (`2026-10-14T12:00:00.000Z`). Treat `2026-10-14` as today for all effective dates, backdating checks, quote expirations, and commission windows.",
     `Active services for this scenario (${servicesList}) are running on localhost ports 3000-3007.`,
     "Obtain a Bearer token via POST http://localhost:3000/oauth/token (grant_type=client_credentials, client_id=agent-full, client_secret=dev-secret).",
-    "OpenAPI 3.1 specifications for REST services are available in `/workspace/specs/` (read-only), Comm Hub MCP is enforced at `http://localhost:3004/mcp`, and carrier web portals are served at `http://localhost:3005/` (Summit Fire) and `http://localhost:3006/` (Coastal Star).",
+    "OpenAPI 3.1 specifications for REST services are available in `/workspace/specs/` (read-only). Comm Hub MCP is enforced via JSON-RPC `tools/call` at `http://localhost:3004/mcp` (with Bearer token), and browser-only carrier portals run at `http://localhost:3005/` (Summit Fire) and `http://localhost:3006/` (Coastal Star) using browser session cookies + `/auth/portal-session`.",
     `Environment seed mode: ${seed}.`,
     "",
     "## Scenario Prompt",
@@ -66,7 +67,7 @@ export function buildInstruction(
     "",
     "## Evaluation & Trace Collection",
     "",
-    "The Harbor verifier collects authoritative server-side traces via `bun eval/collect-trace.ts` and evaluates pre/post database snapshots via `bun eval/score.ts` (`0.80` pass threshold, mandatory E&O compliance, and zero unauthorized collateral mutations).",
+    "The Harbor verifier collects authoritative server-side traces via `bun eval/collect-trace.ts` and evaluates pre/post 32-table database snapshots (`/workspace/traces/snapshot-before.json`) via `bun eval/score.ts` (`0.80` pass threshold, mandatory E&O compliance, and zero unauthorized collateral mutations).",
   ].join("\n");
 }
 
@@ -299,9 +300,17 @@ def run_evergreen_scorer() -> dict:
         str(out_dir),
     ]
 
-    snap_before_env = os.environ.get("HARBOR_SNAPSHOT_BEFORE", "/tmp/harbor-snapshot-before.json")
-    snap_before = Path(snap_before_env)
-    if snap_before.exists():
+    snap_before: Path | None = None
+    for candidate_before in [
+        os.environ.get("HARBOR_SNAPSHOT_BEFORE"),
+        "/workspace/traces/snapshot-before.json",
+        "/tmp/harbor-snapshot-before.json",
+    ]:
+        if candidate_before and Path(candidate_before).exists():
+            snap_before = Path(candidate_before)
+            break
+
+    if snap_before is not None:
         snap_after_env = os.environ.get("HARBOR_SNAPSHOT_AFTER")
         snap_after = (
             Path(snap_after_env)
@@ -378,6 +387,47 @@ include:
   - ../../docker-compose.yml
 
 services:
+  harbor-snapshot-init:
+    image: oven/bun:1-debian
+    network_mode: "host"
+    environment:
+      - SEED_MODE=\${SEED_MODE:-realistic}
+    volumes:
+      - harbor-traces:/workspace/traces
+    depends_on:
+      ams:
+        condition: service_healthy
+      rater:
+        condition: service_healthy
+      crm:
+        condition: service_healthy
+      ecm:
+        condition: service_healthy
+      comm:
+        condition: service_healthy
+      carrier-summit:
+        condition: service_healthy
+      carrier-coastal:
+        condition: service_healthy
+      claims:
+        condition: service_healthy
+    command:
+      - bun
+      - -e
+      - |
+        const map = [[3000,"ams"],[3001,"rater"],[3002,"crm"],[3003,"ecm"],[3004,"comm"],[3005,"summit-fire"],[3006,"coastal-star"],[3007,"claims"]];
+        const seed = process.env.SEED_MODE === "clean" ? "clean" : "realistic";
+        const headers = { "Content-Type": "application/json", "X-Eval-Scorer": "true", "X-Evergreen-Internal": "1" };
+        for (const [p] of map) {
+          await fetch("http://localhost:" + p + "/sim/reset", { method: "POST", headers, body: JSON.stringify({ seed_mode: seed }) });
+        }
+        const snap = {};
+        for (const [p, name] of map) {
+          const r = await fetch("http://localhost:" + p + "/sim/snapshot", { headers });
+          snap[name] = await r.json();
+        }
+        await Bun.write("/workspace/traces/snapshot-before.json", JSON.stringify(snap));
+
   harbor-agent:
     image: oven/bun:1-debian
     working_dir: /workspace
@@ -385,12 +435,16 @@ services:
     environment:
       - SEED_MODE=\${SEED_MODE:-realistic}
       - MODALITY_MODE=\${MODALITY_MODE:-strict}
+      - SIMULATED_TODAY=2026-10-14
       - OTEL_TRACES_PATH=/workspace/traces/trace.json
+      - HARBOR_SNAPSHOT_BEFORE=/workspace/traces/snapshot-before.json
       - GEMINI_MODEL=\${GEMINI_MODEL:-gemini-3.8-flash}
     volumes:
       - ../../specs:/workspace/specs:ro
       - harbor-traces:/workspace/traces
     depends_on:
+      harbor-snapshot-init:
+        condition: service_completed_successfully
       ams:
         condition: service_healthy
       rater:

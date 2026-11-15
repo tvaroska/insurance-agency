@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-11-15T19:42:09.061Z",
+  "benchmarkPath": "eval/calibration/rubric_gold_120.json",
+  "totalItems": 120,
+  "criteriaCount": 10,
+  "evaluatorMode": "vertex-llm-judge",
+  "judgeModel": "gemini-4-argon",
+  "interRaterReliability": {
+    "rawPercentAgreement": 0.9667,
+    "gwetsAc2": 0.9333,
+    "krippendorffAlpha": 0.9336,
+    "passesIrrGate": true
+  },
+  "confusionMatrix": {
+    "tp": 53,
+    "fp": 0,
+    "tn": 60,
+    "fn": 7,
+    "nPos": 60,
+    "nNeg": 60,
+    "total": 120,
+    "tprSensitivity": 0.8833,
+    "tnrSpecificity": 1,
+    "youdenJ": 0.8833,
+    "accuracy": 0.9417,
+    "f1": 0.9381
+  },
+  "perPrincipleAccuracy": {
+    "EVAL-P01": {
+      "total": 12,
+      "correct": 10,
+      "accuracy": 0.8333
+    },
+    "EVAL-P02": {
+      "total": 12,
+      "correct": 12,
+      "accuracy": 1
+    },
+    "EVAL-P03": {
+      "total": 12,
+      "correct": 9,
+      "accuracy": 0.75
+    },
+    "EVAL-P04": {
+      "total": 12,
+      "correct": 12,
+      "accuracy": 1
+    },
+    "EVAL-P05": {
+      "total": 12,
+      "correct": 12,
+      "accuracy": 1
+    },
+    "EVAL-P06": {
+      "total": 12,
+      "correct": 12,
+      "accuracy": 1
+    },
+    "EVAL-P07": {
+      "total": 12,
+      "correct": 11,
+      "accuracy": 0.9167
+    },
+    "EVAL-P08": {
+      "total": 12,
+      "correct": 12,
+      "accuracy": 1
+    },
+    "EVAL-P09": {
+      "total": 12,
+      "correct": 11,
+      "accuracy": 0.9167
+    },
+    "EVAL-P10": {
+      "total": 12,
+      "correct": 12,
+      "accuracy": 1
+    }
+  }
+}

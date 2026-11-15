@@ -41,6 +41,7 @@ describe("Harbor / Terminal-Bench 2.0 Exporter (S2-INTOP-1)", () => {
     expect(yaml).toContain("eo-compliance-trap");
     expect(yaml).toContain('docker_compose: "../../docker-compose.harbor.yaml"');
     expect(yaml).toContain("POST http://localhost:3000/oauth/token");
+    expect(yaml).toContain("2026-10-14");
   });
 
   it("renders test_outputs.py that collects service traces and delegates grading to bun eval/score.ts", () => {
@@ -53,6 +54,7 @@ describe("Harbor / Terminal-Bench 2.0 Exporter (S2-INTOP-1)", () => {
     expect(py).toContain('CASE_ID = "realistic-natural"');
     expect(py).toContain('"eval/collect-trace.ts"');
     expect(py).toContain('"eval/score.ts"');
+    expect(py).toContain('"/workspace/traces/snapshot-before.json"');
     expect(py).toContain('"--snapshot-before"');
     expect(py).toContain('"--snapshot-after"');
     expect(py).toContain('"0.80"');
@@ -64,6 +66,8 @@ describe("Harbor / Terminal-Bench 2.0 Exporter (S2-INTOP-1)", () => {
     const compose = renderHarborDockerCompose();
     expect(compose).toContain("include:");
     expect(compose).toContain("../../docker-compose.yml");
+    expect(compose).toContain("harbor-snapshot-init:");
+    expect(compose).toContain("/workspace/traces/snapshot-before.json");
     expect(compose).toContain("harbor-agent:");
     expect(compose).toContain("MODALITY_MODE=${MODALITY_MODE:-strict}");
     expect(compose).toContain("../../specs:/workspace/specs:ro");

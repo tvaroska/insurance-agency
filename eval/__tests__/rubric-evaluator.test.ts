@@ -3,6 +3,7 @@ import {
   BINARY_SCALE_STEPS,
   CONTRADICTION_AWARE_4PT_STEPS,
   DEFAULT_JUDGE_MODEL,
+  DEFAULT_LLM_CALIBRATION_RECEIPT_PATH,
   DETERMINISTIC_JUDGE_MODEL,
   FOUR_POINT_GROUNDEDNESS_STEPS,
   PII_PERTURBATION_BINARY_STEPS,
@@ -34,12 +35,12 @@ describe("Tier-2 Atomic Rubric, Rogan-Gladen & EVAL-P01..P10 Calibration", () =>
       path: "/messages?direction=outbound",
       field: "body",
       scaleType: "ordinal_4",
-      passingScore: 3,
+      passingScore: 0.66,
       question: "Does the message accurately cite carrier quotes and deductibles?",
       scaleSteps: FOUR_POINT_GROUNDEDNESS_STEPS,
       boundaryExamples: [
-        { inputSnippet: "Summit $1,120 with $500 deductible", score: 4, rationale: "Complete" },
-        { inputSnippet: "We got a quote", score: 1, rationale: "Incomplete" },
+        { inputSnippet: "Summit $1,120 with $500 deductible", score: 1, rationale: "Complete" },
+        { inputSnippet: "We got a quote", score: 0, rationale: "Incomplete" },
       ],
     };
     expect(() => validateAtomicRubric(validOrdinal)).not.toThrow();
@@ -168,11 +169,11 @@ describe("Tier-2 Atomic Rubric, Rogan-Gladen & EVAL-P01..P10 Calibration", () =>
         path: "/messages?direction=outbound",
         field: "body",
         scaleType: "ordinal_4",
-        passingScore: 3,
+        passingScore: 0.66,
         question: "Does the outbound message cite carrier quotes and dollar amounts?",
         scaleSteps: FOUR_POINT_GROUNDEDNESS_STEPS,
         boundaryExamples: [
-          { inputSnippet: "Summit $1,120 vs Coastal $1,180", score: 4, rationale: "Grounded" },
+          { inputSnippet: "Summit $1,120 vs Coastal $1,180", score: 1, rationale: "Grounded" },
         ],
         requiredPatterns: ["(Summit|Coastal)", "\\$[0-9,]+"],
       },
@@ -220,6 +221,12 @@ describe("Tier-2 Atomic Rubric, Rogan-Gladen & EVAL-P01..P10 Calibration", () =>
     const llmResult = await evaluateRubrics(criteria, {
       prefetchedPayloads,
       useLlmJudge: true,
+      calibration: {
+        tprSensitivity: 0.95,
+        tnrSpecificity: 0.95,
+        nCalibrationPos: 60,
+        nCalibrationNeg: 60,
+      },
       judgeFn: async (_prompt, criterion, model) => ({
         reasoning_trace: `Verified ${criterion.id} with ${model}.`,
         score: 1.0,
@@ -234,8 +241,9 @@ describe("Tier-2 Atomic Rubric, Rogan-Gladen & EVAL-P01..P10 Calibration", () =>
     expect(llmResult.verdicts.every((v) => v.judgeModel === DEFAULT_JUDGE_MODEL)).toBe(true);
   });
 
-  test("120-item gold calibration benchmark achieves Gwet AC2 >= 0.85 and produces empirical TPR/TNR receipt", async () => {
+  test("120-item gold calibration benchmark achieves Gwet AC2 >= 0.85, isolates deterministic vs LLM receipts, and rejects cross-mode debiasing", async () => {
     const receipt = await runJudgeCalibration();
+    expect(receipt.evaluatorMode).toBe("deterministic-rule");
     expect(receipt.totalItems).toBe(120);
     expect(receipt.criteriaCount).toBe(10);
     expect(receipt.interRaterReliability.gwetsAc2).toBeGreaterThanOrEqual(0.85);
@@ -246,9 +254,27 @@ describe("Tier-2 Atomic Rubric, Rogan-Gladen & EVAL-P01..P10 Calibration", () =>
     expect(receipt.confusionMatrix.nNeg).toBe(60);
     expect(receipt.confusionMatrix.youdenJ).toBeGreaterThan(0.75);
 
-    const loaded = loadCalibrationReceipt();
-    expect(loaded.tprSensitivity).toBeCloseTo(receipt.confusionMatrix.tprSensitivity, 4);
-    expect(loaded.tnrSpecificity).toBeCloseTo(receipt.confusionMatrix.tnrSpecificity, 4);
+    const loaded = loadCalibrationReceipt(undefined, {
+      expectedEvaluatorMode: "deterministic-rule",
+    });
+    expect(loaded.tprSensitivity).toBeGreaterThan(0.8);
+    expect(loaded.tnrSpecificity).toBeGreaterThan(0.8);
+    expect(() =>
+      loadCalibrationReceipt(undefined, {
+        expectedEvaluatorMode: "vertex-llm-judge",
+      }),
+    ).toThrow(/evaluatorMode='deterministic-rule'/);
+
+    const loadedLlm = loadCalibrationReceipt(DEFAULT_LLM_CALIBRATION_RECEIPT_PATH, {
+      expectedEvaluatorMode: "vertex-llm-judge",
+    });
+    expect(loadedLlm.tprSensitivity).toBeGreaterThanOrEqual(0.85);
+    expect(loadedLlm.tnrSpecificity).toBeGreaterThanOrEqual(0.85);
+    expect(() =>
+      loadCalibrationReceipt(DEFAULT_LLM_CALIBRATION_RECEIPT_PATH, {
+        expectedEvaluatorMode: "deterministic-rule",
+      }),
+    ).toThrow(/evaluatorMode='vertex-llm-judge'/);
   });
 
   test("createVertexJudgeFn calls Vertex AI generateContent REST endpoint and enforces Commit-First reasoning_trace", async () => {

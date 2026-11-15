@@ -167,7 +167,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?client_id=CLI-018&direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Do the outbound messages to Rosa Jimenez (CLI-018) clarify the missing venue/BOP policy details first, and after her pivot confirm the $2,000,000 GL endorsement and COI issuance on her second BOP (POL-BO-2025-000130) for Winter Park Farmers Market?",
           scaleSteps: [
             {
@@ -194,12 +194,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "We endorsed POL-BO-2025-000130 to $2,000,000 General Liability effective 2026-11-01 and issued the COI for Winter Park Farmers Market (200 W New England Ave, Winter Park, FL 32789).",
-              score: 4,
+              score: 1,
               rationale: "Reflects the Turn-2 pivot to POL-BO-2025-000130, $2M GL limit, and Winter Park Farmers Market.",
             },
             {
               inputSnippet: "We issued the COI for Orlando Convention Center on POL-BO-2025-000060.",
-              score: 1,
+              score: 0,
               rationale: "Used the wrong venue and wrong BOP policy.",
             },
           ],
@@ -283,7 +283,7 @@ const scenario: ScenarioDefinition = {
           path: "/messages?client_id=CLI-018&direction=outbound",
           field: "body",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Do the outbound messages to Rosa Jimenez (CLI-018) clarify the missing venue/BOP policy details first, and after her pivot confirm the $2,000,000 GL endorsement and COI issuance on her second BOP (POL-BO-2025-000130) for Winter Park Farmers Market?",
           scaleSteps: [
             {
@@ -310,12 +310,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "We endorsed POL-BO-2025-000130 to $2,000,000 General Liability effective 2026-11-01 and issued the COI for Winter Park Farmers Market (200 W New England Ave, Winter Park, FL 32789).",
-              score: 4,
+              score: 1,
               rationale: "Reflects the Turn-2 pivot to POL-BO-2025-000130, $2M GL limit, and Winter Park Farmers Market.",
             },
             {
               inputSnippet: "We issued the COI for Orlando Convention Center on POL-BO-2025-000060.",
-              score: 1,
+              score: 0,
               rationale: "Used the wrong venue and wrong BOP policy.",
             },
           ],

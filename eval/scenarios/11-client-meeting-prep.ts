@@ -151,7 +151,7 @@ const scenario: ScenarioDefinition = {
           path: "/tasks?related_client_id=CLI-001",
           field: "description",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Does the meeting prep task for Sarah Chen (CLI-001) synthesize the full HH-001 household portfolio (including spouse James Chen CLI-002, auto, homeowners, and umbrella coverage) rather than listing only Sarah's auto policy?",
           scaleSteps: [
             {
@@ -178,12 +178,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "Annual review for Chen household (HH-001): Sarah (CLI-001) auto + homeowners + umbrella, James (CLI-002) auto policy. Review umbrella limit alignment across both drivers.",
-              score: 4,
+              score: 1,
               rationale: "Covers both household members and all policy lines.",
             },
             {
               inputSnippet: "Prep for Sarah Chen meeting.",
-              score: 1,
+              score: 0,
               rationale: "Contains no household, spouse, or policy details.",
             },
           ],
@@ -313,7 +313,7 @@ const scenario: ScenarioDefinition = {
           path: "/tasks?related_client_id=CLI-004",
           field: "description",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Does the meeting prep task for David & Linda Thompson (HH-004) identify the key coverage gaps ($1M umbrella inadequacy for restaurant owner, BOP 2nd location/EPLI gap, and Linda CLI-005 missing homeowners/renters coverage)?",
           scaleSteps: [
             {
@@ -340,12 +340,12 @@ const scenario: ScenarioDefinition = {
           boundaryExamples: [
             {
               inputSnippet: "HH-004 Meeting Prep: 1) David (CLI-004) $1M umbrella inadequate for expanding restaurant; 2) BOP needs 2nd location + EPLI; 3) Linda (CLI-005) has auto only (needs HO/renters); 4) CLM-2026-000011 has attorney involvement.",
-              score: 4,
+              score: 1,
               rationale: "Synthesizes all household coverage gaps and active claim/attorney risks.",
             },
             {
               inputSnippet: "Discuss David's restaurant policy renewal.",
-              score: 1,
+              score: 0.33,
               rationale: "Omits umbrella gap, EPLI, Linda's gap, and claim issues.",
             },
           ],
@@ -395,7 +395,7 @@ const scenario: ScenarioDefinition = {
           path: "/tasks?related_client_id=CLI-004",
           field: "description",
           scaleType: "ordinal_4",
-          passingScore: 3,
+          passingScore: 0.66,
           question: "Does the meeting brief surface the cross-service contradictions between David Thompson's expanding 2-location restaurant exposure vs. his single-location BOP/umbrella limits AND Linda Thompson's denied/disputed claims (CLM-2025-000005 / CLM-2026-000012) rather than silently suppressing them?",
           scaleSteps: [
             {
