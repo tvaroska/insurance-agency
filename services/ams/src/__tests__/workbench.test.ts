@@ -49,7 +49,7 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
     expect(html).toContain("4. 3-Stage Agent-to-Code Economics");
   });
 
-  test("GET /workbench/api/overview returns agency ROI model, 7 promises, 5 hero journeys, 15 anomalies, and seeded escalations", async () => {
+  test("GET /workbench/api/overview is read-only and POST /workbench/api/seed-escalations seeds demo escalations", async () => {
     const res = await app.request("/workbench/api/overview");
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -59,7 +59,7 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
     expect(data.sevenPromises).toHaveLength(7);
     expect(data.heroJourneys).toHaveLength(5);
     expect(data.anomalies).toHaveLength(15);
-    expect(data.escalations.length).toBeGreaterThanOrEqual(3);
+    expect(data.escalations).toHaveLength(0);
     expect(data.evolutionStages).toHaveLength(3);
     expect(data.evolutionStages[0].pass1).toBe(0.58);
     expect(data.evolutionStages[0].meanScore).toBe(0.71);
@@ -67,6 +67,12 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
     expect(data.evolutionStages[0].measuredModels).toHaveLength(3);
     expect(data.evolutionStages[1].provenance).toBe("measured_v0.8_domain_skill");
     expect(data.evolutionStages[2].pass1).toBe(1.0);
+
+    const seedRes = await app.request("/workbench/api/seed-escalations", { method: "POST" });
+    expect(seedRes.status).toBe(200);
+    const seeded = await seedRes.json();
+    expect(seeded.seededCount).toBe(3);
+    expect(seeded.escalations.length).toBeGreaterThanOrEqual(3);
   });
 
   test("POST /workbench/api/run-journey executes Hero Journey and writes a real SQLite audit task", async () => {
@@ -103,6 +109,9 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
     const html = await (await app.request("/")).text();
     expect(html).toContain('href="/workbench/api/documents/DOC-002/pdf"');
     expect(html).not.toContain("localhost:3003/v1/documents/DOC-002/download");
+
+    const missing = await app.request("/workbench/api/documents/NO-SUCH-DOC/pdf");
+    expect(missing.status).toBe(404);
   });
 
   test("resolveStackUrls honors EVERGREEN_BASE_PORT and *_BASE_URL overrides", () => {
@@ -224,7 +233,7 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
   });
 
   test("POST /workbench/api/escalations/:id/resolve approves pending escalation and records audit event", async () => {
-    await app.request("/workbench/api/overview");
+    await app.request("/workbench/api/seed-escalations", { method: "POST" });
     const res = await app.request(
       "/workbench/api/escalations/esc_showcase_01/resolve",
       {

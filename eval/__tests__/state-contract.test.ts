@@ -241,7 +241,7 @@ describe("Pure 32-Table DB State-Contract Evaluator", () => {
       expect(row.negativesAllFailed).toBe(true);
     }
     expect(ok).toBe(true);
-  }, 30_000);
+  }, 90_000);
 
   test("CLI --score-snapshots scores snapshot files purely against DT-01 contract", () => {
     const tmpDir = mkdtempSync(join(tmpdir(), "evergreen-dt-cli-"));

@@ -145,6 +145,16 @@ expected_diff:
   must_update: []
   must_delete: []
   allowed_extras:
+    - service: ecm
+      table: envelopes
+      op: insert
+      where:
+        client_id: CLI-DT06-A
+        status: created
+        document_ids:
+          contains: DOC-DT06-APP
+      max_count: 1
+      reason: Optional second e-signature envelope if agent created one on Turn 2 and re-sent on Turn 3
     - service: ams
       table: escalations
       op: insert

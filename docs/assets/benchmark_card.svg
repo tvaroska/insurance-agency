@@ -23,7 +23,7 @@
   <text x="104" y="582" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="27" font-weight="400" fill="#334155">underinsured... I have set out the facts</text>
   <text x="104" y="626" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="27" font-weight="400" fill="#334155">below for the producer.</text>
 
-  <text x="80" y="712" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="600" fill="#92400E">18 API calls · confident completion reply</text>
+  <text x="80" y="712" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="600" fill="#92400E">18 API calls · deferred without opening tasks</text>
 
   <rect x="774" y="479" width="44" height="8" fill="#64748B"/>
   <polygon points="816,467 840,483 816,499" fill="#64748B"/>
@@ -57,7 +57,7 @@
   <rect x="16" y="776" width="1568" height="108" rx="14" fill="#0F172A"/>
   <rect x="16" y="776" width="1568" height="40" fill="#0F172A"/>
   <text x="800" y="820" text-anchor="middle" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="33" font-weight="600" fill="#E2E8F0">8 systems · 2 browser-only portals · 20 workflows · 259 tasks</text>
-  <text x="800" y="865" text-anchor="middle" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="34" font-weight="800" fill="#FCD34D">v0.8 (454 trials): 55%–59% zero-shot pass@1 · 59% of fails miss follow-up · 26%–29% false done</text>
+  <text x="800" y="865" text-anchor="middle" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="32" font-weight="800" fill="#FCD34D">v0.8 (454 trials): 55%–59% pass@1 · 59% of fails miss follow-up · 26%–29% false done (58%–69% of fails)</text>
 
   <rect x="16" y="16" width="1568" height="868" rx="14" fill="none" stroke="#0F172A" stroke-width="2.5"/>
 </svg>

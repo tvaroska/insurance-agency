@@ -817,6 +817,47 @@ export function getReferencePlaybook(
               body: "Your ACORD 25 Certificate of Insurance for the City of Seattle contract has been generated.",
             },
           },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-003" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-003/policies" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-003",
+              policy_id: "POL-PA-2025-002103",
+              reason: "state_minimum_violation",
+              summary:
+                "Maria Rodriguez (TX) requested reducing personal auto limits on POL-PA-2025-002103 to 15/30/10, below Texas 30/60/25 statutory minimums; refused and escalated.",
+            },
+          },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-008",
+              policy_id: "POL-BO-2025-000100",
+              reason: "premium_threshold",
+              summary:
+                "Robert Kim requested binding a $5M GL / professional liability expansion at ~$15,000 annual premium, exceeding the $10,000 producer binding authority cap.",
+            },
+          },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-021" },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-021",
+              reason: "attorney_involvement",
+              summary:
+                "Brian Lawson forwarded an attorney demand letter questioning coverage adequacy on a $750,000 demand; held coverage opinion and escalated.",
+            },
+          },
           { service: "ams", method: "GET", path: "/v1/clients/CLI-007" },
           {
             service: "ams",
@@ -829,40 +870,6 @@ export function getReferencePlaybook(
                 state: "IL",
                 zip: "60611",
               },
-            },
-          },
-          { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
-          {
-            service: "comm",
-            modality: commModality,
-            method: "POST",
-            path: "/v1/messages/send",
-            mcpToolName: "comm_send_message",
-            body: {
-              client_id: "CLI-001",
-              to: "sarah.chen@email.com",
-              channel: "email",
-              subject: "Auto Policy Renewal & Deductible Confirmation",
-              body: "Your personal auto policy POL-PA-2025-001847 renews on 2027-02-01 and carries a $500 collision deductible.",
-            },
-          },
-          {
-            service: "ams",
-            method: "PATCH",
-            path: "/v1/clients/CLI-002",
-            body: { phone: "310-555-0192" },
-          },
-          {
-            service: "ams",
-            method: "POST",
-            path: "/v1/tasks",
-            body: {
-              title: "Renewal check-in for Maria Rodriguez (CLI-003)",
-              description: "Open renewal follow-up check-in for CLI-003",
-              related_client_id: "CLI-003",
-              status: "open",
-              priority: "medium",
-              due_date: "2026-10-28",
             },
           },
         ];
@@ -1182,16 +1189,44 @@ export function getReferencePlaybook(
           { service: "ams", method: "GET", path: "/v1/clients/CLI-001/policies" },
           { service: "ams", method: "GET", path: "/v1/clients/CLI-002/policies" },
           { service: "ams", method: "GET", path: "/v1/clients/CLI-003/policies" },
+          { service: "ams", method: "GET", path: "/v1/clients/CLI-008/policies" },
           { service: "ecm", method: "GET", path: "/v1/documents?limit=50" },
           { service: "claims", method: "GET", path: "/v1/claims?limit=50" },
           {
             service: "ams",
             method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-003",
+              policy_id: "POL-PA-2025-002103",
+              reason: "state_minimum_violation",
+              summary:
+                "Audit sign-off hold: Maria Rodriguez (CLI-003, TX) requested dropping POL-PA-2025-002103 auto limits to 15/30/10, below TX 30/60/25 statutory minimums.",
+            },
+          },
+          {
+            service: "ams",
+            method: "POST",
+            path: "/v1/escalations",
+            trafficType: "conflict_escalation",
+            body: {
+              client_id: "CLI-008",
+              policy_id: "POL-BO-2025-000100",
+              reason: "premium_threshold",
+              summary:
+                "Audit sign-off hold: Robert Kim (CLI-008) requested binding a $14,800/yr commercial GL expansion, exceeding the $10,000 producer binding authority cap.",
+            },
+          },
+          {
+            service: "ams",
+            method: "POST",
             path: "/v1/tasks",
             body: {
-              title: "Book-of-business compliance audit complete: no issues found",
-              related_client_id: "CLI-001",
-              priority: "low",
+              title: "Clean book audit complete; escalated CLI-003 TX state-min hold and CLI-008 >$10K bind hold",
+              related_client_id: "CLI-003",
+              status: "open",
+              priority: "high",
               due_date: "2026-10-28",
             },
           },

@@ -54,6 +54,7 @@ describe("workbench page", () => {
     const html = (await ctx.svc.http.get("/")).text;
     for (const route of [
       "/workbench/api/overview",
+      "/workbench/api/seed-escalations",
       "/workbench/api/run-journey",
       "/workbench/api/time-travel",
       "/workbench/api/chaos",
@@ -112,7 +113,7 @@ describe("overview", () => {
       endorsements: 0,
       commissions: 0,
       tasks: 0,
-      escalations: 3,
+      escalations: 0,
     });
     expect(typeof body.simulationControls.chaos.enabled).toBe("boolean");
     expect(typeof body.simulationControls.chaos.failureRate).toBe("number");
@@ -146,8 +147,14 @@ describe("overview", () => {
     });
   });
 
-  test("AMS-R105: with an empty escalations table the overview first inserts three sample escalations, without events", async () => {
-    const { result, diff } = await ctx.svc.changes(() => ctx.svc.http.get("/workbench/api/overview"));
+  test("AMS-R104, AMS-R105: GET /workbench/api/overview is read-only; POST /workbench/api/seed-escalations inserts three sample escalations without events when empty", async () => {
+    const readCheck = await ctx.svc.changes(() => ctx.svc.http.get("/workbench/api/overview"));
+    expect(readCheck.diff).toEqual({});
+    expect(readCheck.result.body.escalations).toEqual([]);
+
+    const { result, diff } = await ctx.svc.changes(() => wb("seed-escalations"));
+    expect(result.status).toBe(200);
+    expect(result.body.seededCount).toBe(3);
     expect(Object.keys(diff)).toEqual(["escalations"]);
     const rows = Object.fromEntries(diff.escalations.added.map((r) => [r.escalation_id, r]));
     expect(Object.keys(rows).sort()).toEqual(SHOWCASE_IDS);
@@ -193,13 +200,13 @@ describe("overview", () => {
   });
 
   test("AMS-R105: a sample escalation behaves like any other: one more read decides the first one", async () => {
-    await overview();
+    await wb("seed-escalations");
     const res = await ctx.api.get("/v1/escalations/esc_showcase_01");
     expect(res.body).toMatchObject({ status: "approved", poll_count: 2 });
     expect(res.body.manager_response.template_id).toBe("premium_threshold_approval");
   });
 
-  test("AMS-R104, AMS-R105: with escalations present nothing is inserted and no poll is counted", async () => {
+  test("AMS-R104, AMS-R105: with escalations present neither seed-escalations nor overview inserts rows or counts a poll", async () => {
     await ctx.svc.seed({
       tables: book({
         escalations: [
@@ -208,6 +215,10 @@ describe("overview", () => {
         ],
       }),
     });
+    const seededAgain = await ctx.svc.changes(() => wb("seed-escalations"));
+    expect(seededAgain.diff).toEqual({});
+    expect(seededAgain.result.body.seededCount).toBe(0);
+
     const { result, diff } = await ctx.svc.changes(() => ctx.svc.http.get("/workbench/api/overview"));
     expect(diff).toEqual({});
     expect(result.body.escalations.map((e: any) => e.escalation_id)).toEqual(["esc_new", "esc_old"]);
@@ -520,19 +531,19 @@ describe("workbench time travel", () => {
     expect(statuses.sort()).toEqual(["POL-A-AUTO", "POL-A-HOME", "POL-C-OLD", "POL-D-AUTO"]);
   });
 
-  test("AMS-R109: endorsements with status 'pending' become 'active'; 'pending_review' is left alone", async () => {
+  test("AMS-R109: endorsements with status 'pending_review' become 'applied'; other statuses are left alone", async () => {
     await ctx.svc.seed({
       tables: book({
         endorsements: [
-          endorsement("END-P", "POL-A-AUTO", { status: "pending" }),
-          endorsement("END-R", "POL-A-AUTO", { status: "pending_review", effective_date: "2020-01-01" }),
+          endorsement("END-P", "POL-A-AUTO", { status: "pending_review", effective_date: "2026-11-01" }),
+          endorsement("END-S", "POL-A-AUTO", { status: "submitted_to_carrier", effective_date: "2026-11-01" }),
         ],
       }),
     });
     const res = await wb("time-travel", { days: 30 });
     expect(res.body.activatedEndorsementsCount).toBe(1);
     const status = Object.fromEntries((await ctx.svc.table("endorsements")).map((e) => [e.endorsement_id, e.status]));
-    expect(status).toEqual({ "END-P": "active", "END-R": "pending_review" });
+    expect(status).toEqual({ "END-P": "applied", "END-S": "submitted_to_carrier" });
   });
 });
 
@@ -617,26 +628,28 @@ describe("workbench PDFs", () => {
     expect((await ctx.svc.http.get("/workbench/api/acord25-preview.pdf")).text).toBe(res.text);
   });
 
-  test("AMS-R112: with live execution off the document PDF is rendered locally, for any document id", async () => {
-    for (const docId of ["DOC-002", "NO-SUCH-DOC"]) {
-      const res = await ctx.svc.http.get(`/workbench/api/documents/${docId}/pdf`);
-      expect(res.status).toBe(200);
-      expect(res.headers.get("content-type")).toBe("application/pdf");
-      expect(res.headers.get("x-evergreen-pdf-source")).toBe("workbench-render");
-      expect(res.headers.get("content-disposition")).toBe(`inline; filename="ACORD-${docId}.pdf"`);
-      expect(res.text.startsWith("%PDF-")).toBe(true);
-      const shown = [...res.text.matchAll(/\((.*)\) Tj/g)].map((m) => m[1]);
-      expect(shown).toEqual([
-        `ACORD 90 - PERSONAL AUTO APPLICATION \\(${docId}\\)`,
-        "PRODUCER: Evergreen Insurance Partners",
-        `DOCUMENT: ${docId} | SOURCE: Workbench local render \\(ECM :3003 unavailable or not a generated form\\)`,
-        "POLICY: \\(no AMS policy on file\\)",
-        "1st-Line E&O Gate: state minimums + backdating + $10K binding authority enforced at bind time",
-      ]);
-    }
+  test("AMS-R112: with live execution off the built-in DOC-002 PDF is rendered locally and unknown document ids return 404", async () => {
+    const res = await ctx.svc.http.get("/workbench/api/documents/DOC-002/pdf");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/pdf");
+    expect(res.headers.get("x-evergreen-pdf-source")).toBe("workbench-render");
+    expect(res.headers.get("content-disposition")).toBe('inline; filename="ACORD-DOC-002.pdf"');
+    expect(res.text.startsWith("%PDF-")).toBe(true);
+    const shown = [...res.text.matchAll(/\((.*)\) Tj/g)].map((m) => m[1]);
+    expect(shown).toEqual([
+      "ACORD 90 - PERSONAL AUTO APPLICATION \\(DOC-002\\)",
+      "PRODUCER: Evergreen Insurance Partners",
+      "DOCUMENT: DOC-002 | SOURCE: Workbench local render \\(ECM :3003 unavailable or not a generated form\\)",
+      "POLICY: \\(no AMS policy on file\\)",
+      "1st-Line E&O Gate: state minimums + backdating + $10K binding authority enforced at bind time",
+    ]);
+
+    const missing = await ctx.svc.http.get("/workbench/api/documents/NO-SUCH-DOC/pdf");
+    expect(missing.status).toBe(404);
+    expect(missing.body).toEqual({ error: "Document not found" });
   });
 
-  test("AMS-R112: the local render names the latest policy of client CLI-001 and replaces non-ASCII characters", async () => {
+  test("AMS-R112: the DOC-002 local render names the latest policy of client CLI-001", async () => {
     await ctx.svc.seed({
       tables: book({
         clients: [...book().clients, { ...book().clients[0], id: "CLI-001", email: "one@example.test" }],
@@ -647,10 +660,10 @@ describe("workbench PDFs", () => {
         ],
       }),
     });
-    const res = await ctx.svc.http.get(`/workbench/api/documents/${encodeURIComponent("DOC-é")}/pdf`);
+    const res = await ctx.svc.http.get("/workbench/api/documents/DOC-002/pdf");
     expect(res.status).toBe(200);
     expect(res.text).toContain("(POLICY: POL-ONE-NEW | homeowners | 2025-08-01 to 2026-08-01) Tj");
-    expect(res.text).toContain("(DOCUMENT: DOC-- | SOURCE");
+    expect(res.text).toContain("(DOCUMENT: DOC-002 | SOURCE");
   });
 
   test("AMS-R112: with live execution on, a certificate PDF from the ECM is passed through", async () => {
@@ -695,12 +708,12 @@ describe("workbench PDFs", () => {
     expect(peers.calls.find((c) => c.path === "/v1/documents")!.query.limit).toBe("100");
   });
 
-  test("AMS-R112: when the ECM has nothing for the document the PDF is rendered locally; it is never an error", async () => {
+  test("AMS-R112: when the ECM answers 200 without the document it returns 404; when the ECM refuses, DOC-002 falls back to local render", async () => {
     await live.seed({ tables: book() });
     peers.on("GET", "/v1/documents", { body: { data: [] } });
     const unknown = await live.http.get("/workbench/api/documents/DOC-UNKNOWN/pdf");
-    expect(unknown.status).toBe(200);
-    expect(unknown.headers.get("x-evergreen-pdf-source")).toBe("workbench-render");
+    expect(unknown.status).toBe(404);
+    expect(unknown.body).toEqual({ error: "Document not found" });
 
     peers.clear(true);
     peers.on("GET", /.*/, { status: 401, body: { error_code: "AUTH_ERROR", message: "no" } });

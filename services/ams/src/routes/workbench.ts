@@ -425,9 +425,35 @@ let chaosSimulationState = {
 
 let simulatedDaysOffset = 0;
 
-async function ensureSampleEscalations() {
+function formatEscalationRow(row: {
+  escalation_id: string;
+  client_id: string;
+  policy_id: string | null;
+  reason: string;
+  summary: string;
+  context: string | null;
+  status: string;
+  manager_response: string | null;
+  created_at: string;
+  updated_at: string;
+}) {
+  return {
+    escalation_id: row.escalation_id,
+    client_id: row.client_id,
+    policy_id: row.policy_id,
+    reason: row.reason,
+    summary: row.summary,
+    context: row.context ? JSON.parse(row.context) : null,
+    status: row.status,
+    manager_response: row.manager_response ? JSON.parse(row.manager_response) : null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+async function ensureSampleEscalations(): Promise<number> {
   const count = await prisma.escalation.count();
-  if (count > 0) return;
+  if (count > 0) return 0;
 
   const now = getSimulatedNow().toISOString();
   const samples = [
@@ -502,13 +528,27 @@ async function ensureSampleEscalations() {
       create: s,
     });
   }
+  return samples.length;
 }
+
+// ── POST /workbench/api/seed-escalations ────────────────────────────
+
+workbenchRouter.post("/workbench/api/seed-escalations", async (c) => {
+  const seededCount = await ensureSampleEscalations();
+  const escalations = await prisma.escalation.findMany({
+    orderBy: { created_at: "desc" },
+    take: 25,
+  });
+  return c.json({
+    status: "ok",
+    seededCount,
+    escalations: escalations.map(formatEscalationRow),
+  });
+});
 
 // ── GET /workbench/api/overview ─────────────────────────────────────
 
 workbenchRouter.get("/workbench/api/overview", async (c) => {
-  await ensureSampleEscalations();
-
   const [
     clientsCount,
     policiesCount,
@@ -566,18 +606,7 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
         escalations: escalations.length,
       },
     },
-    escalations: escalations.map((row) => ({
-      escalation_id: row.escalation_id,
-      client_id: row.client_id,
-      policy_id: row.policy_id,
-      reason: row.reason,
-      summary: row.summary,
-      context: row.context ? JSON.parse(row.context) : null,
-      status: row.status,
-      manager_response: row.manager_response ? JSON.parse(row.manager_response) : null,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-    })),
+    escalations: escalations.map(formatEscalationRow),
     evolutionStages: [
       {
         stage: "Stage 1: Zero-Shot General Agent",
@@ -814,6 +843,31 @@ workbenchRouter.post("/workbench/api/run-journey", async (c) => {
 
 // ── GET /workbench/api/documents/:docId/pdf ─────────────────────────
 
+async function renderLocalAcordSummaryResponse(
+  docId: string,
+  clientId: string,
+): Promise<Response> {
+  const policy = await prisma.policy
+    .findFirst({ where: { client_id: clientId }, orderBy: { effective_date: "desc" } })
+    .catch(() => null);
+  const pdf = renderSimplePdf(`ACORD 90 - PERSONAL AUTO APPLICATION (${docId})`, [
+    "PRODUCER: Evergreen Insurance Partners",
+    `DOCUMENT: ${docId} | SOURCE: Workbench local render (ECM :3003 unavailable or not a generated form)`,
+    policy
+      ? `POLICY: ${policy.policy_id} | ${policy.policy_type} | ${policy.effective_date} to ${policy.expiration_date}`
+      : "POLICY: (no AMS policy on file)",
+    "1st-Line E&O Gate: state minimums + backdating + $10K binding authority enforced at bind time",
+  ]);
+  return new Response(pdf, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="ACORD-${docId}.pdf"`,
+      "X-Evergreen-Pdf-Source": "workbench-render",
+    },
+  });
+}
+
 workbenchRouter.get("/workbench/api/documents/:docId/pdf", async (c) => {
   const docId = c.req.param("docId");
   const urls = resolveStackUrls();
@@ -856,59 +910,46 @@ workbenchRouter.get("/workbench/api/documents/:docId/pdf", async (c) => {
       if (listRes.ok) {
         const listBody = (await listRes.json()) as { data?: { document_id: string; client_id: string; tags?: string[] }[] };
         const doc = listBody.data?.find((d) => d.document_id === docId);
-        if (doc) {
-          const wantsHome = (doc.tags ?? []).some((t) => /home|dwelling|property/i.test(t));
-          const policy = await prisma.policy.findFirst({
-            where: {
-              client_id: doc.client_id,
-              policy_type: wantsHome ? "homeowners" : "personal_auto",
-            },
-            orderBy: { effective_date: "desc" },
-          });
-          if (policy) {
-            const form = policy.policy_type === "homeowners" ? "80" : "90";
-            const acordRes = await fetch(
-              `${urls.ecm}/v1/documents/acord/${form}?policy_id=${encodeURIComponent(policy.policy_id)}`,
-              { headers, signal: AbortSignal.timeout(5000) },
-            );
-            if (acordRes.ok) {
-              return new Response(await acordRes.arrayBuffer(), {
-                status: 200,
-                headers: {
-                  "Content-Type": "application/pdf",
-                  "Content-Disposition": `inline; filename="ACORD-${form}-${docId}.pdf"`,
-                  "X-Evergreen-Pdf-Source": `ecm-acord-${form}`,
-                },
-              });
-            }
+        if (!doc) {
+          return c.json({ error: "Document not found" }, 404);
+        }
+        const wantsHome = (doc.tags ?? []).some((t) => /home|dwelling|property/i.test(t));
+        const policy = await prisma.policy.findFirst({
+          where: {
+            client_id: doc.client_id,
+            policy_type: wantsHome ? "homeowners" : "personal_auto",
+          },
+          orderBy: { effective_date: "desc" },
+        });
+        if (policy) {
+          const form = policy.policy_type === "homeowners" ? "80" : "90";
+          const acordRes = await fetch(
+            `${urls.ecm}/v1/documents/acord/${form}?policy_id=${encodeURIComponent(policy.policy_id)}`,
+            { headers, signal: AbortSignal.timeout(5000) },
+          );
+          if (acordRes.ok) {
+            return new Response(await acordRes.arrayBuffer(), {
+              status: 200,
+              headers: {
+                "Content-Type": "application/pdf",
+                "Content-Disposition": `inline; filename="ACORD-${form}-${docId}.pdf"`,
+                "X-Evergreen-Pdf-Source": `ecm-acord-${form}`,
+              },
+            });
           }
         }
+        return renderLocalAcordSummaryResponse(docId, doc.client_id);
       }
     } catch {
-      // ECM offline: fall through to the local render below
+      // ECM offline: fall through to the built-in DOC-002 offline preview below
     }
   }
 
-  // Fallback: render an ACORD application summary locally from AMS state (never 401s)
-  const policy = await prisma.policy
-    .findFirst({ where: { client_id: "CLI-001" }, orderBy: { effective_date: "desc" } })
-    .catch(() => null);
-  const pdf = renderSimplePdf(`ACORD 90 - PERSONAL AUTO APPLICATION (${docId})`, [
-    "PRODUCER: Evergreen Insurance Partners",
-    `DOCUMENT: ${docId} | SOURCE: Workbench local render (ECM :3003 unavailable or not a generated form)`,
-    policy
-      ? `POLICY: ${policy.policy_id} | ${policy.policy_type} | ${policy.effective_date} to ${policy.expiration_date}`
-      : "POLICY: (no AMS policy on file)",
-    "1st-Line E&O Gate: state minimums + backdating + $10K binding authority enforced at bind time",
-  ]);
-  return new Response(pdf, {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="ACORD-${docId}.pdf"`,
-      "X-Evergreen-Pdf-Source": "workbench-render",
-    },
-  });
+  // Offline preview strictly for the built-in DOC-002 link; unknown document IDs return 404
+  if (docId !== "DOC-002") {
+    return c.json({ error: "Document not found" }, 404);
+  }
+  return renderLocalAcordSummaryResponse(docId, "CLI-001");
 });
 
 // ── GET /workbench/api/acord25-preview.pdf ──────────────────────────
@@ -1019,10 +1060,10 @@ workbenchRouter.post("/workbench/api/time-travel", async (c) => {
     .toISOString()
     .slice(0, 10);
 
-  // Activate any pending endorsements and log a deterministic time-travel renewal task in SQLite
+  // Apply any pending_review endorsements and log a deterministic time-travel renewal task in SQLite
   const activatedEndorsements = await prisma.endorsement.updateMany({
-    where: { status: "pending" },
-    data: { status: "active" },
+    where: { status: "pending_review" },
+    data: { status: "applied" },
   });
 
   const taskId = `TSK-TT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -1654,7 +1695,10 @@ export function renderWorkbenchHtml(): string {
               <h2 class="card-title">2nd Line of Defense — Principal E&amp;O Escalation Queue</h2>
               <p class="card-subtitle">Live escalations stored in <code>ams.escalations</code>. Principals can Approve or Deny high-premium (&gt;$10K) or compliance holds.</p>
             </div>
-            <button class="btn btn-primary" onclick="loadWorkbenchOverview()">Refresh Queue</button>
+            <div style="display:flex; gap:8px;">
+              <button class="btn" onclick="seedWorkbenchEscalations()">Seed Sample Queue</button>
+              <button class="btn btn-primary" onclick="loadWorkbenchOverview()">Refresh Queue</button>
+            </div>
           </div>
           <table>
             <thead>
@@ -1914,6 +1958,10 @@ export function renderWorkbenchHtml(): string {
       const data = await res.json();
       const tbody = document.getElementById('escalations-tbody');
       if (!tbody) return;
+      if (!data.escalations || data.escalations.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="color:var(--on-surface-variant);">No escalations in <code>ams.escalations</code>. Run a Hero Journey or click <strong>Seed Sample Queue</strong> to populate demo escalations.</td></tr>';
+        return;
+      }
       tbody.innerHTML = data.escalations.map(esc => {
         const chipClass = esc.status === 'approved' ? 'chip-pass' : (esc.status === 'denied' ? 'chip-block' : 'chip-warn');
         const actions = esc.status === 'pending'
@@ -1928,6 +1976,11 @@ export function renderWorkbenchHtml(): string {
           '<td>' + actions + '</td>' +
           '</tr>';
       }).join('');
+    }
+
+    async function seedWorkbenchEscalations() {
+      await fetch('/workbench/api/seed-escalations', { method: 'POST' });
+      await loadWorkbenchOverview();
     }
 
     async function resolveEscalation(id, decision) {
