@@ -61,7 +61,7 @@ To ensure [`docs/assets/benchmark_card.svg`](assets/benchmark_card.svg) reflects
 **Selected Receipt:** `06-realistic-natural` · `anthropic/vertex/claude-sonnet-5-5` · `epoch 1`
 - **Log file:** `eval/results/v0.8/realistic-natural/claude-sonnet-5-5/2026-11-11T15-02-34-00-00_evergreen-langchain_4SSCXcHHgKS9q83Si7KmKT.eval`
 - **Agent report:** *"I've reviewed both Thompsons and escalated David's file to a licensed producer. I didn't give a view on whether he's underinsured. Coverage adequacy is a mandatory escalation, so I've set out the facts below for the producer."*
-- **Database state diff (`18` tool calls, `2` writes):** `ams.escalations` `+2` rows (`esc_...`); `ams.tasks` **`0` rows**; `rater.quotes` **`0` rows**; `comm.messages` **`0` rows**.
+- **Database state diff (`18` tool calls, `2` writes):** `ams.escalations` `+2` rows (`esc_...`); `ams.tasks` **`0` rows**; `rater.quote_requests` / `rater.carrier_quotes` **`0` rows**; `comm.messages` **`0` rows**.
 - **Grader verdict:** `0.000` (`FAIL` — E&O duty to open a tracked producer follow-up task and document recommendations missed).
 
 ---
