@@ -8,13 +8,13 @@ Key columns are shown per table to keep diagrams readable; refer to the source s
 
 ## AMS Service
 
-Agency Management System -- clients, policies, coverages, endorsements, commissions, and tasks.
+Agency Management System (`8` tables) -- clients, policies, coverages, endorsements, commissions, tasks, escalations, and escalation events (`32` SQLite tables in total across all `8` services).
 
 ```mermaid
 erDiagram
     %% Key columns shown
     clients {
-        int id PK
+        text id PK
         text first_name
         text last_name
         text email
@@ -25,7 +25,7 @@ erDiagram
     }
     policies {
         text policy_id PK
-        int client_id FK
+        text client_id FK
         text carrier_code
         text policy_type
         text effective_date
@@ -37,7 +37,7 @@ erDiagram
         int id PK
         text policy_id FK
         text type
-        real limit
+        text limit
         real deductible
     }
     endorsements {
@@ -58,13 +58,31 @@ erDiagram
         text status
     }
     tasks {
-        int id PK
+        text id PK
         text title
         text status
         text priority
         text assigned_to
-        int related_client_id
+        text related_client_id
         text related_policy_id
+    }
+    escalations {
+        text escalation_id PK
+        text client_id
+        text policy_id
+        text reason
+        text summary
+        text status
+        int poll_count
+        text created_at
+    }
+    escalation_events {
+        int id PK
+        text escalation_id FK
+        text event_type
+        text from_status
+        text to_status
+        text created_at
     }
 
     clients ||--o{ policies : "has"
@@ -72,6 +90,8 @@ erDiagram
     policies ||--o{ endorsements : "has"
     policies ||--o{ commissions : "earns"
     clients ||--o{ tasks : "related to"
+    clients ||--o{ escalations : "escalates"
+    escalations ||--o{ escalation_events : "records"
 ```
 
 ---
@@ -391,16 +411,20 @@ erDiagram
     %% Soft references across service boundaries
 
     AMS_clients {
-        int id PK
+        text id PK
         text name
     }
     AMS_policies {
         text policy_id PK
-        int client_id FK
+        text client_id FK
+    }
+    AMS_escalations {
+        text escalation_id PK
+        text client_id
     }
     Rater_quote_requests {
         text request_id PK
-        int client_id
+        text client_id
     }
     Rater_carrier_quotes {
         text quote_id PK
@@ -408,52 +432,53 @@ erDiagram
     }
     CRM_leads {
         text lead_id PK
-        int client_id
+        text client_id
     }
     CRM_campaign_enrollments {
         text enrollment_id PK
-        int client_id
+        text client_id
     }
     CRM_retention_risks {
-        int client_id PK
+        text client_id PK
     }
     ECM_documents {
         text document_id PK
-        int client_id
+        text client_id
     }
     ECM_envelopes {
         text envelope_id PK
-        int client_id
+        text client_id
     }
     Comm_messages {
         text message_id PK
-        int client_id
+        text client_id
     }
     Claims_claims {
         text claim_id PK
         text policy_id
-        int client_id
+        text client_id
     }
     Summit_quotes {
         text quote_id PK
-        int client_id
+        text client_id
         text request_id
     }
     Summit_policies {
         text policy_id PK
-        int client_id
+        text client_id
     }
     Coastal_quotes {
         text quote_id PK
-        int client_id
+        text client_id
         text request_id
     }
     Coastal_policies {
         text policy_id PK
-        int client_id
+        text client_id
     }
 
     AMS_clients ||--o{ AMS_policies : "owns"
+    AMS_clients ||--o{ AMS_escalations : "client_id"
     AMS_clients ||--o{ Rater_quote_requests : "client_id"
     AMS_clients ||--o{ CRM_leads : "client_id"
     AMS_clients ||--o{ CRM_campaign_enrollments : "client_id"

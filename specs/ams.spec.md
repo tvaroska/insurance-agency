@@ -1004,50 +1004,50 @@ The fixed content served by the workbench (AMS-R104, AMS-R106, AMS-R111). A rebu
  "evolutionStages": [
   {
    "stage": "Stage 1: Zero-Shot General Agent",
-   "label": "Measured v0.8 Baseline (Strict 3-Modality, 20 Workflows x 5 Trials)",
-   "provenance": "measured_v0.8_baseline",
-   "avgTokensPerRun": 1099806,
-   "avgCostUsd": 0.449,
-   "avgLatencyMs": 200400,
-   "pass1": 0.58,
-   "meanScore": 0.71,
-   "pass5": 0.471,
-   "falseCompletionRateRange": "26%–29%",
+   "label": "Measured v0.9 Baseline (Strict 3-Modality, 20 Workflows x 5 Trials + 20 Clean)",
+   "provenance": "measured_v0.9_baseline",
+   "avgTokensPerRun": 1333422,
+   "avgCostUsd": 0.476,
+   "avgLatencyMs": 214650,
+   "pass1": 0.67,
+   "meanScore": 0.77,
+   "pass5": 0.587,
+   "falseCompletionRateRange": "15%–34%",
    "measuredModels": [
     {
-     "model": "DeepSeek-V4.1-Flash",
-     "pass1": 0.59,
-     "meanScore": 0.78,
-     "falseCompletionRate": 0.27,
-     "costPerTaskUsd": 0.073
-    },
-    {
      "model": "gemini-3.8-flash",
-     "pass1": 0.58,
-     "meanScore": 0.71,
-     "falseCompletionRate": 0.29,
-     "costPerTaskUsd": 0.449
+     "pass1": 0.67,
+     "meanScore": 0.77,
+     "falseCompletionRate": 0.15,
+     "costPerTaskUsd": 0.476
     },
     {
      "model": "claude-sonnet-5-5",
-     "pass1": 0.55,
-     "meanScore": 0.69,
-     "falseCompletionRate": 0.26,
-     "costPerTaskUsd": 0.111
+     "pass1": 0.66,
+     "meanScore": 0.81,
+     "falseCompletionRate": 0.16,
+     "costPerTaskUsd": 0.145
+    },
+    {
+     "model": "DeepSeek-V4.1-Flash",
+     "pass1": 0.56,
+     "meanScore": 0.75,
+     "falseCompletionRate": 0.34,
+     "costPerTaskUsd": 0.039
     }
    ],
-   "description": "Measured v0.8 zero-shot baseline across 20 strict workflows, 5 trials each: DeepSeek-V4.1-Flash 59.0% pass@1, gemini-3.8-flash 58.0%, claude-sonnet-5-5 55.0%, and a 26%–29% unconditional false-completion rate across all runs (57.8%–69.0% on failed runs)."
+   "description": "Measured v0.9 zero-shot baseline across 20 strict workflows, 5 trials each: gemini-3.8-flash 67.0% pass@1, claude-sonnet-5-5 66.0%, DeepSeek-V4.1-Flash 56.0%, and a 15%–34% unconditional false-completion rate across all runs (45.5%–77.3% on failed runs)."
   },
   {
    "stage": "Stage 2: Domain Skill + Guardrails",
-   "label": "Measured v0.8 Domain Skill (Agency Procedure Guide)",
-   "provenance": "measured_v0.8_domain_skill",
-   "avgTokensPerRun": 998471,
-   "avgCostUsd": 0.405,
-   "avgLatencyMs": 218200,
-   "pass1": 0.69,
-   "pass5": 0.602,
-   "description": "Measured v0.8: a one-page agency procedure guide appended to the gemini-3.8-flash prompt raises pass@1 from 58.0% to 69.0% and cuts judgment traps missed from 16 to 5 of 60 (tokens include cached tool-use context across multi-step runs)."
+   "label": "Measured v0.9 Domain Skill (Agency Procedure Guide, 10/10 Train-Holdout)",
+   "provenance": "measured_v0.9_domain_skill",
+   "avgTokensPerRun": 1002522,
+   "avgCostUsd": 0.49,
+   "avgLatencyMs": 194980,
+   "pass1": 0.83,
+   "pass5": 0.737,
+   "description": "Measured v0.9: a one-page agency procedure guide appended to the gemini-3.8-flash prompt raises pass@1 from 67.0% to 83.0% (84.0% train, 82.0% holdout), halves the messy-data drop (-28.0 pp to -12.0 pp), and cuts judgment traps missed from 12 to 2 of 60."
   },
   {
    "stage": "Stage 3: $0-Token Compiled Deterministic Code",

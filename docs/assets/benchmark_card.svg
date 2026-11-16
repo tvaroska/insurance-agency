@@ -23,7 +23,7 @@
   <text x="104" y="582" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="27" font-weight="400" fill="#334155">underinsured... I have set out the facts</text>
   <text x="104" y="626" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="27" font-weight="400" fill="#334155">below for the producer.</text>
 
-  <text x="80" y="712" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="600" fill="#92400E">18 API calls · deferred without opening tasks</text>
+  <text x="80" y="712" font-family="Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="600" fill="#92400E">18 API calls · wrapped up with 0 tasks opened</text>
 
   <rect x="774" y="479" width="44" height="8" fill="#64748B"/>
   <polygon points="816,467 840,483 816,499" fill="#64748B"/>

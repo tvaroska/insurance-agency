@@ -2,7 +2,7 @@
 
 Most knowledge work is not code. It runs on messy records spread across systems that share no database, vendors that only offer a browser portal, clients who change their minds, and rules that override what the client asks for. Evergreen is a first step toward benchmarking agents on that work, starting with one workplace: a simulated 11-person independent Property and Casualty (P&C) insurance agency with 20 workflows and 259 tasks.
 
-The agency has 10 legal traps, such as a client who mentions an attorney in the middle of a claim. Its systems catch 3 of them on their own. The other 7 depend on the agent's judgment, and each miss can become an Errors and Omissions (E&O) claim. Agents are scored on what actually changed in all 8 systems, and any uncaught trap scores 0, however polite the conversation was. In our v0.9 benchmark run (20 workflows, 5 trials each on messy records plus 1 clean control each, strict mode, 480 trials), zero-shot agents pass 56% to 67% of tasks on the first try, pass every trial on only 32% to 59% of tasks, and claim the work is done on a failed trial without deferring on 15% to 34% of runs. A written agency procedure guide lifts `gemini-3.8-flash` from 67% to 83% (84% train, 82% unseen holdout) and cuts its messy-data drop from 28 points to 12 points.
+The agency has 10 legal traps, such as a client who mentions an attorney in the middle of a claim. Its systems catch 3 of them on their own. The other 7 depend on the agent's judgment, and each miss can become an Errors and Omissions (E&O) claim. Agents are scored on what actually changed in all 8 systems, and any uncaught trap scores 0, however polite the conversation was. In the v0.9 benchmark run (20 workflows, 5 trials each on messy records plus 1 clean control each, strict mode, 480 trials), zero-shot agents pass 56% to 67% of tasks on the first try, pass all 5 trials on only 25% to 55% of tasks (pass^5 = 32% to 59%), and claim the work is done on a failed trial without deferring on 15% to 34% of runs. A written agency procedure guide lifts `gemini-3.8-flash` from 67% to 83% (84% train, 82% unseen holdout) and cuts its messy-data drop from 28 points to 12 points.
 
 ![One real failing run: what the agent reported vs. what changed in the 8 databases](docs/assets/benchmark_card.svg)
 
@@ -22,7 +22,7 @@ Without that escalation the scenario scores 0, however polite the conversation w
 
 ## Results
 
-Current full run, v0.9 (15 November 2026): all 20 workflows at `difficulty=natural`, 5 trials each on the realistic (messy) data, 1 trial each on the clean data across all 20 workflows as a control, strict mode (`MODALITY_MODE=strict`), simulated clock frozen at `2026-10-14T12:00:00.000Z`, 480 trials in total. Logs, the summary, and a SHA-256 manifest of every trial are in [`eval/results/v0.9/`](eval/results/v0.9/) (the earlier 454-trial v0.8 run remains archived in [`eval/results/v0.8/`](eval/results/v0.8/)).
+Current full run, v0.9 (15 November 2026): all 20 workflows at `difficulty=natural`, 5 trials each on the realistic (messy) data, 1 trial each on the clean data across all 20 workflows as a control, strict mode (`MODALITY_MODE=strict`), simulated clock frozen at `2026-10-14T12:00:00.000Z`, 480 trials in total. All 480 trial logs (packed in 160 Inspect `.eval` archives), the summary, and a SHA-256 manifest of every trial are in [`eval/results/v0.9/`](eval/results/v0.9/) (the earlier 454-trial v0.8 run remains archived in [`eval/results/v0.8/`](eval/results/v0.8/)).
 
 | Model | Harness | Learning mechanism | `pass@1` (95% CI) | `pass^5` | Legal traps missed (3 system-caught / 7 judgment) | Said done, check failed | Records changed unasked | Drop, clean to messy | Cost per task |
 | :--- | :--- | :--- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
@@ -171,7 +171,7 @@ Full comparison and packaging standards: [`docs/benchmark-landscape.md`](docs/be
 
 ## More in This Repository
 
-Architecture, API and data-model docs, specifications, the product narrative, and the demo workbench: [`docs/README.md`](docs/README.md).
+Architecture, OpenAPI and behavioral contracts (Driving and Driven Ports for single-service regeneration in [`prompts/REGENERATE.md`](prompts/REGENERATE.md) and [`specs/`](specs/)), data-model docs, the product narrative, and the demo workbench: [`docs/README.md`](docs/README.md).
 
 ---
 

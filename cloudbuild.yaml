@@ -76,4 +76,17 @@ steps:
         bun run showcase:check
         bun eval/validate-harness.ts
 
+  # ------------------------------------------------------------------------- #
+  # 5. Black-Box Spec Conformance Suite Across All 8 Services                 #
+  # ------------------------------------------------------------------------- #
+  - id: conformance-tests
+    name: oven/bun:1
+    waitFor: ["install-deps"]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        bun test tests/conformance
+
 timeout: "600s"

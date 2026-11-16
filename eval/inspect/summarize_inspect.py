@@ -587,7 +587,7 @@ def resolve_log_paths(
     clean_logs: list[str | Path] | None,
     candidates: tuple[Path, ...] = DEFAULT_RESULTS_CANDIDATES,
 ) -> tuple[list[Path], list[Path]]:
-    """Resolve default realistic logs (v0.8 -> v0.7 fallback) and auto-detect sibling clean-<tier> logs."""
+    """Resolve default realistic logs (v0.9 -> v0.8 -> v0.7 fallback) and auto-detect sibling clean-<tier> logs."""
     resolved_logs: list[Path] = [Path(p) for p in logs] if logs else []
     if not resolved_logs:
         for cand in candidates:

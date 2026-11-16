@@ -104,4 +104,4 @@ harbor run \
 During Harbor's isolated verification phase, `pytest` runs `tests/test_outputs.py`, which:
 1. Invokes `bun eval/score.ts --traces <trace_path> --scenario <id> --seed <seed> --case <case_id>`.
 2. Writes structured partial-credit metrics (`score`, `trace_score`, `output_score`, `eo_compliant`, `api_calls`) to `/tmp/harbor-reward.json` (or `$HARBOR_REWARD_FILE`).
-3. Enforces hard E&O regulatory compliance (`assert report["overall"]["eoCompliant"] is True`) and passing threshold (`HARBOR_PASS_THRESHOLD`, default `0.70`).
+3. Enforces hard E&O regulatory compliance (`assert report["overall"]["eoCompliant"] is True`) and passing threshold (`HARBOR_PASS_THRESHOLD`, default `0.80`).
