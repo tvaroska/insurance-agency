@@ -1,6 +1,6 @@
 # Evergreen Insurance Agency (`AGENTS.md`)
 
-> **Scope Guardrail (Agent Evaluation & Training Gym, Not Production SaaS):** Evergreen is a deterministic multi-service benchmark and RL/eval environment (`v0.8`, simulated clock frozen at `2026-10-14T12:00:00.000Z`), **not** production brokerage software. Isolated SQLite databases, seeded anomalies, and deterministic carrier-portal state transitions exist intentionally to test agent tool use, state verification, and E&O escalation; evaluate changes on benchmark validity, determinism, and anti-reward-hacking rigor rather than production SaaS infrastructure checklists.
+> **Scope Guardrail (Agent Evaluation & Training Gym, Not Production SaaS):** Evergreen is a deterministic multi-service benchmark and RL/eval environment (`v0.9`, simulated clock frozen at `2026-10-14T12:00:00.000Z`), **not** production brokerage software. Isolated SQLite databases, seeded anomalies, and deterministic carrier-portal state transitions exist intentionally to test agent tool use, state verification, and E&O escalation; evaluate changes on benchmark validity, determinism, and anti-reward-hacking rigor rather than production SaaS infrastructure checklists.
 
 ## 1. Services & Execution
 
@@ -25,7 +25,7 @@ bun run showcase --strict                        # strict modality + portal sess
 
 # Run 3-model Inspect AI evaluation & regenerate README Results table:
 proj-test insurance-agency inspect-baseline --scenario 01,03,07,14,19,20 --difficulty natural
-proj-test insurance-agency inspect-summary eval/results/v0.7/realistic-natural --clean-logs eval/results/v0.7/clean-natural --include-anchors
+proj-test insurance-agency inspect-summary eval/results/v0.9/realistic-natural --clean-logs eval/results/v0.9/clean-natural --include-anchors --json-out eval/results/v0.9/summary-report.json --export-replay-manifest eval/results/v0.9/replay-manifest.json
 
 # Deterministic multi-turn DB-state suite (eval/deterministic/DT-01..DT-11):
 bun eval/run-state-scenarios.ts --verify-reference
@@ -42,8 +42,9 @@ SEED_MODE=clean docker compose up                # clean (no adversarial data)
 2. `stateDiff.findings` contain no correct actions flagged as collateral (escalations or audit tasks on the variant's trap clients)
 3. receipt directories are unique per arm (`replay-manifest.json` has no duplicate `artifacts_dir`)
 4. a 1-token call to each provider succeeds (Vertex Model Garden access; pass `--project` if Claude runs on a separate GCP project)
+5. custom harnesses pass `scenario_id` on `POST /sim/reset` so multi-turn customer simulator rules on shared seed clients (`CLI-001/002/003/018`) do not fire in single-turn tasks
 
-Fix everything the pilot surfaces in one pass, then run the production sweep once as-is.
+Fix everything the pilot surfaces in one pass, then run the production sweep once as-is. After any multi-batch sweep, verify every `.eval` header has `status == "success"` (`20/20` scenarios per arm) before writing `summary.md` and `replay-manifest.json`, because `run_baseline.py` skips `status == "error"` batches (e.g. transient Vertex MaaS `choices=None` responses) when printing its table.
 
 **Sweep cost, archival, and cleanup:** state the expected cost before launching, using `summarize_inspect.py` rates (calibrated against the billing export; at list price about $0.45 per trial for `gemini-3.8-flash`, $0.14–$0.20 for `gemini-4-hydrogen`, $0.11–$0.22 for `claude-sonnet-5-5`, $0.04–$0.07 for `DeepSeek-V4.1-Flash`, and $0.013 for `gpt-oss-120b`; `gemini-3.8-flash` gets a 50% credit). Never leave paid Inspect `.eval` logs solely in `/tmp/`: persist every completed run into `eval/results/<run>/` (`.eval` logs, `summary.md`, `summary-report.json`, and `replay-manifest.json` in git) and sync its gitignored `artifacts/` bundles to `gs://btvaroska/insurance-agency/results/<run>/artifacts/` before wrapping up. Check actual spend afterwards with `bq` against the billing export (it lags 3 to 5 hours). After cancelling or finishing a sweep, kill its stacks before relaunching (with `BypassSandbox: true`: `pgrep -f "[r]un-showcase.ts --strict"` and `pgrep -f "[i]nsurance-agency/services/.*/src/index.ts"`), because the runner attaches to any stack already listening on `3100+`.
 
