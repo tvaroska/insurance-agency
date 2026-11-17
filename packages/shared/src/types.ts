@@ -33,7 +33,11 @@ export type ErrorCode =
 
 export type FieldErrorCode =
   | "required"
+  | "invalid"
   | "invalid_format"
+  | "invalid_type"
+  | "invalid_status"
+  | "not_found"
   | "out_of_range"
   | "too_long"
   | "invalid_enum"
@@ -42,7 +46,7 @@ export type FieldErrorCode =
 export interface FieldError {
   field: string;
   message: string;
-  code: FieldErrorCode;
+  code?: FieldErrorCode;
 }
 
 export interface ErrorResponse {

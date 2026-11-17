@@ -31,6 +31,7 @@ export function setActiveScenarioId(scenarioId?: string): void {
 }
 
 const BASE36_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
+const HEX_CHARS = "0123456789abcdef";
 
 function hashSeedString(seedKey: string): number {
   let h = 2166136261 >>> 0;
@@ -70,6 +71,25 @@ export function simRandomId(length = 8): string {
     out += BASE36_CHARS[Math.floor(simRandom() * BASE36_CHARS.length)];
   }
   return out;
+}
+
+/**
+ * Generates a deterministic lowercase hexadecimal string of `length` characters.
+ */
+export function simRandomHex(length = 8): string {
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += HEX_CHARS[Math.floor(simRandom() * 16)];
+  }
+  return out;
+}
+
+/**
+ * Generates a deterministic RFC-4122 v4-formatted UUID backed by `simRandom()`.
+ */
+export function simRandomUuid(): string {
+  const variant = HEX_CHARS[8 + Math.floor(simRandom() * 4)];
+  return `${simRandomHex(8)}-${simRandomHex(4)}-4${simRandomHex(3)}-${variant}${simRandomHex(3)}-${simRandomHex(12)}`;
 }
 
 /**

@@ -232,8 +232,8 @@ describe("REST send", () => {
     expect(diff).toEqual({});
   });
 
-  test.todo("Known gap 9: POST /messages/send answers the documented 202 (the service answers 201)");
-  test.todo("Known gap 8: malformed JSON on a POST route is 400 (the service answers 500)");
+  test.todo("Known gap 9: POST /messages/send answers the documented 202 (the service answers 201)", () => {});
+  test.todo("Known gap 8: malformed JSON on a POST route is 400 (the service answers 500)", () => {});
 });
 
 describe("reply simulator", () => {
@@ -568,7 +568,7 @@ describe("webhook deliveries", () => {
     for (const r of rows) expect(Object.keys(r)).not.toContain("signature");
   });
 
-  test.todo("Known gap 16: the service's own HMAC-SHA256 signature of a delivery equals the receiver's (it is never stored or sent)");
-  test.todo("Known gap 10: delivery envelopes match WebhookEnvelope (event_id is evt_<uuid>, the schema wants a bare UUID)");
-  test.todo("Known gap 7: a delivery is sent to the subscription URL with an X-Evergreen-Signature header (no request is made)");
+  test.todo("Known gap 16: the service's own HMAC-SHA256 signature of a delivery equals the receiver's (it is never stored or sent)", () => {});
+  test.todo("Known gap 10: delivery envelopes match WebhookEnvelope (event_id is evt_<uuid>, the schema wants a bare UUID)", () => {});
+  test.todo("Known gap 7: a delivery is sent to the subscription URL with an X-Evergreen-Signature header (no request is made)", () => {});
 });

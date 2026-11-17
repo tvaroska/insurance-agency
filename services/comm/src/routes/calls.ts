@@ -6,6 +6,7 @@ import {
 } from "@evergreen/shared";
 import { prisma } from "../prisma";
 import { handleGetTranscript } from "../tools/get_transcript";
+import { parseToolResultJson } from "../tools/parse-result";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -22,14 +23,14 @@ callsRouter.get(
     const result = await handleGetTranscript({ call_id: callId }, prisma);
 
     if (result.isError) {
-      const parsed = JSON.parse(result.content[0].text as string);
+      const parsed = parseToolResultJson(result);
       if (parsed.error === "not_found") {
         return c.json({ error_code: "NOT_FOUND", message: parsed.message }, 404);
       }
       return c.json({ error_code: "VALIDATION_ERROR", details: [parsed.error] }, 400);
     }
 
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     return c.json(parsed);
   },
 );

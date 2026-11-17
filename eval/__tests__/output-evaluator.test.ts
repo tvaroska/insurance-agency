@@ -86,7 +86,7 @@ describe("evaluateOutput", () => {
       const fetchMock = mockFetch({
         "/v1/clients": { body: [] },
       });
-      globalThis.fetch = fetchMock as typeof fetch;
+      globalThis.fetch = fetchMock as unknown as typeof fetch;
 
       await evaluateOutput([makeCheck()], BASE_URLS);
 
@@ -100,7 +100,7 @@ describe("evaluateOutput", () => {
         "/v1/clients": { body: [] },
         "/v1/policies": { body: [] },
       });
-      globalThis.fetch = fetchMock as typeof fetch;
+      globalThis.fetch = fetchMock as unknown as typeof fetch;
 
       await evaluateOutput(
         [makeCheck(), makeCheck({ name: "check-2", path: "/policies" })],
@@ -119,7 +119,7 @@ describe("evaluateOutput", () => {
       const fetchMock = mockFetch({
         "/v1/clients": { body: [] },
       });
-      globalThis.fetch = fetchMock as typeof fetch;
+      globalThis.fetch = fetchMock as unknown as typeof fetch;
 
       await evaluateOutput([makeCheck()], BASE_URLS);
 
@@ -136,7 +136,7 @@ describe("evaluateOutput", () => {
         const fetchMock = mockFetch({
           "/v1/clients": { body: [] },
         });
-        globalThis.fetch = fetchMock as typeof fetch;
+        globalThis.fetch = fetchMock as unknown as typeof fetch;
 
         await evaluateOutput([makeCheck()], {
           ams: "http://localhost:3900",
@@ -161,7 +161,7 @@ describe("evaluateOutput", () => {
     test("passes when status matches expected", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: { id: "CLI-001" }, status: 200 },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const [score] = await evaluateOutput([makeCheck()], BASE_URLS);
       expect(score.passed).toBe(true);
@@ -170,7 +170,7 @@ describe("evaluateOutput", () => {
     test("fails when status does not match", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: {}, status: 404 },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const [score] = await evaluateOutput([makeCheck()], BASE_URLS);
       expect(score.passed).toBe(false);
@@ -179,7 +179,7 @@ describe("evaluateOutput", () => {
     test("includes status mismatch detail", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: {}, status: 500 },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const [score] = await evaluateOutput([makeCheck()], BASE_URLS);
       expect(score.detail).toBe("Expected status 200, got 500");
@@ -190,7 +190,7 @@ describe("evaluateOutput", () => {
     test("passes when array length within bounds", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: [1, 2, 3] },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: { status: 200, arrayMinLength: 2, arrayMaxLength: 5 },
@@ -202,7 +202,7 @@ describe("evaluateOutput", () => {
     test("passes with { data: [...] } wrapper format", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: { data: [1, 2, 3] } },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: { status: 200, arrayMinLength: 2 },
@@ -214,7 +214,7 @@ describe("evaluateOutput", () => {
     test("fails when below arrayMinLength", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: [1] },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: { status: 200, arrayMinLength: 3 },
@@ -227,7 +227,7 @@ describe("evaluateOutput", () => {
     test("fails when above arrayMaxLength", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: [1, 2, 3, 4, 5] },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: { status: 200, arrayMaxLength: 3 },
@@ -240,7 +240,7 @@ describe("evaluateOutput", () => {
     test("fails when response is not array or wrapper", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: { name: "not an array" } },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: { status: 200, arrayMinLength: 1 },
@@ -255,7 +255,7 @@ describe("evaluateOutput", () => {
     test("passes on exact object match", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: { name: "Alice", status: "active" } },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: {
@@ -270,7 +270,7 @@ describe("evaluateOutput", () => {
     test("passes on partial object match (extra keys OK)", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: { name: "Alice", status: "active", id: "CLI-001" } },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: { status: 200, bodyMatch: { name: "Alice" } },
@@ -282,7 +282,7 @@ describe("evaluateOutput", () => {
     test("fails on missing key", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: { name: "Alice" } },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: { status: 200, bodyMatch: { email: "alice@test.com" } },
@@ -295,7 +295,7 @@ describe("evaluateOutput", () => {
     test("fails on wrong value", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: { status: "inactive" } },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: { status: 200, bodyMatch: { status: "active" } },
@@ -310,7 +310,7 @@ describe("evaluateOutput", () => {
         "/v1/clients": {
           body: { tags: ["vip", "commercial", "residential"] },
         },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: {
@@ -325,7 +325,7 @@ describe("evaluateOutput", () => {
     test("fails when expected array element not found", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: { tags: ["vip", "commercial"] } },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: {
@@ -345,7 +345,7 @@ describe("evaluateOutput", () => {
             address: { city: "Portland", state: "OR", zip: "97201" },
           },
         },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: {
@@ -360,7 +360,7 @@ describe("evaluateOutput", () => {
     test("handles null matching", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: { deletedAt: null } },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         expect: { status: 200, bodyMatch: { deletedAt: null } },
@@ -385,7 +385,7 @@ describe("evaluateOutput", () => {
             ],
           },
         },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         path: "/messages",
@@ -407,7 +407,7 @@ describe("evaluateOutput", () => {
             data: [{ id: "MSG-1", direction: "outbound", body: "We will get back to you soon." }],
           },
         },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         path: "/messages",
@@ -436,7 +436,7 @@ describe("evaluateOutput", () => {
             ],
           },
         },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({
         path: "/messages",
@@ -456,7 +456,7 @@ describe("evaluateOutput", () => {
 
   describe("unknown service", () => {
     test("returns passed:false with Unknown service detail", async () => {
-      globalThis.fetch = mockFetch({}) as typeof fetch;
+      globalThis.fetch = mockFetch({}) as unknown as typeof fetch;
 
       const check = makeCheck({ service: "nonexistent" });
       const [score] = await evaluateOutput([check], BASE_URLS);
@@ -474,7 +474,7 @@ describe("evaluateOutput", () => {
           return Promise.resolve(jsonResponse(TOKEN_RESPONSE));
         }
         return Promise.reject(new Error("Connection refused"));
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const [score] = await evaluateOutput([makeCheck()], BASE_URLS);
       expect(score.passed).toBe(false);
@@ -486,7 +486,7 @@ describe("evaluateOutput", () => {
     test("returns correct weights on each score", async () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: {} },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const check = makeCheck({ weight: 0.3 });
       const [score] = await evaluateOutput([check], BASE_URLS);
@@ -497,7 +497,7 @@ describe("evaluateOutput", () => {
       globalThis.fetch = mockFetch({
         "/v1/clients": { body: { id: "CLI-001" }, status: 200 },
         "/v1/policies": { body: {}, status: 404 },
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       const checks = [
         makeCheck({ name: "client-exists", weight: 0.4 }),

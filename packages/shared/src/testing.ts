@@ -2,8 +2,8 @@ import { Database } from "bun:sqlite";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync, rmSync } from "fs";
 import { join } from "path";
-import { generateDevToken } from "./auth";
-import type { CorrelationVariables, AuthVariables } from "./types";
+import { generateDevToken, type AuthVariables } from "./auth";
+import type { CorrelationVariables } from "./correlation";
 
 export type AppVariables = CorrelationVariables & AuthVariables;
 

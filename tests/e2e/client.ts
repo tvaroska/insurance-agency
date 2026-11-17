@@ -18,7 +18,7 @@ function nextCorrelationId(): string {
 export async function e2eRequest(
   service: ServiceName,
   path: string,
-  init?: RequestInit & { headers?: Record<string, string> },
+  init?: Omit<RequestInit, "headers"> & { headers?: Record<string, string> },
 ): Promise<Response> {
   const url = `${getServiceUrl(service)}${path}`;
   const headers: Record<string, string> = {
@@ -35,7 +35,7 @@ export async function e2eAuthRequest(
   service: ServiceName,
   path: string,
   scopes: string[],
-  init?: RequestInit & { headers?: Record<string, string> },
+  init?: Omit<RequestInit, "headers"> & { headers?: Record<string, string> },
 ): Promise<Response> {
   const token = K8S_MODE
     ? await fetchOAuthToken(scopes)
@@ -66,7 +66,7 @@ export async function getCarrierToken(service: "carrier-summit" | "carrier-coast
 export async function e2eCarrierRequest(
   service: "carrier-summit" | "carrier-coastal",
   path: string,
-  init?: RequestInit & { headers?: Record<string, string> },
+  init?: Omit<RequestInit, "headers"> & { headers?: Record<string, string> },
 ): Promise<Response> {
   const token = await getCarrierToken(service);
   return e2eRequest(service, path, {

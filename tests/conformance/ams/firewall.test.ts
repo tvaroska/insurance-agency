@@ -522,5 +522,5 @@ describe("clock, order and approvals", () => {
   });
 });
 
-test.todo("AMS-G1: specs/ams.yaml documents no 422 for createPolicy or createEndorsement and names none of the E_EO_* codes");
-test.todo("AMS-G11: createPolicy accepts state and escalation_id, createEndorsement accepts escalation_id; specs/ams.yaml declares neither");
+test.todo("AMS-G1: specs/ams.yaml documents no 422 for createPolicy or createEndorsement and names none of the E_EO_* codes", () => {});
+test.todo("AMS-G11: createPolicy accepts state and escalation_id, createEndorsement accepts escalation_id; specs/ams.yaml declares neither", () => {});

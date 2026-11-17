@@ -13,6 +13,7 @@ import {
   checkMaxLength,
   throwIfErrors,
   getSimulatedNow,
+  simRandomId,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -218,7 +219,7 @@ leadsRouter.post(
     ]);
 
     const now = getSimulatedNow().toISOString();
-    const leadId = `lead_${Math.random().toString(36).slice(2, 10)}`;
+    const leadId = `lead_${simRandomId(8)}`;
 
     const record = {
       lead_id: leadId,
@@ -378,7 +379,7 @@ leadsRouter.post(
     }
 
     // Create enrollment
-    const enrollmentId = `enr_${Math.random().toString(36).slice(2, 10)}`;
+    const enrollmentId = `enr_${simRandomId(8)}`;
     const enrolledAt = getSimulatedNow().toISOString();
 
     await prisma.campaignEnrollment.create({

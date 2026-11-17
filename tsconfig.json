@@ -11,8 +11,8 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "dist",
-    "rootDir": "src",
     "types": ["bun"]
   },
+  "include": ["eval", "scripts", "tests"],
   "exclude": ["node_modules", "dist"]
 }

@@ -129,6 +129,7 @@ describe("GET /v1/quotes", () => {
 
   test.todo(
     "RTR-G09: GET /v1/quotes honours the carrier_code and cursor parameters that specs/rater.yaml documents (the service ignores both and returns no pagination data)",
+  () => {},
   );
 });
 

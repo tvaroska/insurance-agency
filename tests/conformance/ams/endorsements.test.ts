@@ -219,5 +219,5 @@ describe("createEndorsement", () => {
   });
 });
 
-test.todo("AMS-G16: Endorsement.notes and premium_delta are not nullable in specs/ams.yaml; the service returns null for both when unset");
-test.todo("AMS-G12: Endorsement.changes is declared an object in specs/ams.yaml; the service stores and returns any JSON value");
+test.todo("AMS-G16: Endorsement.notes and premium_delta are not nullable in specs/ams.yaml; the service returns null for both when unset", () => {});
+test.todo("AMS-G12: Endorsement.changes is declared an object in specs/ams.yaml; the service stores and returns any JSON value", () => {});

@@ -333,5 +333,5 @@ describe("error envelope", () => {
   });
 });
 
-test.todo("AMS-G18: a body that is not JSON is answered with 400 VALIDATION_ERROR (today it is 500, and specs/ams.yaml documents no such case)");
-test.todo("AMS-G19: a wrong JSON type in a body (first_name: 5, first_name: null on update, a numeric coverage limit) is a 400, not a 500");
+test.todo("AMS-G18: a body that is not JSON is answered with 400 VALIDATION_ERROR (today it is 500, and specs/ams.yaml documents no such case)", () => {});
+test.todo("AMS-G19: a wrong JSON type in a body (first_name: 5, first_name: null on update, a numeric coverage limit) is a 400, not a 500", () => {});

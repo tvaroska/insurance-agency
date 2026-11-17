@@ -1,5 +1,5 @@
 import type { PrismaClient } from "../generated/prisma/client";
-import { getActiveScenarioId, getSimulatedNow } from "@evergreen/shared";
+import { getActiveScenarioId, getSimulatedNow, simRandomHex } from "@evergreen/shared";
 import { SIMULATOR_RULES, type SimulatorTurnRule } from "./rules";
 
 export interface SimulatedReplyInput {
@@ -106,7 +106,7 @@ export async function processSimulatedReply(
     );
     if (!keywordMatched) continue;
 
-    const replyMessageId = `${prefix}t${existingReplies + 1}_${crypto.randomUUID().slice(0, 8)}`;
+    const replyMessageId = `${prefix}t${existingReplies + 1}_${simRandomHex(8)}`;
     const baseMs = Date.parse(input.outboundTimestamp);
     const replyTimestamp = new Date(
       (Number.isNaN(baseMs) ? getSimulatedNow().getTime() : baseMs) + 10,

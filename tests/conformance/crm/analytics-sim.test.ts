@@ -85,7 +85,7 @@ describe("GET /v1/analytics/retention-risk", () => {
     expectError(await ctx.api.get("/v1/leads/scoring", { query: { min_score: "high" } }), 500, "INTERNAL_ERROR");
   });
 
-  test.todo("CRM-G05: a numeric filter that is not a number gets a 400 validation error (the service answers 500)");
+  test.todo("CRM-G05: a numeric filter that is not a number gets a 400 validation error (the service answers 500)", () => {});
 });
 
 describe("seed data", () => {
@@ -238,5 +238,5 @@ test("every operation in specs/crm.yaml answers its success status with a body t
   expect(contract.unchecked()).toEqual([]);
 });
 
-test.todo("CRM-G08: specs/crm.yaml documents 409 for createLead and updateLead (the service never answers 409 there)");
-test.todo("CRM-G09: CursorPagination in specs/crm.yaml declares next_cursor (the service returns it; the schema omits it)");
+test.todo("CRM-G08: specs/crm.yaml documents 409 for createLead and updateLead (the service never answers 409 there)", () => {});
+test.todo("CRM-G09: CursorPagination in specs/crm.yaml declares next_cursor (the service returns it; the schema omits it)", () => {});

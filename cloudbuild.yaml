@@ -23,6 +23,19 @@ steps:
         bun run db:generate
 
   # ------------------------------------------------------------------------- #
+  # 2a. TypeScript Strict Typecheck Across All 12 Project Configs             #
+  # ------------------------------------------------------------------------- #
+  - id: typecheck
+    name: oven/bun:1
+    waitFor: ["install-deps"]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        bun run typecheck
+
+  # ------------------------------------------------------------------------- #
   # 2. Shared Package & Microservice Unit Tests                               #
   # ------------------------------------------------------------------------- #
   - id: unit-tests
@@ -45,22 +58,39 @@ steps:
   - id: eval-and-contract-tests
     name: oven/bun:1
     waitFor: ["install-deps"]
+    env:
+      - "CI=true"
     entrypoint: bash
     args:
       - -c
       - |
         set -euo pipefail
-        bunx @ast-grep/cli scan --rule specs/ast.rules.yaml
+        bun install -g @ast-grep/cli
+        ast-grep scan --rule specs/ast.rules.yaml
         bun test eval/__tests__/ eval/*/__tests__/
         echo "=== Running tests/*.test.ts (OpenAPI route contract & repo hygiene) ==="
         bun test tests/*.test.ts
         echo "=== Running tests/integration/*.test.ts ==="
         bun test tests/integration/*.test.ts
-        if [[ -x "${HOME:-/root}/.venvs/evergreen-inspect/bin/pytest" ]]; then
-          "${HOME:-/root}/.venvs/evergreen-inspect/bin/pytest" -p no:cacheprovider eval/inspect/tests
-        elif command -v pytest >/dev/null 2>&1 && python3 -c "import inspect_ai" >/dev/null 2>&1; then
-          pytest -p no:cacheprovider eval/inspect/tests
-        fi
+
+  # ------------------------------------------------------------------------- #
+  # 3b. Python Evaluation & Adapter Unit Tests (Inspect / METR / OpenEnv)     #
+  # ------------------------------------------------------------------------- #
+  - id: python-tests
+    name: oven/bun:1-debian
+    waitFor: ["install-deps"]
+    env:
+      - "PYTHONDONTWRITEBYTECODE=1"
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        apt-get update -qq
+        apt-get install -y -qq --no-install-recommends python3 python3-venv python3-pip
+        python3 -m venv /tmp/evergreen-inspect-venv
+        /tmp/evergreen-inspect-venv/bin/pip install -q --no-cache-dir -r eval/inspect/requirements.txt
+        /tmp/evergreen-inspect-venv/bin/pytest -p no:cacheprovider eval/inspect/tests
 
   # ------------------------------------------------------------------------- #
   # 4. End-to-End 20-Scenario Harness & Showcase Preflight Validation         #

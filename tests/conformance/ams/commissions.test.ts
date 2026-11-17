@@ -136,4 +136,4 @@ describe("listCommissions", () => {
   });
 });
 
-test.todo("AMS-G5: CarrierCode in specs/ams.yaml lists TRAV and PROG; the service and the seed use SMIT and CSTL");
+test.todo("AMS-G5: CarrierCode in specs/ams.yaml lists TRAV and PROG; the service and the seed use SMIT and CSTL", () => {});

@@ -115,7 +115,7 @@ describe("REST transcript", () => {
     expect(res.headers.get("x-correlation-id")).toBeTruthy();
   });
 
-  test.todo("Known gap 3: transcripts match CallTranscript (CALL-NNN and CLI-NNN ids, agent_name may be null)");
+  test.todo("Known gap 3: transcripts match CallTranscript (CALL-NNN and CLI-NNN ids, agent_name may be null)", () => {});
 });
 
 describe("manage_webhook subscribe", () => {
@@ -309,7 +309,7 @@ describe("REST webhook subscription", () => {
     expect(res.body.error_code).toBe("INTERNAL_ERROR");
   });
 
-  test.todo("Known gap 4: the subscription response matches WebhookSubscription (active is not returned)");
-  test.todo("Known gap 7: a duplicate subscription is 409 (the service accepts it)");
-  test.todo("Known gap 5: error bodies match the OpenAPI Error schema (the service uses the flat shared envelope, and three routes a smaller body)");
+  test.todo("Known gap 4: the subscription response matches WebhookSubscription (active is not returned)", () => {});
+  test.todo("Known gap 7: a duplicate subscription is 409 (the service accepts it)", () => {});
+  test.todo("Known gap 5: error bodies match the OpenAPI Error schema (the service uses the flat shared envelope, and three routes a smaller body)", () => {});
 });

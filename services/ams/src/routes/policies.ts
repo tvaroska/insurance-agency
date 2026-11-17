@@ -14,6 +14,8 @@ import {
   paginatedResponse,
   BENCHMARK_SIMULATED_TODAY,
   getSimulatedNow,
+  simRandom,
+  simRandomId,
   validateBackdating,
   validateBindingAuthority,
   validateStateMinimums,
@@ -210,7 +212,7 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
   }
 
   const now = getSimulatedNow().toISOString();
-  const policyId = `POL-${Math.random().toString(36).slice(2, 8)}`;
+  const policyId = `POL-${simRandomId(6)}`;
 
   const record = {
     policy_id: policyId,
@@ -430,7 +432,7 @@ policiesRouter.post(
     // Generate endorsement ID
     const simNow = getSimulatedNow();
     const year = simNow.getUTCFullYear();
-    const seq = String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
+    const seq = String(Math.floor(simRandom() * 1_000_000)).padStart(6, "0");
     const endorsementId = `END-${year}-${seq}`;
 
     const now = simNow.toISOString();

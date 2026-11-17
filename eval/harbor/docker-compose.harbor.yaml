@@ -11,6 +11,8 @@ services:
     network_mode: "host"
     environment:
       - SEED_MODE=${SEED_MODE:-realistic}
+      - SCENARIO_ID=${SCENARIO_ID:-}
+      - EVERGREEN_SCORER_SECRET=${EVERGREEN_SCORER_SECRET:-}
     volumes:
       - harbor-traces:/workspace/traces
     depends_on:
@@ -36,13 +38,18 @@ services:
       - |
         const map = [[3000,"ams"],[3001,"rater"],[3002,"crm"],[3003,"ecm"],[3004,"comm"],[3005,"summit-fire"],[3006,"coastal-star"],[3007,"claims"]];
         const seed = process.env.SEED_MODE === "clean" ? "clean" : "realistic";
+        const scenarioId = (process.env.SCENARIO_ID || "").trim();
+        const resetPayload = scenarioId ? { seed_mode: seed, scenario_id: scenarioId } : { seed_mode: seed };
         const headers = { "Content-Type": "application/json", "X-Eval-Scorer": "true", "X-Evergreen-Internal": "1" };
-        for (const [p] of map) {
-          await fetch("http://localhost:" + p + "/sim/reset", { method: "POST", headers, body: JSON.stringify({ seed_mode: seed }) });
+        if (process.env.EVERGREEN_SCORER_SECRET) headers["X-Evergreen-Scorer-Secret"] = process.env.EVERGREEN_SCORER_SECRET;
+        for (const [p, name] of map) {
+          const r = await fetch("http://localhost:" + p + "/sim/reset", { method: "POST", headers, body: JSON.stringify(resetPayload) });
+          if (!r.ok) throw new Error("reset failed for " + name + ": HTTP " + r.status);
         }
         const snap = {};
         for (const [p, name] of map) {
           const r = await fetch("http://localhost:" + p + "/sim/snapshot", { headers });
+          if (!r.ok) throw new Error("snapshot failed for " + name + ": HTTP " + r.status);
           snap[name] = await r.json();
         }
         await Bun.write("/workspace/traces/snapshot-before.json", JSON.stringify(snap));

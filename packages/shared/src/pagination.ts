@@ -151,7 +151,7 @@ export function applyPrismaCursorPagination(opts: {
 export function paginatedResponse<T extends Record<string, unknown>>(
   items: T[],
   limit: number,
-  cursorField: keyof T = "id" as keyof T,
+  cursorField?: keyof T,
   currentCursor?: string,
 ): PaginatedResponse<T>;
 

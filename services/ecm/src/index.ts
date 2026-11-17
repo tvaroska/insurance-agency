@@ -54,6 +54,7 @@ app.route(
       return { envelopes_expired: expiredEnvelopes.count };
     },
     onReset: async (seedMode) => {
+      clearCoiPdfStore();
       await seedDatabase(seedMode);
     },
   }),
@@ -72,7 +73,7 @@ import { documentsRouter } from "./routes/documents";
 import { envelopesRouter } from "./routes/envelopes";
 import { assetsRouter } from "./routes/assets";
 import { acordRouter } from "./routes/acord";
-import { coiRouter } from "./routes/coi";
+import { coiRouter, clearCoiPdfStore } from "./routes/coi";
 api.route("/documents/acord", acordRouter);
 api.route("/documents/coi", coiRouter);
 api.route("/coi", coiRouter);

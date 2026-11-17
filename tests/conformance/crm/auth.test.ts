@@ -124,6 +124,7 @@ describe("error envelope", () => {
 
   test.todo(
     "CRM-G01: error bodies match the Error schema of specs/crm.yaml (the file requires `code`, `details[].reason`, `request_id`; the service sends `error_code`, `details[].{field,message,code}`, `correlation_id`)",
+  () => {},
   );
-  test.todo("CRM-G06: a body that is not JSON gets a 400 (the service answers 500 INTERNAL_ERROR)");
+  test.todo("CRM-G06: a body that is not JSON gets a 400 (the service answers 500 INTERNAL_ERROR)", () => {});
 });

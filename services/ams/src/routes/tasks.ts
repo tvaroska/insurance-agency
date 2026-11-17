@@ -12,6 +12,7 @@ import {
   checkMaxLength,
   throwIfErrors,
   getSimulatedNow,
+  simRandomId,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -116,7 +117,7 @@ tasksRouter.post("/", requireScopes("ams:tasks:write"), async (c) => {
   ]);
 
   const now = getSimulatedNow().toISOString();
-  const taskId = `TASK-${Math.random().toString(36).slice(2, 8)}`;
+  const taskId = `TASK-${simRandomId(6)}`;
 
   const record = {
     id: taskId,

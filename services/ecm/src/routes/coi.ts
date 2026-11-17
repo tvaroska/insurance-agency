@@ -7,6 +7,7 @@ import {
   notFoundError,
   getSimulatedNow,
   nextSimulatedEpochMs,
+  simRandomId,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -19,6 +20,10 @@ type AppVariables = CorrelationVariables & AuthVariables;
 export const coiRouter = new Hono<{ Variables: AppVariables }>();
 
 const coiPdfStore = new Map<string, Uint8Array>();
+
+export function clearCoiPdfStore(): void {
+  coiPdfStore.clear();
+}
 
 async function handleGenerateCoi(c: Context<{ Variables: AppVariables }>) {
   const body = await c.req.json();
@@ -65,7 +70,7 @@ async function handleGenerateCoi(c: Context<{ Variables: AppVariables }>) {
   }
 
   // Generate COI document record + real ACORD 25 PDF bytes
-  const documentId = `doc_${Math.random().toString(36).slice(2, 10)}`;
+  const documentId = `doc_${simRandomId(8)}`;
   const now = getSimulatedNow().toISOString();
   const holderAddr = certificateHolder.address ?? {};
 
@@ -172,7 +177,7 @@ coiRouter.get(
         },
       });
       coiPdfStore.set(documentId, fallbackPdf);
-      return new Response(fallbackPdf, {
+      return new Response(new Uint8Array(fallbackPdf), {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
@@ -182,7 +187,7 @@ coiRouter.get(
       });
     }
 
-    return new Response(cached, {
+    return new Response(new Uint8Array(cached), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

@@ -7,7 +7,8 @@
     "reset": "bash scripts/reset-all.sh",
     "seed": "bash scripts/reset-all.sh",
     "showcase": "bun run scripts/run-showcase.ts",
-    "showcase:check": "bun run scripts/run-showcase.ts --check"
+    "showcase:check": "bun run scripts/run-showcase.ts --check",
+    "typecheck": "rc=0; for cfg in tsconfig.json packages/shared/tsconfig.json services/*/tsconfig.json services/*/tsconfig.ui.json; do bunx tsc --noEmit -p \"$cfg\" || rc=1; done; exit $rc"
   },
   "devDependencies": {
     "@types/bun": "^1.2.4",

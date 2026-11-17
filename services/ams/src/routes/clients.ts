@@ -12,6 +12,7 @@ import {
   checkMaxLength,
   throwIfErrors,
   getSimulatedNow,
+  simRandomId,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -119,7 +120,7 @@ clientsRouter.post("/", requireScopes("ams:clients:write"), async (c) => {
   }
 
   const now = getSimulatedNow().toISOString();
-  const clientId = `CL-${Math.random().toString(36).slice(2, 8)}`;
+  const clientId = `CL-${simRandomId(6)}`;
   const address = body.address ?? {};
 
   const record = await prisma.client.create({

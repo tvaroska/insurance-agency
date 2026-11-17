@@ -9,6 +9,7 @@ import {
   applyPrismaCursorPagination,
   paginatedResponse,
   getSimulatedNow,
+  simRandomId,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -65,7 +66,7 @@ documentsRouter.post(
       checkEnum("document_type", documentType, DOCUMENT_TYPES),
     ]);
 
-    const documentId = `doc_${Math.random().toString(36).slice(2, 10)}`;
+    const documentId = `doc_${simRandomId(8)}`;
     const uploadDate = getSimulatedNow().toISOString();
 
     await prisma.document.create({

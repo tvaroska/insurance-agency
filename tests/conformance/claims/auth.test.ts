@@ -159,5 +159,6 @@ describe("error envelope", () => {
 
   test.todo(
     "CLM-G01: specs/claims.yaml documents the response to a body that is not JSON (the service answers 500, the file lists no 500)",
+  () => {},
   );
 });

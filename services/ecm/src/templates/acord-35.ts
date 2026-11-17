@@ -1,3 +1,4 @@
+import { rgb } from "pdf-lib";
 import {
   createAcordDocument,
   drawSectionHeader,
@@ -108,7 +109,7 @@ export async function generateAcord35(data: Acord35Data): Promise<Uint8Array> {
     y,
     size: FONT_SIZE_LABEL,
     font: fonts.regular,
-    color: { type: "RGB", red: 0.4, green: 0.4, blue: 0.4 },
+    color: rgb(0.4, 0.4, 0.4),
   });
   y -= 12;
   y = drawWrappedText(page, MARGIN, y, claim.loss_description, fonts.regular, FONT_SIZE_BODY, CONTENT_WIDTH);

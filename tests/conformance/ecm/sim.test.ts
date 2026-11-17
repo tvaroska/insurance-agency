@@ -216,8 +216,9 @@ test("every operation in specs/ecm.yaml answers its success status in the docume
   expect(contract.unchecked()).toEqual([]);
 });
 
-test.todo("ECM-G02: ids match the `format: uuid` that specs/ecm.yaml gives them (real ids look like doc_ab12cd34 or DOC-001)");
-test.todo("ECM-G08: specs/ecm.yaml documents 409 for upload and envelope creation (the service never answers 409 there)");
+test.todo("ECM-G02: ids match the `format: uuid` that specs/ecm.yaml gives them (real ids look like doc_ab12cd34 or DOC-001)", () => {});
+test.todo("ECM-G08: specs/ecm.yaml documents 409 for upload and envelope creation (the service never answers 409 there)", () => {});
 test.todo(
   "ECM-G14: document expiration_date is a date-time as in specs/ecm.yaml (COI documents and some seeded documents hold date-only text)",
+  () => {},
 );

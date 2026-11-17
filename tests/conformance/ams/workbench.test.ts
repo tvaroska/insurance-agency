@@ -724,6 +724,6 @@ describe("workbench PDFs", () => {
   });
 });
 
-test.todo("AMS-G15: specs/ams.yaml does not describe /, /workbench/api/*, /health, /oauth/token or /sim/*");
-test.todo("AMS-G20: the workbench page is exercised in a browser (tabs, calculator, each control sending its request)");
-test.todo("AMS-G21: a governed run-journey with all seven sibling services online runs the reference agent and reports the real diff");
+test.todo("AMS-G15: specs/ams.yaml does not describe /, /workbench/api/*, /health, /oauth/token or /sim/*", () => {});
+test.todo("AMS-G20: the workbench page is exercised in a browser (tabs, calculator, each control sending its request)", () => {});
+test.todo("AMS-G21: a governed run-journey with all seven sibling services online runs the reference agent and reports the real diff", () => {});

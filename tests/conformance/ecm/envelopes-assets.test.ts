@@ -292,5 +292,6 @@ describe("GET /v1/assets/marketing", () => {
 
 test.todo(
   "ECM-G04: the envelope list matches Envelope in specs/ecm.yaml (the service adds document_Ids and a policy_id that is always null, and the documented scope ecm:envelopes:read cannot be granted)",
+  () => {},
 );
-test.todo("ECM-G05: MarketingAsset.description is nullable in specs/ecm.yaml (the service returns null for assets without one)");
+test.todo("ECM-G05: MarketingAsset.description is nullable in specs/ecm.yaml (the service returns null for assets without one)", () => {});

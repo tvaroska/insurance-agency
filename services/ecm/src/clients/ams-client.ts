@@ -63,16 +63,19 @@ export async function fetchAllClients(authToken: string): Promise<AmsClient[]> {
   const all: AmsClient[] = [];
   let cursor: string | null = null;
   do {
-    const qs = cursor ? `?limit=100&cursor=${encodeURIComponent(cursor)}` : "?limit=100";
-    const res = await fetch(`${getAmsBaseUrl()}/v1/clients${qs}`, {
+    const qs: string = cursor ? `?limit=100&cursor=${encodeURIComponent(cursor)}` : "?limit=100";
+    const res: Response = await fetch(`${getAmsBaseUrl()}/v1/clients${qs}`, {
       headers: { Authorization: authToken, ...getInternalRequestHeaders() },
     });
     if (!res.ok) {
       throw Object.assign(new Error(`AMS client list failed`), { status: res.status });
     }
-    const body = await res.json();
+    const body = (await res.json()) as {
+      data?: AmsClient[];
+      pagination?: { has_more?: boolean; next_cursor?: string | null };
+    };
     all.push(...(body.data ?? []));
-    cursor = body.pagination?.has_more ? body.pagination.next_cursor : null;
+    cursor = body.pagination?.has_more ? (body.pagination.next_cursor ?? null) : null;
   } while (cursor);
   return all;
 }

@@ -12,6 +12,11 @@ import {
   resetSimulatedClock,
   resetChaosConfig,
   getChaosConfig,
+  simRandom,
+  simRandomId,
+  simRandomHex,
+  simRandomUuid,
+  resetSimRandom,
   createTestPrismaClient,
   getTestDatabaseUrl,
 } from "../index";
@@ -511,5 +516,29 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
       body: JSON.stringify({ base: "bogus" }),
     });
     expect(badBaseRes.status).toBe(400);
+  });
+
+  test("simRandomHex and simRandomUuid produce valid formats and replay identically across resetSimRandom()", () => {
+    resetSimRandom();
+    const first = {
+      hex: simRandomHex(8),
+      id: simRandomId(8),
+      uuid: simRandomUuid(),
+      num: simRandom(),
+    };
+    expect(first.hex).toMatch(/^[0-9a-f]{8}$/);
+    expect(first.id).toMatch(/^[0-9a-z]{8}$/);
+    expect(first.uuid).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+
+    resetSimRandom();
+    const second = {
+      hex: simRandomHex(8),
+      id: simRandomId(8),
+      uuid: simRandomUuid(),
+      num: simRandom(),
+    };
+    expect(second).toEqual(first);
   });
 });

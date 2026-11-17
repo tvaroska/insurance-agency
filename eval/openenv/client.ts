@@ -85,6 +85,7 @@ export interface SimClientOptions {
   endpoints?: ServiceEndpoint[];
   fetchImpl?: typeof fetch;
   services?: string[];
+  scenarioId?: string;
 }
 
 function resolveTargets(options?: SimClientOptions): ServiceEndpoint[] {
@@ -106,12 +107,17 @@ export async function resetAllServices(
   const fetchFn = options?.fetchImpl ?? globalThis.fetch;
   const targets = resolveTargets(options);
 
+  const body: Record<string, string> = { seed_mode: seedMode };
+  if (options?.scenarioId?.trim()) {
+    body.scenario_id = options.scenarioId.trim();
+  }
+
   const pairs = await Promise.all(
     targets.map(async (ep) => {
       const res = await fetchFn(`${ep.baseUrl}/sim/reset`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seed_mode: seedMode }),
+        headers: scorerHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         throw new Error(

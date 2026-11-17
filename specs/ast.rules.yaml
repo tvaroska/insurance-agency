@@ -89,3 +89,20 @@ rule:
     - kind: import_statement
       regex: "generated/prisma|@prisma/client"
     - pattern: new PrismaClient($$$)
+---
+id: no-unseeded-math-random
+language: TypeScript
+severity: error
+message: "Determinism violation: Math.random() is forbidden in service code; use episode-seeded simRandom()/simRandomId()/simRandomHex()/simRandomUuid() from @evergreen/shared."
+files:
+  - "services/*/src/**/*.ts"
+ignores:
+  - "services/**/__tests__/**"
+metadata:
+  test_path: "services/ams/src/routes/rng_probe.ts"
+  invalid_examples:
+    - 'const id = `POL-${Math.random().toString(36).slice(2, 8)}`;'
+  valid_examples:
+    - 'const id = `POL-${simRandomId(6)}`;'
+rule:
+  pattern: Math.random()

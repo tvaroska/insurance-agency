@@ -337,6 +337,8 @@ describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
 });
 
 function resolveAstGrepBin(): string | null {
+  const localBin = join(ROOT_DIR, "node_modules", ".bin", "ast-grep");
+  if (existsSync(localBin)) return localBin;
   const fromPath = Bun.which("ast-grep");
   if (fromPath) return fromPath;
   const homeBin = join(process.env.HOME ?? "/root", ".local", "bin", "ast-grep");
@@ -367,7 +369,12 @@ describe("Declarative AST Structural & Security Contract (specs/ast.rules.yaml)"
 
   test("ast-grep passes across repository and flags every invalid_example positive control", () => {
     const astGrep = resolveAstGrepBin();
-    if (!astGrep) return;
+    if (!astGrep) {
+      if (process.env.CI) {
+        throw new Error("ast-grep binary not found while running under CI");
+      }
+      return;
+    }
 
     const liveScan = spawnSync(astGrep, ["scan", "--rule", rulesPath], {
       cwd: ROOT_DIR,

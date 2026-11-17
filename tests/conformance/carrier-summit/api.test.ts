@@ -202,7 +202,7 @@ describe("POST /underwriting/{quote_id}/decision", () => {
     expectError(await decide("QT-PENDING", { decision: "approve" }), 409, "CONFLICT");
   });
 
-  test.todo("Known gap 1: an invalid decision body is 422 (the service answers 400)");
+  test.todo("Known gap 1: an invalid decision body is 422 (the service answers 400)", () => {});
 });
 
 describe("GET /policies/{policy_id}/documents", () => {
@@ -367,9 +367,9 @@ describe("POST /submissions", () => {
     expect(decided.body).toMatchObject({ status: "submitted", underwriting_status: "approved" });
   });
 
-  test.todo("Known gap 1: an invalid submission body is 422 (the service answers 400)");
-  test.todo("Known gap 3: quote responses match SummitQuote (policy_type and status values outside the documented enums)");
-  test.todo("Known gap 3: document lists match PolicyDocumentsResponse (document_type values outside the documented enum)");
+  test.todo("Known gap 1: an invalid submission body is 422 (the service answers 400)", () => {});
+  test.todo("Known gap 3: quote responses match SummitQuote (policy_type and status values outside the documented enums)", () => {});
+  test.todo("Known gap 3: document lists match PolicyDocumentsResponse (document_type values outside the documented enum)", () => {});
 });
 
 describe("inspections", () => {
@@ -454,5 +454,5 @@ describe("inspections", () => {
     expect(b.body.quote_id).not.toBe(a.body.quote_id);
   });
 
-  test.todo("Known gap 3: inspection status matches InspectionStatusResponse for seed quotes (not_scheduled is outside the documented enum)");
+  test.todo("Known gap 3: inspection status matches InspectionStatusResponse for seed quotes (not_scheduled is outside the documented enum)", () => {});
 });

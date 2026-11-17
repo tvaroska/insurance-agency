@@ -7,6 +7,7 @@ import {
 import { prisma } from "../prisma";
 import { handleSendMessage } from "../tools/send_message";
 import { handleGetInbox } from "../tools/get_inbox";
+import { parseToolResultJson } from "../tools/parse-result";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -23,11 +24,11 @@ messagesRouter.post(
     const result = await handleSendMessage(body, prisma);
 
     if (result.isError) {
-      const parsed = JSON.parse(result.content[0].text as string);
+      const parsed = parseToolResultJson(result);
       return c.json({ error_code: "VALIDATION_ERROR", details: parsed.errors }, 400);
     }
 
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     return c.json(parsed, 201);
   },
 );
@@ -51,7 +52,7 @@ messagesRouter.get(
     if (query.cursor) args.cursor = query.cursor;
 
     const result = await handleGetInbox(args, prisma);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     return c.json(parsed);
   },
 );
@@ -75,7 +76,7 @@ messagesRouter.get(
     if (query.cursor) args.cursor = query.cursor;
 
     const result = await handleGetInbox(args, prisma);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     return c.json(parsed);
   },
 );

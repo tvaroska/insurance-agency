@@ -308,10 +308,13 @@ for (const path of PATHS) {
 
 test.todo(
   "CLM-G02: specs/claims.behavior.yaml names the length error code max_length; the service sends too_long (CLM-R15)",
+  () => {},
 );
 test.todo(
   "CLM-G03: a stored loss_date such as 2024-02-31 breaks `format: date` of Claim.loss_date in specs/claims.yaml (CLM-R14)",
+  () => {},
 );
 test.todo(
   "CLM-G04: specs/claims.yaml says adjuster_id is used to 'assign immediately'; the service keeps status reported and writes no assignment event (CLM-R19)",
+  () => {},
 );

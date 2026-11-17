@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
-import { correlationId } from "../correlation";
+import { correlationId, type CorrelationVariables } from "../correlation";
 
 function createApp() {
-  const app = new Hono();
+  const app = new Hono<{ Variables: CorrelationVariables }>();
   app.use(correlationId);
   app.get("/test", (c) => c.json({ id: c.get("correlationId") }));
   return app;

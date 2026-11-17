@@ -62,17 +62,32 @@ describe("Harbor / Terminal-Bench 2.0 Exporter (S2-INTOP-1)", () => {
     expect(py).toContain("def test_eo_compliance_and_score()");
   });
 
-  it("renders shared docker-compose.harbor.yaml with MODALITY_MODE=strict and without mounting repo answer keys", () => {
+  it("renders shared docker-compose.harbor.yaml with MODALITY_MODE=strict and without mounting repo answer keys", async () => {
     const compose = renderHarborDockerCompose();
     expect(compose).toContain("include:");
     expect(compose).toContain("../../docker-compose.yml");
     expect(compose).toContain("harbor-snapshot-init:");
+    expect(compose).toContain("SCENARIO_ID=${SCENARIO_ID:-}");
+    expect(compose).toContain("EVERGREEN_SCORER_SECRET=${EVERGREEN_SCORER_SECRET:-}");
+    expect(compose).toContain("scenario_id: scenarioId");
     expect(compose).toContain("/workspace/traces/snapshot-before.json");
     expect(compose).toContain("harbor-agent:");
     expect(compose).toContain("MODALITY_MODE=${MODALITY_MODE:-strict}");
     expect(compose).toContain("../../specs:/workspace/specs:ro");
     expect(compose).not.toContain("../../:/workspace");
     expect(compose).toContain("gemini-3.8-flash");
+
+    // Ensure scorer secrets and scenario IDs are scoped to harbor-snapshot-init, never harbor-agent
+    const agentSection = compose.slice(compose.indexOf("harbor-agent:"));
+    expect(agentSection).not.toContain("EVERGREEN_SCORER_SECRET");
+    expect(agentSection).not.toContain("SCENARIO_ID");
+
+    const committedCompose = await readFile(
+      join(import.meta.dir, "..", "docker-compose.harbor.yaml"),
+      "utf-8",
+    );
+    expect(committedCompose).toBe(compose);
+
     for (const svc of [
       "ams",
       "rater",

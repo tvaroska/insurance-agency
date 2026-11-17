@@ -14,6 +14,7 @@ import {
   throwIfErrors,
   getSimulatedNow,
   getSimulatedToday,
+  simRandomHex,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -91,7 +92,7 @@ async function addTimelineEvent(opts: {
   new_value?: string | null;
   created_by?: string | null;
 }) {
-  const event_id = `EVT-${crypto.randomUUID().slice(0, 8)}`;
+  const event_id = `EVT-${simRandomHex(8)}`;
   await prisma.claimTimeline.create({
     data: {
       event_id,
@@ -626,7 +627,7 @@ claimsRouter.post(
     }
 
     const now = getSimulatedNow().toISOString();
-    const document_id = `DOC-${crypto.randomUUID().slice(0, 8)}`;
+    const document_id = `DOC-${simRandomHex(8)}`;
 
     const newDoc = {
       document_id,

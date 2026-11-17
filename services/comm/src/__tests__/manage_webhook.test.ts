@@ -12,6 +12,7 @@ beforeEach(() => {
 });
 
 import { handleManageWebhook } from "../tools/manage_webhook";
+import { parseToolResultJson } from "../tools/parse-result";
 
 describe("manage_webhook - subscribe", () => {
   test("creates a webhook subscription", async () => {
@@ -24,7 +25,7 @@ describe("manage_webhook - subscribe", () => {
       testPrisma,
     );
     expect(result.isError).toBeUndefined();
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.webhook_id).toStartWith("whk_");
     expect(parsed.secret).toStartWith("whsec_");
     expect(parsed.url).toBe("https://example.com/hooks");
@@ -52,7 +53,7 @@ describe("manage_webhook - subscribe", () => {
       testPrisma,
     );
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.errors).toContain("url is required for subscribe");
   });
 
@@ -74,7 +75,7 @@ describe("manage_webhook - subscribe", () => {
       testPrisma,
     );
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.errors[0]).toContain("Invalid event type");
   });
 });
@@ -89,7 +90,7 @@ describe("manage_webhook - unsubscribe", () => {
       testPrisma,
     );
     expect(result.isError).toBeUndefined();
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.deleted).toBe(true);
     expect(parsed.webhook_id).toBe("whk_to_delete");
 
@@ -103,7 +104,7 @@ describe("manage_webhook - unsubscribe", () => {
       testPrisma,
     );
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.error).toContain("webhook_id is required");
   });
 
@@ -113,7 +114,7 @@ describe("manage_webhook - unsubscribe", () => {
       testPrisma,
     );
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.error).toBe("not_found");
   });
 });

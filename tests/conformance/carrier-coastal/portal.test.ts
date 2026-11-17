@@ -56,7 +56,7 @@ describe("bootstrap cookie", () => {
 
 describe("session endpoint", () => {
   test("CST-R15: in permissive mode a session is issued to anyone, with or without a cookie", async () => {
-    for (const headers of [{}, { Cookie: `${COOKIE_NAME}=bogus` }]) {
+    for (const headers of [{} as Record<string, string>, { Cookie: `${COOKIE_NAME}=bogus` }]) {
       const res = await open.svc.http.get("/auth/portal-session", { headers });
       expect(res.status).toBe(200);
       expect(Object.keys(res.body)).toEqual(["session_token", "service", "modality", "header", "expires_in"]);
@@ -380,10 +380,10 @@ describe("what the page must be able to do, driven the way the page drives it", 
     expect(again.body.message).toBe("Quote has already been bound.");
   });
 
-  test.todo("Known gap 7: the Quick Quote screen shows the premiums and stores the licence in a browser (field names differ between page and API)");
-  test.todo("Known gap 8: the Compare & Customize screen changes the premium in a browser (the page sends a body the API ignores)");
-  test.todo("Known gap 9: the Bind & Go screen shows plan prices and the insured on the ID card in a browser (the page reads fields the API does not return there)");
-  test.todo("Known gap 12: rendering, button gating, the page's own VIN decode and session retry (needs a real browser)");
+  test.todo("Known gap 7: the Quick Quote screen shows the premiums and stores the licence in a browser (field names differ between page and API)", () => {});
+  test.todo("Known gap 8: the Compare & Customize screen changes the premium in a browser (the page sends a body the API ignores)", () => {});
+  test.todo("Known gap 9: the Bind & Go screen shows plan prices and the insured on the ID card in a browser (the page reads fields the API does not return there)", () => {});
+  test.todo("Known gap 12: rendering, button gating, the page's own VIN decode and session retry (needs a real browser)", () => {});
 });
 
 describe("latency", () => {

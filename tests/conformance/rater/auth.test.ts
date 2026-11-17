@@ -117,6 +117,7 @@ describe("error envelope", () => {
 
   test.todo(
     "RTR-G01: error bodies match ErrorResponse of specs/rater.yaml (the file nests { error: { code, message } }; the service sends { error_code, message, correlation_id, details })",
+  () => {},
   );
-  test.todo("RTR-G10: a body that is not JSON gets a 400 (the service answers 500 INTERNAL_ERROR)");
+  test.todo("RTR-G10: a body that is not JSON gets a 400 (the service answers 500 INTERNAL_ERROR)", () => {});
 });

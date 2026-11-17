@@ -138,12 +138,12 @@ describe("schema conformance of every operation", () => {
   });
 });
 
-test.todo("AMS-G2: the scope ams:policies:write, required by createPolicy, is missing from the security scheme in specs/ams.yaml");
-test.todo("AMS-G3: specs/ams.yaml declares client, household, task, assignee and producer ids as UUIDs and a POL-XX-YYYY-NNNNNN policy id; real ids are CLI-001, CL-ab12cd, HH-001, TSK-001, POL-ab12cd");
-test.todo("AMS-G4: Coverage.limit is a required number in specs/ams.yaml; the service stores text or null, and a numeric limit in createPolicy fails with 500");
-test.todo("AMS-G5: PolicyType in specs/ams.yaml lacks renters, which the service accepts");
-test.todo("AMS-G6: Client.preferred_contact_method lists email, sms, phone in specs/ams.yaml; writes accept email, phone, mail");
-test.todo("AMS-G7: client fields returned as null (dob, phone, address parts and others) are not nullable in specs/ams.yaml, and Client.phone declares an E.164 pattern nothing enforces");
-test.todo("AMS-G10: createPolicy returns annual_premium instead of the Policy schema's premium_current, and listPolicies items have no coverages");
-test.todo("AMS-G13: specs/ams.yaml documents no 409 for updateClient; a duplicate email returns it");
-test.todo("AMS-G14: FieldError.code in specs/ams.yaml lacks 'invalid' (annual_premium) and the E_EO_* codes");
+test.todo("AMS-G2: the scope ams:policies:write, required by createPolicy, is missing from the security scheme in specs/ams.yaml", () => {});
+test.todo("AMS-G3: specs/ams.yaml declares client, household, task, assignee and producer ids as UUIDs and a POL-XX-YYYY-NNNNNN policy id; real ids are CLI-001, CL-ab12cd, HH-001, TSK-001, POL-ab12cd", () => {});
+test.todo("AMS-G4: Coverage.limit is a required number in specs/ams.yaml; the service stores text or null, and a numeric limit in createPolicy fails with 500", () => {});
+test.todo("AMS-G5: PolicyType in specs/ams.yaml lacks renters, which the service accepts", () => {});
+test.todo("AMS-G6: Client.preferred_contact_method lists email, sms, phone in specs/ams.yaml; writes accept email, phone, mail", () => {});
+test.todo("AMS-G7: client fields returned as null (dob, phone, address parts and others) are not nullable in specs/ams.yaml, and Client.phone declares an E.164 pattern nothing enforces", () => {});
+test.todo("AMS-G10: createPolicy returns annual_premium instead of the Policy schema's premium_current, and listPolicies items have no coverages", () => {});
+test.todo("AMS-G13: specs/ams.yaml documents no 409 for updateClient; a duplicate email returns it", () => {});
+test.todo("AMS-G14: FieldError.code in specs/ams.yaml lacks 'invalid' (annual_premium) and the E_EO_* codes", () => {});

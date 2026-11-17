@@ -10,6 +10,7 @@ import {
   checkMaxLength,
   throwIfErrors,
   nextSimulatedEpochMs,
+  simRandomId,
   type AuthVariables,
   type CorrelationVariables,
 } from "@evergreen/shared";
@@ -51,7 +52,7 @@ escalationsRouter.post(
     ]);
 
     const now = new Date(nextSimulatedEpochMs()).toISOString();
-    const escalationId = `esc_${Math.random().toString(36).slice(2, 10)}`;
+    const escalationId = `esc_${simRandomId(8)}`;
 
     const record = {
       escalation_id: escalationId,

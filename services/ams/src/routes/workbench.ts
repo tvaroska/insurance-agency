@@ -9,6 +9,7 @@ import {
   getInternalRequestHeaders,
   getSimulatedNow,
   nextSimulatedEpochMs,
+  simRandomId,
 } from "@evergreen/shared";
 import { prisma } from "../prisma";
 
@@ -425,6 +426,16 @@ let chaosSimulationState = {
 
 let simulatedDaysOffset = 0;
 
+export function resetWorkbenchState(): void {
+  chaosSimulationState = {
+    enabled: false,
+    failureRate: 0,
+    targetServices: ["rater", "carrier-summit", "carrier-coastal"],
+    lastUpdatedAt: getSimulatedNow().toISOString(),
+  };
+  simulatedDaysOffset = 0;
+}
+
 function formatEscalationRow(row: {
   escalation_id: string;
   client_id: string;
@@ -780,7 +791,7 @@ workbenchRouter.post("/workbench/api/run-journey", async (c) => {
   }
 
   // Record the deterministic Workbench audit task in AMS (3rd-Line receipt anchor)
-  const auditTaskId = `TSK-WB-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  const auditTaskId = `TSK-WB-${simRandomId(6).toUpperCase()}`;
   await prisma.task.create({
     data: {
       id: auditTaskId,
@@ -858,7 +869,7 @@ async function renderLocalAcordSummaryResponse(
       : "POLICY: (no AMS policy on file)",
     "1st-Line E&O Gate: state minimums + backdating + $10K binding authority enforced at bind time",
   ]);
-  return new Response(pdf, {
+  return new Response(new Uint8Array(pdf), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
@@ -1066,7 +1077,7 @@ workbenchRouter.post("/workbench/api/time-travel", async (c) => {
     data: { status: "applied" },
   });
 
-  const taskId = `TSK-TT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  const taskId = `TSK-TT-${simRandomId(6).toUpperCase()}`;
   await prisma.task.create({
     data: {
       id: taskId,

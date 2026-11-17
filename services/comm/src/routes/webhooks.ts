@@ -6,6 +6,7 @@ import {
 } from "@evergreen/shared";
 import { prisma } from "../prisma";
 import { handleManageWebhook } from "../tools/manage_webhook";
+import { parseToolResultJson } from "../tools/parse-result";
 
 type AppVariables = CorrelationVariables & AuthVariables;
 
@@ -25,11 +26,11 @@ webhooksRouter.post(
     );
 
     if (result.isError) {
-      const parsed = JSON.parse(result.content[0].text as string);
+      const parsed = parseToolResultJson(result);
       return c.json({ error_code: "VALIDATION_ERROR", details: parsed.errors || [parsed.error] }, 400);
     }
 
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     return c.json(parsed, 201);
   },
 );

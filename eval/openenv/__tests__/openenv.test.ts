@@ -92,6 +92,32 @@ describe("OpenEnv & Prime Intellect verifiers Control Plane (S3-INTOP-3)", () =>
     const resetRes = await resetAllServices("clean", { fetchImpl: mockFetch });
     expect(Object.keys(resetRes)).toHaveLength(8);
     expect(resetRes.ams.seed_mode).toBe("clean");
+    const unseededResetCalls = calls.filter((c) => c.url.endsWith("/sim/reset"));
+    expect(unseededResetCalls).toHaveLength(8);
+    expect(unseededResetCalls.every((c) => c.body?.scenario_id === undefined)).toBe(true);
+
+    calls.length = 0;
+    const prevSecret = process.env.EVERGREEN_SCORER_SECRET;
+    process.env.EVERGREEN_SCORER_SECRET = "test-openenv-secret";
+    const capturedHeaders: Record<string, string>[] = [];
+    const headerMockFetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      capturedHeaders.push((init?.headers as Record<string, string>) ?? {});
+      return mockFetch(url, init);
+    }) as typeof fetch;
+    try {
+      await resetAllServices("realistic", { scenarioId: "16", fetchImpl: headerMockFetch });
+    } finally {
+      if (prevSecret === undefined) delete process.env.EVERGREEN_SCORER_SECRET;
+      else process.env.EVERGREEN_SCORER_SECRET = prevSecret;
+    }
+    const scopedResetCalls = calls.filter((c) => c.url.endsWith("/sim/reset"));
+    expect(scopedResetCalls).toHaveLength(8);
+    expect(scopedResetCalls.every((c) => c.body?.seed_mode === "realistic" && c.body?.scenario_id === "16")).toBe(true);
+    expect(
+      capturedHeaders.every(
+        (h) => h["X-Eval-Scorer"] === "true" && h["X-Evergreen-Scorer-Secret"] === "test-openenv-secret",
+      ),
+    ).toBe(true);
 
     const snapRes = await snapshotAllServices({
       fetchImpl: mockFetch,

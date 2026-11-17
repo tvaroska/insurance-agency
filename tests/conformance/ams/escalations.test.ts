@@ -386,5 +386,5 @@ describe("listEscalations", () => {
   });
 });
 
-test.todo("AMS-G12: Escalation.reason in specs/ams.yaml lacks claims_specialist and claim_specialist, and the reason_code alias is undeclared");
-test.todo("AMS-G13: specs/ams.yaml documents no 400 for listEscalations; invalid filters and cursors return it");
+test.todo("AMS-G12: Escalation.reason in specs/ams.yaml lacks claims_specialist and claim_specialist, and the reason_code alias is undeclared", () => {});
+test.todo("AMS-G13: specs/ams.yaml documents no 400 for listEscalations; invalid filters and cursors return it", () => {});

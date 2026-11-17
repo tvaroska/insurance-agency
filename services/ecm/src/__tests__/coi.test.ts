@@ -72,7 +72,8 @@ mock.module("../clients/ams-client", () => ({
     mockClients.find((c) => c.id === clientId),
 }));
 
-import { coiRouter } from "../routes/coi";
+import { resetSimRandom } from "@evergreen/shared";
+import { coiRouter, clearCoiPdfStore } from "../routes/coi";
 import { createTestApp, createTables, authHeader } from "./setup";
 
 const app = createTestApp({ coi: coiRouter });
@@ -191,6 +192,43 @@ describe("POST /v1/documents/coi/generate - success", () => {
     const pdfBytes = new Uint8Array(await pdfRes.arrayBuffer());
     expect(pdfBytes.length).toBe(body.file_size_bytes);
     expect(new TextDecoder().decode(pdfBytes.slice(0, 5))).toBe("%PDF-");
+  });
+
+  it("evicts cached COI PDFs on clearCoiPdfStore() and replays identical document_id after resetSimRandom()", async () => {
+    const headers = await authHeader(["ecm:documents:write", "ecm:documents:read"]);
+    resetSimRandom();
+    const res1 = await app.request("/v1/coi", {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        policy_id: "POL-001",
+        holder_name: "Reset Isolation Venue LLC",
+      }),
+    });
+    expect(res1.status).toBe(201);
+    const body1 = await res1.json();
+
+    const beforeClear = await app.request(body1.pdf_url, { headers });
+    expect(beforeClear.status).toBe(200);
+
+    // Deleting SQLite rows alone leaves the in-memory PDF cache populated; clearCoiPdfStore() evicts it.
+    testSqlite.exec("DELETE FROM documents");
+    clearCoiPdfStore();
+    const afterClear = await app.request(body1.pdf_url, { headers });
+    expect(afterClear.status).toBe(404);
+
+    resetSimRandom();
+    const res2 = await app.request("/v1/coi", {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        policy_id: "POL-001",
+        holder_name: "Reset Isolation Venue LLC",
+      }),
+    });
+    expect(res2.status).toBe(201);
+    const body2 = await res2.json();
+    expect(body2.document_id).toBe(body1.document_id);
   });
 });
 

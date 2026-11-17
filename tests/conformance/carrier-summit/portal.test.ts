@@ -59,7 +59,7 @@ describe("bootstrap cookie", () => {
 
 describe("session endpoint", () => {
   test("SMT-R15: in permissive mode a session is issued to anyone, with or without a cookie", async () => {
-    for (const headers of [{}, { Cookie: `${COOKIE_NAME}=bogus` }]) {
+    for (const headers of [{} as Record<string, string>, { Cookie: `${COOKIE_NAME}=bogus` }]) {
       const res = await open.svc.http.get("/auth/portal-session", { headers });
       expect(res.status).toBe(200);
       expect(Object.keys(res.body)).toEqual(["session_token", "service", "modality", "header", "expires_in"]);
@@ -386,9 +386,9 @@ describe("what the page must be able to do, driven the way the page drives it", 
     expect((await portal.client.get(`${API}/quotes/QT-PENDING`)).body.underwriting_status).toBe("pending_review");
   });
 
-  test.todo("Known gap 7: the Property Submission screen completes a submission in a browser (the page sends a body the API refuses)");
-  test.todo("Known gap 8: the Approve, Decline and Refer buttons record a decision in a browser (the page sends words the API refuses)");
-  test.todo("Known gap 12: rendering, field gating, timeline and session retry of the page (needs a real browser)");
+  test.todo("Known gap 7: the Property Submission screen completes a submission in a browser (the page sends a body the API refuses)", () => {});
+  test.todo("Known gap 8: the Approve, Decline and Refer buttons record a decision in a browser (the page sends words the API refuses)", () => {});
+  test.todo("Known gap 12: rendering, field gating, timeline and session retry of the page (needs a real browser)", () => {});
 });
 
 describe("latency", () => {

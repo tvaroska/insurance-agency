@@ -143,6 +143,7 @@ describe("error envelope", () => {
 
   test.todo(
     "ECM-G01: error bodies match the Error schema of specs/ecm.yaml (the file requires `code`; the service sends `error_code`, `correlation_id` and `details[].{field,message,code}`)",
+  () => {},
   );
-  test.todo("ECM-G06: a body that cannot be parsed gets a 400 (the service answers 500 INTERNAL_ERROR)");
+  test.todo("ECM-G06: a body that cannot be parsed gets a 400 (the service answers 500 INTERNAL_ERROR)", () => {});
 });

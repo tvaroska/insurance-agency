@@ -14,6 +14,7 @@ beforeEach(() => {
 
 // Import dynamically isn't needed since we test the handler directly
 import { handleSendMessage } from "../tools/send_message";
+import { parseToolResultJson } from "../tools/parse-result";
 
 describe("send_message - validation", () => {
   test("returns error when 'to' is missing", async () => {
@@ -22,7 +23,7 @@ describe("send_message - validation", () => {
       testPrisma,
     );
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.errors).toContain("to is required");
   });
 
@@ -40,7 +41,7 @@ describe("send_message - validation", () => {
       testPrisma,
     );
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.errors).toContain("body is required");
   });
 
@@ -50,7 +51,7 @@ describe("send_message - validation", () => {
       testPrisma,
     );
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.errors[0]).toContain("channel must be one of");
   });
 
@@ -60,7 +61,7 @@ describe("send_message - validation", () => {
       testPrisma,
     );
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.errors).toContain("subject is required for email channel");
   });
 
@@ -75,7 +76,7 @@ describe("send_message - validation", () => {
       testPrisma,
     );
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.errors[0]).toContain("template_id must match format");
   });
 });
@@ -93,7 +94,7 @@ describe("send_message - success", () => {
       testPrisma,
     );
     expect(result.isError).toBeUndefined();
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.message_id).toStartWith("msg_");
     expect(parsed.status).toBe("queued");
     expect(parsed.channel).toBe("email");
@@ -110,7 +111,7 @@ describe("send_message - success", () => {
       testPrisma,
     );
     expect(result.isError).toBeUndefined();
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.message_id).toStartWith("msg_");
     expect(parsed.status).toBe("queued");
     expect(parsed.channel).toBe("sms");

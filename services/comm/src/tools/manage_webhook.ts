@@ -1,6 +1,6 @@
 import type { PrismaClient } from "../generated/prisma/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { getSimulatedNow } from "@evergreen/shared";
+import { getSimulatedNow, simRandom, simRandomUuid } from "@evergreen/shared";
 
 const VALID_EVENTS = [
   "message.received",
@@ -41,16 +41,13 @@ export const manageWebhookToolDef = {
 };
 
 function generateSecret(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  return (
-    "whsec_" +
-    Array.from(bytes)
-      .map((b) => chars[b % chars.length])
-      .join("")
-  );
+  let out = "whsec_";
+  for (let i = 0; i < 32; i++) {
+    out += chars[Math.floor(simRandom() * chars.length)];
+  }
+  return out;
 }
 
 export async function handleManageWebhook(
@@ -109,7 +106,7 @@ async function handleSubscribe(
     };
   }
 
-  const webhookId = `whk_${crypto.randomUUID()}`;
+  const webhookId = `whk_${simRandomUuid()}`;
   const secret = generateSecret();
   const now = getSimulatedNow().toISOString();
 

@@ -263,8 +263,8 @@ describe("POST /quotes/submit, new quote", () => {
     expect((await post(`/quotes/${id}/bind`, { effective_date: "2026-05-01" })).status).toBe(200);
   });
 
-  test.todo("Known gap 1: an invalid body is 422 (the service answers 400)");
-  test.todo("Known gap 3: the new-quote response matches CoastalQuoteAssessed (no deductibles or submitted_at; policy_type outside the documented enum)");
+  test.todo("Known gap 1: an invalid body is 422 (the service answers 400)", () => {});
+  test.todo("Known gap 3: the new-quote response matches CoastalQuoteAssessed (no deductibles or submitted_at; policy_type outside the documented enum)", () => {});
 });
 
 describe("POST /quotes/submit, existing quote", () => {
@@ -671,7 +671,7 @@ describe("POST /quotes/{quote_id}/recalculate", () => {
     contract.check(res);
   });
 
-  test.todo("Known gap 3: a recalculation of a quote without a premium matches RecalculateResponse (original premium is null)");
+  test.todo("Known gap 3: a recalculation of a quote without a premium matches RecalculateResponse (original premium is null)", () => {});
 });
 
 describe("POST /quotes/{quote_id}/bind", () => {
@@ -810,7 +810,7 @@ describe("POST /quotes/{quote_id}/bind", () => {
     expect((await ctx.svc.table("policies")).some((p) => p.policy_id === row.policy_id)).toBe(true);
   });
 
-  test.todo("Known gap 1: binding an unassessed quote or sending an invalid body is 422 (the service answers 400)");
+  test.todo("Known gap 1: binding an unassessed quote or sending an invalid body is 422 (the service answers 400)", () => {});
 });
 
 describe("GET /policies/{policy_id}/id-card", () => {

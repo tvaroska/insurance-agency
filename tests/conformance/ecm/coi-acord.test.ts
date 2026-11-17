@@ -508,8 +508,9 @@ describe("GET /v1/documents/acord/{form_type}", () => {
     expectError(await acord("35", { claim_id: "CLM-1" }), 500, "INTERNAL_ERROR");
   });
 
-  test.todo("ECM-G07: an unknown claim or an AMS failure gets a 4xx or 502 (the service answers 500 INTERNAL_ERROR)");
+  test.todo("ECM-G07: an unknown claim or an AMS failure gets a 4xx or 502 (the service answers 500 INTERNAL_ERROR)", () => {});
   test.todo(
     "ECM-G03: coverage_summary.coverages matches specs/ecm.yaml (the file types limit as a number and deductible as non-null; the service passes on AMS values such as \"100/300\" and null)",
+    () => {},
   );
 });

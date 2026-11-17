@@ -56,6 +56,26 @@ def _scorer_headers() -> dict[str, str]:
     return headers
 
 
+def _reset_all_services(seed_mode: str, scenario_id: str) -> None:
+    base_port = int(os.environ.get("EVERGREEN_BASE_PORT", "3000"))
+    payload = json.dumps({
+        "seed_mode": seed_mode,
+        "scenario_id": str(scenario_id),
+    }).encode("utf-8")
+    headers = {
+        **_scorer_headers(),
+        "Content-Type": "application/json",
+        "X-Evergreen-Internal": "1",
+    }
+    for port, service in PORT_SERVICE_MAP.items():
+        effective_port = base_port + (port - 3000)
+        url = f"http://localhost:{effective_port}/sim/reset"
+        req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            if resp.status < 200 or resp.status >= 300:
+                raise RuntimeError(f"Failed to reset {service} ({url}): HTTP {resp.status}")
+
+
 def _capture_snapshot(out_path: Path) -> Path:
     base_port = int(os.environ.get("EVERGREEN_BASE_PORT", "3000"))
     snapshot: dict[str, Any] = {}
@@ -110,11 +130,14 @@ class TaskFamily:
     def start(task: Task) -> None:
         seed = task["seed"]
         env_seed = "clean" if seed == "clean" else "realistic"
+        scenario_id = str(task["scenario_id"])
 
         env = {
             **os.environ,
             "SEED_MODE": env_seed,
+            "SCENARIO_ID": scenario_id,
             "MODALITY_MODE": "strict",
+            "SIMULATED_TODAY": os.environ.get("SIMULATED_TODAY", "2026-10-14"),
             "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
         }
 
@@ -127,6 +150,7 @@ class TaskFamily:
         )
 
         time.sleep(2)
+        _reset_all_services(env_seed, scenario_id)
         _capture_snapshot(SNAPSHOT_BEFORE_PATH)
 
     @staticmethod

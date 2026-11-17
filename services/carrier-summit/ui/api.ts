@@ -6,8 +6,9 @@ async function getToken(): Promise<string> {
   if (cachedToken) return cachedToken;
   const res = await fetch("/auth/dev-token");
   const data = await res.json();
-  cachedToken = data.token;
-  return cachedToken;
+  const token: string = data.token;
+  cachedToken = token;
+  return token;
 }
 
 async function requestPortalSession(): Promise<string> {

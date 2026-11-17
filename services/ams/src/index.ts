@@ -65,6 +65,7 @@ app.route(
       };
     },
     onReset: async (seedMode) => {
+      resetWorkbenchState();
       await seedDatabase(seedMode);
     },
   }),
@@ -75,7 +76,7 @@ app.route("/sim", requestLog.router);
 app.route("/", oauthTokenEndpoint());
 
 // ── Executive Operations & Governance Workbench (disabled in strict eval mode) ──
-import { workbenchRouter } from "./routes/workbench";
+import { workbenchRouter, resetWorkbenchState } from "./routes/workbench";
 app.use("*", async (c, next) => {
   const path = c.req.path;
   if (

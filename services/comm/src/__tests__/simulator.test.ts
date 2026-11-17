@@ -3,6 +3,7 @@ import { setActiveScenarioId } from "@evergreen/shared";
 import { createTestDb } from "./setup";
 import { handleSendMessage } from "../tools/send_message";
 import { handleGetInbox } from "../tools/get_inbox";
+import { parseToolResultJson } from "../tools/parse-result";
 
 let testPrisma: ReturnType<typeof createTestDb>["prisma"];
 
@@ -29,7 +30,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
       },
       testPrisma,
     );
-    const turn1Json = JSON.parse(turn1Res.content[0].text as string);
+    const turn1Json = parseToolResultJson(turn1Res);
     expect(turn1Json.simulated_reply).toBeDefined();
     expect(turn1Json.simulated_reply.scenario_id).toBe("16");
     expect(turn1Json.simulated_reply.turn).toBe(1);
@@ -43,7 +44,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
       { client_id: "CLI-002", direction: "inbound" },
       testPrisma,
     );
-    const inboxJson = JSON.parse(inboxRes.content[0].text as string);
+    const inboxJson = parseToolResultJson(inboxRes);
     expect(inboxJson.data.length).toBe(1);
     expect(inboxJson.data[0].message_id).toStartWith("msg_sim_16_t1_");
 
@@ -58,7 +59,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
       },
       testPrisma,
     );
-    const turn2Json = JSON.parse(turn2Res.content[0].text as string);
+    const turn2Json = parseToolResultJson(turn2Res);
     expect(turn2Json.simulated_reply).toBeDefined();
     expect(turn2Json.simulated_reply.turn).toBe(2);
     expect(turn2Json.simulated_reply.message_id).toStartWith("msg_sim_16_t2_");
@@ -75,7 +76,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
       },
       testPrisma,
     );
-    const json = JSON.parse(res.content[0].text as string);
+    const json = parseToolResultJson(res);
     expect(json.simulated_reply).toBeDefined();
     expect(json.simulated_reply.scenario_id).toBe("17");
     expect(json.simulated_reply.body).toContain("Winter Park Farmers Market");
@@ -93,7 +94,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
       },
       testPrisma,
     );
-    const json = JSON.parse(res.content[0].text as string);
+    const json = parseToolResultJson(res);
     expect(json.simulated_reply).toBeDefined();
     expect(json.simulated_reply.scenario_id).toBe("18");
     expect(json.simulated_reply.body).toContain("1FT7W2BT5PEC12345");
@@ -112,7 +113,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
       },
       testPrisma,
     );
-    const json = JSON.parse(res.content[0].text as string);
+    const json = parseToolResultJson(res);
     expect(json.simulated_reply).toBeDefined();
     expect(json.simulated_reply.scenario_id).toBe("19");
     expect(json.simulated_reply.body).toContain("POL-BO-2025-000090");
@@ -130,7 +131,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
       },
       testPrisma,
     );
-    const json = JSON.parse(res.content[0].text as string);
+    const json = parseToolResultJson(res);
     expect(json.simulated_reply).toBeDefined();
     expect(json.simulated_reply.scenario_id).toBe("20");
     expect(json.simulated_reply.body).toContain("QT-001-NTNW");
@@ -148,7 +149,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
       },
       testPrisma,
     );
-    const json = JSON.parse(res.content[0].text as string);
+    const json = parseToolResultJson(res);
     expect(json.simulated_reply).toBeUndefined();
   });
 
@@ -164,7 +165,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
       },
       testPrisma,
     );
-    expect(JSON.parse(blockedRes.content[0].text as string).simulated_reply).toBeUndefined();
+    expect(parseToolResultJson(blockedRes).simulated_reply).toBeUndefined();
 
     setActiveScenarioId("16");
     const allowedRes = await handleSendMessage(
@@ -177,7 +178,7 @@ describe("Multi-Turn Client Conversation Simulator (Scenarios 16–20)", () => {
       },
       testPrisma,
     );
-    const allowedJson = JSON.parse(allowedRes.content[0].text as string);
+    const allowedJson = parseToolResultJson(allowedRes);
     expect(allowedJson.simulated_reply).toBeDefined();
     expect(allowedJson.simulated_reply.scenario_id).toBe("16");
   });

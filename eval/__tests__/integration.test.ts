@@ -38,7 +38,7 @@ function setupFetchMock(responses: Record<string, { body: unknown; status?: numb
     }
     return Promise.resolve(jsonResponse({ error: "not found" }, 404));
   });
-  globalThis.fetch = fn as typeof fetch;
+  globalThis.fetch = fn as unknown as typeof fetch;
   return fn;
 }
 

@@ -16,7 +16,7 @@ const testPrisma = new PrismaClient({ adapter: testAdapter });
 mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { Hono } from "hono";
-import { workbenchRouter, resolveStackUrls } from "../routes/workbench";
+import { workbenchRouter, resolveStackUrls, resetWorkbenchState } from "../routes/workbench";
 import { createTables } from "./setup";
 
 const app = new Hono();
@@ -230,6 +230,16 @@ describe("AMS Executive Operations & Governance Workbench (:3000/)", () => {
     const ttData = await ttRes.json();
     expect(ttData.daysAdvanced).toBe(30);
     expect(ttData.createdRenewalTaskId).toMatch(/^TSK-TT-/);
+
+    const beforeReset = await (await app.request("/workbench/api/overview")).json();
+    expect(beforeReset.simulationControls.chaos.enabled).toBe(true);
+    expect(beforeReset.simulationControls.simulatedDaysOffset).toBeGreaterThanOrEqual(30);
+
+    resetWorkbenchState();
+
+    const afterReset = await (await app.request("/workbench/api/overview")).json();
+    expect(afterReset.simulationControls.chaos.enabled).toBe(false);
+    expect(afterReset.simulationControls.simulatedDaysOffset).toBe(0);
   });
 
   test("POST /workbench/api/escalations/:id/resolve approves pending escalation and records audit event", async () => {

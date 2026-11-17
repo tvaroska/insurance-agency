@@ -280,10 +280,12 @@ describe("POST /v1/leads", () => {
 
   test.todo(
     "CRM-G02: Lead in specs/crm.yaml allows null for client_id, phone, assigned_producer and tags (the service returns null for them; the file marks none nullable)",
+  () => {},
   );
-  test.todo("CRM-G03: LeadSource in specs/crm.yaml lists `phone` (the service accepts and stores it; the enum omits it)");
+  test.todo("CRM-G03: LeadSource in specs/crm.yaml lists `phone` (the service accepts and stores it; the enum omits it)", () => {});
   test.todo(
     "CRM-G04: email `format: email` and the phone pattern of specs/crm.yaml are enforced on create (the service stores any text)",
+  () => {},
   );
 });
 

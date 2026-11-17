@@ -145,4 +145,5 @@ describe("pagination with filters", () => {
 
 test.todo(
   "AMS-G17: listTasks pages past a task without a due date (today the next_cursor for such a row holds null and is rejected with 400)",
+  () => {},
 );

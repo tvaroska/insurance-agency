@@ -1,6 +1,6 @@
 import { mock } from "bun:test";
 import { Database } from "bun:sqlite";
-import { insertSqliteRow } from "@evergreen/shared";
+import { insertSqliteRow, resetSimRandom } from "@evergreen/shared";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { mkdtempSync } from "fs";
@@ -147,6 +147,31 @@ describe("POST /v1/escalations - success", () => {
     expect(getBody.events.length).toBeGreaterThanOrEqual(1);
     expect(getBody.events[0].event_type).toBe("created");
     expect(getBody.events[0].to_status).toBe("pending");
+  });
+
+  test("generates identical escalation_id across resetSimRandom() replays", async () => {
+    const headers = await authHeader(["ams:escalations:write"]);
+    resetSimRandom();
+    const res1 = await postEscalation({
+      client_id: "CL-001",
+      reason: "premium_threshold",
+      summary: "Deterministic replay test",
+    }, headers);
+    expect(res1.status).toBe(201);
+    const body1 = await res1.json();
+
+    testSqlite.exec("DELETE FROM escalation_events");
+    testSqlite.exec("DELETE FROM escalations");
+
+    resetSimRandom();
+    const res2 = await postEscalation({
+      client_id: "CL-001",
+      reason: "premium_threshold",
+      summary: "Deterministic replay test",
+    }, headers);
+    expect(res2.status).toBe(201);
+    const body2 = await res2.json();
+    expect(body2.escalation_id).toBe(body1.escalation_id);
   });
 });
 

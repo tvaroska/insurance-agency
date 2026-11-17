@@ -8,6 +8,7 @@ const { sqlite: testSqlite, prisma: testPrisma } = createTestDb();
 mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { handleGetTranscript } from "../tools/get_transcript";
+import { parseToolResultJson } from "../tools/parse-result";
 
 beforeAll(() => {
   const calls = [
@@ -44,7 +45,7 @@ describe("get_transcript - success", () => {
   test("returns transcript for valid call_id", async () => {
     const result = await handleGetTranscript({ call_id: "CALL-001" }, testPrisma);
     expect(result.isError).toBeUndefined();
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.call_id).toBe("CALL-001");
     expect(parsed.client_id).toBe("CLI-004");
     expect(parsed.duration_seconds).toBe(540);
@@ -56,13 +57,13 @@ describe("get_transcript - success", () => {
 
   test("extracts agent name from transcript", async () => {
     const result = await handleGetTranscript({ call_id: "CALL-001" }, testPrisma);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.agent_name).toBe("Amy");
   });
 
   test("extracts different agent names", async () => {
     const result = await handleGetTranscript({ call_id: "CALL-002" }, testPrisma);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.agent_name).toBe("Tom");
   });
 });
@@ -71,7 +72,7 @@ describe("get_transcript - errors", () => {
   test("returns error for missing call_id", async () => {
     const result = await handleGetTranscript({}, testPrisma);
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.error).toBe("call_id is required");
   });
 
@@ -81,7 +82,7 @@ describe("get_transcript - errors", () => {
       testPrisma,
     );
     expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text as string);
+    const parsed = parseToolResultJson(result);
     expect(parsed.error).toBe("not_found");
   });
 });

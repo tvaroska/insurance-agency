@@ -223,6 +223,6 @@ describe("REST list routes", () => {
     });
   });
 
-  test.todo("Known gap 1: list responses match InboxResponse (the service returns a pagination object instead of top-level cursor and has_more)");
-  test.todo("Known gap 2: listed messages match Message (no attachments, null body on calls, MSG-NNN and CLI-NNN ids)");
+  test.todo("Known gap 1: list responses match InboxResponse (the service returns a pagination object instead of top-level cursor and has_more)", () => {});
+  test.todo("Known gap 2: listed messages match Message (no attachments, null body on calls, MSG-NNN and CLI-NNN ids)", () => {});
 });

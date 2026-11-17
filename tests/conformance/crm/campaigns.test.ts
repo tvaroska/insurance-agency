@@ -281,5 +281,6 @@ describe("POST /v1/leads/{id}/enroll", () => {
 
   test.todo(
     "CRM-G07: enrolling a lead that has no client is refused (the service writes an enrollment with client_id \"\" and skips the duplicate check)",
+    () => {},
   );
 });

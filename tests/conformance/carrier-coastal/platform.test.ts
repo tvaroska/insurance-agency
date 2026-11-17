@@ -183,8 +183,8 @@ describe("authentication and scopes", () => {
     expect(fresh.unchecked()).toEqual([]);
   });
 
-  test.todo("Known gap 2: GET /auth/portal-session and the strict-mode 403 responses are described by the OpenAPI file (they are not)");
-  test.todo("Known gap 4: /health and /auth/dev-token are served under the OpenAPI server path /v1 (they are served at the root)");
+  test.todo("Known gap 2: GET /auth/portal-session and the strict-mode 403 responses are described by the OpenAPI file (they are not)", () => {});
+  test.todo("Known gap 4: /health and /auth/dev-token are served under the OpenAPI server path /v1 (they are served at the root)", () => {});
 });
 
 describe("tables", () => {

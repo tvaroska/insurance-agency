@@ -105,18 +105,23 @@ function postBind(quoteId: string, body: unknown, headers: Record<string, string
 
 function mockEscalation(escalation: Record<string, unknown>, status = 200) {
   const seen: { url?: string; headers?: Record<string, string> } = {};
-  fetchSpy = spyOn(globalThis, "fetch").mockImplementation(async (input: any, init?: any) => {
-    const url = typeof input === "string" ? input : input.url;
-    if (url.includes("/v1/escalations/")) {
-      seen.url = url;
-      seen.headers = init?.headers;
-      return new Response(JSON.stringify(escalation), {
-        status,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    return app.fetch(new Request(url, init));
-  });
+  fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
+    Object.assign(
+      async (input: any, init?: any) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.includes("/v1/escalations/")) {
+          seen.url = url;
+          seen.headers = init?.headers;
+          return new Response(JSON.stringify(escalation), {
+            status,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return app.fetch(new Request(url, init));
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    ),
+  );
   return seen;
 }
 
