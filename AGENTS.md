@@ -23,8 +23,8 @@ bun run showcase:check
 bun run showcase
 bun run showcase --strict                        # strict modality + portal session enforcement
 
-# Run 3-model Inspect AI evaluation & regenerate README Results table:
-proj-test insurance-agency inspect-baseline --scenario 01,03,07,14,19,20 --difficulty natural
+# Run Inspect AI evaluation (--parallel-stacks >= 2 auto-launches isolated stacks on 3100+; --parallel-stacks 1 requires a pre-running :3000 stack):
+proj-test insurance-agency inspect-baseline --scenario 01,03,07,14,19,20 --difficulty natural --parallel-stacks 2
 proj-test insurance-agency inspect-summary eval/results/v0.9/realistic-natural --clean-logs eval/results/v0.9/clean-natural --include-anchors --json-out eval/results/v0.9/summary-report.json --export-replay-manifest eval/results/v0.9/replay-manifest.json
 
 # Deterministic multi-turn DB-state suite (eval/deterministic/DT-01..DT-11):
@@ -46,13 +46,13 @@ SEED_MODE=clean docker compose up                # clean (no adversarial data)
 
 Fix everything the pilot surfaces in one pass, then run the production sweep once as-is. After any multi-batch sweep, verify every `.eval` header has `status == "success"` (`20/20` scenarios per arm) before writing `summary.md` and `replay-manifest.json`, because `run_baseline.py` skips `status == "error"` batches (e.g. transient Vertex MaaS `choices=None` responses) when printing its table.
 
-**Sweep cost, archival, and cleanup:** state the expected cost before launching, using `summarize_inspect.py` rates (calibrated against the billing export; at list price about $0.45 per trial for `gemini-3.8-flash`, $0.14–$0.20 for `gemini-4-hydrogen`, $0.11–$0.22 for `claude-sonnet-5-5`, $0.04–$0.07 for `DeepSeek-V4.1-Flash`, and $0.013 for `gpt-oss-120b`; `gemini-3.8-flash` gets a 50% credit). Never leave paid Inspect `.eval` logs solely in `/tmp/`: persist every completed run into `eval/results/<run>/` (`.eval` logs, `summary.md`, `summary-report.json`, and `replay-manifest.json` in git) and sync its gitignored `artifacts/` bundles to `gs://btvaroska/insurance-agency/results/<run>/artifacts/` before wrapping up. Check actual spend afterwards with `bq` against the billing export (it lags 3 to 5 hours). After cancelling or finishing a sweep, kill its stacks before relaunching (with `BypassSandbox: true`: `pgrep -f "[r]un-showcase.ts --strict"` and `pgrep -f "[i]nsurance-agency/services/.*/src/index.ts"`), because the runner attaches to any stack already listening on `3100+`.
+**Sweep cost, archival, and cleanup:** state the expected cost before launching, using `summarize_inspect.py` rates (calibrated against the billing export; at list price about $0.48 per trial for `gemini-3.8-flash`, $0.22–$0.26 for `gemini-4-hydrogen` on 20-workflow sweeps [$0.15 on `DT`], $0.15 for `claude-sonnet-5-5`, $0.04 for `DeepSeek-V4.1-Flash`, and $0.013 for `gpt-oss-120b`; `gemini-3.8-flash` gets a 50% credit). Never leave paid Inspect `.eval` logs solely in `/tmp/`: persist every completed run into `eval/results/<run>/` (`.eval` logs, `summary.md`, `summary-report.json`, and `replay-manifest.json` in git) and sync its gitignored `artifacts/` bundles to `gs://btvaroska/insurance-agency/results/<run>/artifacts/` before wrapping up. Check actual spend afterwards with `bq` against the billing export (it lags 3 to 5 hours). After cancelling or finishing a sweep, kill its stacks before relaunching (with `BypassSandbox: true`: `pgrep -f "[r]un-showcase.ts --strict"` and `pgrep -f "[i]nsurance-agency/services/.*/src/index.ts"`), because the runner attaches to any stack already listening on `3100+`.
 
 ## 2. Documentation & Planning Workflow
 
 | File | Purpose |
 | :--- | :--- |
-| [`README.md`](README.md) | Benchmark overview, framed as a first step in benchmarking agents on knowledge work: one worked task, 3-model strict results table, what makes it hard, the 20 workflows, scoring, harness adapters, comparison, and limitations (`0` `—`/`→`/`->`; expand `P&C`, `E&O`, `AMS`, `CRM`, `ECM`, `MCP`, `CSR`, `FNOL`, `COI` on first use) |
+| [`README.md`](README.md) | Benchmark overview, framed as a first step in benchmarking agents on knowledge work: one worked task, 4-arm strict results table, what makes it hard, the 20 workflows, scoring, harness adapters, comparison, and limitations (`0` `—`/`→`/`->`; expand `P&C`, `E&O`, `AMS`, `CRM`, `ECM`, `MCP`, `CSR`, `FNOL`, `COI` on first use) |
 | [`docs/README.md`](docs/README.md) | Docs index for everything outside the benchmark README, including the product narrative |
 | [`design/story.md`](design/story.md) | Executive narrative, 11-person agency capacity model, and Three Lines of Defense |
 | [`EXECUTIVE-BRIEF.md`](EXECUTIVE-BRIEF.md) | 2-page executive summary and KPI receipts |
