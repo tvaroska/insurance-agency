@@ -6,6 +6,8 @@ Black-box tests that prove a service does what its behaviour specification says.
 | :--- | :--- |
 | Behaviour specification, with numbered rules | `specs/<svc>.spec.md` |
 | OpenAPI file | `specs/<svc>.yaml` |
+| Public smoke contract (given to regenerators) | `specs/smoke/<svc>.smoke.yaml` |
+| Held-out validation fixtures (blind evaluation) | `data/validation/<svc>/*.json` |
 | Tests, each named after the rule it proves | `tests/conformance/<svc>/*.test.ts` |
 | Shared harness | `tests/conformance/harness/` |
 

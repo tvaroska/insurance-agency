@@ -1,0 +1,239 @@
+# Public smoke contract for the Claims service (:3007).
+# Given to regenerating agents alongside specs/claims.spec.md and specs/claims.yaml
+# to pin down wire envelopes and control-plane shapes without leaking the full
+# held-out conformance suite (tests/conformance/claims/).
+service: claims
+version: "1.0"
+steps:
+  - name: health_public
+    rule: CLM-R01
+    request:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers_present:
+        - X-Correlation-ID
+      json_match:
+        status: ok
+        service: claims
+
+  - name: oauth_token
+    rule: CLM-R02
+    request:
+      method: POST
+      path: /oauth/token
+      body:
+        grant_type: client_credentials
+        client_id: agent-full
+        client_secret: dev-secret
+    expect:
+      status: 200
+      json_match:
+        token_type: Bearer
+        expires_in: 3600
+    capture:
+      token: access_token
+
+  - name: seed_empty_with_adjuster
+    rule: CLM-R122
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          adjusters:
+            - adjuster_id: ADJ-SMOKE-1
+              first_name: Ada
+              last_name: Avery
+              email: ada@example.test
+              phone: null
+              specialty: auto
+              active: 1
+              max_open_claims: 5
+              created_at: "2026-01-01T00:00:00.000Z"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: claims
+        base: empty
+        inserted:
+          adjusters: 1
+
+  - name: sim_status_defaults
+    rule: CLM-R123
+    request:
+      method: GET
+      path: /sim/status
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: claims
+        clock_offset_ms: 0
+        modality_mode: permissive
+        chaos:
+          enabled: false
+          error_rate: 0
+          status_code: 503
+          latency_ms: 0
+
+  - name: auth_required_on_v1
+    rule: CLM-R03
+    request:
+      method: GET
+      path: /v1/claims
+    expect:
+      status: 401
+      headers_present:
+        - X-Correlation-ID
+      json_match:
+        error_code: AUTH_ERROR
+
+  - name: file_fnol_with_aliases
+    rule: CLM-R10, CLM-R11, CLM-R19, CLM-R21
+    request:
+      method: POST
+      path: /v1/claims/fnol
+      auth: "{{token}}"
+      body:
+        policy_id: POL-SMOKE-1
+        client_id: CLI-SMOKE-1
+        loss_type: auto_collision
+        loss_date: "2026-10-10"
+        description: Rear-ended at stoplight.
+        estimated_loss: 1200
+    expect:
+      status: 201
+      json_match:
+        policy_id: POL-SMOKE-1
+        client_id: CLI-SMOKE-1
+        claim_type: auto_collision
+        status: reported
+        reported_date: "2026-10-14"
+        reserve_amount: 1200
+        settlement_amount: null
+        adjuster_id: null
+    capture:
+      claim_id: claim_id
+
+  - name: assign_adjuster
+    rule: CLM-R53, CLM-R54
+    request:
+      method: POST
+      path: "/v1/claims/{{claim_id}}/assign"
+      auth: "{{token}}"
+      body:
+        adjuster_id: ADJ-SMOKE-1
+    expect:
+      status: 200
+      json_match:
+        claim_id: "{{claim_id}}"
+        adjuster_id: ADJ-SMOKE-1
+        status: assigned
+
+  - name: patch_claim_status_and_reserve
+    rule: CLM-R63, CLM-R64, CLM-R65
+    request:
+      method: PATCH
+      path: "/v1/claims/{{claim_id}}"
+      auth: "{{token}}"
+      body:
+        status: investigating
+        reserve_amount: 1800
+    expect:
+      status: 200
+      json_match:
+        claim_id: "{{claim_id}}"
+        status: investigating
+        reserve_amount: 1800
+
+  - name: timeline_records_all_events
+    rule: CLM-R70
+    request:
+      method: GET
+      path: "/v1/claims/{{claim_id}}/timeline"
+      auth: "{{token}}"
+    expect:
+      status: 200
+      array_length:
+        data: 5
+
+  - name: chaos_enable
+    rule: CLM-R124
+    request:
+      method: POST
+      path: /sim/chaos
+      body:
+        enabled: true
+        error_rate: 1
+        status_code: 502
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: claims
+        chaos:
+          enabled: true
+          error_rate: 1
+          status_code: 502
+          latency_ms: 0
+
+  - name: chaos_blocks_v1
+    rule: CLM-R124
+    request:
+      method: GET
+      path: /v1/claims
+      auth: "{{token}}"
+    expect:
+      status: 502
+      json_match:
+        error_code: SERVICE_UNAVAILABLE
+
+  - name: seed_resets_chaos_and_sets_reported_claim
+    rule: CLM-R122, CLM-R124
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          claims:
+            - claim_id: CLM-2026-000001
+              policy_id: POL-SMOKE-2
+              client_id: CLI-SMOKE-2
+              claim_type: fire
+              status: reported
+              loss_date: "2026-10-01"
+              reported_date: "2026-10-02"
+              loss_description: Smoke test claim.
+              loss_location: null
+              reserve_amount: null
+              settlement_amount: null
+              adjuster_id: null
+              notes: null
+              created_at: "2026-10-02T10:00:00.000Z"
+              updated_at: "2026-10-02T10:00:00.000Z"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: claims
+
+  - name: time_travel_advances_reported_claim
+    rule: CLM-R110
+    request:
+      method: POST
+      path: /sim/time-travel
+      body:
+        days: 3
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: claims
+        days_advanced: 3
+        transitions:
+          claims_advanced: 1

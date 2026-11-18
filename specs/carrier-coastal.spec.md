@@ -319,17 +319,17 @@ An `assessed` quote does not expire. `bound` is final.
 
 ## Simulated clock
 
-- **CST-R53** `POST /sim/time-travel` moves the shared simulated clock and then, for this service:
+- **CST-R53** `POST /sim/time-travel` (body `{ "days": <number> }` or `{ "target_date": <ISO date> }`; neither or invalid gives `400 VALIDATION_ERROR`) moves the shared simulated clock and then, for this service:
   - every quote with `status` `quoted` and a `valid_until` date earlier than the simulated date becomes `expired`
   - every policy with `status` `active` and an `expiration_date` earlier than the simulated date becomes `expired`, and its `updated_at` becomes the simulated time
 
-  The response's `transitions` is `{ "quotes_expired": <count>, "policies_expired": <count> }`. Dates equal to the simulated date do not expire.
+  It answers `200` with `{ "status": "ok", "service": "carrier-coastal", "simulated_time", "days_advanced", "transitions": { "quotes_expired": <count>, "policies_expired": <count> } }`. Dates equal to the simulated date do not expire.
 - **CST-R54** API operations follow the shared simulated clock (`getSimulatedNow()`, `nextSimulatedEpochMs()`, anchored at `2026-10-14T12:00:00.000Z` unless `SIMULATED_TODAY` overrides it): monotonic epoch-millisecond ids, `submitted_at`, `assessed_at`, `bound_at`, `issued_at` and the driver's age advance with `/sim/time-travel`. Portal session and bootstrap cookie lifetimes continue to use 3600s of wall-clock time. Reset and seed return the simulated clock to `2026-10-14T12:00:00.000Z` (`clock_offset_ms` = 0).
 
 ## Simulation control plane and request log
 
-- **CST-R55** The service mounts the shared control plane without authentication: `GET /sim/snapshot`, `POST /sim/reset`, `POST /sim/seed`, `POST /sim/time-travel`, `POST /sim/chaos`, `GET /sim/status`, `GET /sim/trace`.
-- **CST-R56** Chaos applies to `/v1/*` only: with `POST /sim/chaos` `{ "enabled": true, "error_rate": 1 }` every such request is answered with the configured status (default `503`) and `{ "error_code": "SERVICE_UNAVAILABLE", ... }` without running. `/health`, `/auth/*`, `/sim/*` and the UI are not affected. Reset and seed turn chaos off.
+- **CST-R55** The service mounts the shared control plane without authentication: `GET /sim/snapshot`, `POST /sim/reset`, `POST /sim/seed`, `POST /sim/time-travel`, `POST /sim/chaos`, `GET /sim/status` (`{ "status": "ok", "service": "carrier-coastal", "simulated_time", "clock_offset_ms", "chaos": { "enabled", "error_rate", "status_code", "latency_ms" }, "modality_mode" }`, where `modality_mode` is `MODALITY_MODE` or `"permissive"` by default), `GET /sim/trace`.
+- **CST-R56** Chaos applies to `/v1/*` only: `POST /sim/chaos` takes `{ "enabled" (boolean, required), "error_rate" (0 to 1), "status_code", "latency_ms" }` and answers `200` with `{ "status": "ok", "service": "carrier-coastal", "chaos": { "enabled", "error_rate", "status_code", "latency_ms" } }`. With `{ "enabled": true, "error_rate": 1 }` every `/v1/*` request is answered with the configured status (default `503`) and `{ "error_code": "SERVICE_UNAVAILABLE", ... }` without running. `/health`, `/auth/*`, `/sim/*` and the UI are not affected. Reset and seed turn chaos off.
 - **CST-R57** Request log. Every `/v1/*` request is recorded as a span and returned by `GET /sim/trace` in OTLP JSON form, under resource attribute `service.name` = `carrier-coastal`. A span's `url.full` and `server.port` use the canonical port 3006 whatever port the process listens on. Reset and seed clear the log.
 
 ## Runtime contract
