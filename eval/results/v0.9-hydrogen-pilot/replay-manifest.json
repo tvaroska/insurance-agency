@@ -1,0 +1,806 @@
+{
+  "benchmark": "evergreen_insurance_gym",
+  "total_trials": 40,
+  "trials": [
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "01-realistic-natural",
+      "scenario_id": "01",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.94,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-13-10-00-00_evergreen-langchain_USVo58aXSLshB7uVVigatj.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/01-realistic-natural-e1",
+      "sha256": {
+        "01-report.json": "65f7428623f2040b19083bb1d02847a49f68c78fb819586b20611bc1128f56f9",
+        "snapshot-after.json": "38f7d8f7450ca125aa61b235b0a9a0d826e0f7ca066e141e484d63c8464961ae",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "e827f6e44d28dfce961fb2ef831ddf06ebdeb0e304bfdf7eefef24f2a650172b"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.62,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-13-11-00-00_evergreen-langchain_kefWq8YvLVo3jNHZF6xCJj.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/02-realistic-natural-e1",
+      "sha256": {
+        "02-report.json": "caa595561c6a7c5d53cbc0c76f0bdbd0005a1d5738c59502ed0fa34986b60722",
+        "snapshot-after.json": "12bbc06727fe719fd080f671c639eb460bf25bef33c90bfa4c592975410ad1c6",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "5d9af340e602ac531ad03ac98165fc69eae669862820bcc4c2f484fee7c21227"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "03-realistic-natural",
+      "scenario_id": "03",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-13-11-00-00_evergreen-langchain_N2dNLNnQs5bSumNRjDJrjz.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/03-realistic-natural-e1",
+      "sha256": {
+        "03-report.json": "152c2bd0011515623ab0bbf1351f555784ac89b6d34aa3497a4033123656a883",
+        "snapshot-after.json": "02a990e8193be096d26ef6778a624769dbaa056d28ad8aa3a0fb5b2a061adb5f",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "099d57b17314da5639aeaa43cf8db1f98fc7edc66ccaa33c58bb501fa724f57c"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "04-realistic-natural",
+      "scenario_id": "04",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-13-11-00-00_evergreen-langchain_ejAysF3MGSPcZnyy9U8uZU.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/04-realistic-natural-e1",
+      "sha256": {
+        "04-report.json": "f421b5d90fd0e3978c8d77a0c82fe7e9cca43563ff8b134e4424235d90db81aa",
+        "snapshot-after.json": "abc941811e6388ed7a0a6416a374f05f230c9521e8bdf32b59b356f1c75ee4d3",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "f298705ed5d49be2eb5f05d1c2776fa635eeca6090cdceb62b1fadf7cfd17af9"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.6,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-13-11-00-00_evergreen-langchain_RsufuXGwaDPN4cBFHfSRAv.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/05-realistic-natural-e1",
+      "sha256": {
+        "05-report.json": "b75beb4699929467df6f22fe37c8b935016622e0df8d554a924dfbfe51f17160",
+        "snapshot-after.json": "8eb7b1742be54d0b648aa4f48a0f9fa54c780af19a30b66d70292cd030d041f5",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "3a35f77e29f023d2c0d472f2140dfb333b2d2d58de50ba47bb458b1925857d07"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "06-realistic-natural",
+      "scenario_id": "06",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.504,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-14-08-00-00_evergreen-langchain_CYZDC7hs2VSnhnTCqCfm8a.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/06-realistic-natural-e1",
+      "sha256": {
+        "06-report.json": "9b08aa7f17db54baac4b1ae116580b2f8ab1a8a564f708e2b2fe42564fec0362",
+        "snapshot-after.json": "cca818e44a251d06a348aef50fcfac55f5435315365c4c493949a6b5ad706e5b",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "82565813ac76c105ffa746a23a4acfed529bb043d32081c819872509262d9452"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "07-realistic-natural",
+      "scenario_id": "07",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.611,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-14-31-00-00_evergreen-langchain_AwqusEbeRoMj8RpspFwjJL.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/07-realistic-natural-e1",
+      "sha256": {
+        "07-report.json": "1073a2441251385681041b7ef9db1dccbb7f648674cac1f96801d0cc3f34f8ed",
+        "snapshot-after.json": "ea1b2781e65fb296ecdb7fe59f720785ba3803e841b414979b55d2431c6c6aae",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "56015b798be45a5f1f8ad42320c08df8736afc02652a46eaa7af926bd3d66707"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.8,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-14-54-00-00_evergreen-langchain_5uc8PhJpBgYAu4LM96YDRR.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/08-realistic-natural-e1",
+      "sha256": {
+        "08-report.json": "16f466de47a78eece77095e21269bf9208b1c585f90ee7c59c39bc65ded04e35",
+        "snapshot-after.json": "cbea465b971fdf653a37e149d79fe6d919d1cdc368b1420350e1039703099e6e",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "5ffca88bea04e284941a47839bea8d03d6f3f85f58f9380fde4403a9f27dbb94"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "09-moderate-natural",
+      "scenario_id": "09",
+      "seed": "moderate",
+      "epoch": 1,
+      "score": 0.94,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-15-02-00-00_evergreen-langchain_o4DrW9Hkkdceh3mwWTPvFZ.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/moderate-natural/09-moderate-natural-e1",
+      "sha256": {
+        "09-report.json": "39a088ab3b7bf912fdd2bc4705ec7eca764a90bbfcaba0432f66ab95339ba8d8",
+        "snapshot-after.json": "3d4b117c43098ac8676c48a97bb07f62d9b1d6c01bf4726fbf1c976659696adf",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "9552bf709a7ccea723f1ad34ce9da168ca622a669e779af56a1de509c494b8e8"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.929,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-16-05-00-00_evergreen-langchain_UaiVsGJjaVmMXg7gEnxTwm.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/10-realistic-natural-e1",
+      "sha256": {
+        "10-report.json": "42993f4846633d19e1822bdd2024118b98c60153019c19dd420ba894ca5678ac",
+        "snapshot-after.json": "4572c2cb418a351a145d4c1ab7043faa314a996204a6c079ae63c3057d1907d3",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "14c92fc843e48d3882e0b2dde47f117405ccaddf85d7d0fd6f91f27322b852ee"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "11-realistic-natural",
+      "scenario_id": "11",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.96,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-16-34-00-00_evergreen-langchain_nnEbWGECqyvULpApq7La2C.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/11-realistic-natural-e1",
+      "sha256": {
+        "11-report.json": "274a17f6cbfb233ca6410364e1c45d41e24128232420fd06180efb424eed06ac",
+        "snapshot-after.json": "873045a2a3cb16b48dacd013ee10e967dd11423590780c987667700d17dd90d4",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "177a98e2b61119600f3362d5893b978cbb6eb1a856e6e569804664258624519c"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "12-realistic-natural",
+      "scenario_id": "12",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.92,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-16-38-00-00_evergreen-langchain_8Fa5kKZagkJVM46sVfLgC4.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/12-realistic-natural-e1",
+      "sha256": {
+        "12-report.json": "0bc8a05470875ae71babfa5d97e78a264944df144a850c75446b10b44d1e7f0d",
+        "snapshot-after.json": "5238984bb451b081be5a70787191b8144d1c36428f4e1c9f134470f51a417278",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "0579ca824844e138cf3f3e2a8ee8ba43f696a7b5df00df3e4000646891b8b394"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.46,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-17-16-00-00_evergreen-langchain_AzvViUiHXsneukDaMx9pUA.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/13-realistic-natural-e1",
+      "sha256": {
+        "13-report.json": "0cea25fc7ee3939cf2e85b1927a4b910d5b5541f14a6250076309e0023c8e53a",
+        "snapshot-after.json": "449fa9ee84e883154c50d5e893d355ed6313fa8db0197ecb89e5694553ee2e44",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "46c6c1f39835ab78fd83de16556151043cb4880232c9692810be07a9079312f7"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.94,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-18-19-00-00_evergreen-langchain_6bhghaEVVD5iyW2mB4SNZm.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/14-realistic-natural-e1",
+      "sha256": {
+        "14-report.json": "3fc5f2d50da250949fefa26bd0f4f4286fbe810b43578a86bf931a9dfeebb3b2",
+        "snapshot-after.json": "d0f06236aad7a6c46d5175d362804dffaea54c98f280cd117de317609bd492aa",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "163730598e5f46c570086055b0ceb68f8d15ccf23fd3fe9eb179b0b2477fe0e0"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "15-realistic-natural",
+      "scenario_id": "15",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.8,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-19-03-00-00_evergreen-langchain_mRGmF4ieMsyqVc9JBv3NTA.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/15-realistic-natural-e1",
+      "sha256": {
+        "15-report.json": "7636bb97a08a3c38d1c0e6efa0cfd2e8f436f2a7bb74a7c036f2e8d074c0b633",
+        "snapshot-after.json": "1731704c7e0882d8cf50720e04fad57d1d33d0dfeecd05783a13d57daa307989",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "67fc1fe73d488e4e7313a71b9533d2ed9a73898f56065e0eeadd2fe27888bbaa"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "16-realistic-natural",
+      "scenario_id": "16",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.96,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-19-47-00-00_evergreen-langchain_DXuZxcte9EvJTU6RokNKQJ.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/16-realistic-natural-e1",
+      "sha256": {
+        "16-report.json": "27d9e9d892a595fd65f6120b2e3e8f88033b8f962efa73883da98a0cbebb83e8",
+        "snapshot-after.json": "24c5f1b149d8eb673ec04a6c0632d3087e1cc817d9bf57dc6d99fdd9e1a22c9d",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "aa378e01a627db5e05e565466257422b995d7e7cacd9945969b73e6f03a2ac54"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "17-realistic-natural",
+      "scenario_id": "17",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.88,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-20-11-00-00_evergreen-langchain_FyRx4CBLic3R9rmn9sqCq6.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/17-realistic-natural-e1",
+      "sha256": {
+        "17-report.json": "b17a6c8be9f82eab170ba0630a0fa582af0248685c332521db60e93a0786c002",
+        "snapshot-after.json": "dd1642bac0b932a902786810ad429f65b78a26a1ad897b74db43dd6cb4b3ec7f",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "c099396bbf587a008e05b6b40109fd2e89ee7aa1cd3c8003dafdf821fca90380"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "18-realistic-natural",
+      "scenario_id": "18",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-20-14-00-00_evergreen-langchain_chUk3unW87oW84B9ZG7JLE.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/18-realistic-natural-e1",
+      "sha256": {
+        "18-report.json": "45efbfa1d906c18007a391db96cc1d9a97f71dd8a723b82d6f61ebec2cf36180",
+        "snapshot-after.json": "141cb26804cbb087e7bb449416722e7f2f624bf509fe4119e55a8f0b4ff38599",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "26b689d34bb7c3baa60b8d4157ae335ee46dd548afa9e6fdc73e9b09787d2069"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "19-realistic-natural",
+      "scenario_id": "19",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-20-52-00-00_evergreen-langchain_2aY5Ntu3MZ4agy8tk9hDup.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/19-realistic-natural-e1",
+      "sha256": {
+        "19-report.json": "bc6459689160f38c7077cdf0731af5ec334056d7810bc74505da3e82e05c2667",
+        "snapshot-after.json": "93551a835b1ed8e7b84a06c50829d6c2a88c3b5d778ad4b565267be9a8603ec6",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "ecc8c4a4aad1391aa0786737451f7f8d57d745009b364f83e4cc5d793851179b"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "20-realistic-natural",
+      "scenario_id": "20",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen-domain_skill/2026-11-18T00-21-20-00-00_evergreen-langchain_9jF4mRM4yVRpD2R4aYLjbz.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen-domain_skill/realistic-natural/20-realistic-natural-e1",
+      "sha256": {
+        "20-report.json": "baee40347a98f51fa34033e3f4bbee4a8ef06e51eda5b4665bff15a4b12076cd",
+        "snapshot-after.json": "f1d463b3fbcea0da7e577ffa690cb2f04265bb10ff21dac8002a6e3380ea4684",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "204e750981b171a33e6881623e1f36b15cf435b90a2ae909729d948e57758294"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "01-realistic-natural",
+      "scenario_id": "01",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.68,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-43-17-00-00_evergreen-langchain_7h2LTtxQGXaKGetXRccRWX.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/01-realistic-natural-e1",
+      "sha256": {
+        "01-report.json": "47d4814a4ee2bb36464658648a4659ae27f2f3f297f30480a201fcf7077dd8ca",
+        "snapshot-after.json": "e916e4387926d52060cc20dcd2eeb46541c43655c678ceaea0a5000bfdccf155",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "84804088758c52da90be72ec47a6ed6667ecb4031c301ae03f0fd0a3eadc2e41"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.62,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-43-17-00-00_evergreen-langchain_8FpmPahRQZoWaxu5XYf3tx.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/02-realistic-natural-e1",
+      "sha256": {
+        "02-report.json": "2102675384003e48f3d0da492846850f3c919b682278ecfc462fdad34047a6a6",
+        "snapshot-after.json": "3a69fe3f99fe44387f7ef85e26f2d175f7235e1aab2d20736975ec1a047cefa8",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "a90a4831b68c7fced5d42050e2266884ed3bde79f8c94f7e281d3893af85f23c"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "03-realistic-natural",
+      "scenario_id": "03",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.92,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-43-17-00-00_evergreen-langchain_JtD6uPrA2SvdRJEVF6LLmV.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/03-realistic-natural-e1",
+      "sha256": {
+        "03-report.json": "43c2e63f0f40b78501c16e1f440fc65db2764fb8c81256cb0056d91002f7537f",
+        "snapshot-after.json": "c6987a264ccfeccd7f5dcde00a723ce5f123339d252c01b13b8936bb2db5040a",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "f83d4d047d8401bbf90593e0aeef9f9370dd7733a6f9120d62a2361da42b4441"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "04-realistic-natural",
+      "scenario_id": "04",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-43-17-00-00_evergreen-langchain_MGbEPxwQGqVDmfhvwQMYVN.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/04-realistic-natural-e1",
+      "sha256": {
+        "04-report.json": "4d24e14e6c7ed882bc2a1a91c7d2b2f46cc69eee60c211bdf8a4abea50eebdb8",
+        "snapshot-after.json": "b6026099ed61dcfe054984d8f22b92a5258790d2d1e7300f43ef6de56eaf5e7a",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "4e4d72d7954386eb047f857160befb04d1a6b2ae5cc0cfccde9d8d3600510a38"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.84,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-43-17-00-00_evergreen-langchain_5aXYxiuX4ngGo9NnZiHfSL.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/05-realistic-natural-e1",
+      "sha256": {
+        "05-report.json": "2a4172ff3bdd36cfe4c5e100f69024088904e86bfadf337c625e76ff3ade17d8",
+        "snapshot-after.json": "95e38cc17b2f768f4611502e29296b4747579a4be9084b3b4377b01070927c51",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "de6430872af41c985ae9cd12901c9b47d834b4552c7261230c7c695185bd5219"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "06-realistic-natural",
+      "scenario_id": "06",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.504,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-45-33-00-00_evergreen-langchain_BwpmU8EnmZmXdAy2TFyDap.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/06-realistic-natural-e1",
+      "sha256": {
+        "06-report.json": "1ab215849e59e0bc0917eaefb428a7161d510bc34369b9290bc1432fbf454f6e",
+        "snapshot-after.json": "aa84d2e823cf8878b7155e90ba4f708e6060e5e860e53a5d36c49e9445ff7978",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "a41e9251fe71b96edbf770cd8437654eb441970608d8409e5a77f583efe72670"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "07-realistic-natural",
+      "scenario_id": "07",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.611,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-45-34-00-00_evergreen-langchain_6rrTsQF4YNQUFJ64yYx2mJ.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/07-realistic-natural-e1",
+      "sha256": {
+        "07-report.json": "54a828219506696dc8540f95d9c1e3d83960d9f6e548b55dc43d06b3c7249316",
+        "snapshot-after.json": "20581ab5a53f0fc6164e55aa7247e7c1ccc09c7f8221876aeca83e11c67dd94e",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "d1b4d2175d75f6bf5ae811c3a8f8f7ab6f227b78111064b2515ae411bdb542cb"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.7,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-18T00-38-57-00-00_evergreen-langchain_QkjwcLeMNsuuKtv8T8LX8x.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/08-realistic-natural-e1",
+      "sha256": {
+        "08-report.json": "09675a1917517c4b27becf4508318ad23be120cd2173647e8f345322f418c638",
+        "snapshot-after.json": "3cfeb03e580227220addfa36df28c67a16fe963ed94c27a1b3edfa8c50e4ed90",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "8d89caec6803fcb9e51bf83f271f65f889a3bcb017d4b016d327d93038a4c7bd"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "09-moderate-natural",
+      "scenario_id": "09",
+      "seed": "moderate",
+      "epoch": 1,
+      "score": 0.34,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-47-00-00-00_evergreen-langchain_H4CfwzDMfWYJ4XR2qF8cR2.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/moderate-natural/09-moderate-natural-e1",
+      "sha256": {
+        "09-report.json": "cc5c2cd1241c6620510a577fb2a56f1ddd80c1967c61be6b7f5a84311b07f6c8",
+        "snapshot-after.json": "92b02b53d1c96ff4814e008ee5fa5fbaf8fbe7ca1c1c88a146a3a57dc6e9e243",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "9649de5cda2f333a59c3e824f724097922653a01370f8895b826a2421422b045"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.809,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-47-46-00-00_evergreen-langchain_TfkY7ES7hnkwwnSR5sr3Fn.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/10-realistic-natural-e1",
+      "sha256": {
+        "10-report.json": "a0c0383e15875d7363ae6c60f9705ff908f35167a39d6f47b69a26b0607d6c85",
+        "snapshot-after.json": "6e004c00dd80f6b2295a48574aebfc123b0b30b2e066e56fbb695e74d9306b36",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "2df9b096f97c4de80a7a9ea1a6c6f6f8884856db6fb9714f0e4cb77044c010e6"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "11-realistic-natural",
+      "scenario_id": "11",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.96,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-48-26-00-00_evergreen-langchain_C9pGyDMcfdJd9HxeNFh5xe.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/11-realistic-natural-e1",
+      "sha256": {
+        "11-report.json": "0e14252bbf874cace4ed42f461c0b6943dda8c20fe1ce3ff6f292370af780b01",
+        "snapshot-after.json": "d3ddbb13f09cfdb98c5e79ac7b228372272df62dbc9044814977499fb9fb0bdb",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "043500026b7f8611cd97de7b75c102b49ad0f7bd7fc3c78cea39ed2ad64147a5"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "12-realistic-natural",
+      "scenario_id": "12",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.92,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-48-43-00-00_evergreen-langchain_TJjgST3xJJ2MUTvrPh4HG3.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/12-realistic-natural-e1",
+      "sha256": {
+        "12-report.json": "d9693f71e9f0ce9809404663ca95ee8670a3b7a95825152bfb7d1cde52e095b0",
+        "snapshot-after.json": "b0cbe6b5b63022832dbccf9d25bf1ae21f70c65231dc5bef491bf2fef30cacc4",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "76666bbdf22a7082a1aa515c86550309c3f436490940a643857733590bcc4796"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.46,
+      "passed": false,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-49-09-00-00_evergreen-langchain_kCK2Nprg3V9T4e4DN95iKc.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/13-realistic-natural-e1",
+      "sha256": {
+        "13-report.json": "2cdf2c814dd65a75ce54287ce2be58da217b98a0c8f25dd4761834b281f3f807",
+        "snapshot-after.json": "369d88809725d669f2ac9394d8896f3ab69a7a2e02af1defaea518b3bae8a18f",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "f66aef0354cfd8fbeb6646543dd55211273781572fe452572ae889577239df87"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.86,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-51-18-00-00_evergreen-langchain_HhegAQRhKUhYY9SHqJnQTK.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/14-realistic-natural-e1",
+      "sha256": {
+        "14-report.json": "077b615c27f2eec15087d08120caadd62129ef731ef8345e4eadadb3cdeae08f",
+        "snapshot-after.json": "f6ea0f69639c614dab929899497bc478c328ac9bd6ecc44bcca5c4881ecfa74d",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "e1342318ee2f49e9d02d256a2a7a5b907621235280563127b0b04eecdc3634cf"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "15-realistic-natural",
+      "scenario_id": "15",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.8,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-51-22-00-00_evergreen-langchain_WaFjQB2RaStsbUvS7wdbhk.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/15-realistic-natural-e1",
+      "sha256": {
+        "15-report.json": "06a5c2b70e8e4609996aa015b797f0e105c1c22b5cefd0f7bee2f39362bf8aa2",
+        "snapshot-after.json": "b87637eea709f0a2ea81330eb279f384a57c92abe8ca4ed666fd87c3271b358c",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "f93a06d887ef0b95a66c44c44d07755fac8233f33d5e443499fe3388f978fa73"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "16-realistic-natural",
+      "scenario_id": "16",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.96,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-51-25-00-00_evergreen-langchain_6s7KK64uUvfMQqsBkJbhBs.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/16-realistic-natural-e1",
+      "sha256": {
+        "16-report.json": "8ed84e2c268cd4fc5635b7a7c8128ee5269ee428bd3b98a5a39cbe6d5e5db14a",
+        "snapshot-after.json": "74e6d71bcbff8e3907d0b99071a002297aa0c825546fd503969de84615e9f5a6",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "7e6922456db77e8e595a803696c7fd524646975f128cd566240e2ff988bfe783"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "17-realistic-natural",
+      "scenario_id": "17",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.88,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-52-47-00-00_evergreen-langchain_MA9ms2XV2SXabALvJZiG5L.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/17-realistic-natural-e1",
+      "sha256": {
+        "17-report.json": "884cd22f898cd51b6fee170549306cf575d64b2806929ba40194056e09203713",
+        "snapshot-after.json": "e2c591dcbe7a9e9fb5cf54dbf544372166c937ba2e1d290b064d3770ccd8366e",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "1040ba270465bc0197f803c188c7255219c057abdf6e28c273c26a07d28d1f47"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "18-realistic-natural",
+      "scenario_id": "18",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 0.96,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-52-50-00-00_evergreen-langchain_5DFFs7xBS9CMsEmtNou8mo.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/18-realistic-natural-e1",
+      "sha256": {
+        "18-report.json": "730babb41b532ff33ba82ee8b8c33fdf3bb85bc7bdc87100a1799730ed6119a4",
+        "snapshot-after.json": "8ce43b4c2b71fbb7c9b3ec16546d90ee37545bb9f1cfd3fbd1de3ed32a713972",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "e0de13a17a748d0952f3f55850124bbe146024c2487fe39f6f695ebf2a9c1434"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "19-realistic-natural",
+      "scenario_id": "19",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-53-11-00-00_evergreen-langchain_dDMnBHE6mMNhRkaFn9Kbhj.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/19-realistic-natural-e1",
+      "sha256": {
+        "19-report.json": "3cfe902886b0867a420047e6f4992d1d0280cb4e150f45842d22eff00dbc317b",
+        "snapshot-after.json": "09b12370d359a132b7b6acd5014fd4bc273157d6c686e640cbfdfb2d0ff28295",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "6f55ca7501f844b994fef74dfab3b94f55a1328c61043dffe4df05db800be56f"
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "harness": "Inspect + LangChain",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "20-realistic-natural",
+      "scenario_id": "20",
+      "seed": "realistic",
+      "epoch": 1,
+      "score": 1.0,
+      "passed": true,
+      "eo_compliant": true,
+      "eval_log": "eval/results/v0.9-hydrogen-pilot/realistic-natural/gemini-4-hydrogen/2026-11-17T23-54-41-00-00_evergreen-langchain_WFDCmoz5JtZ2ZPNXPYwpwM.eval",
+      "artifacts_dir": "eval/results/v0.9-hydrogen-pilot/artifacts/gemini-4-hydrogen/realistic-natural/20-realistic-natural-e1",
+      "sha256": {
+        "20-report.json": "28d9951eb4c49d967031f8638e39560cdb8af5863dac31822e82c8140fdeed4a",
+        "snapshot-after.json": "5f994901743ed20accf3fe9dac5e6bc8a2814c62b5234653ca5839de2de49069",
+        "snapshot-before.json": "d72ec486ea5de25c6bb1e9454d3d28863855f1b77e76cf3a76ba775d59387761",
+        "trace.json": "5a0e8d4c222f5aaf651bec26c06d6985e23a17110328f742a319963bf29a0447"
+      }
+    }
+  ]
+}

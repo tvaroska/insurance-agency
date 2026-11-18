@@ -352,12 +352,38 @@ def run_inspect_batch(
         "plain",
     ]
     port_tag = env.get("EVERGREEN_BASE_PORT", "3000")
-    print(
-        f"\n=== Running {model_id} | scenario={scenario} | seed={seed} | difficulty={difficulty} "
-        f"| learning={learning_mechanism} | epochs={epochs} | port={port_tag} ===",
-        flush=True,
-    )
-    subprocess.run(cmd, cwd=str(GYM_ROOT), env=env, check=True)
+    max_batch_attempts = 2
+    for attempt in range(1, max_batch_attempts + 1):
+        before_files = set(log_dir.glob("*.eval"))
+        print(
+            f"\n=== Running {model_id} | scenario={scenario} | seed={seed} | difficulty={difficulty} "
+            f"| learning={learning_mechanism} | epochs={epochs} | port={port_tag} (attempt {attempt}/{max_batch_attempts}) ===",
+            flush=True,
+        )
+        subprocess.run(cmd, cwd=str(GYM_ROOT), env=env, check=True)
+        new_files = sorted(set(log_dir.glob("*.eval")) - before_files)
+        bad_statuses: list[str] = []
+        norm_expected = ",".join(parse_scenarios_arg(scenario))
+        for nf in new_files:
+            hdr = read_eval_log(str(nf), header_only=True)
+            task_sc = str((hdr.eval.task_args or {}).get("scenario", ""))
+            if ",".join(parse_scenarios_arg(task_sc)) != norm_expected:
+                continue  # belongs to a sibling parallel worker sharing log_dir
+            if hdr.status != "success":
+                err_msg = str(getattr(hdr, "error", "") or "")[:240]
+                bad_statuses.append(f"{nf.name}: status={hdr.status} ({err_msg})")
+                nf.unlink(missing_ok=True)
+        if not bad_statuses:
+            return
+        if attempt == max_batch_attempts:
+            raise RuntimeError(
+                f"Inspect batch {model_id} scenario={scenario} seed={seed} failed after {max_batch_attempts} attempts: "
+                + "; ".join(bad_statuses)
+            )
+        print(
+            f"[retry] Transient non-success .eval log for {model_id} scenario={scenario} seed={seed}; retrying once...",
+            flush=True,
+        )
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -469,3 +469,47 @@ def test_archive_sample_artifacts_separates_learning_mechanism_arms(tmp_path: Pa
     assert zero.parts[-3] == "gemini-3.8-flash"
     assert skill.parts[-3] == "gemini-3.8-flash-domain_skill"
     assert zero != skill
+
+
+def test_transient_vertex_400_retries_only_opaque_internal_decode_errors():
+    from google.genai.errors import ClientError as GenAIClientError
+    from inspect_ai.model._providers.google import GoogleGenAIAPI
+
+    opaque_400 = GenAIClientError(
+        400,
+        {
+            "error": {
+                "code": 400,
+                "message": "Request contains an invalid argument.",
+                "status": "INVALID_ARGUMENT",
+                "details": [
+                    {
+                        "@type": "type.googleapis.com/google.rpc.DebugInfo",
+                        "detail": "Diagnostic details for this error are recorded internally and are not included in the response.",
+                    }
+                ],
+            }
+        },
+    )
+    wrapped_opaque = RuntimeError("Request:\n{}\n\nClientError")
+    wrapped_opaque.__cause__ = opaque_400
+
+    schema_400 = GenAIClientError(
+        400,
+        {
+            "error": {
+                "code": 400,
+                "message": "Function call is missing a thought_signature in functionCall parts.",
+                "status": "INVALID_ARGUMENT",
+            }
+        },
+    )
+    wrapped_schema = RuntimeError("Request:\n{}\n\nClientError")
+    wrapped_schema.__cause__ = schema_400
+
+    dummy_api = types.SimpleNamespace(_oauth=False)
+    dec_opaque = GoogleGenAIAPI.should_retry(dummy_api, wrapped_opaque)  # type: ignore[arg-type]
+    dec_schema = GoogleGenAIAPI.should_retry(dummy_api, wrapped_schema)  # type: ignore[arg-type]
+
+    assert getattr(dec_opaque, "retry", bool(dec_opaque)) is True
+    assert getattr(dec_schema, "retry", bool(dec_schema)) is False

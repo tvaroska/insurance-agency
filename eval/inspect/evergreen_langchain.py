@@ -49,6 +49,9 @@ from inspect_ai.model import (
     ModelOutput,
     messages_to_openai,
 )
+from inspect_ai.model._model import RetryDecision
+from inspect_ai.model._providers.google import GoogleGenAIAPI
+from google.genai.errors import ClientError as GenAIClientError
 from inspect_ai.scorer import Score, Scorer, Target, mean, scorer, stderr
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 from inspect_ai.tool import ToolChoice, ToolInfo
@@ -82,6 +85,34 @@ MODALITY_MODE_KEY = "evergreen_langchain:modality_mode"
 # put two agents on the one service stack. Kept per event loop because an
 # asyncio.Lock cannot be shared across the loops of successive eval() calls.
 _stack_lock_state: tuple[asyncio.AbstractEventLoop, asyncio.Lock] | None = None
+_vertex_400_retry_installed = False
+
+
+def is_transient_vertex_400(ex: BaseException) -> bool:
+    """True for Vertex's opaque internal-decode 400 ('Diagnostic details... recorded internally')."""
+    cause = ex.__cause__ if ex.__cause__ is not None else ex
+    if not isinstance(cause, GenAIClientError) or getattr(cause, "code", None) != 400:
+        return False
+    return "Diagnostic details for this error are recorded internally" in str(cause)
+
+
+def install_vertex_transient_400_retry() -> None:
+    """Retry opaque Vertex generation-time 400s in place while letting schema/signature 400s fail fast."""
+    global _vertex_400_retry_installed
+    if _vertex_400_retry_installed:
+        return
+    orig_should_retry = GoogleGenAIAPI.should_retry
+
+    def _patched_should_retry(self: GoogleGenAIAPI, ex: BaseException) -> bool | RetryDecision:
+        if is_transient_vertex_400(ex):
+            return RetryDecision.transient()
+        return orig_should_retry(self, ex)
+
+    GoogleGenAIAPI.should_retry = _patched_should_retry  # type: ignore[method-assign]
+    _vertex_400_retry_installed = True
+
+
+install_vertex_transient_400_retry()
 
 
 def _stack_lock():
@@ -577,7 +608,7 @@ def evergreen_langchain(
         cleanup=release_services,
         # Inspect's default sample concurrency follows max_connections, so this
         # runs one sample at a time on the shared service stack.
-        config=GenerateConfig(max_connections=1),
+        config=GenerateConfig(max_connections=1, max_retries=4),
         turn_limit=turn_limit,
         metadata={
             "benchmark": "evergreen_insurance_gym",

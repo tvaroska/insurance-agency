@@ -27,6 +27,7 @@ TASKS_JSON_PATH = EVAL_DIR / "metr" / "tasks.json"
 COMPOSE_PATH = str(GYM_ROOT / "docker-compose.yml")
 COMM_MCP_URL = "http://localhost:3004/mcp"
 RECOMMENDED_MODELS = [
+    "google/gemini-4-hydrogen",
     "google/gemini-3.8-flash",
     "anthropic/vertex/claude-sonnet-5-5",
     "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
