@@ -1,0 +1,209 @@
+# Public smoke contract for the Coastal Star Auto carrier portal (:3006).
+service: carrier-coastal
+version: "1.0"
+steps:
+  - name: health_public
+    rule: CST-R01
+    request:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers_present:
+        - X-Correlation-ID
+      json_match:
+        status: ok
+        service: carrier-coastal
+
+  - name: oauth_token
+    rule: CST-R02
+    request:
+      method: POST
+      path: /oauth/token
+      body:
+        grant_type: client_credentials
+        client_id: agent-full
+        client_secret: dev-secret
+    expect:
+      status: 200
+      json_match:
+        token_type: Bearer
+        expires_in: 3600
+    capture:
+      token: access_token
+
+  - name: seed_quote_for_assess_and_bind
+    rule: CST-R50
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          quotes:
+            - quote_id: QT-CSTL-SMOKE
+              request_id: QR-CSTL-SMOKE
+              client_id: CLI-SMOKE-1
+              policy_type: personal_auto
+              premium_annual: 1200
+              premium_monthly: 100
+              coverages: '[{"type":"bodily_injury","limit":"100/300"}]'
+              deductibles: '{"collision":500}'
+              status: assessed
+              valid_until: "2030-01-31"
+              submitted_at: "2026-10-01T09:00:00Z"
+              risk_score: 70
+              risk_tier: standard
+              risk_factors: '[{"factor":"driver_age","impact":"positive","detail":"Preferred age range"}]'
+              assessed_at: "2026-10-01T09:00:00Z"
+              bind_status: unbound
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: carrier-coastal
+        base: empty
+
+  - name: sim_status_defaults
+    rule: CST-R55
+    request:
+      method: GET
+      path: /sim/status
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: carrier-coastal
+        clock_offset_ms: 0
+        modality_mode: permissive
+        chaos:
+          enabled: false
+          error_rate: 0
+          status_code: 503
+          latency_ms: 0
+
+  - name: auth_required_on_v1
+    rule: CST-R03
+    request:
+      method: GET
+      path: /v1/coastal/quotes
+    expect:
+      status: 401
+      json_match:
+        error_code: AUTH_ERROR
+
+  - name: risk_assessment
+    rule: CST-R21
+    request:
+      method: GET
+      path: /v1/coastal/quotes/QT-CSTL-SMOKE/risk-assessment
+      auth: "{{token}}"
+    expect:
+      status: 200
+      json_match:
+        quote_id: QT-CSTL-SMOKE
+
+  - name: bind_assessed_quote
+    rule: CST-R39
+    request:
+      method: POST
+      path: /v1/coastal/quotes/QT-CSTL-SMOKE/bind
+      auth: "{{token}}"
+      body:
+        effective_date: "2026-11-01"
+        payment_plan: monthly
+    expect:
+      status: 200
+      json_match:
+        quote_id: QT-CSTL-SMOKE
+        bind_status: bound
+
+  - name: chaos_enable
+    rule: CST-R56
+    request:
+      method: POST
+      path: /sim/chaos
+      body:
+        enabled: true
+        error_rate: 1
+        status_code: 502
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: carrier-coastal
+        chaos:
+          enabled: true
+          error_rate: 1
+          status_code: 502
+          latency_ms: 0
+
+  - name: chaos_blocks_v1
+    rule: CST-R56
+    request:
+      method: GET
+      path: /v1/coastal/quotes
+      auth: "{{token}}"
+    expect:
+      status: 502
+      json_match:
+        error_code: SERVICE_UNAVAILABLE
+
+  - name: seed_expiring_quote_and_policy
+    rule: CST-R50
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          quotes:
+            - quote_id: QT-CSTL-EXP
+              request_id: QR-CSTL-EXP
+              client_id: CLI-SMOKE-1
+              policy_type: personal_auto
+              premium_annual: 1200
+              premium_monthly: 100
+              coverages: '[{"type":"bodily_injury","limit":"100/300"}]'
+              deductibles: '{"collision":500}'
+              status: quoted
+              valid_until: "2026-10-15"
+              submitted_at: "2026-10-01T09:00:00Z"
+              risk_score: null
+              risk_tier: null
+              risk_factors: null
+              assessed_at: null
+              bind_status: unbound
+          policies:
+            - policy_id: POL-CSTL-EXP
+              client_id: CLI-SMOKE-1
+              policy_type: personal_auto
+              effective_date: "2025-10-15"
+              expiration_date: "2026-10-15"
+              premium_current: 1200
+              status: active
+              coverages: '[{"type":"bodily_injury","limit":"100/300"}]'
+              created_at: "2025-10-15T00:00:00Z"
+              updated_at: "2025-10-15T00:00:00Z"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: carrier-coastal
+
+  - name: time_travel_expires_quote_and_policy
+    rule: CST-R53
+    request:
+      method: POST
+      path: /sim/time-travel
+      body:
+        days: 3
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: carrier-coastal
+        days_advanced: 3
+        transitions:
+          quotes_expired: 1
+          policies_expired: 1

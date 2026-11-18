@@ -1,0 +1,242 @@
+# Public smoke contract for the Rater service (:3001).
+service: rater
+version: "1.0"
+steps:
+  - name: health_public
+    rule: RTR-R01
+    request:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers_present:
+        - X-Correlation-ID
+      json_match:
+        status: ok
+        service: rater
+
+  - name: oauth_token
+    rule: RTR-R02
+    request:
+      method: POST
+      path: /oauth/token
+      body:
+        grant_type: client_credentials
+        client_id: agent-full
+        client_secret: dev-secret
+    expect:
+      status: 200
+      json_match:
+        token_type: Bearer
+        expires_in: 3600
+    capture:
+      token: access_token
+
+  - name: seed_carrier
+    rule: RTR-R122
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          carriers:
+            - carrier_code: ERIE
+              carrier_name: Erie Mutual
+              states: '["TX","IL"]'
+              policy_types: '["personal_auto","homeowners"]'
+              risk_categories: '["preferred","standard"]'
+              appetite_level: high
+              min_driver_age: 16
+              max_vehicles: 4
+              accepts_sr22: false
+              surplus_lines_only: false
+              sr22_available: false
+              citizens_eligible: false
+              state_restrictions: "[]"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: rater
+        base: empty
+
+  - name: sim_status_defaults
+    rule: RTR-R123
+    request:
+      method: GET
+      path: /sim/status
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: rater
+        clock_offset_ms: 0
+        modality_mode: permissive
+        chaos:
+          enabled: false
+          error_rate: 0
+          status_code: 503
+          latency_ms: 0
+
+  - name: auth_required_on_v1
+    rule: RTR-R03
+    request:
+      method: GET
+      path: /v1/quotes
+    expect:
+      status: 401
+      json_match:
+        error_code: AUTH_ERROR
+
+  - name: submit_quote_request
+    rule: RTR-R20, RTR-R22, RTR-R24
+    request:
+      method: POST
+      path: /v1/quotes/request
+      auth: "{{token}}"
+      body:
+        policy_type: homeowners
+        effective_date: "2026-11-01"
+        client:
+          first_name: Sarah
+          last_name: Chen
+          address:
+            street: 100 Main St
+            city: Austin
+            state: TX
+            zip: "78701"
+        property:
+          year_built: 2010
+          square_feet: 2200
+        requested_coverages:
+          - type: dwelling
+            limit: "350000"
+    expect:
+      status: 202
+      json_match:
+        status: completed
+        carriers_queried: 1
+    capture:
+      request_id: request_id
+
+  - name: fetch_quote_results
+    rule: RTR-R31
+    request:
+      method: GET
+      path: "/v1/quotes/{{request_id}}/results"
+      auth: "{{token}}"
+    expect:
+      status: 200
+      json_match:
+        request_id: "{{request_id}}"
+        status: completed
+      array_length:
+        carriers: 1
+    capture:
+      quote_id: carriers.0.quote_id
+
+  - name: bind_quote
+    rule: RTR-R45
+    request:
+      method: POST
+      path: "/v1/quotes/{{quote_id}}/bind"
+      auth: "{{token}}"
+      body:
+        payment_method: eft
+        effective_date: "2026-11-01"
+        producer_id: PROD-1
+        insured_signature_collected: true
+        insured_signature_date: "2026-10-14"
+    expect:
+      status: 201
+      json_match:
+        quote_id: "{{quote_id}}"
+        bind_status: bound
+
+  - name: chaos_enable
+    rule: RTR-R124
+    request:
+      method: POST
+      path: /sim/chaos
+      body:
+        enabled: true
+        error_rate: 1
+        status_code: 502
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: rater
+        chaos:
+          enabled: true
+          error_rate: 1
+          status_code: 502
+          latency_ms: 0
+
+  - name: chaos_blocks_v1
+    rule: RTR-R124
+    request:
+      method: GET
+      path: /v1/quotes
+      auth: "{{token}}"
+    expect:
+      status: 502
+      json_match:
+        error_code: SERVICE_UNAVAILABLE
+
+  - name: seed_expiring_quote_and_time_travel
+    rule: RTR-R122
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          quote_requests:
+            - request_id: QR-SMOKE-1
+              client_id: CLI-001
+              policy_type: homeowners
+              effective_date: "2026-11-01"
+              status: completed
+              submitted_at: "2026-10-01T10:00:00.000Z"
+              completed_at: "2026-10-01T10:00:00.000Z"
+              expires_at: "2026-10-15T00:00:00.000Z"
+              risk_data: "{}"
+              created_at: "2026-10-01T10:00:00.000Z"
+          carrier_quotes:
+            - quote_id: QT-SMOKE-1
+              request_id: QR-SMOKE-1
+              carrier_code: ERIE
+              carrier_name: Erie Mutual
+              status: quoted
+              premium_annual: 1500
+              premium_monthly: 125
+              coverages: "[]"
+              deductibles: "{}"
+              decline_reason: null
+              valid_until: "2026-10-15T00:00:00.000Z"
+              bound_at: null
+              created_at: "2026-10-01T10:00:00.000Z"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: rater
+
+  - name: time_travel_expires_quotes
+    rule: RTR-R110
+    request:
+      method: POST
+      path: /sim/time-travel
+      body:
+        days: 3
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: rater
+        days_advanced: 3
+        transitions:
+          quote_requests_expired: 1
+          carrier_quotes_expired: 1

@@ -1,0 +1,87 @@
+{
+  "description": "Held-out Coastal validation fixture: unassessed quote bind refusal, already-bound conflict, and strict date expiry boundary.",
+  "tables": {
+    "quotes": [
+      {
+        "quote_id": "QT-CSTL-VAL-RAW",
+        "request_id": "QR-CSTL-VAL-1",
+        "client_id": "CLI-VAL-1",
+        "policy_type": "personal_auto",
+        "premium_annual": 1100,
+        "premium_monthly": 91.67,
+        "coverages": "[{\"type\": \"bodily_injury\", \"limit\": \"100/300\"}]",
+        "deductibles": "{\"collision\": 500}",
+        "status": "quoted",
+        "valid_until": "2026-10-16",
+        "submitted_at": "2026-10-01T09:00:00Z",
+        "risk_score": null,
+        "risk_tier": null,
+        "risk_factors": null,
+        "assessed_at": null,
+        "bind_status": "unbound"
+      },
+      {
+        "quote_id": "QT-CSTL-VAL-EQ",
+        "request_id": "QR-CSTL-VAL-2",
+        "client_id": "CLI-VAL-2",
+        "policy_type": "personal_auto",
+        "premium_annual": 1200,
+        "premium_monthly": 100,
+        "coverages": "[{\"type\": \"bodily_injury\", \"limit\": \"100/300\"}]",
+        "deductibles": "{\"collision\": 500}",
+        "status": "quoted",
+        "valid_until": "2026-10-17",
+        "submitted_at": "2026-10-01T09:00:00Z",
+        "risk_score": null,
+        "risk_tier": null,
+        "risk_factors": null,
+        "assessed_at": null,
+        "bind_status": "unbound"
+      },
+      {
+        "quote_id": "QT-CSTL-VAL-BOUND",
+        "request_id": "QR-CSTL-VAL-3",
+        "client_id": "CLI-VAL-3",
+        "policy_type": "personal_auto",
+        "premium_annual": 1300,
+        "premium_monthly": 108.33,
+        "coverages": "[{\"type\": \"bodily_injury\", \"limit\": \"100/300\"}]",
+        "deductibles": "{\"collision\": 500}",
+        "status": "bound",
+        "valid_until": "2030-01-31",
+        "submitted_at": "2026-10-01T09:00:00Z",
+        "risk_score": 72,
+        "risk_tier": "standard",
+        "risk_factors": "[]",
+        "assessed_at": "2026-10-01T09:00:00Z",
+        "bind_status": "bound"
+      }
+    ],
+    "policies": [
+      {
+        "policy_id": "POL-CSTL-VAL-EXP",
+        "client_id": "CLI-VAL-1",
+        "policy_type": "personal_auto",
+        "effective_date": "2025-10-16",
+        "expiration_date": "2026-10-16",
+        "premium_current": 1100,
+        "status": "active",
+        "coverages": "[{\"type\": \"bodily_injury\", \"limit\": \"100/300\"}]",
+        "created_at": "2025-10-16T00:00:00Z",
+        "updated_at": "2025-10-16T00:00:00Z"
+      },
+      {
+        "policy_id": "POL-CSTL-VAL-EQ",
+        "client_id": "CLI-VAL-2",
+        "policy_type": "personal_auto",
+        "effective_date": "2025-10-17",
+        "expiration_date": "2026-10-17",
+        "premium_current": 1200,
+        "status": "active",
+        "coverages": "[{\"type\": \"bodily_injury\", \"limit\": \"100/300\"}]",
+        "created_at": "2025-10-17T00:00:00Z",
+        "updated_at": "2025-10-17T00:00:00Z"
+      }
+    ]
+  }
+}

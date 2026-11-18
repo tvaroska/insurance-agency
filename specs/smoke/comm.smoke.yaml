@@ -1,0 +1,207 @@
+# Public smoke contract for the Comm Hub service (:3004, REST + MCP).
+service: comm
+version: "1.0"
+steps:
+  - name: health_public
+    rule: COMM-R4
+    request:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers_present:
+        - X-Correlation-ID
+      json_match:
+        status: ok
+        service: comm
+
+  - name: oauth_token
+    rule: COMM-R5
+    request:
+      method: POST
+      path: /oauth/token
+      body:
+        grant_type: client_credentials
+        client_id: agent-full
+        client_secret: dev-secret
+    expect:
+      status: 200
+      json_match:
+        token_type: Bearer
+        expires_in: 3600
+    capture:
+      token: access_token
+
+  - name: seed_message
+    rule: COMM-R43
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          messages:
+            - message_id: MSG-SMOKE-1
+              client_id: CLI-SMOKE-1
+              direction: inbound
+              channel: email
+              subject: Policy question
+              body: Please confirm coverage.
+              from_addr: alice@example.test
+              to_addr: service@evergreen-ins.com
+              timestamp: "2026-10-10T10:00:00.000Z"
+              read: false
+              call_id: null
+              duration_seconds: null
+              transcript: null
+              sentiment: null
+              topics: "[]"
+              status: delivered
+              template_id: null
+              attachments: "[]"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: comm
+        base: empty
+
+  - name: sim_status_defaults
+    rule: COMM-R48
+    request:
+      method: GET
+      path: /sim/status
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: comm
+        clock_offset_ms: 0
+        modality_mode: permissive
+        chaos:
+          enabled: false
+          error_rate: 0
+          status_code: 503
+          latency_ms: 0
+
+  - name: auth_required_on_v1
+    rule: COMM-R6
+    request:
+      method: GET
+      path: /v1/messages/inbox
+    expect:
+      status: 401
+      json_match:
+        error_code: AUTH_ERROR
+
+  - name: list_inbox_rest
+    rule: COMM-R20
+    request:
+      method: GET
+      path: /v1/messages/inbox
+      auth: "{{token}}"
+    expect:
+      status: 200
+      array_length:
+        data: 1
+
+  - name: mcp_tools_call_get_inbox
+    rule: COMM-R12
+    request:
+      method: POST
+      path: /mcp
+      auth: "{{token}}"
+      headers:
+        Accept: application/json, text/event-stream
+      body:
+        jsonrpc: "2.0"
+        id: 1
+        method: tools/call
+        params:
+          name: get_inbox
+          arguments:
+            client_id: CLI-SMOKE-1
+    expect:
+      status: 200
+      text_contains:
+        - MSG-SMOKE-1
+
+  - name: chaos_enable
+    rule: COMM-R49
+    request:
+      method: POST
+      path: /sim/chaos
+      body:
+        enabled: true
+        error_rate: 1
+        status_code: 502
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: comm
+        chaos:
+          enabled: true
+          error_rate: 1
+          status_code: 502
+          latency_ms: 0
+
+  - name: chaos_blocks_v1
+    rule: COMM-R49
+    request:
+      method: GET
+      path: /v1/messages/inbox
+      auth: "{{token}}"
+    expect:
+      status: 502
+      json_match:
+        error_code: SERVICE_UNAVAILABLE
+
+  - name: seed_pending_webhook_delivery
+    rule: COMM-R43
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          webhooks:
+            - webhook_id: whk_smoke_1
+              url: https://hooks.example.test/smoke
+              events: '["message.received"]'
+              secret: whsec_0123456789abcdef0123456789abcdef
+              active: true
+              created_at: "2026-10-01T00:00:00.000Z"
+          webhook_deliveries:
+            - delivery_id: del_smoke_1
+              webhook_id: whk_smoke_1
+              event_id: evt_smoke_1
+              event_type: message.received
+              payload: "{}"
+              status: pending
+              attempts: 1
+              last_attempt_at: "2026-10-14T10:00:00.000Z"
+              next_retry_at: "2026-10-15T00:00:00.000Z"
+              response_status: null
+              created_at: "2026-10-14T10:00:00.000Z"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: comm
+
+  - name: time_travel_expires_pending_delivery
+    rule: COMM-R46
+    request:
+      method: POST
+      path: /sim/time-travel
+      body:
+        days: 3
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: comm
+        days_advanced: 3
+        transitions:
+          webhook_deliveries_expired: 1

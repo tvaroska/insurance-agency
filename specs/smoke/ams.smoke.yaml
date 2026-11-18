@@ -1,0 +1,248 @@
+# Public smoke contract for the AMS service (:3000).
+service: ams
+version: "1.0"
+steps:
+  - name: health_public
+    rule: AMS-R11
+    request:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers_present:
+        - X-Correlation-ID
+      json_match:
+        status: ok
+        service: ams
+
+  - name: oauth_token
+    rule: AMS-R12
+    request:
+      method: POST
+      path: /oauth/token
+      body:
+        grant_type: client_credentials
+        client_id: agent-full
+        client_secret: dev-secret
+    expect:
+      status: 200
+      json_match:
+        token_type: Bearer
+        expires_in: 3600
+    capture:
+      token: access_token
+
+  - name: seed_empty
+    rule: AMS-R122
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables: {}
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: ams
+        base: empty
+
+  - name: sim_status_defaults
+    rule: AMS-R123
+    request:
+      method: GET
+      path: /sim/status
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: ams
+        clock_offset_ms: 0
+        modality_mode: permissive
+        chaos:
+          enabled: false
+          error_rate: 0
+          status_code: 503
+          latency_ms: 0
+
+  - name: auth_required_on_v1
+    rule: AMS-R13
+    request:
+      method: GET
+      path: /v1/clients
+    expect:
+      status: 401
+      json_match:
+        error_code: AUTH_ERROR
+
+  - name: create_client
+    rule: AMS-R33
+    request:
+      method: POST
+      path: /v1/clients
+      auth: "{{token}}"
+      body:
+        first_name: Alice
+        last_name: Smoke
+        email: alice.smoke@example.test
+        address:
+          street: 10 Oak Ave
+          city: Austin
+          state: TX
+          zip: "78701"
+    expect:
+      status: 201
+      json_match:
+        first_name: Alice
+        last_name: Smoke
+    capture:
+      client_id: id
+
+  - name: create_policy
+    rule: AMS-R45
+    request:
+      method: POST
+      path: /v1/policies
+      auth: "{{token}}"
+      body:
+        client_id: "{{client_id}}"
+        carrier_code: SMIT
+        policy_type: homeowners
+        effective_date: "2026-10-14"
+        expiration_date: "2027-10-14"
+        annual_premium: 1800
+        coverages:
+          - type: dwelling
+            limit: "350000"
+    expect:
+      status: 201
+      json_match:
+        client_id: "{{client_id}}"
+        status: pending
+
+  - name: firewall_blocks_backdated_policy
+    rule: AMS-R92
+    request:
+      method: POST
+      path: /v1/policies
+      auth: "{{token}}"
+      body:
+        client_id: "{{client_id}}"
+        carrier_code: SMIT
+        policy_type: homeowners
+        effective_date: "2026-10-13"
+        expiration_date: "2027-10-13"
+        annual_premium: 1800
+        coverages:
+          - type: dwelling
+            limit: "350000"
+    expect:
+      status: 422
+      json_match:
+        error_code: E_EO_BACKDATING_PROHIBITED
+
+  - name: chaos_enable
+    rule: AMS-R124
+    request:
+      method: POST
+      path: /sim/chaos
+      body:
+        enabled: true
+        error_rate: 1
+        status_code: 502
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: ams
+        chaos:
+          enabled: true
+          error_rate: 1
+          status_code: 502
+          latency_ms: 0
+
+  - name: chaos_blocks_v1
+    rule: AMS-R124
+    request:
+      method: GET
+      path: /v1/clients
+      auth: "{{token}}"
+    expect:
+      status: 502
+      json_match:
+        error_code: SERVICE_UNAVAILABLE
+
+  - name: seed_expiring_policy_and_pending_endorsement
+    rule: AMS-R122
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          clients:
+            - id: CL-SMOKE-TT
+              first_name: Alice
+              last_name: Smoke
+              dob: null
+              email: alice@example.test
+              phone: null
+              address_street: null
+              address_city: null
+              address_state: TX
+              address_zip: null
+              driver_license_number: null
+              occupation: null
+              marital_status: null
+              household_id: null
+              preferred_contact_method: null
+              preferred_contact_time: null
+              status: active
+              created_at: "2026-01-01T00:00:00.000Z"
+              updated_at: "2026-01-01T00:00:00.000Z"
+          policies:
+            - policy_id: POL-SMOKE-TT
+              client_id: CL-SMOKE-TT
+              carrier_code: SMIT
+              policy_type: homeowners
+              effective_date: "2025-10-15"
+              expiration_date: "2026-10-15"
+              premium_current: 1200
+              premium_prior: null
+              status: active
+              multi_policy_discount: false
+              created_at: "2025-10-15T00:00:00.000Z"
+              updated_at: "2025-10-15T00:00:00.000Z"
+          endorsements:
+            - endorsement_id: END-2026-000001
+              policy_id: POL-SMOKE-TT
+              effective_date: "2026-10-15"
+              change_type: add_vehicle
+              changes: "{}"
+              premium_delta: 100
+              status: pending_review
+              notes: null
+              created_at: "2026-10-01T00:00:00.000Z"
+              updated_at: "2026-10-01T00:00:00.000Z"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: ams
+
+  - name: time_travel_transitions
+    rule: AMS-R98
+    request:
+      method: POST
+      path: /sim/time-travel
+      body:
+        days: 3
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: ams
+        days_advanced: 3
+        transitions:
+          policies_expired: 1
+          endorsements_applied: 1

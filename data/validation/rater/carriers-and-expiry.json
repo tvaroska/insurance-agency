@@ -1,0 +1,110 @@
+{
+  "description": "Held-out Rater validation fixture: multi-state carrier appetite matrix, expired/bound quote bind conflicts, and time-travel expiry.",
+  "tables": {
+    "carriers": [
+      {
+        "carrier_code": "VAL-TX-HOME",
+        "carrier_name": "Texas Home Mutual",
+        "states": "[\"TX\"]",
+        "policy_types": "[\"homeowners\"]",
+        "risk_categories": "[\"preferred\", \"standard\"]",
+        "appetite_level": "high",
+        "min_driver_age": 16,
+        "max_vehicles": 4,
+        "accepts_sr22": false,
+        "surplus_lines_only": false,
+        "sr22_available": false,
+        "citizens_eligible": false,
+        "state_restrictions": "[]"
+      },
+      {
+        "carrier_code": "VAL-ALL-AUTO",
+        "carrier_name": "National Auto Co",
+        "states": "[\"TX\", \"CA\", \"NY\"]",
+        "policy_types": "[\"personal_auto\", \"homeowners\"]",
+        "risk_categories": "[\"preferred\", \"standard\"]",
+        "appetite_level": "medium",
+        "min_driver_age": 18,
+        "max_vehicles": 5,
+        "accepts_sr22": true,
+        "surplus_lines_only": false,
+        "sr22_available": true,
+        "citizens_eligible": false,
+        "state_restrictions": "[]"
+      }
+    ],
+    "quote_requests": [
+      {
+        "request_id": "QR-VAL-1",
+        "client_id": "CLI-VAL-1",
+        "policy_type": "homeowners",
+        "effective_date": "2026-11-01",
+        "status": "completed",
+        "submitted_at": "2026-10-01T10:00:00.000Z",
+        "completed_at": "2026-10-01T10:00:00.000Z",
+        "expires_at": "2026-10-16T00:00:00.000Z",
+        "risk_data": "{}",
+        "created_at": "2026-10-01T10:00:00.000Z"
+      },
+      {
+        "request_id": "QR-VAL-2",
+        "client_id": "CLI-VAL-2",
+        "policy_type": "personal_auto",
+        "effective_date": "2026-11-01",
+        "status": "completed",
+        "submitted_at": "2026-10-01T10:00:00.000Z",
+        "completed_at": "2026-10-01T10:00:00.000Z",
+        "expires_at": "2026-12-01T00:00:00.000Z",
+        "risk_data": "{}",
+        "created_at": "2026-10-01T10:00:00.000Z"
+      }
+    ],
+    "carrier_quotes": [
+      {
+        "quote_id": "QT-VAL-EXP-SOON",
+        "request_id": "QR-VAL-1",
+        "carrier_code": "VAL-TX-HOME",
+        "carrier_name": "Texas Home Mutual",
+        "status": "quoted",
+        "premium_annual": 1500,
+        "premium_monthly": 125,
+        "coverages": "[]",
+        "deductibles": "{}",
+        "decline_reason": null,
+        "valid_until": "2026-10-16T00:00:00.000Z",
+        "bound_at": null,
+        "created_at": "2026-10-01T10:00:00.000Z"
+      },
+      {
+        "quote_id": "QT-VAL-ALREADY-BOUND",
+        "request_id": "QR-VAL-2",
+        "carrier_code": "VAL-ALL-AUTO",
+        "carrier_name": "National Auto Co",
+        "status": "bound",
+        "premium_annual": 1800,
+        "premium_monthly": 150,
+        "coverages": "[]",
+        "deductibles": "{}",
+        "decline_reason": null,
+        "valid_until": "2026-12-01T00:00:00.000Z",
+        "bound_at": "2026-10-10T10:00:00.000Z",
+        "created_at": "2026-10-01T10:00:00.000Z"
+      },
+      {
+        "quote_id": "QT-VAL-EXPIRED",
+        "request_id": "QR-VAL-2",
+        "carrier_code": "VAL-TX-HOME",
+        "carrier_name": "Texas Home Mutual",
+        "status": "quoted",
+        "premium_annual": 1900,
+        "premium_monthly": 158.33,
+        "coverages": "[]",
+        "deductibles": "{}",
+        "decline_reason": null,
+        "valid_until": "2026-10-01T00:00:00.000Z",
+        "bound_at": null,
+        "created_at": "2026-09-01T10:00:00.000Z"
+      }
+    ]
+  }
+}

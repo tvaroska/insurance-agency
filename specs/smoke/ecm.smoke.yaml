@@ -1,0 +1,214 @@
+# Public smoke contract for the ECM service (:3003).
+service: ecm
+version: "1.0"
+steps:
+  - name: health_public
+    rule: ECM-R01
+    request:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers_present:
+        - X-Correlation-ID
+      json_match:
+        status: ok
+        service: ecm
+
+  - name: oauth_token
+    rule: ECM-R02
+    request:
+      method: POST
+      path: /oauth/token
+      body:
+        grant_type: client_credentials
+        client_id: agent-full
+        client_secret: dev-secret
+    expect:
+      status: 200
+      json_match:
+        token_type: Bearer
+        expires_in: 3600
+    capture:
+      token: access_token
+
+  - name: seed_document_and_asset
+    rule: ECM-R122
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          documents:
+            - document_id: DOC-SMOKE-1
+              client_id: CLI-SMOKE-1
+              document_type: signed_application
+              filename: app.pdf
+              mime_type: application/pdf
+              file_size_bytes: 1024
+              status: signed
+              upload_date: "2026-10-01T10:00:00.000Z"
+              signer_name: Cora Smoke
+              signer_email: cora@example.test
+              signed_date: "2026-10-01T11:00:00.000Z"
+              expiration_date: null
+              tags: '["auto"]'
+          marketing_assets:
+            - asset_id: AST-SMOKE-1
+              name: Welcome Kit
+              description: Smoke asset.
+              category: welcome_kit
+              mime_type: application/pdf
+              url: https://cdn.example.test/welcome.pdf
+              version: "1.0"
+              published_date: "2026-01-01T00:00:00Z"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: ecm
+        base: empty
+
+  - name: sim_status_defaults
+    rule: ECM-R123
+    request:
+      method: GET
+      path: /sim/status
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: ecm
+        clock_offset_ms: 0
+        modality_mode: permissive
+        chaos:
+          enabled: false
+          error_rate: 0
+          status_code: 503
+          latency_ms: 0
+
+  - name: auth_required_on_v1
+    rule: ECM-R03
+    request:
+      method: GET
+      path: /v1/documents
+    expect:
+      status: 401
+      json_match:
+        error_code: AUTH_ERROR
+
+  - name: list_documents
+    rule: ECM-R10
+    request:
+      method: GET
+      path: /v1/documents
+      auth: "{{token}}"
+    expect:
+      status: 200
+      array_length:
+        data: 1
+
+  - name: list_assets
+    rule: ECM-R50
+    request:
+      method: GET
+      path: /v1/assets/marketing
+      auth: "{{token}}"
+    expect:
+      status: 200
+      array_length:
+        data: 1
+
+  - name: create_envelope
+    rule: ECM-R44
+    request:
+      method: POST
+      path: /v1/envelopes/create
+      auth: "{{token}}"
+      body:
+        client_id: CLI-SMOKE-1
+        document_ids:
+          - DOC-SMOKE-1
+        signers:
+          - name: Cora Smoke
+            email: cora@example.test
+            role: policyholder
+        message: Please sign.
+    expect:
+      status: 201
+      json_match:
+        client_id: CLI-SMOKE-1
+        status: created
+
+  - name: chaos_enable
+    rule: ECM-R124
+    request:
+      method: POST
+      path: /sim/chaos
+      body:
+        enabled: true
+        error_rate: 1
+        status_code: 502
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: ecm
+        chaos:
+          enabled: true
+          error_rate: 1
+          status_code: 502
+          latency_ms: 0
+
+  - name: chaos_blocks_v1
+    rule: ECM-R124
+    request:
+      method: GET
+      path: /v1/documents
+      auth: "{{token}}"
+    expect:
+      status: 502
+      json_match:
+        error_code: SERVICE_UNAVAILABLE
+
+  - name: seed_expiring_envelope
+    rule: ECM-R122
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          envelopes:
+            - envelope_id: ENV-SMOKE-1
+              client_id: CLI-SMOKE-1
+              document_ids: '["DOC-SMOKE-1"]'
+              signers: '[{"name":"Cora","email":"cora@example.test","role":"policyholder","status":"pending","signed_at":null}]'
+              status: sent
+              message: Sign soon.
+              redirect_url: null
+              created_at: "2026-10-01T10:00:00.000Z"
+              completed_at: null
+              expiration_date: "2026-10-15T00:00:00.000Z"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: ecm
+
+  - name: time_travel_expires_envelope
+    rule: ECM-R110
+    request:
+      method: POST
+      path: /sim/time-travel
+      body:
+        days: 3
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: ecm
+        days_advanced: 3
+        transitions:
+          envelopes_expired: 1

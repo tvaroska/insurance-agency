@@ -1,0 +1,182 @@
+# Public smoke contract for the CRM service (:3002).
+service: crm
+version: "1.0"
+steps:
+  - name: health_public
+    rule: CRM-R01
+    request:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers_present:
+        - X-Correlation-ID
+      json_match:
+        status: ok
+        service: crm
+
+  - name: oauth_token
+    rule: CRM-R02
+    request:
+      method: POST
+      path: /oauth/token
+      body:
+        grant_type: client_credentials
+        client_id: agent-full
+        client_secret: dev-secret
+    expect:
+      status: 200
+      json_match:
+        token_type: Bearer
+        expires_in: 3600
+    capture:
+      token: access_token
+
+  - name: seed_campaign
+    rule: CRM-R122
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          campaigns:
+            - campaign_id: camp_smoke
+              name: Smoke Nurture
+              type: nurture
+              status: active
+              enrolled_count: 0
+              conversion_rate: 0.2
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: crm
+        base: empty
+
+  - name: sim_status_defaults
+    rule: CRM-R123
+    request:
+      method: GET
+      path: /sim/status
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: crm
+        clock_offset_ms: 0
+        modality_mode: permissive
+        chaos:
+          enabled: false
+          error_rate: 0
+          status_code: 503
+          latency_ms: 0
+
+  - name: auth_required_on_v1
+    rule: CRM-R03
+    request:
+      method: GET
+      path: /v1/leads
+    expect:
+      status: 401
+      json_match:
+        error_code: AUTH_ERROR
+
+  - name: create_lead
+    rule: CRM-R30
+    request:
+      method: POST
+      path: /v1/leads
+      auth: "{{token}}"
+      body:
+        client_id: CLI-SMOKE-1
+        first_name: Lena
+        last_name: Smoke
+        email: lena.smoke@example.test
+        source: web
+        tags:
+          - auto
+    expect:
+      status: 201
+      json_match:
+        client_id: CLI-SMOKE-1
+        status: new
+    capture:
+      lead_id: lead_id
+
+  - name: update_lead
+    rule: CRM-R40
+    request:
+      method: PATCH
+      path: "/v1/leads/{{lead_id}}"
+      auth: "{{token}}"
+      body:
+        status: qualified
+        score: 85
+    expect:
+      status: 200
+      json_match:
+        lead_id: "{{lead_id}}"
+        status: qualified
+        score: 85
+
+  - name: enroll_lead_in_campaign
+    rule: CRM-R50, CRM-R51
+    request:
+      method: POST
+      path: "/v1/leads/{{lead_id}}/enroll"
+      auth: "{{token}}"
+      body:
+        campaign_id: camp_smoke
+    expect:
+      status: 201
+      json_match:
+        campaign_id: camp_smoke
+        client_id: CLI-SMOKE-1
+
+  - name: time_travel_advances_enrollment
+    rule: CRM-R110
+    request:
+      method: POST
+      path: /sim/time-travel
+      body:
+        days: 14
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: crm
+        days_advanced: 14
+        transitions:
+          campaign_enrollments_advanced: 1
+
+  - name: chaos_enable
+    rule: CRM-R124
+    request:
+      method: POST
+      path: /sim/chaos
+      body:
+        enabled: true
+        error_rate: 1
+        status_code: 502
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: crm
+        chaos:
+          enabled: true
+          error_rate: 1
+          status_code: 502
+          latency_ms: 0
+
+  - name: chaos_blocks_v1
+    rule: CRM-R124
+    request:
+      method: GET
+      path: /v1/leads
+      auth: "{{token}}"
+    expect:
+      status: 502
+      json_match:
+        error_code: SERVICE_UNAVAILABLE

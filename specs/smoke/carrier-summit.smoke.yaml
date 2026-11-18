@@ -1,0 +1,206 @@
+# Public smoke contract for the Summit Fire & Casualty carrier portal (:3005).
+service: carrier-summit
+version: "1.0"
+steps:
+  - name: health_public
+    rule: SMT-R01
+    request:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers_present:
+        - X-Correlation-ID
+      json_match:
+        status: ok
+        service: carrier-summit
+
+  - name: oauth_token
+    rule: SMT-R02
+    request:
+      method: POST
+      path: /oauth/token
+      body:
+        grant_type: client_credentials
+        client_id: agent-full
+        client_secret: dev-secret
+    expect:
+      status: 200
+      json_match:
+        token_type: Bearer
+        expires_in: 3600
+    capture:
+      token: access_token
+
+  - name: seed_empty
+    rule: SMT-R43
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables: {}
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: carrier-summit
+        base: empty
+
+  - name: sim_status_defaults
+    rule: SMT-R48
+    request:
+      method: GET
+      path: /sim/status
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: carrier-summit
+        clock_offset_ms: 0
+        modality_mode: permissive
+        chaos:
+          enabled: false
+          error_rate: 0
+          status_code: 503
+          latency_ms: 0
+
+  - name: auth_required_on_v1
+    rule: SMT-R03
+    request:
+      method: GET
+      path: /v1/summit/quotes
+    expect:
+      status: 401
+      json_match:
+        error_code: AUTH_ERROR
+
+  - name: submit_property_quote
+    rule: SMT-R20
+    request:
+      method: POST
+      path: /v1/summit/submissions
+      auth: "{{token}}"
+      body:
+        client_id: CLI-SMOKE-1
+        policy_type: homeowners
+        property_address:
+          street: 1 Aspen St
+          city: Denver
+          state: CO
+          zip: "80202"
+        property_details:
+          year_built: 1996
+          square_feet: 2400
+          construction_type: frame
+          roof_type: metal
+        coverages:
+          - type: dwelling
+            limit: 350000
+    expect:
+      status: 201
+      json_match:
+        client_id: CLI-SMOKE-1
+        policy_type: homeowners
+    capture:
+      quote_id: quote_id
+
+  - name: fetch_quote
+    rule: SMT-R15
+    request:
+      method: GET
+      path: "/v1/summit/quotes/{{quote_id}}"
+      auth: "{{token}}"
+    expect:
+      status: 200
+      json_match:
+        quote_id: "{{quote_id}}"
+        client_id: CLI-SMOKE-1
+
+  - name: chaos_enable
+    rule: SMT-R49
+    request:
+      method: POST
+      path: /sim/chaos
+      body:
+        enabled: true
+        error_rate: 1
+        status_code: 502
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: carrier-summit
+        chaos:
+          enabled: true
+          error_rate: 1
+          status_code: 502
+          latency_ms: 0
+
+  - name: chaos_blocks_v1
+    rule: SMT-R49
+    request:
+      method: GET
+      path: /v1/summit/quotes
+      auth: "{{token}}"
+    expect:
+      status: 502
+      json_match:
+        error_code: SERVICE_UNAVAILABLE
+
+  - name: seed_expiring_quote_and_policy
+    rule: SMT-R43
+    request:
+      method: POST
+      path: /sim/seed
+      body:
+        base: empty
+        tables:
+          quotes:
+            - quote_id: QT-SMIT-SMOKE
+              request_id: QR-SMIT-SMOKE
+              client_id: CLI-SMOKE-1
+              policy_type: homeowners
+              premium_annual: 1400
+              premium_monthly: 116.67
+              coverages: '[{"type":"dwelling","limit":300000}]'
+              deductibles: '{"all_perils":1000}'
+              status: quoted
+              decline_reason: null
+              valid_until: "2026-10-15"
+              submitted_at: "2026-10-01T09:00:00Z"
+              underwriting_status: pending_review
+              underwriting_notes: null
+          policies:
+            - policy_id: POL-SMIT-SMOKE
+              client_id: CLI-SMOKE-1
+              policy_type: homeowners
+              effective_date: "2025-10-15"
+              expiration_date: "2026-10-15"
+              premium_current: 1500
+              status: active
+              coverages: '[{"type":"dwelling","limit":"300000","deductible":1000}]'
+              created_at: "2025-10-15T00:00:00Z"
+              updated_at: "2025-10-15T00:00:00Z"
+    expect:
+      status: 200
+      json_match:
+        status: seeded
+        service: carrier-summit
+
+  - name: time_travel_expires_quote_and_policy
+    rule: SMT-R46
+    request:
+      method: POST
+      path: /sim/time-travel
+      body:
+        days: 3
+    expect:
+      status: 200
+      json_match:
+        status: ok
+        service: carrier-summit
+        days_advanced: 3
+        transitions:
+          quotes_expired: 1
+          policies_expired: 1
