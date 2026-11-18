@@ -129,7 +129,7 @@ export function webhookRow(overrides: Record<string, unknown> = {}): Record<stri
     webhook_id: `whk_seed_${seq}`,
     url: "https://hooks.example.com/evergreen",
     events: JSON.stringify(["message.delivered"]),
-    secret: "whsec_seedsecretseedsecretseedsecret12",
+    secret: "whsec_seed_test",
     active: true,
     created_at: "2026-01-01T00:00:00.000Z",
     ...overrides,

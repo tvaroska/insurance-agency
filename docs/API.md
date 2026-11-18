@@ -637,7 +637,7 @@ Subscribe to or unsubscribe from real-time communication events.
   "webhook_id": "whk_a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
   "url": "http://localhost:3002/hooks/evergreen",
   "events": ["message.received", "message.delivered", "message.failed", "call.completed", "call.missed"],
-  "secret": "whsec_k7m9p2r4t6v8x0z1b3d5f7h9j1l3n5q",
+  "secret": "whsec_doc_example_123",
   "active": true,
   "created_at": "2026-02-18T10:15:30Z"
 }

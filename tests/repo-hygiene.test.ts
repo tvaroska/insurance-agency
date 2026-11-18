@@ -148,4 +148,36 @@ describe("Repository Hygiene & Governance Spine (ADR-005 & ADR-006)", () => {
     }
     expect(staleClaims).toEqual([]);
   });
+
+  test("secret-scanning hygiene: .github/secret_scanning.yml exists and tracked files avoid 24+ char whsec_ literals", () => {
+    expect(existsSync(join(ROOT, ".github", "secret_scanning.yml"))).toBe(true);
+
+    const stripeWebhookLike = new RegExp(`\\b${"whsec"}_[A-Za-z0-9+/=_]{24,}\\b`);
+    const jsonFiles: string[] = [];
+    for (const sub of ["data", "specs", "tests", "services", "packages", "docs"]) {
+      const base = join(ROOT, sub);
+      if (!existsSync(base)) continue;
+      const walkJson = (dir: string) => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          if (SKIP_DIRS.has(entry.name) || entry.name === ".venv" || entry.name === "artifacts") continue;
+          const p = join(dir, entry.name);
+          if (entry.isDirectory()) walkJson(p);
+          else if (entry.isFile() && entry.name.endsWith(".json")) jsonFiles.push(p);
+        }
+      };
+      walkJson(base);
+    }
+
+    const hits: string[] = [];
+    for (const filePath of [...repoFiles, ...jsonFiles]) {
+      const rel = relative(ROOT, filePath);
+      if (rel === "tests/repo-hygiene.test.ts") continue;
+      const content = readFileSync(filePath, "utf-8");
+      const m = stripeWebhookLike.exec(content);
+      if (m) {
+        hits.push(`${rel}: contains secret-scanner-triggering literal "${m[0]}"`);
+      }
+    }
+    expect(hits).toEqual([]);
+  });
 });
