@@ -126,11 +126,11 @@ describe("error envelope", () => {
   });
 
   for (const path of ["/v1/envelopes/create", "/v1/coi", "/v1/coi/generate", "/v1/documents/coi", "/v1/documents/coi/generate"]) {
-    test(`ECM-R07: POST ${path} answers 500 INTERNAL_ERROR to a body that is not JSON`, async () => {
+    test(`ECM-R07: POST ${path} answers 400 VALIDATION_ERROR to a body that is not JSON`, async () => {
       const { result, diff } = await ctx.svc.changes(() =>
         ctx.api.post(path, "{not json", { headers: { "Content-Type": "application/json" } }),
       );
-      expectError(result, 500, "INTERNAL_ERROR");
+      expectError(result, 400, "VALIDATION_ERROR");
       expect(diff).toEqual({});
     });
   }
