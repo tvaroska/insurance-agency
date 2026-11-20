@@ -853,7 +853,7 @@ describe("POST /v1/claims/fnol - normalization and optional fields", () => {
     expect(body.loss_description).toBe("Catalytic converter stolen.");
   });
 
-  test("persists estimated_loss as reserve_amount and an active adjuster_id while staying reported", async () => {
+  test("persists estimated_loss as reserve_amount and assigns an active adjuster_id immediately", async () => {
     const res = await postFnol({
       policy_id: "POL-PA-2025-001847",
       client_id: "CLI-001",
@@ -865,7 +865,7 @@ describe("POST /v1/claims/fnol - normalization and optional fields", () => {
     });
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.status).toBe("reported");
+    expect(body.status).toBe("assigned");
     expect(body.reserve_amount).toBe(4200);
     expect(body.adjuster_id).toBe("ADJ-001");
     const stored = await testPrisma.claim.findUnique({ where: { claim_id: body.claim_id } });

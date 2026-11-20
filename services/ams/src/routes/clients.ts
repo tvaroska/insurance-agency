@@ -177,6 +177,9 @@ clientsRouter.patch("/:id", requireScopes("ams:clients:write"), async (c) => {
 
   // Validate provided fields
   throwIfErrors([
+    body.first_name === null ? { field: "first_name", message: "first_name cannot be null.", code: "required" } : null,
+    body.last_name === null ? { field: "last_name", message: "last_name cannot be null.", code: "required" } : null,
+    body.email === null ? { field: "email", message: "email cannot be null.", code: "required" } : null,
     body.first_name !== undefined ? checkMaxLength("first_name", body.first_name, 100) : null,
     body.last_name !== undefined ? checkMaxLength("last_name", body.last_name, 100) : null,
     body.email !== undefined ? checkMaxLength("email", body.email, 255) : null,

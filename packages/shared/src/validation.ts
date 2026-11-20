@@ -65,6 +65,9 @@ export function checkMaxLength(
   max: number,
 ): FieldError | null {
   if (value == null) return null;
+  if (typeof value !== "string") {
+    return { field, message: `${field} must be a string.`, code: "invalid_format" };
+  }
   if (value.length > max) {
     return {
       field,

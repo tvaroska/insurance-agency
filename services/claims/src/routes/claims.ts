@@ -190,17 +190,33 @@ async function createFnolClaim(rawBody: Record<string, unknown>) {
         },
       ]);
     }
+    const openCount = await prisma.claim.count({
+      where: {
+        adjuster_id: adjusterId,
+        status: { notIn: ["settled", "denied"] },
+      },
+    });
+    if (openCount >= adjuster.max_open_claims) {
+      throw validationError([
+        {
+          field: "adjuster_id",
+          message: `Adjuster ${adjusterId} is at maximum open claims capacity (${adjuster.max_open_claims}).`,
+          code: "out_of_range",
+        },
+      ]);
+    }
   }
 
   const now = getSimulatedNow().toISOString();
   const claim_id = await generateClaimId();
+  const initialStatus = adjusterId ? "assigned" : "reported";
 
   const newClaim = {
     claim_id,
     policy_id: body.policy_id as string,
     client_id: body.client_id as string,
     claim_type: body.claim_type as string,
-    status: "reported",
+    status: initialStatus,
     loss_date: body.loss_date as string,
     reported_date: today,
     loss_description: body.loss_description as string,
@@ -219,10 +235,20 @@ async function createFnolClaim(rawBody: Record<string, unknown>) {
   await addTimelineEvent({
     claim_id,
     event_type: "status_change",
-    description: "Claim filed — status set to reported.",
+    description: `Claim filed — status set to ${initialStatus}.`,
     old_value: null,
-    new_value: "reported",
+    new_value: initialStatus,
   });
+
+  if (adjusterId) {
+    await addTimelineEvent({
+      claim_id,
+      event_type: "assignment",
+      description: `Assigned to adjuster ${adjusterId} on FNOL intake.`,
+      old_value: null,
+      new_value: adjusterId,
+    });
+  }
 
   return newClaim;
 }

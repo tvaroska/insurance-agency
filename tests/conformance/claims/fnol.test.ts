@@ -222,12 +222,12 @@ for (const path of PATHS) {
       expectError(res, 400, "VALIDATION_ERROR", { field: "loss_date", code: "out_of_range" });
     });
 
-    test("CLM-R18, CLM-R19: an active adjuster_id is stored (trimmed) but the claim stays reported", async () => {
+    test("CLM-R18, CLM-R19: an active adjuster_id is stored (trimmed), assigns immediately, and writes an assignment event", async () => {
       const { result: res, diff } = await ctx.svc.changes(() => ctx.api.post(path, fnolBody({ adjuster_id: " ADJ-A " })));
       expect(res.status).toBe(201);
       contract.check(res);
-      expect(res.body).toMatchObject({ adjuster_id: "ADJ-A", status: "reported" });
-      expect(diff.claim_timeline.added.map((e) => e.event_type)).toEqual(["status_change"]);
+      expect(res.body).toMatchObject({ adjuster_id: "ADJ-A", status: "assigned" });
+      expect(diff.claim_timeline.added.map((e) => e.event_type).sort()).toEqual(["assignment", "status_change"]);
     });
 
     test("CLM-R18: a blank or non-string adjuster_id is ignored", async () => {
@@ -238,16 +238,16 @@ for (const path of PATHS) {
       }
     });
 
-    test("CLM-R18: intake does not check the adjuster's capacity", async () => {
+    test("CLM-R18: intake checks the adjuster's open-claims capacity", async () => {
       await ctx.svc.seed({
         tables: {
           adjusters: [adjuster({ max_open_claims: 1 })],
           claims: [claim({ adjuster_id: "ADJ-A", status: "assigned" })],
         },
       });
-      const res = await ctx.api.post(path, fnolBody({ adjuster_id: "ADJ-A" }));
-      expect(res.status).toBe(201);
-      expect(res.body.adjuster_id).toBe("ADJ-A");
+      const { result: res, diff } = await ctx.svc.changes(() => ctx.api.post(path, fnolBody({ adjuster_id: "ADJ-A" })));
+      expectError(res, 400, "VALIDATION_ERROR", { field: "adjuster_id", code: "out_of_range" });
+      expect(diff).toEqual({});
     });
 
     test("CLM-R20: claim ids are CLM-<current year>-<six digit sequence>, starting at 000001", async () => {
@@ -307,9 +307,5 @@ for (const path of PATHS) {
 
 test.todo(
   "CLM-G02: specs/claims.behavior.yaml names the length error code max_length; the service sends too_long (CLM-R15)",
-  () => {},
-);
-test.todo(
-  "CLM-G04: specs/claims.yaml says adjuster_id is used to 'assign immediately'; the service keeps status reported and writes no assignment event (CLM-R19)",
   () => {},
 );

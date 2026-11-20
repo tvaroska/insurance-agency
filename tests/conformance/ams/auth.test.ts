@@ -331,6 +331,29 @@ describe("error envelope", () => {
     expect(res.body.surprise).toBeUndefined();
     expect(res.body.created_at).not.toBe("2000-01-01");
   });
+  test("AMS-G19: a wrong JSON type in a body (first_name: 5, first_name: null on update, a numeric coverage limit) is a 400, not a 500", async () => {
+    expectError(
+      await ctx.api.post("/v1/clients", { first_name: 5, last_name: "Doe", email: "x@example.com" }),
+      400,
+      "VALIDATION_ERROR",
+    );
+    expectError(
+      await ctx.api.patch("/v1/clients/CLI-A", { first_name: null }),
+      400,
+      "VALIDATION_ERROR",
+    );
+    expectError(
+      await ctx.api.post("/v1/policies", {
+        client_id: "CLI-A",
+        policy_type: "homeowners",
+        carrier_code: "SMIT",
+        effective_date: "2026-11-01",
+        expiration_date: "2027-11-01",
+        annual_premium: 1200,
+        coverages: [{ type: "dwelling", limit: 100000, deductible: 1000 }],
+      }),
+      400,
+      "VALIDATION_ERROR",
+    );
+  });
 });
-
-test.todo("AMS-G19: a wrong JSON type in a body (first_name: 5, first_name: null on update, a numeric coverage limit) is a 400, not a 500", () => {});

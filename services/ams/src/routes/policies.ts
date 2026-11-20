@@ -142,6 +142,11 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
         { field: `coverages[${i}].type`, message: "Each coverage must have a type.", code: "required" },
       ]);
     }
+    if (cov.limit !== undefined && cov.limit !== null && typeof cov.limit !== "string") {
+      throw validationError([
+        { field: `coverages[${i}].limit`, message: "Coverage limit must be a string.", code: "invalid_format" },
+      ]);
+    }
   }
 
   // Verify client exists
