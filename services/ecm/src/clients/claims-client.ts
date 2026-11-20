@@ -1,4 +1,5 @@
-import { getInternalRequestHeaders } from "@evergreen/shared";
+import { HTTPException } from "hono/http-exception";
+import { createErrorResponse, getInternalRequestHeaders, notFoundError } from "@evergreen/shared";
 
 function getClaimsBaseUrl(): string {
   return (
@@ -34,8 +35,18 @@ export async function fetchClaim(claimId: string, authToken: string): Promise<Cl
   const res = await fetch(`${getClaimsBaseUrl()}/v1/claims/${claimId}`, {
     headers: { Authorization: authToken, ...getInternalRequestHeaders() },
   });
+  if (res.status === 404) {
+    throw notFoundError("claim");
+  }
   if (!res.ok) {
-    throw Object.assign(new Error(`Claims lookup failed`), { status: res.status });
+    const body = createErrorResponse("INTERNAL_ERROR", `Claims lookup failed (${res.status}).`);
+    throw new HTTPException(502, {
+      message: body.message,
+      res: new Response(JSON.stringify(body), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      }),
+    });
   }
   return res.json();
 }

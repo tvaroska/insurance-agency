@@ -222,18 +222,17 @@ describe("REST send", () => {
     contract.check(res, { allow: ERROR_ENVELOPE_GAP });
   });
 
-  test("COMM-R42: a body that is not JSON is 500 INTERNAL_ERROR", async () => {
+  test("COMM-R42: a body that is not JSON is 400 VALIDATION_ERROR", async () => {
     const { result: res, diff } = await ctx.svc.changes(() =>
       ctx.api.post("/v1/messages/send", "{not json", { headers: { "Content-Type": "application/json" } }),
     );
-    expect(res.status).toBe(500);
-    expect(res.body.error_code).toBe("INTERNAL_ERROR");
+    expect(res.status).toBe(400);
+    expect(res.body.error_code).toBe("VALIDATION_ERROR");
     expect(typeof res.body.correlation_id).toBe("string");
     expect(diff).toEqual({});
   });
 
   test.todo("Known gap 9: POST /messages/send answers the documented 202 (the service answers 201)", () => {});
-  test.todo("Known gap 8: malformed JSON on a POST route is 400 (the service answers 500)", () => {});
 });
 
 describe("reply simulator", () => {

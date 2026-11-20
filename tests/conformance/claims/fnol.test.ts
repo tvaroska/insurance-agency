@@ -153,10 +153,9 @@ for (const path of PATHS) {
       }
     });
 
-    test("CLM-R14: a well-formed loss_date is stored as sent, without a calendar check", async () => {
+    test("CLM-R14: an invalid calendar loss_date like 2024-02-31 is rejected", async () => {
       const res = await ctx.api.post(path, fnolBody({ loss_date: "2024-02-31" }));
-      expect(res.status).toBe(201);
-      expect(res.body.loss_date).toBe("2024-02-31");
+      expectError(res, 400, "VALIDATION_ERROR", { field: "loss_date", code: "invalid_format" });
     });
 
     test("CLM-R15: loss_description over 5000 and loss_location over 500 characters are too long", async () => {
@@ -308,10 +307,6 @@ for (const path of PATHS) {
 
 test.todo(
   "CLM-G02: specs/claims.behavior.yaml names the length error code max_length; the service sends too_long (CLM-R15)",
-  () => {},
-);
-test.todo(
-  "CLM-G03: a stored loss_date such as 2024-02-31 breaks `format: date` of Claim.loss_date in specs/claims.yaml (CLM-R14)",
   () => {},
 );
 test.todo(

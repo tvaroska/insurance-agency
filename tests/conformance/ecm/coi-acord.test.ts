@@ -298,14 +298,14 @@ describe("policy lookup in AMS", () => {
     }
   });
 
-  test("ECM-R82: when AMS answers with an error the service answers 500 INTERNAL_ERROR and writes nothing", async () => {
+  test("ECM-R82: when AMS answers with an error the service answers 502 and writes nothing", async () => {
     for (const failing of ["/v1/clients", "/v1/clients/{id}/policies"]) {
       serveAms(ctx.ams, [amsClient()], [amsPolicy()]);
       ctx.ams.on("GET", failing, { status: 503, body: {} });
       const { result, diff } = await ctx.svc.changes(() => ctx.api.post("/v1/coi", coiBody()));
-      expectError(result, 500, "INTERNAL_ERROR");
+      expectError(result, 502, "INTERNAL_ERROR");
       expect(diff).toEqual({});
-      expectError(await ctx.api.get("/v1/documents/acord/90", { query: { policy_id: "POL-9" } }), 500, "INTERNAL_ERROR");
+      expectError(await ctx.api.get("/v1/documents/acord/90", { query: { policy_id: "POL-9" } }), 502, "INTERNAL_ERROR");
     }
   });
 
@@ -502,13 +502,12 @@ describe("GET /v1/documents/acord/{form_type}", () => {
     expect(res.body.details[0].message).toBe("Policy referenced by claim not found in AMS.");
   });
 
-  test("ECM-R82: a claim that Claims does not return, or a client AMS does not return, answers 500 INTERNAL_ERROR", async () => {
-    expectError(await acord("35", { claim_id: "CLM-NOPE" }), 500, "INTERNAL_ERROR");
+  test("ECM-R82: a claim that Claims does not return, or a client AMS does not return, answers 404 NOT_FOUND", async () => {
+    expectError(await acord("35", { claim_id: "CLM-NOPE" }), 404, "NOT_FOUND");
     ctx.claims.on("GET", "/v1/claims/{id}", { body: claimDetail({ client_id: "CLI-GONE" }) });
-    expectError(await acord("35", { claim_id: "CLM-1" }), 500, "INTERNAL_ERROR");
+    expectError(await acord("35", { claim_id: "CLM-1" }), 404, "NOT_FOUND");
   });
 
-  test.todo("ECM-G07: an unknown claim or an AMS failure gets a 4xx or 502 (the service answers 500 INTERNAL_ERROR)", () => {});
   test.todo(
     "ECM-G03: coverage_summary.coverages matches specs/ecm.yaml (the file types limit as a number and deductible as non-null; the service passes on AMS values such as \"100/300\" and null)",
     () => {},

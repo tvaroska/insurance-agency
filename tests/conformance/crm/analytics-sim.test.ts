@@ -79,13 +79,20 @@ describe("GET /v1/analytics/retention-risk", () => {
     );
   });
 
-  test("CRM-R83: numeric filters that are not numbers answer 500 INTERNAL_ERROR", async () => {
-    expectError(await ctx.api.get("/v1/analytics/retention-risk", { query: { min_risk_score: "high" } }), 500, "INTERNAL_ERROR");
-    expectError(await ctx.api.get("/v1/leads", { query: { min_score: "high" } }), 500, "INTERNAL_ERROR");
-    expectError(await ctx.api.get("/v1/leads/scoring", { query: { min_score: "high" } }), 500, "INTERNAL_ERROR");
+  test("CRM-R83: numeric filters that are not numbers answer 400 VALIDATION_ERROR", async () => {
+    expectError(await ctx.api.get("/v1/analytics/retention-risk", { query: { min_risk_score: "high" } }), 400, "VALIDATION_ERROR", {
+      field: "min_risk_score",
+      code: "invalid_format",
+    });
+    expectError(await ctx.api.get("/v1/leads", { query: { min_score: "high" } }), 400, "VALIDATION_ERROR", {
+      field: "min_score",
+      code: "invalid_format",
+    });
+    expectError(await ctx.api.get("/v1/leads/scoring", { query: { min_score: "high" } }), 400, "VALIDATION_ERROR", {
+      field: "min_score",
+      code: "invalid_format",
+    });
   });
-
-  test.todo("CRM-G05: a numeric filter that is not a number gets a 400 validation error (the service answers 500)", () => {});
 });
 
 describe("seed data", () => {

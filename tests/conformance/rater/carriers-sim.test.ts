@@ -61,9 +61,9 @@ for (const [path, rule] of [
       expect(await codes({ policy_type: "boat" })).toEqual([]);
     });
 
-    test(`${rule}, RTR-R51: filters match text inside the stored list, so standard also selects non_standard`, async () => {
+    test(`${rule}, RTR-R51: risk_category=standard does not select carriers that only take non_standard risks`, async () => {
       await ctx.svc.seed({ tables: { carriers: CARRIERS } });
-      expect(await codes({ risk_category: "standard" })).toEqual(["ERIE", "HRTF", "NTNW"]);
+      expect(await codes({ risk_category: "standard" })).toEqual(["ERIE", "HRTF"]);
       expect(await codes({ risk_category: "non_standard" })).toEqual(["NTNW"]);
       expect(await codes({ state: "T" })).toEqual(["ERIE", "NTNW"]);
       expect(await codes({ policy_type: "auto" })).toEqual(["ERIE", "NTNW"]);
@@ -103,7 +103,6 @@ test.todo(
   "RTR-G08: the carrier list has the shape specs/rater.yaml documents (the file puts has_more at the top level; the service returns { data, pagination })",
   () => {},
 );
-test.todo("RTR-G13: risk_category=standard does not select carriers that only take non_standard risks (the service matches by text)", () => {});
 
 describe("seed data", () => {
   // RTR-G03..G07: the seeded data uses carrier codes, statuses, nulls, date-only values and

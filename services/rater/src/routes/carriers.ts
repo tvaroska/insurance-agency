@@ -49,7 +49,7 @@ const listCarriers = async (c: any) => {
       filters.push({ policy_types: { contains: query.policy_type } });
     }
     if (query.risk_category) {
-      filters.push({ risk_categories: { contains: query.risk_category } });
+      filters.push({ risk_categories: { contains: `"${query.risk_category}"` } });
     }
     if (cursorWhere) filters.push(cursorWhere);
 

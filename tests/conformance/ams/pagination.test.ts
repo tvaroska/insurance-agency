@@ -143,7 +143,11 @@ describe("pagination with filters", () => {
   });
 });
 
-test.todo(
-  "AMS-G17: listTasks pages past a task without a due date (today the next_cursor for such a row holds null and is rejected with 400)",
-  () => {},
-);
+test("AMS-G17: listTasks pages past a task without a due date", async () => {
+  await ctx.svc.seed({ base: "empty" });
+  const t1 = (await ctx.api.post("/v1/tasks", { title: "No due 1", priority: "low" })).body;
+  const t2 = (await ctx.api.post("/v1/tasks", { title: "No due 2", priority: "low" })).body;
+  const t3 = (await ctx.api.post("/v1/tasks", { title: "Has due", priority: "low", due_date: "2026-10-20" })).body;
+  const all = await readAll(ctx.api, "/v1/tasks", { limit: 1 });
+  expect(all.map((t) => t.id)).toEqual([t1.id, t2.id, t3.id].sort((a, b) => (a === t3.id ? 1 : b === t3.id ? -1 : a.localeCompare(b))));
+});

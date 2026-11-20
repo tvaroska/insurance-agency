@@ -107,6 +107,15 @@ async function addTimelineEvent(opts: {
   });
 }
 
+// ── Helper: calendar date check (YYYY-MM-DD) ──
+
+function isValidCalendarDate(value: unknown): boolean {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [y, m, d] = value.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
 // ── Helper: normalize alternate FNOL field names ──
 
 function normalizeFnolBody(body: Record<string, unknown>): Record<string, unknown> {
@@ -138,12 +147,9 @@ async function createFnolClaim(rawBody: Record<string, unknown>) {
     checkRequired("loss_date", body.loss_date),
     checkRequired("loss_description", body.loss_description),
     checkEnum("claim_type", body.claim_type as string, CLAIM_TYPES),
-    checkFormat(
-      "loss_date",
-      body.loss_date as string,
-      /^\d{4}-\d{2}-\d{2}$/,
-      "loss_date must be YYYY-MM-DD.",
-    ),
+    body.loss_date != null && !isValidCalendarDate(body.loss_date)
+      ? { field: "loss_date", message: "loss_date must be YYYY-MM-DD.", code: "invalid_format" }
+      : null,
     body.loss_description
       ? checkMaxLength("loss_description", body.loss_description as string, 5000)
       : null,

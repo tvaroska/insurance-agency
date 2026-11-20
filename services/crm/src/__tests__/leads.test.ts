@@ -752,7 +752,7 @@ describe("POST /v1/leads/:id/enroll - success", () => {
 });
 
 describe("POST /v1/leads/:id/enroll - net-new leads with null client_id", () => {
-  it("enrolls multiple net-new (client_id = null) leads in the same campaign without a false duplicate", async () => {
+  it("refuses enrolling net-new (client_id = null) leads with 400 VALIDATION_ERROR", async () => {
     testSqlite.exec(`INSERT OR IGNORE INTO campaigns (campaign_id, name, type, status, enrolled_count, conversion_rate) VALUES ('camp_netnew', 'Net New', 'welcome', 'active', 0, 0)`);
     insertSqliteRow(testSqlite, "leads", makeLead({ lead_id: "lead_null_1", client_id: null }));
     insertSqliteRow(testSqlite, "leads", makeLead({ lead_id: "lead_null_2", client_id: null }));
@@ -764,8 +764,8 @@ describe("POST /v1/leads/:id/enroll - net-new leads with null client_id", () => 
         headers: { "Content-Type": "application/json", ...headers },
         body: JSON.stringify({ campaign_id: "camp_netnew" }),
       });
-      expect(res.status).toBe(201);
-      expect((await res.json()).client_id).toBe("");
+      expect(res.status).toBe(400);
+      expect((await res.json()).error_code).toBe("VALIDATION_ERROR");
     }
 
     const getRes = await app.request(`${LEADS_URL}/lead_null_1`, { headers });

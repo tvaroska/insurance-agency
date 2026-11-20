@@ -106,11 +106,11 @@ describe("error envelope", () => {
   });
 
   for (const path of ["/v1/quotes/request", "/v1/quotes/QT-1/bind"]) {
-    test(`RTR-R07: POST ${path} answers 500 INTERNAL_ERROR to a body that is not JSON`, async () => {
+    test(`RTR-R07: POST ${path} answers 400 VALIDATION_ERROR to a body that is not JSON`, async () => {
       const { result, diff } = await ctx.svc.changes(() =>
         ctx.api.post(path, "{not json", { headers: { "Content-Type": "application/json" } }),
       );
-      expectError(result, 500, "INTERNAL_ERROR");
+      expectError(result, 400, "VALIDATION_ERROR");
       expect(diff).toEqual({});
     });
   }
@@ -119,5 +119,4 @@ describe("error envelope", () => {
     "RTR-G01: error bodies match ErrorResponse of specs/rater.yaml (the file nests { error: { code, message } }; the service sends { error_code, message, correlation_id, details })",
   () => {},
   );
-  test.todo("RTR-G10: a body that is not JSON gets a 400 (the service answers 500 INTERNAL_ERROR)", () => {});
 });

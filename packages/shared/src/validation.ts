@@ -47,6 +47,9 @@ export function checkRange(
   opts: { min?: number; max?: number },
 ): FieldError | null {
   if (value == null) return null;
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return { field, message: `${field} must be a valid number.`, code: "invalid_format" };
+  }
   if (opts.min !== undefined && value < opts.min) {
     return { field, message: `${field} must be at least ${opts.min}.`, code: "out_of_range" };
   }

@@ -2,8 +2,8 @@ import { Hono } from "hono";
 import {
   requireScopes,
   parsePaginationParams,
-  applyPrismaCursorPagination,
-  paginatedResponse,
+  encodeCursor,
+  requireValidCursor,
   notFoundError,
   validationError,
   checkRequired,
@@ -58,17 +58,20 @@ tasksRouter.get("/", requireScopes("ams:tasks:read"), async (c) => {
       : null,
   ]);
 
-  // Parse pagination
+  // Parse pagination (supports null due_date via "" sentinel in cursor)
   const { limit, cursor } = parsePaginationParams(query);
-
-  const { where: cursorWhere, orderBy, take } = applyPrismaCursorPagination({
-    cursor,
-    limit: limit!,
-    orderBy: [
-      { field: "due_date", direction: "asc" },
-      { field: "id", direction: "asc" },
-    ],
-  });
+  const decodedCursor = requireValidCursor(cursor, ["due_date", "id"]);
+  let cursorWhere: Record<string, unknown> | undefined;
+  if (decodedCursor) {
+    const due = String(decodedCursor.due_date);
+    const id = String(decodedCursor.id);
+    cursorWhere =
+      due === ""
+        ? { OR: [{ due_date: null, id: { gt: id } }, { due_date: { not: null } }] }
+        : { OR: [{ due_date: { gt: due } }, { due_date: due, id: { gt: id } }] };
+  }
+  const orderBy = [{ due_date: "asc" as const }, { id: "asc" as const }];
+  const take = limit! + 1;
 
   // Build filter conditions
   const filters: Record<string, unknown>[] = [];
@@ -89,11 +92,24 @@ tasksRouter.get("/", requireScopes("ams:tasks:read"), async (c) => {
     take,
   });
 
-  const mapped = rows.map(mapTaskRow);
+  const hasMore = rows.length > limit!;
+  const pageRows = hasMore ? rows.slice(0, limit!) : rows;
+  const mapped = pageRows.map(mapTaskRow);
+  const last = mapped[mapped.length - 1];
+  const nextCursor =
+    hasMore && last
+      ? encodeCursor({ due_date: last.due_date ?? "", id: last.id })
+      : null;
 
-  return c.json(
-    paginatedResponse(mapped, limit!, ["due_date", "id"], cursor),
-  );
+  return c.json({
+    data: mapped,
+    pagination: {
+      limit: limit!,
+      cursor: cursor ?? null,
+      next_cursor: nextCursor,
+      has_more: hasMore,
+    },
+  });
 });
 
 // ── Create task ─────────────────────────────────────────────────────

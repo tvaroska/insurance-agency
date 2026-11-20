@@ -230,7 +230,7 @@ describe("error envelope", () => {
     expectError(await (await ctx.svc.client({ scopes: ["ams:tasks:read"] })).get("/v1/clients"), 403, "FORBIDDEN");
     expectError(await ctx.api.get("/v1/clients/NO-SUCH"), 404, "NOT_FOUND");
     expectError(await ctx.api.post("/v1/clients/CLI-A/merge", { source_client_id: "CLI-A" }), 409, "CONFLICT");
-    expectError(await ctx.api.post("/v1/clients", "{not json", { headers: { "Content-Type": "application/json" } }), 500, "INTERNAL_ERROR");
+    expectError(await ctx.api.post("/v1/clients", "{not json", { headers: { "Content-Type": "application/json" } }), 400, "VALIDATION_ERROR");
   });
 
   test("AMS-R15: a validation failure lists every failed check of the step, in order, with the standard messages", async () => {
@@ -275,7 +275,7 @@ describe("error envelope", () => {
     }
   });
 
-  test("AMS-R17: a body that is not JSON is answered with 500 INTERNAL_ERROR and writes nothing", async () => {
+  test("AMS-R17: a body that is not JSON is answered with 400 VALIDATION_ERROR and writes nothing", async () => {
     const json = { headers: { "Content-Type": "application/json" } };
     const calls = [
       () => ctx.api.post("/v1/clients", "{not json", json),
@@ -288,8 +288,8 @@ describe("error envelope", () => {
     ];
     for (const call of calls) {
       const { result, diff } = await ctx.svc.changes(call);
-      expectError(result, 500, "INTERNAL_ERROR");
-      expect(result.body.message).toBe("An unexpected error occurred.");
+      expectError(result, 400, "VALIDATION_ERROR");
+      expect(result.body.message).toBe("Invalid JSON body.");
       expect(diff).toEqual({});
     }
   });
@@ -333,5 +333,4 @@ describe("error envelope", () => {
   });
 });
 
-test.todo("AMS-G18: a body that is not JSON is answered with 400 VALIDATION_ERROR (today it is 500, and specs/ams.yaml documents no such case)", () => {});
 test.todo("AMS-G19: a wrong JSON type in a body (first_name: 5, first_name: null on update, a numeric coverage limit) is a 400, not a 500", () => {});

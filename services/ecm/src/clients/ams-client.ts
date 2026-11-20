@@ -1,4 +1,16 @@
-import { getInternalRequestHeaders } from "@evergreen/shared";
+import { HTTPException } from "hono/http-exception";
+import { createErrorResponse, getInternalRequestHeaders, notFoundError } from "@evergreen/shared";
+
+function upstreamBadGateway(message: string): HTTPException {
+  const body = createErrorResponse("INTERNAL_ERROR", message);
+  return new HTTPException(502, {
+    message,
+    res: new Response(JSON.stringify(body), {
+      status: 502,
+      headers: { "Content-Type": "application/json" },
+    }),
+  });
+}
 
 function getAmsBaseUrl(): string {
   return (
@@ -39,8 +51,11 @@ export async function fetchClient(clientId: string, authToken: string): Promise<
   const res = await fetch(`${getAmsBaseUrl()}/v1/clients/${clientId}`, {
     headers: { Authorization: authToken, ...getInternalRequestHeaders() },
   });
+  if (res.status === 404) {
+    throw notFoundError("client");
+  }
   if (!res.ok) {
-    throw Object.assign(new Error(`AMS client lookup failed`), { status: res.status });
+    throw upstreamBadGateway(`AMS client lookup failed (${res.status}).`);
   }
   return res.json();
 }
@@ -52,8 +67,11 @@ export async function fetchClientPolicies(
   const res = await fetch(`${getAmsBaseUrl()}/v1/clients/${clientId}/policies?limit=100`, {
     headers: { Authorization: authToken, ...getInternalRequestHeaders() },
   });
+  if (res.status === 404) {
+    throw notFoundError("client");
+  }
   if (!res.ok) {
-    throw Object.assign(new Error(`AMS policy lookup failed`), { status: res.status });
+    throw upstreamBadGateway(`AMS policy lookup failed (${res.status}).`);
   }
   const body = await res.json();
   return body.data;
@@ -68,7 +86,7 @@ export async function fetchAllClients(authToken: string): Promise<AmsClient[]> {
       headers: { Authorization: authToken, ...getInternalRequestHeaders() },
     });
     if (!res.ok) {
-      throw Object.assign(new Error(`AMS client list failed`), { status: res.status });
+      throw upstreamBadGateway(`AMS client list failed (${res.status}).`);
     }
     const body = (await res.json()) as {
       data?: AmsClient[];

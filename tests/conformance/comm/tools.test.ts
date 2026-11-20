@@ -303,10 +303,10 @@ describe("REST webhook subscription", () => {
     expect((await ctx.api.get("/v1/webhooks")).status).toBe(404);
   });
 
-  test("COMM-R42: a body that is not JSON is 500 INTERNAL_ERROR", async () => {
+  test("COMM-R42: a body that is not JSON is 400 VALIDATION_ERROR", async () => {
     const res = await ctx.api.post("/v1/webhooks/incoming", "{oops", { headers: { "Content-Type": "application/json" } });
-    expect(res.status).toBe(500);
-    expect(res.body.error_code).toBe("INTERNAL_ERROR");
+    expect(res.status).toBe(400);
+    expect(res.body.error_code).toBe("VALIDATION_ERROR");
   });
 
   test.todo("Known gap 4: the subscription response matches WebhookSubscription (active is not returned)", () => {});

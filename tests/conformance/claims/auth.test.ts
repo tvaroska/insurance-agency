@@ -148,17 +148,12 @@ describe("error envelope", () => {
     ["PATCH", "/v1/claims/CLM-2024-000001"],
     ["POST", "/v1/claims/CLM-2024-000001/documents"],
   ]) {
-    test(`CLM-R07: ${method} ${path} answers 500 INTERNAL_ERROR to a body that is not JSON`, async () => {
+    test(`CLM-R07: ${method} ${path} answers 400 VALIDATION_ERROR to a body that is not JSON`, async () => {
       const { result, diff } = await ctx.svc.changes(() =>
         ctx.api.request(method, path, { body: "{not json", headers: { "Content-Type": "application/json" } }),
       );
-      expectError(result, 500, "INTERNAL_ERROR");
+      expectError(result, 400, "VALIDATION_ERROR");
       expect(diff).toEqual({});
     });
   }
-
-  test.todo(
-    "CLM-G01: specs/claims.yaml documents the response to a body that is not JSON (the service answers 500, the file lists no 500)",
-  () => {},
-  );
 });

@@ -113,11 +113,11 @@ describe("error envelope", () => {
     ["POST", "/v1/leads/lead_a/enroll"],
     ["POST", "/v1/campaigns/camp_a/enroll"],
   ]) {
-    test(`CRM-R07: ${method} ${path} answers 500 INTERNAL_ERROR to a body that is not JSON`, async () => {
+    test(`CRM-R07: ${method} ${path} answers 400 VALIDATION_ERROR to a body that is not JSON`, async () => {
       const { result, diff } = await ctx.svc.changes(() =>
         ctx.api.request(method, path, { body: "{not json", headers: { "Content-Type": "application/json" } }),
       );
-      expectError(result, 500, "INTERNAL_ERROR");
+      expectError(result, 400, "VALIDATION_ERROR");
       expect(diff).toEqual({});
     });
   }
@@ -126,5 +126,4 @@ describe("error envelope", () => {
     "CRM-G01: error bodies match the Error schema of specs/crm.yaml (the file requires `code`, `details[].reason`, `request_id`; the service sends `error_code`, `details[].{field,message,code}`, `correlation_id`)",
   () => {},
   );
-  test.todo("CRM-G06: a body that is not JSON gets a 400 (the service answers 500 INTERNAL_ERROR)", () => {});
 });

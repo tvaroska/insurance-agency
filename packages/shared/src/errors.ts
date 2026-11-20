@@ -65,6 +65,16 @@ export const errorHandler: ErrorHandler = (err: Error, c: Context) => {
     );
   }
 
+  if (err instanceof SyntaxError) {
+    return c.json(
+      createErrorResponse("VALIDATION_ERROR", "Invalid JSON body.", {
+        correlationId,
+        details: [{ field: "body", message: "Request body must be valid JSON.", code: "invalid_format" }],
+      }),
+      400,
+    );
+  }
+
   console.error(`[${correlationId}] Unhandled error:`, err);
   return c.json(
     createErrorResponse("INTERNAL_ERROR", "An unexpected error occurred.", { correlationId }),

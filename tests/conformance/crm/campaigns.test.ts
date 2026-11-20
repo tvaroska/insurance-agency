@@ -266,21 +266,11 @@ describe("POST /v1/leads/{id}/enroll", () => {
   });
 
   for (const id of ["lead_null", "lead_blank"]) {
-    test(`CRM-R52: a lead without a client (${id}) is enrolled with an empty client_id, as often as asked`, async () => {
+    test(`CRM-R52: enrolling a lead without a client (${id}) is refused with 400 VALIDATION_ERROR`, async () => {
       await seed();
-      const first = await enroll(id, { campaign_id: "camp_a" });
-      const second = await enroll(id, { campaign_id: "camp_a" });
-      expect([first.status, second.status]).toEqual([201, 201]);
-      contract.check(first);
-      expect(first.body.client_id).toBe("");
-      const rows = await ctx.svc.table("campaign_enrollments");
-      expect(rows.map((r) => r.client_id)).toEqual(["", ""]);
-      expect((await ctx.svc.table("campaigns")).find((c) => c.campaign_id === "camp_a")!.enrolled_count).toBe(12);
+      const { result: res, diff } = await ctx.svc.changes(() => enroll(id, { campaign_id: "camp_a" }));
+      expectError(res, 400, "VALIDATION_ERROR", { field: "client_id", code: "required" });
+      expect(diff).toEqual({});
     });
   }
-
-  test.todo(
-    "CRM-G07: enrolling a lead that has no client is refused (the service writes an enrollment with client_id \"\" and skips the duplicate check)",
-    () => {},
-  );
 });
