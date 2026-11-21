@@ -12,7 +12,7 @@ For each item (`AUD-01` to `AUD-60`), mark `- [x] PASS` or `- [x] FAIL` (and opt
 
 After marking, score agreement (raw agreement, Cohen's kappa, Gwet's AC1, confusion matrix) with:
 ```bash
-proj-test insurance-agency pytest
+../bin/gate test insurance-agency pytest
 python3 eval/inspect/score_blind_audit.py eval/results/v0.8/blind-audit-60-sheet.md
 ```
 

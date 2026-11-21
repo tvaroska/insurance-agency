@@ -92,7 +92,7 @@ Strict Hexagonal Port & Contract Rules:
 2. Do NOT edit `specs/claims.yaml`, `specs/claims.behavior.yaml`, `specs/ast.rules.yaml`, `services/claims/prisma/schema.prisma`, `services/claims/src/prisma.ts`, `services/claims/src/index.ts`, `packages/shared/*`, or any test file under `services/claims/src/__tests__/`.
 3. Use Hono (`new Hono<{ Variables: AppVariables }>()`), `prisma` from `../prisma`, and shared helpers from `@evergreen/shared` (`requireScopes`, `parsePaginationParams`, `applyPrismaCursorPagination`, `paginatedResponse`, `notFoundError`, `validationError`, `checkRequired`, `checkEnum`, `checkFormat`, `checkMaxLength`, `checkRange`, `throwIfErrors`).
 4. Export `{ claimsRouter }` from `services/claims/src/routes/claims.ts` and `{ adjustersRouter }` from `services/claims/src/routes/adjusters.ts`.
-5. Run `proj-test insurance-agency claims` and `proj-test insurance-agency showcase-check` until 100% of unit, formal behavioral contract, and showcase checks pass with zero modifications to frozen files.
+5. Run `./scripts/gate.sh claims` and `./scripts/gate.sh showcase-check` until 100% of unit, formal behavioral contract, and showcase checks pass with zero modifications to frozen files.
 ```
 
 ### Step 2B: Regenerate with Antigravity / Jetski (Stateless Goldfish Session)
@@ -104,18 +104,18 @@ Execute the Phoenix Drill in `prompts/REGENERATE.md` for `services/claims`:
 1. Read `specs/claims.yaml`, `specs/claims.behavior.yaml`, `services/claims/prisma/schema.prisma`, `services/claims/src/index.ts`, and `services/claims/src/__tests__/claims.test.ts`.
 2. Regenerate `services/claims/src/routes/claims.ts` (`export { claimsRouter }`) and `services/claims/src/routes/adjusters.ts` (`export { adjustersRouter }`) to satisfy every OpenAPI wire schema and every state-machine transition, guard (`requires`), and `claim_timeline` side-effect (`ensures`) in `specs/claims.behavior.yaml`.
 3. Keep all Driving Ports, behavioral specs, Prisma schemas, and tests untouched (`git diff --exit-code specs/ services/claims/prisma/schema.prisma services/claims/src/__tests__/`).
-4. Verify in under 5 seconds via `proj-test insurance-agency claims` and `proj-test insurance-agency showcase-check`.
+4. Verify in under 5 seconds via `./scripts/gate.sh claims` and `./scripts/gate.sh showcase-check`.
 ```
 
 ### Step 3: Deterministic Verification Gate (`< 5 Seconds`)
 
 ```bash
-# 1. Run the Claims unit + formal behavioral contract suite (< 1s):
-proj-test insurance-agency claims
+# 1. Run the Claims unit + formal behavioral contract suite (< 1s; or ../bin/gate test insurance-agency claims):
+./scripts/gate.sh claims
 
 # 2. Verify zero drift across all frozen Driving Ports, behavioral specs, Prisma schemas, and tests:
 git diff --exit-code specs/claims.yaml specs/claims.behavior.yaml services/claims/prisma/schema.prisma services/claims/src/index.ts services/claims/src/__tests__/
 
 # 3. Verify all 8 microservices and the Executive Workbench preflight:
-proj-test insurance-agency showcase-check
+./scripts/gate.sh showcase-check
 ```
