@@ -7,17 +7,17 @@
 Use `bun run showcase` for zero-Docker local execution of all 8 services (`:3000`–`:3007`) and the Executive Workbench (`http://localhost:3000/`), or `docker compose` for containerized execution:
 
 ```bash
-# Canonical single-command runner (runs showcase:check, shared, 8 services in parallel, eval, contract, integration, conformance, and pytest; or run ./scripts/gate.sh directly in standalone clones):
-../bin/gate test insurance-agency
+# Canonical single-command runner (runs showcase:check, shared, 8 services in parallel, eval, contract, integration, conformance, and pytest; from the parent workspace, use `gate test insurance-agency [subtarget]`):
+scripts/gate.sh
 
 # Fast targeted subtargets (~0.5s–1.5s; conformance ~2.5m):
-../bin/gate test insurance-agency claims               # single service: ams|rater|crm|ecm|comm|carrier-summit|carrier-coastal|claims
-../bin/gate test insurance-agency eval                 # eval/__tests__/ + eval/*/__tests__/
-../bin/gate test insurance-agency integration          # tests/integration/*.test.ts
-../bin/gate test insurance-agency conformance          # tests/conformance (full HTTP/spec conformance suite)
-../bin/gate test insurance-agency pytest               # eval/inspect/tests
-../bin/gate test insurance-agency showcase-check       # bun run showcase:check
-../bin/gate test insurance-agency validate-harness     # zero-daemon in-process 20-scenario harness validation
+scripts/gate.sh claims               # single service: ams|rater|crm|ecm|comm|carrier-summit|carrier-coastal|claims
+scripts/gate.sh eval                 # eval/__tests__/ + eval/*/__tests__/
+scripts/gate.sh integration          # tests/integration/*.test.ts
+scripts/gate.sh conformance          # tests/conformance (full HTTP/spec conformance suite)
+scripts/gate.sh pytest               # eval/inspect/tests
+scripts/gate.sh showcase-check       # bun run showcase:check
+scripts/gate.sh validate-harness     # zero-daemon in-process 20-scenario harness validation
 
 # Zero-Docker Executive Showcase (preflight check or full launch):
 bun run showcase:check
@@ -25,8 +25,8 @@ bun run showcase
 bun run showcase --strict                        # strict modality + portal session enforcement
 
 # Run Inspect AI evaluation (--parallel-stacks >= 2 auto-launches isolated stacks on 3100+; --parallel-stacks 1 requires a pre-running :3000 stack):
-../bin/gate test insurance-agency inspect-baseline --scenario 01,03,07,14,19,20 --difficulty natural --parallel-stacks 2
-../bin/gate test insurance-agency inspect-summary eval/results/v0.9/realistic-natural --clean-logs eval/results/v0.9/clean-natural --include-anchors --json-out eval/results/v0.9/summary-report.json --export-replay-manifest eval/results/v0.9/replay-manifest.json
+scripts/gate.sh inspect-baseline --scenario 01,03,07,14,19,20 --difficulty natural --parallel-stacks 2
+scripts/gate.sh inspect-summary eval/results/v0.9/realistic-natural --clean-logs eval/results/v0.9/clean-natural --include-anchors --json-out eval/results/v0.9/summary-report.json --export-replay-manifest eval/results/v0.9/replay-manifest.json
 
 # Deterministic multi-turn DB-state suite (eval/deterministic/DT-01..DT-11):
 bun eval/run-state-scenarios.ts --verify-reference
@@ -71,4 +71,4 @@ Fix everything the pilot surfaces in one pass, then run the production sweep onc
 | [`prompts/REGENERATE.md`](prompts/REGENERATE.md) | Single-service Phoenix regeneration blueprint (`services/claims` `:3007`) for Claude Code & Antigravity |
 | `docs/features/*.md` | Completed work history per feature area |
 
-Run `../bin/gate test insurance-agency` (or `./scripts/gate.sh`, or a targeted subtarget like `../bin/gate test insurance-agency claims`) before committing. Tests must pass before marking tasks complete.
+Run `scripts/gate.sh` (or workspace `gate test insurance-agency`, or a targeted subtarget like `scripts/gate.sh claims`) before committing. Tests must pass before marking tasks complete.
