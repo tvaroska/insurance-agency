@@ -122,8 +122,12 @@ describe("error envelope", () => {
     });
   }
 
-  test.todo(
-    "CRM-G01: error bodies match the Error schema of specs/crm.yaml (the file requires `code`, `details[].reason`, `request_id`; the service sends `error_code`, `details[].{field,message,code}`, `correlation_id`)",
-  () => {},
-  );
+  test("CRM-G01: error bodies conform to the Error schema in specs/crm.yaml", async () => {
+    const res = await ctx.api.post("/v1/leads", { source: "tv" });
+    expectError(res, 400, "VALIDATION_ERROR");
+    contract.check(res);
+    const missing = await ctx.api.get("/v1/leads/nope");
+    expectError(missing, 404, "NOT_FOUND");
+    contract.check(missing);
+  });
 });

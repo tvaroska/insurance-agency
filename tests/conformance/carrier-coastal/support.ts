@@ -14,9 +14,6 @@ export const SCOPES = {
 export const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 export const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
-/** Known gap 3 of specs/carrier-coastal.spec.md: enum values the OpenAPI file does not list. */
-export const ENUM_GAPS = [/policy_type: is ".*", expected one of/];
-
 export interface Ctx {
   svc: Service;
   /** agent-full: every carrier scope. */

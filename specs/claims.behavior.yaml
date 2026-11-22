@@ -98,26 +98,30 @@ operations:
         expr: "input.claim_type in enums.claim_types"
         error: { http_status: 400, error_code: VALIDATION_ERROR, field: claim_type, code: invalid_enum }
       - id: valid_loss_date_format
-        expr: "matches(input.loss_date, '^\\d{4}-\\d{2}-\\d{2}$')"
+        expr: "is_valid_calendar_date(input.loss_date)"
         error: { http_status: 400, error_code: VALIDATION_ERROR, field: loss_date, code: invalid_format }
       - id: loss_date_not_future
         expr: "input.loss_date <= today_utc()"
         error: { http_status: 400, error_code: VALIDATION_ERROR, field: loss_date, code: out_of_range }
       - id: loss_description_max_length
         expr: "len(input.loss_description) <= 5000"
-        error: { http_status: 400, error_code: VALIDATION_ERROR, field: loss_description, code: max_length }
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: loss_description, code: too_long }
       - id: loss_location_max_length
         expr: "input.loss_location == null or len(input.loss_location) <= 500"
-        error: { http_status: 400, error_code: VALIDATION_ERROR, field: loss_location, code: max_length }
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: loss_location, code: too_long }
     ensures:
       http_status: 201
       postconditions:
         - "matches(result.claim_id, '^CLM-\\d{4}-\\d{6}$')"
-        - "result.status == 'reported'"
+        - "result.status == (input.adjuster_id != null ? 'assigned' : 'reported')"
       timeline_effects:
         - event_type: status_change
           old_value: null
-          new_value: reported
+          new_value_from: result.status
+        - when: "input.adjuster_id != null"
+          event_type: assignment
+          old_value: null
+          new_value_from: result.adjuster_id
 
   listClaims:
     methods: [GET]
@@ -204,14 +208,8 @@ operations:
       - id: non_empty_patch
         expr: "any_present(input, ['status', 'reserve_amount', 'settlement_amount', 'notes'])"
         error: { http_status: 400, error_code: VALIDATION_ERROR, field: body, code: required }
-      - id: claim_exists
-        expr: "exists(claims, path.claim_id)"
-        error: { http_status: 404, error_code: NOT_FOUND }
       - id: valid_status_enum
-        expr: "input.status == null or input.status in enums.claim_statuses"
-        error: { http_status: 400, error_code: VALIDATION_ERROR, field: status, code: invalid_enum }
-      - id: forward_only_status_transition
-        expr: "input.status == null or input.status == prev.status or input.status in state_machines.claim_lifecycle.transitions[prev.status]"
+        expr: "input.status === undefined or input.status == null or input.status in enums.claim_statuses"
         error: { http_status: 400, error_code: VALIDATION_ERROR, field: status, code: invalid_enum }
       - id: non_negative_reserve_amount
         expr: "input.reserve_amount == null or input.reserve_amount >= 0"
@@ -221,7 +219,13 @@ operations:
         error: { http_status: 400, error_code: VALIDATION_ERROR, field: settlement_amount, code: out_of_range }
       - id: notes_max_length
         expr: "input.notes == null or len(input.notes) <= 5000"
-        error: { http_status: 400, error_code: VALIDATION_ERROR, field: notes, code: max_length }
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: notes, code: too_long }
+      - id: claim_exists
+        expr: "exists(claims, path.claim_id)"
+        error: { http_status: 404, error_code: NOT_FOUND }
+      - id: forward_only_status_transition
+        expr: "input.status === undefined or input.status == prev.status or input.status in state_machines.claim_lifecycle.transitions[prev.status]"
+        error: { http_status: 400, error_code: VALIDATION_ERROR, field: status, code: invalid_enum }
     ensures:
       http_status: 200
       timeline_effects:

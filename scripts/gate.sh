@@ -44,6 +44,7 @@ if [[ $# -eq 0 ]]; then
   bun test eval/__tests__/ eval/*/__tests__/
   bun test tests/*.test.ts
   bun test tests/integration/*.test.ts
+  bun test tests/conformance
   if [[ -x "${HOME}/.venvs/evergreen-inspect/bin/pytest" ]]; then
     PYTHONDONTWRITEBYTECODE=1 "${HOME}/.venvs/evergreen-inspect/bin/pytest" -p no:cacheprovider eval/inspect/tests
   fi

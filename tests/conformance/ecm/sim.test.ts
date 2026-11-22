@@ -77,10 +77,7 @@ describe("seed data", () => {
       expect(audit.body).toMatchObject({ compliance_status: "compliant", missing_documents: [] });
       expect(audit.body.documents).toHaveLength(5);
 
-      // ECM-G14: some seeded documents hold a date-only expiration_date.
-      check(contract, await ctx.api.get("/v1/documents", { query: { limit: 100 } }), [
-        /expiration_date: "\d{4}-\d{2}-\d{2}" is not an RFC 3339 date-time/,
-      ]);
+      check(contract, await ctx.api.get("/v1/documents", { query: { limit: 100 } }));
       check(contract, await ctx.api.get("/v1/envelopes"));
       check(contract, await ctx.api.get("/v1/assets/marketing"));
     });
@@ -176,10 +173,9 @@ test("every operation in specs/ecm.yaml answers its success status in the docume
   serveAms(ctx.ams, [amsClient()], [amsPolicy()]);
   ctx.claims.clear(true);
   ctx.claims.on("GET", "/v1/claims/{id}", { body: claimDetail() });
-  const gaps = [/coverage_summary\/coverages\/\d+\/(limit|deductible): is /];
   const ok = (res: any, status: number) => {
     expect(res.status).toBe(status);
-    check(contract, res, gaps);
+    contract.check(res);
     return res.body;
   };
 
@@ -216,9 +212,11 @@ test("every operation in specs/ecm.yaml answers its success status in the docume
   expect(contract.unchecked()).toEqual([]);
 });
 
-test.todo("ECM-G02: ids match the `format: uuid` that specs/ecm.yaml gives them (real ids look like doc_ab12cd34 or DOC-001)", () => {});
-test.todo("ECM-G08: specs/ecm.yaml documents 409 for upload and envelope creation (the service never answers 409 there)", () => {});
-test.todo(
-  "ECM-G14: document expiration_date is a date-time as in specs/ecm.yaml (COI documents and some seeded documents hold date-only text)",
-  () => {},
-);
+test("ECM-G02, ECM-G08, ECM-G14: specs/ecm.yaml aligns ID formats, omits unused 409s, and allows date-only expiration_date", async () => {
+  const { parse } = await import("yaml");
+  const doc = parse(await Bun.file(new URL("../../../specs/ecm.yaml", import.meta.url)).text());
+  expect(doc.paths["/documents/upload"].post.responses["409"]).toBeUndefined();
+  expect(doc.paths["/envelopes/create"].post.responses["409"]).toBeUndefined();
+  expect(doc.components.schemas.Document.properties.document_id.format).toBeUndefined();
+  expect(doc.components.schemas.Document.properties.expiration_date.format).toBeUndefined();
+});

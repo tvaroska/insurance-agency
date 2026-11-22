@@ -131,8 +131,7 @@ describe("seed data", () => {
       const leads = await ctx.api.get("/v1/leads", { query: { limit: 100 } });
       expect(leads.body.data).toHaveLength(facts.leads);
       expect(leads.body.data[0].lead_id).toBe(facts.topLead);
-      // CRM-G02: seeded leads come back with null client_id or assigned_producer.
-      contract.check(leads, { allow: [/\/(client_id|assigned_producer): is null but the schema is not nullable/] });
+      contract.check(leads);
     });
   }
 
@@ -245,5 +244,12 @@ test("every operation in specs/crm.yaml answers its success status with a body t
   expect(contract.unchecked()).toEqual([]);
 });
 
-test.todo("CRM-G08: specs/crm.yaml documents 409 for createLead and updateLead (the service never answers 409 there)", () => {});
-test.todo("CRM-G09: CursorPagination in specs/crm.yaml declares next_cursor (the service returns it; the schema omits it)", () => {});
+test("CRM-G08, CRM-G09: specs/crm.yaml omits unused 409 on leads and declares next_cursor on CursorPagination", async () => {
+  const specText = await Bun.file(new URL("../../../specs/crm.yaml", import.meta.url)).text();
+  expect(specText).toContain("next_cursor:");
+  const { parse } = await import("yaml");
+  const doc = parse(specText);
+  expect(doc.paths["/leads"].post.responses["409"]).toBeUndefined();
+  expect(doc.paths["/leads/{id}"].patch.responses["409"]).toBeUndefined();
+  expect(doc.components.schemas.CursorPagination.properties.next_cursor).toBeDefined();
+});

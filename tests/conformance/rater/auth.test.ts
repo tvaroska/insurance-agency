@@ -115,8 +115,12 @@ describe("error envelope", () => {
     });
   }
 
-  test.todo(
-    "RTR-G01: error bodies match ErrorResponse of specs/rater.yaml (the file nests { error: { code, message } }; the service sends { error_code, message, correlation_id, details })",
-  () => {},
-  );
+  test("RTR-G01: error bodies conform to ErrorResponse in specs/rater.yaml", async () => {
+    const bad = await ctx.api.post("/v1/quotes/QT-1/bind", { payment_method: "cash" });
+    expectError(bad, 400, "VALIDATION_ERROR");
+    contract.check(bad);
+    const missing = await ctx.api.get("/v1/quotes/nope/results");
+    expectError(missing, 404, "NOT_FOUND");
+    contract.check(missing);
+  });
 });

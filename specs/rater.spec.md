@@ -56,14 +56,14 @@ Invariants:
 
 - **RTR-R05** Errors use the shared envelope `{ "error_code", "message", "correlation_id", "details"? }`, except the E&O refusals of RTR-R42 to RTR-R44, which have their own body. A validation failure is `400` with `error_code: "VALIDATION_ERROR"`, `message: "One or more fields failed validation."` and `details`, a list of `{ "field", "message", "code" }`. Field codes used: `required`, `invalid_enum`, `invalid_format`. "Reported together" below means one response lists every failing field. A missing row is `404` with `error_code: "NOT_FOUND"`; a conflict is `409` with `error_code: "CONFLICT"`.
 - **RTR-R06** Every response carries `X-Correlation-ID`: the request's value when sent, a fresh UUID otherwise. A shared-envelope error body's `correlation_id` has the same value.
-- **RTR-R07** A write operation whose body is not valid JSON answers `500` with `error_code: "INTERNAL_ERROR"` (after RTR-R03 and RTR-R04) and writes nothing.
+- **RTR-R07** A write operation whose body is not valid JSON answers `400` with `error_code: "VALIDATION_ERROR"` (after RTR-R03 and RTR-R04) and writes nothing.
 
 ## 5. Rules per operation
 
 ### 5.1 List quote requests: `GET /v1/quotes`
 
-- **RTR-R10** `200` with `{ "data": [...] }` and nothing else (no pagination object), ordered by `request_id` ascending. Each item has `request_id`, `client_id`, `policy_type`, `effective_date`, `status` (as stored), `submitted_at`, `completed_at`, `created_at` and `carriers`: one entry per carrier quote of the request with `quote_id`, `carrier_code`, `carrier_name`, `status`, `premium_annual`, `premium_monthly`, `decline_reason`, `valid_until`. `quote_id` is null when the carrier quote's status is `declined`.
-- **RTR-R11** Optional filters `client_id`, `policy_type` and `status` match exactly and are not validated: an unknown value gives an empty list. The `carrier_code` and `cursor` parameters are ignored.
+- **RTR-R10** `200` with `{ "data": [...], "pagination": { "limit", "cursor", "next_cursor", "has_more" } }`, ordered by `request_id` ascending. Each item has `request_id`, `client_id`, `policy_type`, `effective_date`, `status` (as stored), `submitted_at`, `completed_at`, `created_at` and `carriers`: one entry per carrier quote of the request with `quote_id`, `carrier_code`, `carrier_name`, `status`, `premium_annual`, `premium_monthly`, `decline_reason`, `valid_until`. `quote_id` is null when the carrier quote's status is `declined`.
+- **RTR-R11** Optional filters `client_id`, `policy_type`, `status` and `carrier_code` match exactly and are not validated: an unknown value gives an empty list (`carrier_code` keeps only quote requests with a matching carrier quote and filters their `carriers` list to that code). `cursor` pages by `{ "request_id" }`; a malformed cursor gives `400` with `cursor` / `invalid_format`.
 - **RTR-R12** `limit` defaults to 50. A value that is not a number, or is 0, means 50. Other values are clamped to 1..100.
 
 ### 5.2 Submit a quote request: `POST /v1/quotes/request`
@@ -163,7 +163,7 @@ Checks run in this order and stop at the first failure.
 ### 5.5 Carrier directory: `GET /v1/carriers` and `GET /v1/carriers/appetite`
 
 - **RTR-R50** `GET /v1/carriers` returns `200` with `{ "data": [...], "pagination": { "limit", "cursor", "next_cursor", "has_more" } }`, ordered by `carrier_code` ascending. Each item is the `carriers` row with `states`, `policy_types`, `risk_categories` and `state_restrictions` as JSON arrays.
-- **RTR-R51** Optional filters, combined with AND: `state`, `policy_type`, `risk_category`. Each keeps the carriers whose stored JSON text for that column contains the given text. So `risk_category=standard` also selects carriers that list only `non_standard`. `risk_category` must be one of the three risk categories, otherwise `400` with `risk_category` / `invalid_enum`. `state` and `policy_type` are not validated.
+- **RTR-R51** Optional filters, combined with AND: `state`, `policy_type`, `risk_category`. `risk_category` matches exact array entries (so `standard` does not select carriers that list only `non_standard`) and must be one of the three risk categories, otherwise `400` with `risk_category` / `invalid_enum`. `state` and `policy_type` match inside the stored list text and are not validated.
 - **RTR-R52** `limit` defaults to 25, is clamped to 1..100, and is ignored when not a number. `pagination.cursor` repeats the `cursor` parameter. When more rows exist, `has_more` is true and `next_cursor` is the base64 encoding of the JSON object `{ "carrier_code" }` of the last row; otherwise `has_more` is false and `next_cursor` is null. A cursor that cannot be decoded gives `400` with `cursor` / `invalid_format`.
 - **RTR-R53** `GET /v1/carriers/appetite` is identical to `GET /v1/carriers` (RTR-R50 to RTR-R52).
 
@@ -219,22 +219,11 @@ What the service must provide besides its `/v1` operations. The token endpoint, 
 
 ## 11. Known gaps
 
-Places where `rater.yaml` and the running service disagree, or where the behaviour is likely unintended. The running service is the reference, and the tests assert what it does. Each gap that has a `test.todo` is marked.
+All OpenAPI contract contradictions (`RTR-G01`–`RTR-G10`, `RTR-G13`) have been resolved across code and `rater.yaml`. The remaining items below are non-blocking behavioral notes:
 
-| Id | Gap | todo |
-| :--- | :--- | :--- |
-| RTR-G01 | Error bodies. `rater.yaml` nests errors as `{ error: { code, message, correlation_id, details } }`. The service sends the shared envelope of RTR-R05. | yes |
-| RTR-G02 | E&O refusals (RTR-R42 to RTR-R44) are `422`. `rater.yaml` documents them under `409` and lists no `422`. | yes |
-| RTR-G03 | The `carrier_code` enum in `rater.yaml` lists `TRAV` and `PROG`; the seeded carriers include `CSTL` and `SMIT`, and one seeded quote uses `SURPLUS`. | yes |
-| RTR-G04 | `effective_date` and `expiration_date` are not nullable in `rater.yaml`; seeded requests return null for both. | yes |
-| RTR-G05 | `valid_until` is a date-time in `rater.yaml`; seeded quotes hold date-only text. | yes |
-| RTR-G06 | The status enums of `rater.yaml` omit `bound`, `expired` and `underwriting_hold` for carrier quotes and `requires_info` for requests. | yes |
-| RTR-G07 | `rater.yaml` requires `coverage_type` on coverage items. The service stores and returns the items as submitted; seed data uses `type`. | yes |
-| RTR-G08 | The carrier list in `rater.yaml` has `has_more` at the top level. The service returns `{ data, pagination }`. | yes |
-| RTR-G09 | `GET /v1/quotes` ignores the documented `carrier_code` and `cursor` parameters and returns no pagination data. | yes |
-| RTR-G10 | A body that is not JSON gives `500` instead of `400` (RTR-R07). | yes |
-| RTR-G11 | `POST /sim/time-travel` compares ISO strings directly against stored date/date-time strings (RTR-R110). | |
-| RTR-G13 | Carrier filters match text inside the stored list, so `standard` selects `non_standard` and partial values match (RTR-R51). | yes |
-| RTR-G14 | Binding stores no payment, producer or signature data and creates no AMS policy; `policy_id` is deterministic-random per episode and `policy_documents_url` points to ECM `/v1/documents` (RTR-R45). | |
-| RTR-G15 | An unreachable AMS gives `500` rather than an E&O refusal (RTR-R46). | |
-| RTR-G16 | Values of the wrong JSON type are not validated; their outcome is not part of this contract. | |
+| Id | Note |
+| :--- | :--- |
+| RTR-G11 | `POST /sim/time-travel` compares ISO strings directly against stored date/date-time strings (RTR-R110). |
+| RTR-G14 | Binding stores no payment, producer or signature data and creates no AMS policy; `policy_id` is deterministic-random per episode and `policy_documents_url` points to ECM `/v1/documents` (RTR-R45). |
+| RTR-G15 | An unreachable AMS gives `500` rather than an E&O refusal (RTR-R46). |
+| RTR-G16 | Values of the wrong JSON type are not validated; their outcome is not part of this contract. |

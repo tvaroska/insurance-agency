@@ -18,9 +18,10 @@ info:
     value from a previous response to fetch the next page.
 
     ## Webhook Delivery
-    Webhook payloads are signed with HMAC-SHA256 using the subscription
-    secret.  The signature is sent in the `X-Evergreen-Signature` header.
-    Delivery is retried with exponential back-off up to 5 times.
+    Webhook deliveries are recorded locally in the `webhook_deliveries` table
+    (no outbound HTTP requests are made in the isolated benchmark environment).
+    Each stored payload is canonical compact JSON signed with HMAC-SHA256 using
+    the subscription `secret`.
   version: 1.4.0
   contact:
     name: Evergreen Platform Engineering
@@ -88,7 +89,6 @@ paths:
           required: false
           schema:
             type: string
-            format: uuid
         - name: since
           in: query
           description: Only return messages after this ISO-8601 timestamp.
@@ -243,7 +243,7 @@ paths:
               body: "Hi James, your life insurance application LI-2026-00312 has been approved! Your new monthly premium is $47.50. Welcome to Evergreen."
               template_id: "tmpl_approval_notification"
       responses:
-        "202":
+        "201":
           description: Message accepted and queued for delivery.
           headers:
 
@@ -255,15 +255,13 @@ paths:
                 message_id: "msg_b4c5d6e7-f8a9-0b1c-2d3e-4f5a6b7c8d9e"
                 status: queued
                 channel: sms
+                timestamp: "2026-10-14T12:00:00.000Z"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -289,8 +287,7 @@ paths:
           description: Unique identifier of the recorded call.
           schema:
             type: string
-            pattern: "^call_[a-f0-9\\-]{36}$"
-            example: "call_d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a"
+            example: "CALL-001"
       responses:
         "200":
           description: Call transcript with metadata.
@@ -337,9 +334,10 @@ paths:
       operationId: createWebhookSubscription
       summary: Subscribe to real-time events
       description: |
-        Creates a new webhook subscription.  Evergreen will POST event
-        payloads to the provided URL whenever a subscribed event occurs.
-        Each payload is signed with HMAC-SHA256 using the returned `secret`.
+        Creates a new webhook subscription. Duplicate subscriptions are allowed
+        and each receives its own `webhook_id` and HMAC-SHA256 signing `secret`.
+        Matching events are recorded locally in `webhook_deliveries` (simulated
+        delivery, no outbound HTTP requests).
       tags:
         - Webhooks
       security:
@@ -386,9 +384,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -591,23 +586,19 @@ components:
         - client_id
         - direction
         - channel
-        - body
         - from
         - to
         - timestamp
         - read
-        - attachments
       properties:
         message_id:
           type: string
           description: Unique message identifier.
-          pattern: "^msg_[a-f0-9\\-]{36}$"
-          example: "msg_9f2a4e71-bc03-4c8d-8e1a-d5f6a7b8c9d0"
+          example: "MSG-001"
         client_id:
           type: string
-          format: uuid
-          description: Identifier of the associated insurance client.
-          example: "cli_3e4f5a6b-7c8d-9e0f-1a2b-3c4d5e6f7a8b"
+          description: Identifier of the associated insurance client (or `unknown`).
+          example: "CLI-001"
         direction:
           $ref: "#/components/schemas/Direction"
         channel:
@@ -620,16 +611,17 @@ components:
           example: "Question about my auto policy deductible"
         body:
           type: string
-          description: Message body text.
+          nullable: true
+          description: Message body text. Null for recorded phone calls.
           maxLength: 65536
           example: "Hi, I recently received my renewal notice..."
         from:
           type: string
-          description: Sender address (email) or phone number (E.164).
+          description: Sender address (email) or phone number.
           example: "margaret.chen@example.com"
         to:
           type: string
-          description: Recipient address (email) or phone number (E.164).
+          description: Recipient address (email) or phone number.
           example: "support@evergreen-ins.com"
         timestamp:
           type: string
@@ -640,32 +632,61 @@ components:
           type: boolean
           description: Whether the message has been read by an agent.
           example: false
+        call_id:
+          type: string
+          nullable: true
+        duration_seconds:
+          type: integer
+          nullable: true
+        sentiment:
+          $ref: "#/components/schemas/Sentiment"
+          nullable: true
+        topics:
+          type: array
+          items:
+            type: string
+        status:
+          $ref: "#/components/schemas/MessageStatus"
         attachments:
           type: array
-          description: Files attached to the message.
+          description: Files attached to the message (omitted on inbox listings).
           items:
             $ref: "#/components/schemas/Attachment"
+
+    PaginationMeta:
+      type: object
+      required:
+        - limit
+        - has_more
+      properties:
+        limit:
+          type: integer
+          example: 25
+        cursor:
+          type: string
+          nullable: true
+          example: null
+        next_cursor:
+          type: string
+          nullable: true
+          example: "eyJ0aW1lc3RhbXAiOiIyMDI2LTAxLTAzVDAwOjAwOjAwWiIsIm1lc3NhZ2VfaWQiOiJNNCI9"
+        has_more:
+          type: boolean
+          example: false
 
     InboxResponse:
       type: object
       description: Paginated inbox response.
       required:
         - data
-        - has_more
+        - pagination
       properties:
         data:
           type: array
           items:
             $ref: "#/components/schemas/Message"
-        cursor:
-          type: string
-          nullable: true
-          description: Opaque cursor for fetching the next page. Null when there are no more results.
-          example: "eyJpZCI6Im1zZ18xYTJiM2M0ZCIsInRzIjoxNzA5MTk3MjAwfQ=="
-        has_more:
-          type: boolean
-          description: Whether additional pages of results are available.
-          example: true
+        pagination:
+          $ref: "#/components/schemas/PaginationMeta"
 
     CallTranscript:
       type: object
@@ -683,18 +704,17 @@ components:
         call_id:
           type: string
           description: Unique call identifier.
-          pattern: "^call_[a-f0-9\\-]{36}$"
-          example: "call_d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a"
+          example: "CALL-001"
         client_id:
           type: string
-          format: uuid
           description: Identifier of the associated insurance client.
-          example: "cli_3e4f5a6b-7c8d-9e0f-1a2b-3c4d5e6f7a8b"
+          example: "CLI-004"
         agent_name:
           type: string
-          description: Full name of the agent who handled the call.
+          nullable: true
+          description: Name of the agent extracted from the transcript, or null if absent.
           maxLength: 200
-          example: "Sarah Mitchell"
+          example: "Amy"
         duration_seconds:
           type: integer
           format: int32
@@ -804,6 +824,12 @@ components:
           $ref: "#/components/schemas/MessageStatus"
         channel:
           $ref: "#/components/schemas/Channel"
+        timestamp:
+          type: string
+          format: date-time
+        simulated_reply:
+          type: object
+          additionalProperties: true
 
     # -- Webhooks --
     WebhookSubscriptionRequest:
@@ -834,7 +860,6 @@ components:
         - url
         - events
         - secret
-        - active
         - created_at
       properties:
         webhook_id:
@@ -860,7 +885,7 @@ components:
           example: "whsec_doc_example_123"
         active:
           type: boolean
-          description: Whether the subscription is currently active.
+          description: Whether the subscription is currently active (stored as true; omitted from create response).
           example: true
         created_at:
           type: string
@@ -880,7 +905,7 @@ components:
       properties:
         event_id:
           type: string
-          format: uuid
+          pattern: "^evt_[a-f0-9\\-]{36}$"
           description: Unique idempotency key for this event delivery.
           example: "evt_c9d0e1f2-a3b4-5c6d-7e8f-9a0b1c2d3e4f"
         event_type:
@@ -1116,52 +1141,46 @@ components:
     # -- Error --
     Error:
       type: object
-      description: Standard error response wrapper.
+      description: Flat error envelope used by shared middleware and REST wrappers.
       required:
-        - error
+        - error_code
       properties:
-        error:
-          type: object
-          required:
-            - code
-            - message
-            - request_id
-          properties:
-            code:
-              type: string
-              description: Machine-readable error code.
-              enum:
-                - VALIDATION_ERROR
-                - UNAUTHORIZED
-                - FORBIDDEN
-                - NOT_FOUND
-                - CONFLICT
-                - INTERNAL_ERROR
-              example: VALIDATION_ERROR
-            message:
-              type: string
-              description: Human-readable error description.
-              example: "Invalid value for 'channel'."
-            request_id:
-              type: string
-              format: uuid
-              description: Unique identifier for this request, useful for support inquiries.
-              example: "req_f1e2d3c4-b5a6-9788-7654-321fedcba098"
-            details:
-              type: array
-              nullable: true
-              description: Optional field-level validation errors.
-              items:
-                type: object
+        error_code:
+          type: string
+          description: Machine-readable error code.
+          enum:
+            - VALIDATION_ERROR
+            - AUTH_ERROR
+            - FORBIDDEN
+            - NOT_FOUND
+            - CONFLICT
+            - MODALITY_VIOLATION
+            - SERVICE_UNAVAILABLE
+            - INTERNAL_ERROR
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Human-readable error description.
+          example: "One or more fields failed validation."
+        correlation_id:
+          type: string
+          description: Correlation identifier matching the X-Correlation-ID header.
+          example: "f1e2d3c4-b5a6-9788-7654-321fedcba098"
+        details:
+          type: array
+          nullable: true
+          description: Validation error details (either strings or `{ field, message, code }` objects).
+          items:
+            oneOf:
+              - type: string
+              - type: object
                 required:
                   - field
-                  - reason
+                  - message
                 properties:
                   field:
                     type: string
-                    description: JSON path of the invalid field.
-                    example: "channel"
-                  reason:
+                  message:
                     type: string
-                    description: Explanation of why the field is invalid.
-                    example: "Value 'fax' is not a valid channel."
+                  code:
+                    type: string

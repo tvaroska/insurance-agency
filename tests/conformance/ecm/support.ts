@@ -23,11 +23,11 @@ export const DOCUMENT_TYPES = [
 export const DOCUMENT_STATUSES = ["uploaded", "pending_signature", "signed", "expired", "generated"];
 export const ENVELOPE_STATUSES = ["created", "sent", "viewed", "signed", "completed", "declined", "expired"];
 export const ASSET_CATEGORIES = ["welcome_kit", "flyer", "comparison_template", "social_media"];
-/** Scopes an OAuth client can hold. `ecm:envelopes:read` is not among them (ECM-R08). */
 export const SCOPES = [
   "ecm:documents:read",
   "ecm:documents:write",
   "ecm:documents:upload",
+  "ecm:envelopes:read",
   "ecm:envelopes:create",
   "ecm:assets:read",
   "ecm:acord:read",
@@ -186,22 +186,16 @@ export function serveAms(ams: Stub, clients: Record<string, any>[], policies: Re
   }));
 }
 
-// ECM-G01: specs/ecm.yaml describes errors as { code, message, ... }; the service sends the
-// shared envelope { error_code, message, correlation_id, details }.
-const ERROR_ENVELOPE_GAP = "is missing required property 'code'";
-// ECM-G02: specs/ecm.yaml gives ids `format: uuid`; real ids look like doc_ab12cd34 or DOC-001.
-const ID_FORMAT_GAP = /is not a UUID$/;
+export const ID_GAP: CheckOptions = {};
 
-export const ID_GAP: CheckOptions = { allow: [ID_FORMAT_GAP] };
-
-/** `contract.check` that tolerates the id-format gap ECM-G02 and any further `allow` rules. */
+/** Validates a response against specs/ecm.yaml (with optional per-test allow list). */
 export function check(contract: Contract, res: HttpResult, allow: (string | RegExp)[] = []): CheckResult {
-  return contract.check(res, { allow: [ID_FORMAT_GAP, ...allow] });
+  return allow.length > 0 ? contract.check(res, { allow }) : contract.check(res);
 }
 
-/** Checks that an error status is documented for the operation, tolerating the error-envelope gap ECM-G01. */
+/** Validates an error response status and envelope against specs/ecm.yaml. */
 export function checkError(contract: Contract, res: HttpResult): CheckResult {
-  return contract.check(res, { allow: [ERROR_ENVELOPE_GAP] });
+  return contract.check(res);
 }
 
 /**

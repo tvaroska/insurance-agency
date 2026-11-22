@@ -142,9 +142,19 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
         { field: `coverages[${i}].type`, message: "Each coverage must have a type.", code: "required" },
       ]);
     }
-    if (cov.limit !== undefined && cov.limit !== null && typeof cov.limit !== "string") {
+    if (
+      cov.limit !== undefined &&
+      cov.limit !== null &&
+      typeof cov.limit !== "string" &&
+      typeof cov.limit !== "number"
+    ) {
       throw validationError([
-        { field: `coverages[${i}].limit`, message: "Coverage limit must be a string.", code: "invalid_format" },
+        { field: `coverages[${i}].limit`, message: "Coverage limit must be a string or number.", code: "invalid_format" },
+      ]);
+    }
+    if (cov.deductible !== undefined && cov.deductible !== null && typeof cov.deductible !== "number") {
+      throw validationError([
+        { field: `coverages[${i}].deductible`, message: "Coverage deductible must be a number.", code: "invalid_format" },
       ]);
     }
   }
@@ -237,12 +247,14 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
   await prisma.policy.create({ data: record });
 
   // Insert coverages
-  const coverageRecords = body.coverages.map((cov: { type: string; limit?: string; deductible?: number }) => ({
-    policy_id: policyId,
-    type: cov.type,
-    limit: cov.limit ?? null,
-    deductible: cov.deductible ?? null,
-  }));
+  const coverageRecords = body.coverages.map(
+    (cov: { type: string; limit?: string | number | null; deductible?: number | null }) => ({
+      policy_id: policyId,
+      type: cov.type,
+      limit: cov.limit !== undefined && cov.limit !== null ? String(cov.limit) : null,
+      deductible: cov.deductible ?? null,
+    }),
+  );
 
   for (const covRecord of coverageRecords) {
     await prisma.coverage.create({ data: covRecord });

@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { expectError, loadContract } from "../harness";
-import { book, fieldCodes, ISO_UTC, start, task, TASK_GAPS, TASK_ID, type Ctx } from "./support";
+import { book, fieldCodes, ISO_UTC, start, task, TASK_ID, type Ctx } from "./support";
 
 const contract = loadContract("ams");
 let ctx: Ctx;
@@ -38,7 +38,7 @@ describe("listTasks", () => {
     const res = await list();
     expect(res.status).toBe(200);
     expect(ids(res)).toEqual(["T-4", "T-2", "T-1", "T-3"]);
-    contract.check(res, { allow: TASK_GAPS });
+    contract.check(res);
   });
 
   test("AMS-R5, AMS-R63: a task carries both names for its client and policy links", async () => {
@@ -159,7 +159,7 @@ describe("createTask", () => {
       updated_at: result.body.created_at,
     });
     expect(result.body.created_at).toMatch(ISO_UTC);
-    contract.check(result, { allow: TASK_GAPS });
+    contract.check(result);
 
     expect(Object.keys(diff)).toEqual(["tasks"]);
     expect(diff.tasks.changed).toEqual([]);
@@ -274,7 +274,7 @@ describe("updateTask", () => {
     });
     expect(result.body.updated_at).toMatch(ISO_UTC);
     expect(result.body.updated_at).not.toBe("2025-01-01T00:00:00.000Z");
-    contract.check(result, { allow: TASK_GAPS });
+    contract.check(result);
 
     expect(Object.keys(diff)).toEqual(["tasks"]);
     expect(diff.tasks.changed.map((c) => c.key)).toEqual(["T-1"]);
@@ -301,6 +301,14 @@ describe("updateTask", () => {
   });
 });
 
-test.todo("AMS-G8: Task.title maxLength is 250 in specs/ams.yaml; the service accepts up to 500 characters", () => {});
-test.todo("AMS-G9: specs/ams.yaml says listTasks breaks due-date ties by created_at descending; the service uses id ascending", () => {});
-test.todo("AMS-G13: specs/ams.yaml documents 409 on updateTask; the service never returns it", () => {});
+test("AMS-G8, AMS-G9, AMS-G13: specs/ams.yaml aligns Task.title maxLength 500, listTasks tie-break/filters, and updateTask statuses", () => {
+  expect(contract.document.components?.schemas?.Task?.properties?.title?.maxLength).toBe(500);
+  expect(contract.document.components?.schemas?.TaskCreateRequest?.properties?.title?.maxLength).toBe(500);
+  const listTasks = contract.document.paths?.["/tasks"]?.get;
+  expect(listTasks?.description).toContain("`id` ascending");
+  const paramNames = (listTasks?.parameters ?? []).map((p: any) => p.name).filter(Boolean);
+  expect(paramNames).toContain("related_client_id");
+  expect(paramNames).toContain("policy_id");
+  expect(paramNames).toContain("related_policy_id");
+  expect(contract.operation("updateTask").statuses).not.toContain("409");
+});

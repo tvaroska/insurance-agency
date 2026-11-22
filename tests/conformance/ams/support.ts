@@ -282,32 +282,3 @@ export function workbenchCatalogue(): any {
 export function fieldCodes(res: { body: any }): string[] {
   return (res.body?.details ?? []).map((d: any) => `${d.field}:${d.code}`);
 }
-
-// ── Differences between specs/ams.yaml and the service (specs/ams.spec.md, section 14.1) ──
-// Each list tolerates only the named gap; every other schema issue still fails the test.
-
-/** Gap 3: ids are not UUIDs. Gap 7: nullable client fields, partial addresses, phone pattern. */
-export const CLIENT_GAPS: (string | RegExp)[] = [
-  /\/(id|household_id): .* is not a UUID/,
-  /\/(dob|phone|driver_license_number|occupation|marital_status|household_id|preferred_contact_method|preferred_contact_time): is null/,
-  /\/address\/(street|city|state|zip): is null/,
-  /\/phone: does not match pattern/,
-];
-
-/** Gap 3: policy and client id formats. Gap 4: coverage limit is text or null. Gap 5: carrier codes, renters. */
-export const POLICY_GAPS: (string | RegExp)[] = [
-  /\/policy_id: does not match pattern/,
-  /\/client_id: .* is not a UUID/,
-  /\/carrier_code: is "(SMIT|CSTL)"/,
-  /\/policy_type: is "renters"/,
-  /\/coverages\/\d+\/(limit|deductible): /,
-];
-
-/** Gap 3 and gap 8: id formats, null description, extra alias fields are allowed by the schema. */
-export const TASK_GAPS: (string | RegExp)[] = [
-  /\/(id|assigned_to|related_client_id): .* is not a UUID/,
-  /\/description: is null/,
-];
-
-/** Gap 3 and gap 5 on commission records. */
-export const COMMISSION_GAPS: (string | RegExp)[] = [/\/producer_id: .* is not a UUID/, /\/carrier_code: is "(SMIT|CSTL)"/];

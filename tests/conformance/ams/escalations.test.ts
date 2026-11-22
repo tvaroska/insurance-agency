@@ -309,7 +309,7 @@ describe("getEscalation", () => {
           template_id: template,
           response_text: RESPONSE_TEXT[template],
         });
-        contract.check(res, { allow: [/\/reason: is "claims?_specialist"/] });
+        contract.check(res);
       });
     }
   });
@@ -377,6 +377,7 @@ describe("listEscalations", () => {
       { field: "created_after", message: "created_after must be a valid ISO date.", code: "invalid_format" },
       { field: "created_before", message: "created_before must be a valid ISO date.", code: "invalid_format" },
     ]);
+    contract.check(res);
   });
 
   test("AMS-R82: empty filter values are ignored", async () => {
@@ -386,5 +387,12 @@ describe("listEscalations", () => {
   });
 });
 
-test.todo("AMS-G12: Escalation.reason in specs/ams.yaml lacks claims_specialist and claim_specialist, and the reason_code alias is undeclared", () => {});
-test.todo("AMS-G13: specs/ams.yaml documents no 400 for listEscalations; invalid filters and cursors return it", () => {});
+test("AMS-G12 & AMS-G13: Escalation schemas document claims_specialist/claim_specialist, reason_code, any-JSON context, workbench event, and listEscalations 400", async () => {
+  expect(contract.document.components?.schemas?.Escalation?.properties?.reason?.enum).toEqual(REASONS);
+  expect(contract.document.components?.schemas?.EscalationCreate?.properties?.reason_code?.enum).toEqual(REASONS);
+  expect(contract.document.components?.schemas?.EscalationEvent?.properties?.event_type?.enum).toContain("principal_workbench_reviewed");
+  expect(contract.operation("listEscalations").statuses).toContain("400");
+  const scalar = await create({ context: "plain string context" });
+  expect(scalar.status).toBe(201);
+  contract.check(scalar);
+});

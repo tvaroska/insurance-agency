@@ -7,13 +7,14 @@
 Use `bun run showcase` for zero-Docker local execution of all 8 services (`:3000`–`:3007`) and the Executive Workbench (`http://localhost:3000/`), or `docker compose` for containerized execution:
 
 ```bash
-# Canonical single-command runner (runs showcase:check, shared, 8 services in parallel, eval, contract, integration, and pytest; or run ./scripts/gate.sh directly in standalone clones):
+# Canonical single-command runner (runs showcase:check, shared, 8 services in parallel, eval, contract, integration, conformance, and pytest; or run ./scripts/gate.sh directly in standalone clones):
 ../bin/gate test insurance-agency
 
-# Fast targeted subtargets (~0.5s–1.5s):
+# Fast targeted subtargets (~0.5s–1.5s; conformance ~2.5m):
 ../bin/gate test insurance-agency claims               # single service: ams|rater|crm|ecm|comm|carrier-summit|carrier-coastal|claims
 ../bin/gate test insurance-agency eval                 # eval/__tests__/ + eval/*/__tests__/
 ../bin/gate test insurance-agency integration          # tests/integration/*.test.ts
+../bin/gate test insurance-agency conformance          # tests/conformance (full HTTP/spec conformance suite)
 ../bin/gate test insurance-agency pytest               # eval/inspect/tests
 ../bin/gate test insurance-agency showcase-check       # bun run showcase:check
 ../bin/gate test insurance-agency validate-harness     # zero-daemon in-process 20-scenario harness validation

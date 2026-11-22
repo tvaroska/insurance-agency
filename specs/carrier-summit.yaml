@@ -20,6 +20,10 @@ info:
     A dev-token endpoint is available at `GET /auth/dev-token` for training
     environments (no authentication required).
 
+    In strict modality mode (`MODALITY_MODE=strict`), `/v1/summit/*` also
+    requires an `X-Portal-Session` token issued by `GET /auth/portal-session`
+    after loading `/` to receive the bootstrap cookie.
+
     ## Latency Simulation
 
     Set the `CARRIER_LATENCY_MS` environment variable to add artificial
@@ -62,6 +66,9 @@ security:
 # ---------------------------------------------------------------------------
 paths:
   /health:
+    servers:
+      - url: http://localhost:3005
+        description: Root service endpoint
     get:
       operationId: getHealth
       summary: Health check
@@ -80,6 +87,9 @@ paths:
                 timestamp: "2026-02-20T12:00:00.000Z"
 
   /auth/dev-token:
+    servers:
+      - url: http://localhost:3005
+        description: Root service endpoint
     get:
       operationId: getDevToken
       summary: Generate development JWT token
@@ -97,6 +107,36 @@ paths:
                 $ref: "#/components/schemas/DevTokenResponse"
               example:
                 token: "eyJhbGciOiJIUzI1NiIs..."
+
+  /auth/portal-session:
+    servers:
+      - url: http://localhost:3005
+        description: Root service endpoint
+    get:
+      operationId: getPortalSession
+      summary: Issue web portal session token
+      description: |
+        Issues a short-lived `X-Portal-Session` token for browser portal API
+        requests. In strict modality mode, the caller must send a valid
+        `evergreen_portal_boot_carrier-summit` bootstrap cookie obtained from
+        `GET /` or `GET /index.html`; otherwise returns `403 PORTAL_BOOTSTRAP_REQUIRED`.
+      tags: [Auth]
+      security: []
+      responses:
+        "200":
+          description: Portal session token issued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalSessionResponse"
+              example:
+                session_token: "portal_sess_carrier-summit_a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                service: carrier-summit
+                modality: web-portal
+                header: X-Portal-Session
+                expires_in: 3600
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /summit/quotes/{quote_id}:
     get:
@@ -170,8 +210,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
 
   /summit/policies/{policy_id}/documents:
@@ -251,8 +291,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
 
   /summit/inspections/{quote_id}:
@@ -352,7 +392,6 @@ components:
       description: Request correlation identifier for tracing.
       schema:
         type: string
-        format: uuid
         example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
   schemas:
     # ----- Health -----------------------------------------------------------
@@ -381,6 +420,27 @@ components:
           type: string
           description: Signed JWT with all carrier scopes.
           example: "eyJhbGciOiJIUzI1NiIs..."
+
+    PortalSessionResponse:
+      type: object
+      required: [session_token, service, modality, header, expires_in]
+      properties:
+        session_token:
+          type: string
+          description: Session token to pass in the X-Portal-Session header.
+          example: "portal_sess_carrier-summit_a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        service:
+          type: string
+          example: carrier-summit
+        modality:
+          type: string
+          example: web-portal
+        header:
+          type: string
+          example: X-Portal-Session
+        expires_in:
+          type: integer
+          example: 3600
 
     # ----- Quote (Summit Fire & Casualty) ------------------------------------------------
     SummitQuote:
@@ -412,8 +472,7 @@ components:
         policy_type:
           type: string
           description: Type of insurance policy.
-          enum: [auto, home, umbrella]
-          example: auto
+          example: personal_auto
         premium_annual:
           type: number
           format: double
@@ -437,7 +496,7 @@ components:
         status:
           type: string
           description: Current quote status.
-          enum: [quoted, approved, declined]
+          enum: [quoted, approved, declined, bound, pending, underwriting_hold, submitted, expired]
           example: quoted
         decline_reason:
           type: string
@@ -503,12 +562,12 @@ components:
         document_id:
           type: string
           description: Unique document identifier.
-          example: "DOC-TRAV-001"
+          example: "SDOC-001"
         document_type:
           type: string
           description: Type of document.
-          enum: [declaration, id_card, endorsement, cancellation]
-          example: declaration
+          enum: [declaration, dec_page, id_card, id_cards, endorsement, cancellation, policy_jacket]
+          example: dec_page
         filename:
           type: string
           description: Original filename.
@@ -662,7 +721,7 @@ components:
         inspection_status:
           type: string
           description: Current inspection status.
-          enum: [scheduled, in_progress, completed, cancelled]
+          enum: [not_scheduled, scheduled, in_progress, completed, cancelled]
           example: scheduled
         inspection_scheduled_at:
           type: string
@@ -740,11 +799,10 @@ components:
           example: "quote not found"
         correlation_id:
           type: string
-          format: uuid
           description: Correlation ID for request tracing.
         details:
           type: array
-          description: Field-level validation errors (present on 422).
+          description: Field-level validation errors (present on 400).
           items:
             type: object
             required: [field, message]
@@ -755,6 +813,9 @@ components:
               message:
                 type: string
                 example: "decision is required"
+              code:
+                type: string
+                example: required
 
   responses:
     Unauthorized:
@@ -764,17 +825,20 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
           example:
-            error_code: UNAUTHORIZED
-            message: "Missing or invalid Bearer token"
+            error_code: AUTH_ERROR
+            message: "Missing or malformed Authorization header."
     Forbidden:
-      description: Insufficient scopes for this operation.
+      description: |
+        Insufficient scopes (`FORBIDDEN`), missing/invalid strict-mode portal
+        session (`MODALITY_VIOLATION`), or missing strict-mode bootstrap cookie
+        on `GET /auth/portal-session` (`PORTAL_BOOTSTRAP_REQUIRED`).
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
           example:
             error_code: FORBIDDEN
-            message: "Insufficient scopes"
+            message: "Missing required scope(s): carrier:quotes:read"
     NotFound:
       description: Resource not found.
       content:
@@ -793,7 +857,7 @@ components:
           example:
             error_code: CONFLICT
             message: "Quote already has underwriting decision 'approved'."
-    UnprocessableEntity:
+    BadRequest:
       description: Validation error.
       content:
         application/json:
@@ -801,7 +865,8 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
           example:
             error_code: VALIDATION_ERROR
-            message: "Validation failed"
+            message: "One or more fields failed validation."
             details:
               - field: decision
-                message: "decision is required"
+                message: "decision is required."
+                code: required

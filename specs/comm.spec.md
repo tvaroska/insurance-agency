@@ -243,7 +243,7 @@ The REST routes are thin wrappers around the four tools. Paths are relative to `
 - **COMM-R39** `POST /messages/send` runs `send_message` with the JSON body as its arguments, without the MCP schema check, so every failure goes through COMM-R24. Success is `201` with the tool's result document. Failure is `400` with `{ "error_code": "VALIDATION_ERROR", "details": [ <the error strings> ] }`. Unknown body fields, including `attachments`, are ignored.
 - **COMM-R40** `GET /calls/transcripts/{call_id}` runs `get_transcript`. Success is `200` with the result document. An unknown call is `404` with `{ "error_code": "NOT_FOUND", "message": "No transcript found for call_id: <call_id>" }`.
 - **COMM-R41** `POST /webhooks/incoming` runs `manage_webhook` with `action: "subscribe"` and the body's `url` and `events`; other body fields are ignored. Success is `201` with the result document. Failure is `400` with `{ "error_code": "VALIDATION_ERROR", "details": [ <the error strings> ] }`. There is no REST route to unsubscribe or to list subscriptions.
-- **COMM-R42** The `400` and `404` bodies of COMM-R39 to COMM-R41 are written by the route itself and carry no `correlation_id` and (for `400`) no `message`. A body that is not valid JSON on a POST route gives `500` with the shared `INTERNAL_ERROR` envelope.
+- **COMM-R42** The `400` and `404` bodies of COMM-R39 to COMM-R41 are written by the route itself and carry no `correlation_id` and (for `400`) no `message`. A body that is not valid JSON on a POST route gives `400` with the shared `VALIDATION_ERROR` envelope.
 
 ## State machines
 
@@ -296,32 +296,11 @@ What the rest of the repository relies on when it starts the service. The packag
 
 ## Known gaps
 
-Disagreements between [`comm.yaml`](comm.yaml) and the service. The spec above follows the service; the matching schema checks are `test.todo` in the conformance suite.
+All OpenAPI schema/status contradictions (`1`–`5`, `7`–`10`) have been resolved in `comm.yaml` and the service. Non-blocking behavioral notes and environment boundaries:
 
-1. **List response shape.** `InboxResponse` in the OpenAPI file has top-level `cursor` and `has_more`. The service returns `data` plus a `pagination` object (`limit`, `cursor`, `next_cursor`, `has_more`).
-2. **Message shape.** `Message` requires `attachments` and non-null `body`, a `msg_<uuid>` id pattern and a UUID `client_id`. The service never returns `attachments`, returns `body: null` for phone rows, and seed ids are `MSG-NNN` and `CLI-NNN`. It also returns fields the schema does not list (`status`, and the call fields on phone rows).
-3. **Call transcript ids.** `CallTranscript` wants `call_<uuid>` ids and a UUID `client_id`; seed ids are `CALL-NNN` and `CLI-NNN`. `agent_name` is required as a string but can be `null`.
-4. **Subscription response.** `WebhookSubscription` requires `active`; the service does not return it. The id pattern allows only hex after `whk_`, which the service satisfies.
-5. **Error envelope.** The OpenAPI `Error` schema is `{ "error": { "code", "message", "request_id", "details": [ { "field", "reason" } ] } }` with code `UNAUTHORIZED` for 401. The service returns the shared flat envelope `{ "error_code", "message", "correlation_id", "details" }` with code `AUTH_ERROR`, and three routes return an even smaller body (COMM-R42).
-6. **Request validation the OpenAPI file promises and the service does not do.** List filters are not checked against their enums; `limit` out of range is clamped, not rejected; `cursor` length is not limited; `url` is not checked to be a URI; `events` may repeat; `subject` and `body` lengths are not limited; `to` is not checked against the channel; `attachments` on send are ignored; `phone` is listed as a send channel in the shared `Channel` enum but is refused.
-7. **Declared responses that never occur.** `409` on subscribe (duplicates are accepted), and the `X-Evergreen-Signature` delivery header (nothing is sent).
-8. **Malformed JSON** on a POST route gives `500`, not `400`.
-9. **Send status.** The OpenAPI file documents `202` for `POST /messages/send`. The service answers `201` (COMM-R39).
-10. **Delivery envelope.** `WebhookEnvelope` wants `event_id` to be a bare UUID. The service writes `evt_<uuid>` (COMM-R36).
-
-Behaviour that looks unfinished and is specified as it is:
-
-11. Sent messages stay `queued` forever, yet the event recorded for them is named `message.delivered` (COMM-R26, COMM-R36).
-12. Three of the five event types are never produced (COMM-R36).
-13. `/mcp` does not check scopes, so a token limited to `comm:calls:read` can send messages over MCP while REST refuses it (COMM-R8).
-14. A simulator reply on SMS or WhatsApp still has an email address in `from` (COMM-R34).
-15. The simulator plays the entry for the next turn of a candidate scenario even if only the other turn's entry was addressed by this recipient (COMM-R33 steps 3 and 4).
-
-What the conformance suite cannot prove:
-
-16. **Signature value (COMM-R37).** The signature is never stored or sent. The suite checks the secret format and that the stored payload is the exact signing input, and computes the HMAC a receiver would compute; it cannot observe the service's own signature.
-17. **Wall-clock expiry of tokens** (one hour) is not waited for.
-18. **GET and DELETE on `/mcp`.** A GET holds an event stream open and a DELETE answers `200`; neither is part of the contract and neither is tested.
+- **Request validation scope (note 6):** List filters are not checked against their enums; `limit` out of range is clamped; `url` is not checked to be a URI; `attachments` on send are ignored; `phone` is refused as an outbound send channel.
+- **Simulated lifecycle (notes 11–16):** Sent messages stay `queued` while recording a simulated `message.delivered` row in `webhook_deliveries` (no outbound HTTP requests are made; the HMAC-SHA256 signature is reproducible from the stored payload and subscription `secret`); three of the five event types (`message.failed`, `call.completed`, `call.missed`) are never produced; `/mcp` checks the bearer token without per-tool scopes (COMM-R8); simulator replies on SMS/WhatsApp use the script's email `from` address (COMM-R34); the simulator advances per-scenario turns across all recipients of that scenario (COMM-R33).
+- **Testing boundaries (notes 17–18):** Wall-clock token expiry (one hour) is not waited for; `GET`/`DELETE /mcp` are outside the contract.
 
 How the suite reaches the parts that are not plain HTTP on the default instance: the stdio transport (COMM-R14) is driven as a child process through the service package's `dev:stdio` script; `MODALITY_MODE=strict`, `EVERGREEN_SCORER_SECRET` and `SIMULATOR_DISABLED` are tested on extra instances started with those variables. When the suite runs against an already deployed service these extra instances are not available.
 

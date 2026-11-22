@@ -305,7 +305,8 @@ for (const path of PATHS) {
   });
 }
 
-test.todo(
-  "CLM-G02: specs/claims.behavior.yaml names the length error code max_length; the service sends too_long (CLM-R15)",
-  () => {},
-);
+test("CLM-G02: specs/claims.behavior.yaml aligns length error codes with the service (too_long)", async () => {
+  const behaviorText = await Bun.file(new URL("../../../specs/claims.behavior.yaml", import.meta.url)).text();
+  expect(behaviorText).not.toContain("code: max_length");
+  expect(behaviorText).toContain("code: too_long");
+});

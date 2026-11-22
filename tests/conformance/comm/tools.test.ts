@@ -91,8 +91,7 @@ describe("REST transcript", () => {
     const res = await ctx.api.get("/v1/calls/transcripts/CALL-T1");
     expect(res.status).toBe(200);
     expect(res.body).toEqual(await tool(ctx.api, "get_transcript", { call_id: "CALL-T1" }));
-    // Tolerated issues are Known gap 3 of specs/comm.spec.md.
-    contract.check(res, { allow: [/call_id: does not match pattern/, /client_id: .* is not a UUID/] });
+    contract.check(res);
   });
 
   test("COMM-R40: a call without an agent introduction returns agent_name null", async () => {
@@ -100,13 +99,14 @@ describe("REST transcript", () => {
     const res = await ctx.api.get("/v1/calls/transcripts/CALL-Q");
     expect(res.status).toBe(200);
     expect(res.body.agent_name).toBeNull();
+    contract.check(res);
   });
 
   test("COMM-R40: an unknown call is 404 with error_code and message only", async () => {
     const res = await ctx.api.get("/v1/calls/transcripts/CALL-NOPE");
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error_code: "NOT_FOUND", message: "No transcript found for call_id: CALL-NOPE" });
-    contract.check(res, { allow: ERROR_ENVELOPE_GAP });
+    contract.check(res);
   });
 
   test("COMM-R42: the 404 body carries no correlation_id, though the header is set", async () => {
@@ -114,8 +114,6 @@ describe("REST transcript", () => {
     expect(Object.keys(res.body)).toEqual(["error_code", "message"]);
     expect(res.headers.get("x-correlation-id")).toBeTruthy();
   });
-
-  test.todo("Known gap 3: transcripts match CallTranscript (CALL-NNN and CLI-NNN ids, agent_name may be null)", () => {});
 });
 
 describe("manage_webhook subscribe", () => {
@@ -258,8 +256,7 @@ describe("REST webhook subscription", () => {
     expect(res.body.secret).toMatch(/^whsec_[A-Za-z0-9]{32}$/);
     expect(diff.webhooks.added).toHaveLength(1);
     expect(diff.webhooks.added[0]).toMatchObject({ webhook_id: res.body.webhook_id, secret: res.body.secret, active: true });
-    // Tolerated issue is Known gap 4 of specs/comm.spec.md.
-    contract.check(res, { allow: [/missing required property 'active'/] });
+    contract.check(res);
   });
 
   test("COMM-R41: other body fields are ignored: no caller-chosen secret, state or action", async () => {
@@ -288,7 +285,7 @@ describe("REST webhook subscription", () => {
       ],
     });
     expect(diff).toEqual({});
-    contract.check(res, { allow: ERROR_ENVELOPE_GAP });
+    contract.check(res);
   });
 
   test("COMM-R41: a duplicate subscription is accepted, not 409", async () => {
@@ -307,9 +304,14 @@ describe("REST webhook subscription", () => {
     const res = await ctx.api.post("/v1/webhooks/incoming", "{oops", { headers: { "Content-Type": "application/json" } });
     expect(res.status).toBe(400);
     expect(res.body.error_code).toBe("VALIDATION_ERROR");
+    contract.check(res);
   });
 
-  test.todo("Known gap 4: the subscription response matches WebhookSubscription (active is not returned)", () => {});
-  test.todo("Known gap 7: a duplicate subscription is 409 (the service accepts it)", () => {});
-  test.todo("Known gap 5: error bodies match the OpenAPI Error schema (the service uses the flat shared envelope, and three routes a smaller body)", () => {});
+  test("Known gaps 4, 5, 7: specs/comm.yaml omits unused 409, allows omitted active, and matches flat error envelope", async () => {
+    const { parse } = await import("yaml");
+    const doc = parse(await Bun.file(new URL("../../../specs/comm.yaml", import.meta.url)).text());
+    expect(doc.paths["/webhooks/incoming"].post.responses["409"]).toBeUndefined();
+    expect(doc.components.schemas.WebhookSubscription.required).not.toContain("active");
+    expect(doc.components.schemas.Error.required).toEqual(["error_code"]);
+  });
 });

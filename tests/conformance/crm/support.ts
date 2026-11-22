@@ -86,11 +86,7 @@ export async function start(): Promise<Ctx> {
   return { svc, api: await svc.client() };
 }
 
-// CRM-G01: specs/crm.yaml describes errors as { code, message, details[].reason, request_id };
-// the service sends the shared envelope { error_code, message, details[].{field,message,code}, correlation_id }.
-const ERROR_ENVELOPE_GAP = "is missing required property 'code'";
-
-/** Checks that an error status is documented for the operation, tolerating the error-envelope gap CRM-G01. */
+/** Checks that an error status and envelope match specs/crm.yaml. */
 export function checkError(contract: Contract, res: HttpResult): CheckResult {
-  return contract.check(res, { allow: [ERROR_ENVELOPE_GAP] });
+  return contract.check(res);
 }

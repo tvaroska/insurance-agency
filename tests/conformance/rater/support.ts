@@ -167,15 +167,9 @@ export async function start(): Promise<Ctx> {
   return { svc, api: await svc.client(), ams: amsStub };
 }
 
-// RTR-G01: specs/rater.yaml nests errors as { error: { code, message, ... } }; the service
-// sends the shared envelope { error_code, message, correlation_id, details }.
-const ERROR_ENVELOPE_GAP = "is missing required property 'error'";
-
-/** Checks that an error status is documented for the operation, tolerating the error-envelope gap RTR-G01. */
+/** Checks that an error status and envelope match specs/rater.yaml. */
 export function checkError(contract: Contract, res: HttpResult): CheckResult {
-  return contract.check(res, { allow: [ERROR_ENVELOPE_GAP] });
+  return contract.check(res);
 }
 
-// RTR-G08: specs/rater.yaml puts has_more at the top level of the carrier list; the service
-// returns it inside `pagination`.
-export const CARRIER_LIST_GAP: CheckOptions = { allow: ["/: is missing required property 'has_more'"] };
+export const CARRIER_LIST_GAP: CheckOptions = {};

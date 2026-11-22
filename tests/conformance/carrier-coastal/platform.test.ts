@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expectError, loadContract } from "../harness";
-import { API, ENUM_GAPS, policyRow, quoteRow, rawQuoteRow, recommendation, riskFactors, riskScore, riskTier, SCOPES, spaced, start, type Ctx } from "./support";
+import { API, policyRow, quoteRow, rawQuoteRow, recommendation, riskFactors, riskScore, riskTier, SCOPES, spaced, start, type Ctx } from "./support";
 
 const contract = loadContract("carrier-coastal");
 let ctx: Ctx;
@@ -37,7 +37,6 @@ const BODIES: Record<string, unknown> = {
 };
 const call = (client: typeof ctx.api, op: (typeof apiOperations)[number]) =>
   spaced(() => client.request(op.method, concrete(op.path), { body: BODIES[op.operationId] }));
-const SUCCESS_GAPS = [...ENUM_GAPS, /missing required property 'deductibles'/, /missing required property 'submitted_at'/];
 
 describe("public endpoints", () => {
   test("CST-R6: GET /health answers without a token", async () => {
@@ -46,13 +45,13 @@ describe("public endpoints", () => {
     expect(Object.keys(res.body)).toEqual(["status", "service", "timestamp"]);
     expect(res.body).toMatchObject({ status: "ok", service: "carrier-coastal" });
     expect(Number.isNaN(Date.parse(res.body.timestamp))).toBe(false);
-    contract.check(res, { operationId: "getHealth" });
+    contract.check(res);
   });
 
   test("CST-R7: GET /auth/dev-token answers without a token, and its token opens every API route", async () => {
     const res = await ctx.svc.http.get("/auth/dev-token");
     expect(res.status).toBe(200);
-    contract.check(res, { operationId: "getDevToken" });
+    contract.check(res);
     const dev = ctx.svc.withToken(res.body.token);
     for (const op of apiOperations) {
       await ctx.svc.seed(SEED);
@@ -121,7 +120,7 @@ describe("authentication and scopes", () => {
       const only = await ctx.svc.client({ scopes: [op.scopes[0]] });
       const allowed = await call(only, op);
       expect([200, 201]).toContain(allowed.status);
-      contract.check(allowed, { allow: SUCCESS_GAPS });
+      contract.check(allowed);
     });
   }
 
@@ -157,8 +156,7 @@ describe("authentication and scopes", () => {
     expect(invalid.body.error_code).toBe("VALIDATION_ERROR");
     expect(invalid.body.message).toBe("One or more fields failed validation.");
     for (const d of invalid.body.details) expect(Object.keys(d).sort()).toEqual(["code", "field", "message"]);
-    // Known gap 1 of specs/carrier-coastal.spec.md: the OpenAPI file documents 422.
-    contract.check(invalid, { allowUndocumentedStatus: true });
+    contract.check(invalid);
     contract.checkSchema("ErrorResponse", invalid.body);
 
     const missing = await ctx.api.get(`${API}/policies/POL-NOPE/id-card`);
@@ -173,8 +171,9 @@ describe("authentication and scopes", () => {
   test("CST-R10: every operation of the OpenAPI file was exercised", async () => {
     // A fresh contract object, so this does not depend on which tests ran before.
     const fresh = loadContract("carrier-coastal");
-    fresh.check(await ctx.svc.http.get("/health"), { operationId: "getHealth" });
-    fresh.check(await ctx.svc.http.get("/auth/dev-token"), { operationId: "getDevToken" });
+    fresh.check(await ctx.svc.http.get("/health"));
+    fresh.check(await ctx.svc.http.get("/auth/dev-token"));
+    fresh.check(await ctx.svc.http.get("/auth/portal-session"));
     for (const op of fresh.operations().filter((o) => o.path.startsWith(API))) {
       const res = await ctx.svc.http.request(op.method, concrete(op.path), { body: BODIES[op.operationId] });
       expect(res.status).toBe(401);
@@ -183,8 +182,18 @@ describe("authentication and scopes", () => {
     expect(fresh.unchecked()).toEqual([]);
   });
 
-  test.todo("Known gap 2: GET /auth/portal-session and the strict-mode 403 responses are described by the OpenAPI file (they are not)", () => {});
-  test.todo("Known gap 4: /health and /auth/dev-token are served under the OpenAPI server path /v1 (they are served at the root)", () => {});
+  test("Known gaps 2 & 4: /health, /auth/dev-token and /auth/portal-session match root OpenAPI paths and document strict 403", async () => {
+    expect(contract.match("GET", "/health")?.operationId).toBe("getHealth");
+    expect(contract.match("GET", "/auth/dev-token")?.operationId).toBe("getDevToken");
+    const portalOp = contract.match("GET", "/auth/portal-session");
+    expect(portalOp?.operationId).toBe("getPortalSession");
+    expect(portalOp?.statuses).toContain("200");
+    expect(portalOp?.statuses).toContain("403");
+    contract.check(await ctx.svc.http.get("/auth/portal-session"));
+    const forbiddenDesc: string = contract.document.components?.responses?.Forbidden?.description ?? "";
+    expect(forbiddenDesc).toContain("MODALITY_VIOLATION");
+    expect(forbiddenDesc).toContain("PORTAL_BOOTSTRAP_REQUIRED");
+  });
 });
 
 describe("tables", () => {

@@ -46,9 +46,7 @@ describe("GET /v1/envelopes", () => {
     expect(res.body.data[3]).toEqual({
       envelope_id: "ENV-1",
       client_id: "CLI-1",
-      policy_id: null,
       document_ids: ["DOC-1"],
-      document_Ids: ["DOC-1"],
       signers: [{ name: "Cora Client", email: "cora@example.test", role: "policyholder", status: "pending", signed_at: null }],
       signer_name: "Cora Client",
       signer_email: "cora@example.test",
@@ -243,14 +241,11 @@ describe("GET /v1/assets/marketing", () => {
     asset({ asset_id: "AST-3", category: "flyer", published_date: "2024-02-01T00:00:00Z", description: null }),
     asset({ asset_id: "AST-4", category: "social_media", published_date: "2024-02-01T00:00:00Z" }),
   ];
-  // ECM-G05: MarketingAsset in specs/ecm.yaml does not allow a null description.
-  const allow = ["/description: is null but the schema is not nullable"];
-
   test("ECM-R50: lists assets newest published first, then asset_id descending", async () => {
     await ctx.svc.seed({ tables: { marketing_assets: ASSETS } });
     const res = await ctx.api.get("/v1/assets/marketing");
     expect(res.status).toBe(200);
-    check(contract, res, allow);
+    contract.check(res);
     expect(res.body.data.map((a: any) => a.asset_id)).toEqual(["AST-2", "AST-4", "AST-3", "AST-1"]);
     expect(res.body.data[3]).toEqual(asset({ asset_id: "AST-1", category: "welcome_kit", published_date: "2024-01-01T00:00:00Z" }));
     expect(res.body.pagination).toEqual({ limit: 25, cursor: null, next_cursor: null, has_more: false });
@@ -261,7 +256,7 @@ describe("GET /v1/assets/marketing", () => {
     const ids = async (category: string) => {
       const res = await ctx.api.get("/v1/assets/marketing", { query: { category } });
       expect(res.status).toBe(200);
-      check(contract, res, allow);
+      contract.check(res);
       return res.body.data.map((a: any) => a.asset_id);
     };
     expect(await ids("flyer")).toEqual(["AST-2", "AST-3"]);
@@ -290,8 +285,21 @@ describe("GET /v1/assets/marketing", () => {
   });
 });
 
-test.todo(
-  "ECM-G04: the envelope list matches Envelope in specs/ecm.yaml (the service adds document_Ids and a policy_id that is always null, and the documented scope ecm:envelopes:read cannot be granted)",
-  () => {},
-);
-test.todo("ECM-G05: MarketingAsset.description is nullable in specs/ecm.yaml (the service returns null for assets without one)", () => {});
+test("ECM-G04, ECM-G05: envelopes and marketing assets conform strictly to specs/ecm.yaml", async () => {
+  await ctx.svc.seed({
+    tables: {
+      envelopes: [envelopeRow()],
+      marketing_assets: [asset({ asset_id: "AST-NULL", description: null })],
+    },
+  });
+  const envelopes = await ctx.api.get("/v1/envelopes");
+  expect(envelopes.status).toBe(200);
+  expect(envelopes.body.data[0]).not.toHaveProperty("document_Ids");
+  expect(envelopes.body.data[0]).not.toHaveProperty("policy_id");
+  contract.check(envelopes);
+
+  const assets = await ctx.api.get("/v1/assets/marketing");
+  expect(assets.status).toBe(200);
+  expect(assets.body.data[0].description).toBeNull();
+  contract.check(assets);
+});

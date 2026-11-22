@@ -97,11 +97,16 @@ paths:
                 type: object
                 required:
                   - data
+                  - pagination
                 properties:
                   data:
                     type: array
                     items:
                       $ref: '#/components/schemas/QuoteResults'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/AuthError'
         '403':
@@ -470,29 +475,48 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
         '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
           description: |
-            Conflict — either the quote is already bound/declined, or E&O rules
-            have been triggered requiring manager escalation. When E&O rules
-            trigger, the response includes an `eo_rules` array describing which
-            rules were violated.
+            Unprocessable Entity — E&O rules triggered (premium > $10,000 without
+            approved manager escalation, or personal auto coverages below state
+            statutory minimums).
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - error
+                  - error_code
+                  - message
+                  - details
+                  - eo_rules
                 properties:
                   error:
                     type: string
-                    enum: [CONFLICT, E&O_RULES_TRIGGERED, ESCALATION_NOT_APPROVED, ESCALATION_VERIFICATION_FAILED]
+                    enum: [E&O_RULES_TRIGGERED, ESCALATION_NOT_APPROVED, ESCALATION_VERIFICATION_FAILED]
+                  error_code:
+                    type: string
+                    enum: [E_EO_PREMIUM_THRESHOLD_EXCEEDED, E_EO_STATE_MINIMUM_VIOLATION]
                   message:
                     type: string
+                  details:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FieldError'
                   eo_rules:
                     type: array
                     items:
                       type: object
+                      required:
+                        - rule
+                        - message
                       properties:
                         rule:
                           type: string
                           enum: [premium_threshold, state_minimum_violation]
+                        error_code:
+                          type: string
                         message:
                           type: string
 
@@ -548,17 +572,14 @@ paths:
                 type: object
                 required:
                   - data
-                  - has_more
+                  - pagination
                 properties:
                   data:
                     type: array
                     items:
                       $ref: '#/components/schemas/CarrierAppetite'
-                  has_more:
-                    type: boolean
-                  next_cursor:
-                    type: string
-                    nullable: true
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -631,25 +652,14 @@ paths:
                 type: object
                 required:
                   - data
-                  - has_more
+                  - pagination
                 properties:
                   data:
                     type: array
                     items:
                       $ref: '#/components/schemas/CarrierAppetite'
-                  has_more:
-                    type: boolean
-                    description: Whether additional pages exist beyond this result set.
-                    example: true
-                  next_cursor:
-                    type: string
-                    nullable: true
-                    description: Cursor value to pass as the `cursor` query parameter to retrieve the next page. Null when `has_more` is false.
-                    example: eyJjIjoiTlROVyJ9
-                  total_count:
-                    type: integer
-                    description: Total number of carriers matching the filter criteria.
-                    example: 5
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
               examples:
                 illinois_auto:
                   summary: Carriers writing personal auto in Illinois
@@ -765,13 +775,14 @@ components:
       type: string
       description: Short mnemonic code identifying a carrier partner.
       enum:
-        - TRAV
-        - PROG
+        - SMIT
+        - CSTL
         - HRTF
         - ERIE
         - NTNW
         - SAFECO
         - LIBT
+        - SURPLUS
 
     QuoteStatus:
       type: string
@@ -781,6 +792,7 @@ components:
         - completed
         - partial
         - expired
+        - requires_info
 
     CarrierQuoteStatus:
       type: string
@@ -790,6 +802,9 @@ components:
         - declined
         - pending
         - error
+        - bound
+        - expired
+        - underwriting_hold
 
     PaymentMethod:
       type: string
@@ -1091,13 +1106,21 @@ components:
 
     Coverage:
       type: object
-      required:
-        - coverage_type
       properties:
         coverage_type:
           type: string
           description: Identifier for the type of coverage.
           example: bodily_injury
+        type:
+          type: string
+          description: Alternate field name for the type of coverage.
+          example: bodily_injury
+        limit:
+          nullable: true
+          oneOf:
+            - type: string
+            - type: number
+          description: Coverage limit (formatted split string or numeric dollar amount).
         per_person_limit:
           type: number
           format: double
@@ -1115,6 +1138,7 @@ components:
         deductible:
           type: number
           format: double
+          nullable: true
           description: Deductible amount in USD.
           example: 500
 
@@ -1198,6 +1222,7 @@ components:
         effective_date:
           type: string
           format: date
+          nullable: true
           example: "2026-04-01"
         created_at:
           type: string
@@ -1267,9 +1292,8 @@ components:
           description: Human-readable explanation when the carrier declines the risk. Null if quoted.
         valid_until:
           type: string
-          format: date-time
           nullable: true
-          description: Timestamp after which this quote expires and can no longer be bound. Null if declined.
+          description: Expiration date (`YYYY-MM-DD`) or ISO-8601 date-time after which this quote can no longer be bound. Null if declined.
           example: "2026-04-10T23:59:59Z"
 
     BindRequest:
@@ -1351,11 +1375,13 @@ components:
         effective_date:
           type: string
           format: date
+          nullable: true
           description: Policy effective date.
           example: "2026-04-01"
         expiration_date:
           type: string
           format: date
+          nullable: true
           description: Policy expiration date.
           example: "2027-04-01"
         premium_annual:
@@ -1446,37 +1472,53 @@ components:
           description: Whether the carrier files SR-22 certificates.
           example: true
 
+    PaginationMeta:
+      type: object
+      required:
+        - limit
+        - has_more
+      properties:
+        limit:
+          type: integer
+          example: 25
+        cursor:
+          type: string
+          nullable: true
+          example: null
+        next_cursor:
+          type: string
+          nullable: true
+          example: eyJjYXJyaWVyX2NvZGUiOiJFUklFIn0=
+        has_more:
+          type: boolean
+          example: false
+
     # ─── Error schemas ──────────────────────────────────────────────────
 
     ErrorResponse:
       type: object
       required:
-        - error
+        - error_code
+        - message
+        - correlation_id
       properties:
-        error:
-          type: object
-          required:
-            - code
-            - message
-          properties:
-            code:
-              type: string
-              description: Machine-readable error code.
-              example: validation_error
-            message:
-              type: string
-              description: Human-readable error summary.
-              example: The request body contains invalid fields.
-            correlation_id:
-              type: string
-              format: uuid
-              description: Unique identifier for this error occurrence. Always present on 5xx errors. Include this when contacting support.
-              example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-            details:
-              type: array
-              description: Field-level validation errors. Present only on 400 responses.
-              items:
-                $ref: '#/components/schemas/FieldError'
+        error_code:
+          type: string
+          description: Machine-readable error code.
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Human-readable error summary.
+          example: One or more fields failed validation.
+        correlation_id:
+          type: string
+          description: Correlation identifier matching the X-Correlation-ID header.
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        details:
+          type: array
+          description: Field-level validation errors. Present on 400 responses.
+          items:
+            $ref: '#/components/schemas/FieldError'
 
     FieldError:
       type: object
@@ -1495,7 +1537,7 @@ components:
         code:
           type: string
           description: Machine-readable validation rule that failed.
-          example: date_in_past
+          example: invalid_format
 
   responses:
     ValidationError:
@@ -1505,16 +1547,13 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error:
-              code: validation_error
-              message: The request body contains invalid fields.
-              details:
-                - field: effective_date
-                  message: Effective date must be between today and 60 days in the future.
-                  code: date_range
-                - field: drivers[1].license_number
-                  message: License number is required for all drivers.
-                  code: required
+            error_code: VALIDATION_ERROR
+            message: One or more fields failed validation.
+            correlation_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+            details:
+              - field: effective_date
+                message: effective_date must be YYYY-MM-DD.
+                code: invalid_format
 
     AuthError:
       description: Authentication failed. The access token is missing, expired, or invalid.
@@ -1523,9 +1562,9 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error:
-              code: authentication_error
-              message: The access token has expired. Please obtain a new token.
+            error_code: AUTH_ERROR
+            message: Missing or malformed Authorization header.
+            correlation_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 
     ForbiddenError:
       description: The authenticated client lacks the required scope for this operation.
@@ -1534,9 +1573,9 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error:
-              code: forbidden
-              message: "The token does not have the required scope: rater:quotes:bind."
+            error_code: FORBIDDEN
+            message: "Missing required scope(s): rater:quotes:bind"
+            correlation_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 
     NotFoundError:
       description: The requested resource does not exist.
@@ -1545,20 +1584,20 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error:
-              code: not_found
-              message: "Quote request qr_00000000 was not found."
+            error_code: NOT_FOUND
+            message: "quote request not found."
+            correlation_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 
     ConflictError:
-      description: The quote has already been bound. The existing policy details are returned.
+      description: The quote cannot be bound in its current state (already bound, declined, expired, or non-quoted status).
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error:
-              code: conflict
-              message: "Quote qt_a1b2c3d4 has already been bound as policy POL-PROG-2026-0041827."
+            error_code: CONFLICT
+            message: "Quote qt_a1b2c3d4 is already bound."
+            correlation_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 
     InternalError:
       description: An unexpected server error occurred. Include the correlation_id when contacting support.
@@ -1567,7 +1606,6 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error:
-              code: internal_error
-              message: An unexpected error occurred. Please try again later.
-              correlation_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+            error_code: INTERNAL_ERROR
+            message: An unexpected error occurred.
+            correlation_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6

@@ -53,7 +53,8 @@ describe("GET /v1/quotes", () => {
     const res = await ctx.api.get("/v1/quotes");
     expect(res.status).toBe(200);
     contract.check(res);
-    expect(Object.keys(res.body)).toEqual(["data"]);
+    expect(Object.keys(res.body)).toEqual(["data", "pagination"]);
+    expect(res.body.pagination).toEqual({ limit: 50, cursor: null, next_cursor: null, has_more: false });
     expect(res.body.data.map((r: any) => r.request_id)).toEqual(["QR-1", "QR-2", "QR-3"]);
     const first = res.body.data[0];
     expect({ ...first, carriers: undefined }).toEqual({
@@ -107,11 +108,30 @@ describe("GET /v1/quotes", () => {
     expect(await ids({ policy_type: "boat" })).toEqual([]);
   });
 
-  test("RTR-R11: carrier_code and cursor are ignored", async () => {
+  test("RTR-R11, RTR-G09: carrier_code filters quote requests and carriers, and cursor paginates cleanly", async () => {
     await seed();
-    const res = await ctx.api.get("/v1/quotes", { query: { carrier_code: "LIBT", cursor: "anything" } });
-    expect(res.status).toBe(200);
-    expect(res.body.data).toHaveLength(3);
+    const byCarrier = await ctx.api.get("/v1/quotes", { query: { carrier_code: "LIBT" } });
+    expect(byCarrier.status).toBe(200);
+    contract.check(byCarrier);
+    expect(byCarrier.body.data.map((r: any) => r.request_id)).toEqual(["QR-1"]);
+    expect(byCarrier.body.data[0].carriers.map((c: any) => c.carrier_code)).toEqual(["LIBT"]);
+
+    const first = await ctx.api.get("/v1/quotes", { query: { limit: 2 } });
+    expect(first.status).toBe(200);
+    contract.check(first);
+    expect(first.body.data.map((r: any) => r.request_id)).toEqual(["QR-1", "QR-2"]);
+    expect(first.body.pagination.has_more).toBe(true);
+    expect(first.body.pagination.next_cursor).toBeTruthy();
+
+    const second = await ctx.api.get("/v1/quotes", { query: { limit: 2, cursor: first.body.pagination.next_cursor } });
+    expect(second.status).toBe(200);
+    contract.check(second);
+    expect(second.body.data.map((r: any) => r.request_id)).toEqual(["QR-3"]);
+    expect(second.body.pagination.has_more).toBe(false);
+
+    const badCursor = await ctx.api.get("/v1/quotes", { query: { cursor: "%%%" } });
+    expectError(badCursor, 400, "VALIDATION_ERROR", { field: "cursor", code: "invalid_format" });
+    contract.check(badCursor);
   });
 
   test("RTR-R12: limit defaults to 50 and is clamped to 1..100", async () => {
@@ -126,11 +146,6 @@ describe("GET /v1/quotes", () => {
     expect(await count("100")).toBe(100);
     expect(await count("1000")).toBe(100);
   });
-
-  test.todo(
-    "RTR-G09: GET /v1/quotes honours the carrier_code and cursor parameters that specs/rater.yaml documents (the service ignores both and returns no pagination data)",
-  () => {},
-  );
 });
 
 describe("POST /v1/quotes/request: validation", () => {

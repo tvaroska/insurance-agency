@@ -57,14 +57,14 @@ Invariants:
 | `POST /v1/documents/coi/generate`, `POST /v1/documents/coi`, `POST /v1/coi/generate`, `POST /v1/coi` | `ecm:documents:write` |
 | `GET /v1/documents/coi/{document_id}/pdf`, `GET /v1/coi/{document_id}/pdf` | `ecm:documents:read` |
 | `GET /v1/documents/acord/{form_type}` | `ecm:acord:read` |
-| `GET /v1/envelopes` | `ecm:envelopes:read` (see ECM-R08) |
+| `GET /v1/envelopes` | `ecm:envelopes:read` |
 | `POST /v1/envelopes/create` | `ecm:envelopes:create` |
 | `GET /v1/assets/marketing` | `ecm:assets:read` |
 
 - **ECM-R05** Errors under `/v1` use the shared envelope `{ "error_code", "message", "correlation_id", "details"? }`. A validation failure is `400` with `error_code: "VALIDATION_ERROR"`, `message: "One or more fields failed validation."` and `details`, a list of `{ "field", "message", "code" }`. Field codes used: `required`, `invalid_enum`, `invalid_format`, `too_long`, and three specific to this service: `not_found`, `invalid_status`, `invalid_type`. "Reported together" below means one response lists every failing field. A missing row is `404` with `error_code: "NOT_FOUND"`.
 - **ECM-R06** Every response carries `X-Correlation-ID`: the request's value when sent, a fresh UUID otherwise. An error body's `correlation_id` has the same value.
-- **ECM-R07** A JSON operation whose body is not valid JSON, and an upload whose body is not form data, answer `500` with `error_code: "INTERNAL_ERROR"` (after ECM-R03 and ECM-R04) and write nothing.
-- **ECM-R08** The scope `ecm:envelopes:read` is not in the list any OAuth client can be granted, so it cannot be requested (`400 invalid_scope`). For `GET /v1/envelopes` only, a token is treated as holding it when its scopes include `ecm:documents:read` and its subject starts with `agent-` (true for every token the token endpoint issues), or when its scopes include both `ecm:documents:read` and `ecm:envelopes:create`. In practice `ecm:documents:read` opens the envelope list. A token without it gets `403` naming `ecm:envelopes:read`.
+- **ECM-R07** A JSON operation whose body is not valid JSON, and an upload whose body is not valid `multipart/form-data`, answer `400` with `error_code: "VALIDATION_ERROR"` (after ECM-R03 and ECM-R04) and write nothing.
+- **ECM-R08** `ecm:envelopes:read` is a standard OAuth scope grantable to `agent-full`, `agent-csr`, and `agent-readonly` and is required by `GET /v1/envelopes`. A token without it gets `403` naming `ecm:envelopes:read`.
 
 ## 5. Rules per operation
 
@@ -98,7 +98,7 @@ The body is `multipart/form-data` with a file part `file` and text parts `client
 
 ### 5.4 List envelopes: `GET /v1/envelopes`
 
-- **ECM-R40** `200` with `{ "data": [...], "pagination": {...} }`, ordered by `created_at` descending, then `envelope_id` descending; default `limit` 50. Each item has `envelope_id`, `client_id`, `policy_id` (always null), `document_ids` (array), `document_Ids` (the same array again, under that spelling), `signers` (array), `signer_name` and `signer_email` (name and email of the first signer, or null), `message`, `redirect_url`, `status`, `created_at`, `completed_at`, `expiration_date`.
+- **ECM-R40** `200` with `{ "data": [...], "pagination": {...} }`, ordered by `created_at` descending, then `envelope_id` descending; default `limit` 50. Each item has `envelope_id`, `client_id`, `document_ids` (array), `signers` (array), `signer_name` and `signer_email` (name and email of the first signer, or null), `message`, `redirect_url`, `status`, `created_at`, `completed_at`, `expiration_date`.
 - **ECM-R41** Optional filters `client_id` and `status`, combined with AND. A non-empty `status` outside the envelope statuses gives `400` with `status` / `invalid_enum`. Pagination as above, with the cursor built from `{ "created_at", "envelope_id" }`.
 
 ### 5.5 Create an envelope: `POST /v1/envelopes/create`
@@ -162,7 +162,7 @@ Currency is `$` plus the amount with thousands separators and two decimals (`$1,
 
 - **ECM-R80** Every call to the AMS or to Claims is a `GET` that carries the caller's `Authorization` header unchanged and the header `X-Evergreen-Internal: 1`. The AMS base URL is `AMS_BASE_URL` when set and not empty, else `AMS_URL`, else `http://localhost:3000`. The Claims base URL is `CLAIMS_BASE_URL`, else `CLAIMS_URL`, else `http://localhost:3007`. Trailing slashes are dropped.
 - **ECM-R81** Finding a policy by id (COI and forms `90` and `80`): first read the whole client list, `GET /v1/clients?limit=100`, then `GET /v1/clients?limit=100&cursor=<pagination.next_cursor>` for as long as `pagination.has_more` is true. Then, for each client in list order, `GET /v1/clients/<id>/policies?limit=100` and look in its `data` for the policy id. The search stops at the first match; that client and policy are used.
-- **ECM-R82** When a call cannot be completed or the peer answers with a non-2xx status (for example an unknown claim or client), the service answers `500 INTERNAL_ERROR` and writes nothing.
+- **ECM-R82** When a peer returns `404` for a referenced claim or client on ACORD 35, the service answers `404 NOT_FOUND`. When a peer call cannot be completed or fails with a non-2xx/non-404 status, the service answers `502` with `error_code: "INTERNAL_ERROR"` and writes nothing.
 
 Fields read from the AMS client: `id`, `first_name`, `last_name`, `dob`, `email`, `phone`, `address` (`street`, `city`, `state`, `zip`), `driver_license_number`, `occupation`, `marital_status`. From the AMS policy: `policy_id`, `client_id`, `carrier_code`, `policy_type`, `effective_date`, `expiration_date`, `premium_current`, `status`, `multi_policy_discount`, `coverages` (`type`, `limit`, `deductible`). From the claim: `claim_id`, `policy_id`, `client_id`, `claim_type`, `status`, `loss_date`, `reported_date`, `loss_description`, `loss_location`, `reserve_amount`, `settlement_amount`, `adjuster` (`first_name`, `last_name`, `email`, `phone`, `specialty`).
 
@@ -207,21 +207,12 @@ What the service must provide besides its `/v1` operations. The token endpoint, 
 
 ## 11. Known gaps
 
-Places where `ecm.yaml` and the running service disagree, or where the behaviour is likely unintended. The running service is the reference, and the tests assert what it does. Gaps with a `test.todo` are marked.
+All OpenAPI contract contradictions (`ECM-G01`–`ECM-G08`, `ECM-G14`) have been resolved across code, `packages/shared/src/auth.ts`, and `ecm.yaml`. The remaining items below are non-blocking behavioral notes:
 
-| Id | Gap | todo |
-| :--- | :--- | :--- |
-| ECM-G01 | Error bodies. `ecm.yaml` requires `code`; the service sends the shared envelope of ECM-R05 with `error_code`. | yes |
-| ECM-G02 | `ecm.yaml` gives document, client, envelope and asset ids the format `uuid`. Real ids look like `doc_ab12cd34`, `DOC-001`, `CLI-001`. | yes |
-| ECM-G03 | `coverage_summary.coverages` passes on the AMS values (`limit` as text such as `100/300`, `deductible` null); `ecm.yaml` types `limit` as a number and `deductible` as non-null. | yes |
-| ECM-G04 | The envelope list carries `document_Ids` (a second spelling of `document_ids`) and a `policy_id` that is always null (ECM-R40). The scope `ecm:envelopes:read` documented for it cannot be granted (ECM-R08). | yes |
-| ECM-G05 | `description` of a marketing asset can be null; `ecm.yaml` does not allow null. | yes |
-| ECM-G06 | A body that cannot be parsed gives `500` instead of `400` (ECM-R07). | yes |
-| ECM-G07 | A peer failure, including an unknown claim or client, gives `500` (ECM-R82), where `ecm.yaml` documents `404` for the ACORD operation. An unknown policy gives `400` with code `not_found`, not `404`. | yes |
-| ECM-G08 | `ecm.yaml` documents `409` for upload and envelope creation. The service never answers `409`. | yes |
-| ECM-G09 | Certificates are kept in process memory, so a certificate generated before a seed, reset or restart is still served, or replaced by the placeholder of ECM-R67. The download filename of a placeholder differs between the first and later downloads. The placeholder shows fixed values (carrier `SMIT`, premium `$2,400.00`) and takes its policy number from the second dash-separated part of the filename. | |
-| ECM-G10 | The audit answers `404` when the `status` filter matches nothing, although the client has documents (ECM-R30). | |
-| ECM-G11 | Creating an envelope does not check that the documents belong to the client and does not set the documents to `pending_signature` (ECM-R43, ECM-R44). | |
-| ECM-G12 | `POST /sim/time-travel` expires envelopes (ECM-R110) without mutating document `status` rows. | |
-| ECM-G14 | `expiration_date` of a document is a date-time in `ecm.yaml`. COI documents store the policy's date-only expiration date (ECM-R64), and some seeded documents hold date-only text too. | yes |
-| ECM-G13 | Values of the wrong JSON type, and a `file` part sent as text, are not validated; their outcome is not part of this contract. | |
+| Id | Note |
+| :--- | :--- |
+| ECM-G09 | Certificates are kept in process memory, so a certificate generated before a seed, reset or restart is still served, or replaced by the placeholder of ECM-R67. The download filename of a placeholder differs between the first and later downloads. The placeholder shows fixed values (carrier `SMIT`, premium `$2,400.00`) and takes its policy number from the second dash-separated part of the filename. |
+| ECM-G10 | The audit answers `404` when the `status` filter matches nothing, although the client has documents (ECM-R30). |
+| ECM-G11 | Creating an envelope does not check that the documents belong to the client and does not set the documents to `pending_signature` (ECM-R43, ECM-R44). |
+| ECM-G12 | `POST /sim/time-travel` expires envelopes (ECM-R110) without mutating document `status` rows. |
+| ECM-G13 | Values of the wrong JSON type, and a `file` part sent as text, are not validated; their outcome is not part of this contract. |

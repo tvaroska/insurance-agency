@@ -62,7 +62,7 @@ Invariants:
 
 - **CLM-R05** Errors under `/v1` use one envelope: `{ "error_code", "message", "correlation_id", "details"? }`. A validation failure is `400` with `error_code: "VALIDATION_ERROR"`, `message: "One or more fields failed validation."` and `details`, a list of `{ "field", "message", "code" }`. Field codes used by this service: `required`, `invalid_enum`, `invalid_format`, `out_of_range`, `too_long`. When a rule below says checks are "reported together", one response lists every failing field. A missing row is `404` with `error_code: "NOT_FOUND"` and message `claim not found.` or `adjuster not found.`.
 - **CLM-R06** Every response carries an `X-Correlation-ID` header. It repeats the request's `X-Correlation-ID` when one was sent and is a fresh UUID otherwise. An error body's `correlation_id` has the same value.
-- **CLM-R07** A write operation whose body is not valid JSON answers `500` with `error_code: "INTERNAL_ERROR"` (after the checks of CLM-R03 and CLM-R04) and writes nothing.
+- **CLM-R07** A write operation whose body is not valid JSON answers `400` with `error_code: "VALIDATION_ERROR"` (after the checks of CLM-R03 and CLM-R04) and writes nothing.
 
 ## 5. Rules per operation
 
@@ -75,19 +75,19 @@ Checks run in this order. CLM-R12 to CLM-R16 are reported together.
 
 - **CLM-R12** `policy_id`, `client_id`, `claim_type`, `loss_date` and `loss_description` are required. Missing, null or empty string gives code `required`. An empty-string `claim_type` or `loss_date` is reported twice: as `required` and as `invalid_enum` (CLM-R13) or `invalid_format` (CLM-R14).
 - **CLM-R13** `claim_type` must be one of the nine claim types; otherwise `invalid_enum`.
-- **CLM-R14** `loss_date` must match `^\d{4}-\d{2}-\d{2}$`; otherwise `invalid_format`. Nothing checks that it is a real calendar date: `2024-02-31` is accepted and stored as sent.
+- **CLM-R14** `loss_date` must match `^\d{4}-\d{2}-\d{2}$` and represent a real calendar date (for example `2024-02-31` is rejected); otherwise `invalid_format`.
 - **CLM-R15** `loss_description` longer than 5000 characters, or `loss_location` longer than 500, gives `too_long`.
 - **CLM-R16** A reserve (`reserve_amount` or `estimated_loss`) below 0 gives `out_of_range` on field `reserve_amount`. Zero is accepted.
 - **CLM-R17** Then: a `loss_date` later than today's date in UTC gives `400` with `loss_date` / `out_of_range`. Today's date is accepted.
-- **CLM-R18** Then: `adjuster_id` counts only when it is a string that is not blank after trimming; the trimmed value is used. Any other value is treated as absent. An id with no adjuster row gives `404 NOT_FOUND` (`adjuster not found.`). An adjuster with `active` = 0 gives `400` with `adjuster_id` / `invalid_enum`. The adjuster's capacity is not checked here.
+- **CLM-R18** Then: `adjuster_id` counts only when it is a string that is not blank after trimming; the trimmed value is used. Any other value is treated as absent. An id with no adjuster row gives `404 NOT_FOUND` (`adjuster not found.`). An adjuster with `active` = 0 gives `400` with `adjuster_id` / `invalid_enum`. If the adjuster's current open claim count (`status` not in `settled`, `denied`) is greater than or equal to `max_open_claims`, the answer is `400` with `adjuster_id` / `out_of_range`.
 - **CLM-R19** On success the answer is `201` with the new `claims` row:
-  - `status` is `reported`, also when an adjuster was given.
+  - `status` is `assigned` when an adjuster was given, otherwise `reported`.
   - `adjuster_id` is the given adjuster or null.
   - `reported_date` is today's date in UTC. `created_at` and `updated_at` are the same current timestamp.
   - `reserve_amount` is the given reserve when it is a number, otherwise null. `settlement_amount` is null.
   - `loss_location` and `notes` are the given values or null.
 - **CLM-R20** `claim_id` is `CLM-<year>-<n>`, where `<year>` is the current four-digit year and `<n>` is six digits, zero padded. `<n>` is one more than the larger of (a) the number read from the id that sorts last, as text, among the ids with the same `CLM-<year>-` prefix (0 when that id's suffix is not a number) and (b) the count of ids with that prefix. With no such id it is `000001`. Ids of other years are ignored.
-- **CLM-R21** One `claim_timeline` row is written: `event_type: "status_change"`, `old_value: null`, `new_value: "reported"`, `description: "Claim filed — status set to reported."`. No assignment event is written, even when an adjuster was given. No other table is touched.
+- **CLM-R21** One `claim_timeline` row is written for the initial status: `event_type: "status_change"`, `old_value: null`, `new_value: <initialStatus>`, `description: "Claim filed — status set to <initialStatus>."`. When an adjuster was given, a second `claim_timeline` row is written: `event_type: "assignment"`, `old_value: null`, `new_value: <adjuster_id>`, `description: "Assigned to adjuster <adjuster_id> on FNOL intake."`. No other table is touched.
 
 ### 5.2 List claims: `GET /v1/claims`
 
@@ -194,13 +194,9 @@ What the service must provide besides its `/v1` operations. The token endpoint, 
 
 ## 11. Known gaps
 
-Places where a durable contract and the running service disagree, or where the behaviour is likely unintended. The running service is the reference, and the tests assert what it does. CLM-G01 to CLM-G04 contradict a contract file and each has a `test.todo` that names it.
+All contract contradictions (`CLM-G01`–`CLM-G04`) have been resolved across code, `claims.yaml`, and `claims.behavior.yaml`. The remaining items below are intentional or non-blocking behavioral notes:
 
-| Id | Gap |
+| Id | Note |
 | :--- | :--- |
-| CLM-G01 | A body that is not JSON gives `500 INTERNAL_ERROR` (CLM-R07). `claims.yaml` documents no `500` response; a `400` would be the conventional answer. |
-| CLM-G02 | `claims.behavior.yaml` names the length error code `max_length`. The service sends `too_long` (CLM-R15, CLM-R61, CLM-R80). |
-| CLM-G03 | `loss_date` is checked by pattern only (CLM-R14), so a stored value such as `2024-02-31` breaks `format: date` in `claims.yaml`. |
-| CLM-G04 | `claims.yaml` describes FNOL `adjuster_id` as assigning "immediately". The service stores the adjuster but keeps status `reported`, writes no `assignment` event and skips the capacity check (CLM-R18, CLM-R19, CLM-R21). |
 | CLM-G05 | Time travel changes claim status without writing a timeline row (CLM-R110). |
 | CLM-G06 | Timeline order is by `created_at` only (CLM-R70). Two events written in the same millisecond, as in CLM-R54, have no guaranteed order. |

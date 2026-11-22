@@ -99,29 +99,23 @@ for (const [path, rule] of [
   });
 }
 
-test.todo(
-  "RTR-G08: the carrier list has the shape specs/rater.yaml documents (the file puts has_more at the top level; the service returns { data, pagination })",
-  () => {},
-);
+test("RTR-G08: the carrier list conforms strictly to specs/rater.yaml ({ data, pagination })", async () => {
+  await ctx.svc.seed({ tables: { carriers: CARRIERS } });
+  for (const path of ["/v1/carriers", "/v1/carriers/appetite"]) {
+    const res = await ctx.api.get(path);
+    expect(res.status).toBe(200);
+    contract.check(res);
+  }
+});
 
 describe("seed data", () => {
-  // RTR-G03..G07: the seeded data uses carrier codes, statuses, nulls, date-only values and
-  // coverage items that specs/rater.yaml does not allow.
-  const SEED_GAPS = {
-    allow: [
-      /carrier_code: is "(CSTL|SMIT|SURPLUS)"/,
-      /effective_date: is null but the schema is not nullable/,
-      /valid_until: "\d{4}-\d{2}-\d{2}" is not an RFC 3339 date-time/,
-      /status: is "(bound|underwriting_hold|requires_info|expired)"/,
-      /coverages\/\d+: is missing required property 'coverage_type'/,
-      "/: is missing required property 'has_more'",
-    ],
-  };
-
   test("RTR-R100: GET /sim/snapshot exposes the three tables; base empty leaves them empty", async () => {
     await ctx.svc.seed({ base: "empty" });
     expect(await ctx.svc.snapshot()).toEqual({ quote_requests: [], carrier_quotes: [], carriers: [] });
-    expect((await ctx.api.get("/v1/quotes")).body).toEqual({ data: [] });
+    expect((await ctx.api.get("/v1/quotes")).body).toEqual({
+      data: [],
+      pagination: { limit: 50, cursor: null, next_cursor: null, has_more: false },
+    });
   });
 
   for (const mode of ["realistic", "clean"] as const) {
@@ -161,12 +155,12 @@ describe("seed data", () => {
       }
 
       const list = await ctx.api.get("/v1/quotes", { query: { limit: 100 } });
-      contract.check(list, SEED_GAPS);
+      contract.check(list);
       expect(list.body.data).toHaveLength(17);
       for (const row of list.body.data) {
-        contract.check(await ctx.api.get(`/v1/quotes/${row.request_id}/results`), SEED_GAPS);
+        contract.check(await ctx.api.get(`/v1/quotes/${row.request_id}/results`));
       }
-      contract.check(await ctx.api.get("/v1/carriers"), SEED_GAPS);
+      contract.check(await ctx.api.get("/v1/carriers"));
     });
   }
 
@@ -179,20 +173,15 @@ describe("seed data", () => {
     expect(await ctx.svc.table("carrier_quotes")).toHaveLength(54);
   });
 
-  test.todo(
-    "RTR-G03: the carrier_code enum of specs/rater.yaml matches the seeded carriers (the file lists TRAV and PROG; the data has CSTL and SMIT)",
-  () => {},
-  );
-  test.todo(
-    "RTR-G04: effective_date and expiration_date are nullable in specs/rater.yaml (seeded requests have no effective date, so both come back null)",
-  () => {},
-  );
-  test.todo("RTR-G05: valid_until is a date-time (seeded quotes hold date-only text such as 2026-03-08)", () => {});
-  test.todo(
-    "RTR-G06: the status enums of specs/rater.yaml cover bound, expired and underwriting_hold for carrier quotes and requires_info for requests",
-  () => {},
-  );
-  test.todo("RTR-G07: coverage items carry coverage_type as specs/rater.yaml requires (the service echoes the items as submitted; seeded items use `type`)", () => {});
+  test("RTR-G03..G07: seeded carriers, nullable dates, valid_until, statuses, and coverages conform strictly to specs/rater.yaml", async () => {
+    await ctx.svc.reset("realistic");
+    const list = await ctx.api.get("/v1/quotes", { query: { limit: 100 } });
+    expect(list.status).toBe(200);
+    contract.check(list);
+    for (const row of list.body.data) {
+      contract.check(await ctx.api.get(`/v1/quotes/${row.request_id}/results`));
+    }
+  });
 });
 
 describe("simulated clock", () => {

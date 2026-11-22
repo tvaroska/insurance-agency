@@ -114,8 +114,19 @@ function extractServiceRoutes(serviceName: string): ExtractedServiceRoutes {
     const filePath = importMap.get(routerVar);
     if (filePath) {
       mountedFiles.add(filePath);
-      const prefix = target === "api" ? `${apiBasePrefix}${rawPrefix}` : rawPrefix;
-      mounts.push({ target, prefix, filePath });
+      // Direct `app.route("/v1/...", router)` mounts belong to the /v1 API surface just like `api.route(...)`.
+      const isDirectV1Mount = target === "app" && /^\/v1(?:\/|$)/.test(rawPrefix);
+      const prefix =
+        target === "api"
+          ? `${apiBasePrefix}${rawPrefix}`
+          : isDirectV1Mount
+            ? rawPrefix.replace(/^\/v1\b/, "") || "/"
+            : rawPrefix;
+      mounts.push({
+        target: target === "api" || isDirectV1Mount ? "api" : "app",
+        prefix,
+        filePath,
+      });
     }
   }
 
@@ -135,6 +146,9 @@ function extractServiceRoutes(serviceName: string): ExtractedServiceRoutes {
     const method = match[1].toUpperCase();
     const rawPath = match[2];
     appRoutes.set(`${method} ${normalizePathTemplate(rawPath)}`, `${method} ${rawPath} (index.ts)`);
+  }
+  if (/\bportalSessionEndpoint\s*\(/.test(indexContent)) {
+    appRoutes.set("GET /auth/portal-session", "GET /auth/portal-session (portalSessionEndpoint)");
   }
 
   for (const { target, prefix, filePath } of mounts) {

@@ -187,7 +187,7 @@ const ALL_SCOPES = [
   "crm:leads:read", "crm:leads:write", "crm:campaigns:enroll", "crm:campaigns:read",
   "crm:analytics:read",
   "ecm:documents:read", "ecm:documents:write", "ecm:documents:upload",
-  "ecm:envelopes:create", "ecm:assets:read", "ecm:acord:read",
+  "ecm:envelopes:read", "ecm:envelopes:create", "ecm:assets:read", "ecm:acord:read",
   "comm:messages:read", "comm:messages:send", "comm:calls:read",
   "comm:webhooks:manage",
   "ams:escalations:read", "ams:escalations:write",

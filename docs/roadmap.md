@@ -2,7 +2,7 @@
 
 ## Where we are
 
-`v0.9` is complete on `main` (`20` workflows / `259` tasks across 8 deterministic SQLite services, `11/11` multi-turn `DT` scenarios, `53/53` `validate-harness` variants, `1,496` conformance passes, `12/12` `tsc --noEmit` clean, frozen simulated clock at `2026-10-14T12:00:00.000Z`, calibrated `gemini-4-argon` rubric judge across 120 gold items, and a 480-trial `v0.9` leaderboard sweep published in `eval/results/v0.9/` and `README.md`). Next up: close the remaining `P3.1` harness/conformance/decomposition hygiene items (`v0.9.1`), then run the wider difficulty sweep, two-rater 60-trial blind human audit, and publication gates for the `v1.0.0` arXiv preprint.
+`v0.9` is complete on `main` (`20` workflows / `259` tasks across 8 deterministic SQLite services, `11/11` multi-turn `DT` scenarios, `53/53` `validate-harness` variants, `1,548` conformance passes with `0` `test.todo` wired into the default gate, `12/12` `tsc --noEmit` clean, frozen simulated clock at `2026-10-14T12:00:00.000Z`, calibrated `gemini-4-argon` rubric judge across 120 gold items, and a 480-trial `v0.9` leaderboard sweep published in `eval/results/v0.9/` and `README.md`). Next up: close the remaining `P3.1` harness/conformance/decomposition hygiene items (`v0.9.1`), then run the wider difficulty sweep, two-rater 60-trial blind human audit, and publication gates for the `v1.0.0` arXiv preprint.
 
 ## Milestones at a glance
 
@@ -15,7 +15,7 @@
 
 - [ ] **M1-1: Fix OpenEnv custom-seed variant collapse (`P3.1`)** — Stop `eval/openenv/evergreen_env.py` (`lines 130, 136, 537`) from collapsing non-`clean` `task["seed"]` variants (such as `09-moderate-natural`) to `--seed realistic`, which crashes `eval/score.ts` across the 14 custom-seed tasks (`moderate`, `severe`, `market-exit`) in `tasks.json` (`done when`: all 14 custom-seed tasks score cleanly through `evergreen_env.py` and unit tests cover non-`realistic` messy seeds).
 - [ ] **M1-2: Make `test_summarize_inspect.py` hermetic & fast (`P3.1`)** — Decouple `eval/inspect/tests/test_summarize_inspect.py` (`lines 264–290`) from scanning live `eval/results/v0.9/` `.eval` archives (`done when`: local and Cloud Build `pytest` drops from `~125s` to `< 3s` using fixture logs).
-- [ ] **M1-3: Conformance harness cleanup, Vertex MaaS retry guard & `v1.0` API alignment (`P3.1`)** — Implement child cleanup (`stop()`) in `tests/conformance/harness/service.ts`, guard transient Vertex MaaS `choices=None` responses in `eval/inspect/run_baseline.py` retry logic, and coordinate centralized malformed-JSON `400`s (`packages/shared/src/errors.ts`), exact Rater `risk_category` JSON-array matching, and `specs/ams.yaml` tool-surface alignment (`Coverage.limit`, `SMIT`/`CSTL`, `renters`, `state`/`escalation_id`) with the 7 conformance files (`AMS-R4`, `CLM-R07`, etc.) (`done when`: `../bin/gate test insurance-agency` and conformance suites pass with zero leaked child processes).
+- [ ] **M1-3: Conformance harness cleanup & Vertex MaaS retry guard (`P3.1`)** — Implement child cleanup (`stop()`) in `tests/conformance/harness/service.ts`, guard transient Vertex MaaS `choices=None` responses in `eval/inspect/run_baseline.py` retry logic, and tighten exact Rater `risk_category` JSON-array matching (conformance default-gate wiring, malformed-JSON `400`s, all 90 conformance `test.todo` gaps, and `specs/ams.yaml` tool-surface alignment are complete) (`done when`: `../bin/gate test insurance-agency` passes with zero leaked child processes).
 - [ ] **M1-4: File decomposition (`<= 800` LOC) & `regulatory.md` scoping (`P3`)** — Split `eval/agents/baseline-agent.ts` and `services/ams/src/routes/workbench.ts` to `<= 800` LOC each, and clearly separate the 10 active benchmark E&O triggers in `regulatory.md` from background agency context (`done when`: both files are `<= 800` LOC and `../bin/gate test insurance-agency` passes).
 
 ## Milestone 2 — `v1.0.0`: Wider Difficulty Sweep, Blind Human Audit & arXiv Preprint Readiness
@@ -25,6 +25,8 @@
 - [ ] **M2-3: Clear publication gates & draft arXiv preprint** — In parallel with `M2-1`/`M2-2`, secure an arXiv endorser (`cs.AI` / `cs.SE`) and employer publication approval, then draft the 8–10 page paper (problem, environment, grading, `v0.8`/`v0.9` + wider run, error taxonomy from [`docs/v08-failure-analysis.md`](v08-failure-analysis.md) & [`docs/v09-failure-analysis.md`](v09-failure-analysis.md), limitations; framed as one worked domain) (`done when`: endorser + approval recorded and preprint draft is ready for submission).
 
 ## Unscheduled backlog
+
+- **Legacy `tests/e2e/` modernization or retirement:** `tests/e2e/` currently targets only ports `3000–3006` (omitting `claims:3007`) and opens `comm:3004/mcp` without an `Authorization` header (predating `/mcp` JWT auth); either update `tests/e2e/{config,client}.ts` + scenarios for all 8 services and JWT `/mcp` auth, or formally retire `tests/e2e/` in favor of `tests/integration/`, `tests/conformance/`, and `eval/validate-harness.ts`.
 
 - **Optional additional `v0.9` ablation arms (`E2`/`E4`/`E5`):** Policy-prompt, permissive-modality GUI-vs-REST, and extra model arms (subject to the pre-sweep pilot and cost gates in `AGENTS.md`).
 - **Automated `GEPA` / reflective trace evolution:** Automated skill/prompt evolution over the fixed 10-train / 10-holdout workflow split.

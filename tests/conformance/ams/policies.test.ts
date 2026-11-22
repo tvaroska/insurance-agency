@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { expectError, loadContract } from "../harness";
-import { book, fieldCodes, ISO_UTC, POLICY_GAPS, POLICY_ID, policyBody, start, type Ctx } from "./support";
+import { book, fieldCodes, ISO_UTC, POLICY_ID, policyBody, start, type Ctx } from "./support";
 
 const contract = loadContract("ams");
 let ctx: Ctx;
@@ -32,7 +32,7 @@ describe("listPolicies", () => {
       "POL-C-CAN",
       "POL-C-EXP",
     ]);
-    contract.check(res, { allow: [...POLICY_GAPS, "is missing required property 'coverages'"] });
+    contract.check(res);
   });
 
   test("AMS-R42: list items are the policy columns, without coverages", async () => {
@@ -122,7 +122,7 @@ describe("getPolicyById", () => {
       { policy_id: "POL-A-AUTO", type: "collision", limit: null, deductible: 500 },
     ]);
     for (const cov of res.body.coverages) expect(Number.isInteger(cov.id)).toBe(true);
-    contract.check(res, { allow: POLICY_GAPS });
+    contract.check(res);
   });
 
   test("AMS-R45: a policy without coverages returns an empty array; an unknown id is 404", async () => {
@@ -170,6 +170,7 @@ describe("createPolicy validation", () => {
       expect(res.body.details).toEqual([
         { field: "annual_premium", message: "annual_premium must be a non-negative number.", code: "invalid" },
       ]);
+      contract.check(res);
     }
     const zero = await ctx.api.post("/v1/policies", policyBody({ annual_premium: 0 }));
     expect(zero.status).toBe(201);
@@ -238,7 +239,7 @@ describe("createPolicy success", () => {
       updated_at: res.body.created_at,
     });
     expect(res.body.created_at).toMatch(ISO_UTC);
-    contract.check(res, { allow: [...POLICY_GAPS, "is missing required property 'premium_current'"] });
+    contract.check(res);
   });
 
   test("AMS-R52: status and multi_policy_discount may be given; every listed status and policy type is accepted", async () => {

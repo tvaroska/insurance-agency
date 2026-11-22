@@ -60,7 +60,7 @@ Invariants:
 
 - **CRM-R05** Errors under `/v1` use the shared envelope `{ "error_code", "message", "correlation_id", "details"? }`. A validation failure is `400` with `error_code: "VALIDATION_ERROR"`, `message: "One or more fields failed validation."` and `details`, a list of `{ "field", "message", "code" }`. Field codes used: `required`, `invalid_enum`, `out_of_range`, `too_long`, `invalid_format`. "Reported together" below means one response lists every failing field. A missing row is `404` with `error_code: "NOT_FOUND"` and message `lead not found.` or `campaign not found.`. A conflict is `409` with `error_code: "CONFLICT"`.
 - **CRM-R06** Every response carries `X-Correlation-ID`: the request's value when sent, a fresh UUID otherwise. An error body's `correlation_id` has the same value.
-- **CRM-R07** A write operation whose body is not valid JSON answers `500` with `error_code: "INTERNAL_ERROR"` (after CRM-R03 and CRM-R04) and writes nothing.
+- **CRM-R07** A write operation whose body is not valid JSON answers `400` with `error_code: "VALIDATION_ERROR"` (after CRM-R03 and CRM-R04) and writes nothing.
 
 ## 5. Rules per operation
 
@@ -107,9 +107,10 @@ Checks run in this order.
   2. Unknown lead: `404` (`lead not found.`).
   3. Unknown campaign: `404` (`campaign not found.`).
   4. Campaign status other than `active`: `409 CONFLICT`, message `Campaign <campaign_id> is not active (status: <status>).`
-  5. Only when the lead has a non-empty `client_id`: an existing enrollment with the same `campaign_id` and `client_id` gives `409 CONFLICT`, message `Client <client_id> is already enrolled in campaign <campaign_id>.`
+  5. Lead without a non-empty `client_id`: `400 VALIDATION_ERROR` (`client_id` / `required`).
+  6. An existing enrollment with the same `campaign_id` and `client_id` gives `409 CONFLICT`, message `Client <client_id> is already enrolled in campaign <campaign_id>.`
 - **CRM-R51** On success one `campaign_enrollments` row is written and the campaign's `enrolled_count` grows by 1. The lead row is not changed. The enrollment has `enrollment_id` = `enr_` followed by 1 to 8 characters from `a-z0-9`, the `campaign_id`, `client_id` = the lead's `client_id`, `trigger_reason` = the given value or null (no length limit here), `metadata` = the given object as JSON text or null, `enrolled_at` = the current time, `sequence_step` = 1. The answer is `201` with `{ enrollment_id, campaign_id, client_id, enrolled_at, sequence_step }`.
-- **CRM-R52** A lead whose `client_id` is null or empty is enrolled with `client_id` = `""`. Step 5 of CRM-R50 is skipped, so the same lead can be enrolled in the same campaign repeatedly.
+- **CRM-R52** A lead whose `client_id` is null or empty is rejected with `400 VALIDATION_ERROR` (`client_id` / `required`) and writes nothing.
 
 ### 5.7 List campaigns: `GET /v1/campaigns`
 
@@ -131,7 +132,7 @@ Checks run in this order.
 - **CRM-R80** `200` with `{ "data": [...], "pagination": {...} }`. Each item is `{ client_id, client_name, risk_score, factors: { rate_increase_pct, months_since_contact, email_open_rate, policies_count }, recommended_action }`; `assigned_producer` is not returned. Order: `risk_score` descending, then `client_id` descending.
 - **CRM-R81** `min_risk_score` keeps `risk_score >= min_risk_score` and defaults to 50. A value below 0 or above 100 gives `400` with `min_risk_score` / `out_of_range`. `assigned_producer` filters by exact match.
 - **CRM-R82** Pagination as in CRM-R13, with the cursor built from `{ "risk_score", "client_id" }`.
-- **CRM-R83** A `min_risk_score` (here) or `min_score` (CRM-R12) that is not a number answers `500 INTERNAL_ERROR`.
+- **CRM-R83** A `min_risk_score` (here) or `min_score` (CRM-R12) that is not a number answers `400 VALIDATION_ERROR` (`invalid_format`).
 
 ## 6. State machines
 
@@ -179,18 +180,9 @@ What the service must provide besides its `/v1` operations. The token endpoint, 
 
 ## 11. Known gaps
 
-Places where `crm.yaml` and the running service disagree, or where the behaviour is likely unintended. The running service is the reference, and the tests assert what it does. Each gap that contradicts `crm.yaml` or is likely unintended has a `test.todo` that names it.
+All contract contradictions (`CRM-G01`–`CRM-G09`) have been resolved across code and `crm.yaml`. The remaining items below are non-blocking behavioral notes:
 
-| Id | Gap |
+| Id | Note |
 | :--- | :--- |
-| CRM-G01 | Error bodies. `crm.yaml` describes `{ code, message, details[].{field, reason}, request_id }`. The service sends the shared envelope of CRM-R05 (`error_code`, `details[].{field, message, code}`, `correlation_id`). Every 4xx and 5xx body therefore fails the `Error` schema. |
-| CRM-G02 | `Lead` in `crm.yaml` marks only `notes` nullable. The service returns null for `client_id` (seeded leads), `phone`, `assigned_producer` and, after `PATCH` with `tags: null`, `tags`. A lead created without a client has `client_id` `""`, while seeded leads without a client have null. |
-| CRM-G03 | The `LeadSource` enum in `crm.yaml` omits `phone`, which the service accepts, stores and filters by. |
-| CRM-G04 | `crm.yaml` gives `email` the format `email` and `phone` a pattern. The service checks neither (CRM-R31). |
-| CRM-G05 | A numeric filter that is not a number gives `500` instead of `400` (CRM-R83). |
-| CRM-G06 | A body that is not JSON gives `500` instead of `400` (CRM-R07). |
-| CRM-G07 | Enrolling a lead that has no client writes an enrollment with `client_id` `""` and skips the duplicate check (CRM-R52). |
-| CRM-G08 | `crm.yaml` documents `409` for `POST /v1/leads` and `PATCH /v1/leads/{id}`. The service never answers `409` there. |
-| CRM-G09 | `pagination.next_cursor` is returned but is not part of `CursorPagination` in `crm.yaml`. |
 | CRM-G10 | Values of the wrong JSON type are not validated. Their outcome is not part of this contract: for example a `score` sent as text, or a null `status` or `score`, gives `500`; a fractional `score` is stored without its fraction; and `tags` accepts any JSON value. `trigger_reason` is limited to 500 characters on one enroll path only (CRM-R70, not CRM-R51). |
 | CRM-G11 | Campaign enrollment `sequence_step` advances only via `/sim/time-travel` (CRM-R110). |

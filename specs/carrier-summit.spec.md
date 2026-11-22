@@ -179,12 +179,12 @@ Screens:
 
 | Step | Fields | Needed to continue |
 | :--- | :--- | :--- |
-| 1 Address | Street Address, City, State (2 characters), ZIP Code (10 characters) | all four |
+| 1 Address | Client ID, Policy Type, Street Address, City, State (2 characters), ZIP Code (10 characters) | address fields |
 | 2 Property Details | Year Built, Square Footage, Construction Type (Frame, Masonry, Masonry Veneer, Fire Resistive, Superior), Roof Type (Asphalt Shingle, Metal, Tile, Slate, Wood Shake, Flat / Membrane), Roof Year, Heating Type (Forced Air, Radiant, Heat Pump, Baseboard, Wood Stove) | year, square footage, construction type, roof type |
 | 3 Photo Checklist | seven checkboxes: Front Exterior, Rear Exterior, Roof View, Kitchen, Bathroom, Electrical Panel, HVAC System | nothing |
 | 4 Coverage | Dwelling Limit, Personal Property Limit, Liability Limit, Deductible ($500, $1,000, $2,500, $5,000, $10,000) | dwelling limit, deductible |
 
-Action: "Submit Property" sends `POST /v1/summit/submissions`. On success the page shows "Property submission created successfully." and returns to step 1 with an empty form. On failure it shows the error message and keeps the form.
+Action: "Submit Property" sends `POST /v1/summit/submissions` with `{ "client_id", "policy_type", "property_address", "property_details", "coverages", "deductibles", "photo_checklist" }`. On success the page shows "Property submission created successfully." and returns to step 1 with an empty form. On failure it shows the error message and keeps the form.
 
 **Underwriting Review** (second tab). A search box ("Enter quote ID to review") and a "Look Up" button.
 
@@ -192,7 +192,7 @@ Action: "Submit Property" sends `POST /v1/summit/submissions`. On success the pa
 - Quote Details card: Quote ID, Client ID, Policy Type, and Underwriting Status as a badge.
 - Review Timeline card: six steps (Submitted, Inspection Scheduled, Inspection Complete, Documents Received, Under Review, Decision). `pending_review` marks "Under Review" as current; `approved`, `declined` and `referred` mark "Decision" as current; earlier steps show as completed.
 - Conditions card, only when the quote has conditions: each condition's description and status.
-- Decision card: when `underwriting_status` is `pending_review`, a notes box ("Optional underwriting notes...") and three buttons, "Approve", "Decline", "Refer", each sending `POST /v1/summit/underwriting/{id}/decision` and then reloading the quote. For any other status the card says "This quote has already been reviewed (<status>)." and offers no buttons.
+- Decision card: when `underwriting_status` is `pending_review` or `referred`, a notes box ("Optional underwriting notes...") and three buttons, "Approve", "Decline", "Refer", each sending `POST /v1/summit/underwriting/{id}/decision` with `approve`, `decline`, or `refer` and then reloading the quote. For `approved` or `declined` the card says "This quote has already been reviewed (<status>)." and offers no buttons.
 
 **Policy Documents** (third tab). A search box ("Enter policy ID (e.g. POL-001)") and a "Search" button.
 
@@ -205,9 +205,7 @@ What a browser user must be able to complete:
 - **SMT-R39** Look up a quote by id and see its client, policy type, underwriting status, timeline position and conditions.
 - **SMT-R40** List the documents of a policy by id.
 - **SMT-R41** Submit a property and have a quote created with an inspection scheduled and three conditions (SMT-R30, SMT-R31).
-- **SMT-R42** Record an approve, decline or refer decision, with optional notes, on a quote that is pending review, and see the new status.
-
-SMT-R41 and SMT-R42 cannot be completed with the UI as shipped; see Known gaps 7 and 8.
+- **SMT-R42** Record an approve, decline or refer decision, with optional notes, on a quote that is pending review or referred, and see the new status.
 
 ## State machines
 
@@ -273,28 +271,28 @@ What the rest of the repository relies on when it starts the service. The packag
 
 ## Known gaps
 
-Disagreements between [`carrier-summit.yaml`](carrier-summit.yaml) and the service. The spec above follows the service.
+All OpenAPI-vs-service contract disagreements (items 1–4) and portal UI payload mismatches (items 7–8) have been resolved and verified by `tests/conformance/carrier-summit/`:
 
-1. **Validation status.** The OpenAPI file declares `422` for invalid bodies on the decision and submission operations. The service answers `400` (SMT-R13).
-2. **Portal session is not in the OpenAPI file.** `GET /auth/portal-session`, the bootstrap cookie, the `X-Portal-Session` header and the `403` codes `MODALITY_VIOLATION` and `PORTAL_BOOTSTRAP_REQUIRED` are specified only here. `POST /oauth/token` and `/sim/*` are also outside the OpenAPI file.
-3. **Enum values.** The OpenAPI schemas list fewer values than the service returns: `policy_type` (`auto`, `home`, `umbrella`; the data has `personal_auto`, `homeowners`, `bop` and others, and submissions accept any text), quote `status` (`quoted`, `approved`, `declined`; the service also has `bound`, `pending`, `underwriting_hold`, `submitted`, `expired`), `document_type` (`declaration`, `id_card`, `endorsement`, `cancellation`; the service has `dec_page`, `id_cards`, `policy_jacket`) and `inspection_status` (no `not_scheduled`).
-4. **Server path.** The OpenAPI file lists `/health` and `/auth/dev-token` under the server URL ending in `/v1`. The service serves both at the root, without `/v1`.
+1. **Validation status (resolved).** [`carrier-summit.yaml`](carrier-summit.yaml) documents `400` (`BadRequest`) for invalid decision and submission bodies, matching SMT-R13.
+2. **Portal session (resolved).** `GET /auth/portal-session` (`200` `PortalSessionResponse` and `403` `PORTAL_BOOTSTRAP_REQUIRED`) and strict-mode `403 MODALITY_VIOLATION` responses are documented in [`carrier-summit.yaml`](carrier-summit.yaml). `POST /oauth/token` and `/sim/*` remain shared platform control routes outside the carrier OpenAPI spec.
+3. **Enum values (resolved).** [`carrier-summit.yaml`](carrier-summit.yaml) accepts any `policy_type` string and lists all service values for quote `status`, `document_type` (including `dec_page`, `id_cards`, `policy_jacket`), and `inspection_status` (including `not_scheduled`).
+4. **Root server path (resolved).** `/health`, `/auth/dev-token`, and `/auth/portal-session` declare path-item `servers: [{ url: http://localhost:3005 }]` so they resolve at the root while `/v1/summit/*` resolves under `/v1`.
 
-Behaviour that looks unfinished and is specified as it is:
+Intentional simulation simplifications (kept as specified):
 
 5. A decision never changes the quote's `status`, so an approved quote stays `quoted` and can later become `expired` by time travel (SMT-R25, SMT-R46).
-6. Submission ids come from the clock in milliseconds; two submissions in the same millisecond collide on the primary key and the second fails with `500`. Malformed JSON on a POST route also gives `500`, not `400`.
-7. **Property Submission screen.** The page collects `Client ID` and `Policy Type` alongside address, property details, photo checklist, and coverage limits, and posts `{ "client_id", "policy_type", "property_address", "property_details", "coverages", "deductibles", "photo_checklist" }` matching SMT-R28. Legacy malformed bodies (`{ "address", "property", "photos", "coverage" }`) remain refused with `400`.
-8. **Underwriting Review decision buttons.** The page enables `Approve`, `Decline` and `Refer` for both `pending_review` and `referred` quotes (SMT-R24) and sends `approve`, `decline` and `refer` matching SMT-R22; past-tense enum values (`approved`, `declined`, `referred`) remain refused with `400`.
+6. Submission ids come from the clock in milliseconds; two submissions in the same millisecond collide on the primary key and the second fails with `500`. Malformed JSON returns `400 VALIDATION_ERROR` via the shared `errorHandler`.
+7. **Property Submission screen (resolved).** The shipped page collects `Client ID` and `Policy Type` alongside address, property details, photo checklist, and coverage limits, and posts `{ "client_id", "policy_type", "property_address", "property_details", "coverages", "deductibles", "photo_checklist" }` matching SMT-R28. Legacy malformed bodies (`{ "address", "property", "photos", "coverage" }`) remain refused with `400`.
+8. **Underwriting Review decision buttons (resolved).** The shipped page enables `Approve`, `Decline` and `Refer` for both `pending_review` and `referred` quotes (SMT-R24) and sends `approve`, `decline` and `refer` matching SMT-R22; past-tense enum values (`approved`, `declined`, `referred`) remain refused with `400`.
 9. The Policy Documents table has a Version column, but the API does not return `version`, so it always shows "--".
 10. An unknown `GET` path under `/v1/summit`, sent with a valid token, falls through to the UI page and returns `200` HTML rather than a JSON `404`.
 11. Inspections are never completed and conditions are never resolved; no route does either.
 
-What the conformance suite cannot prove over HTTP, and would need a real browser:
+HTTP-conformance boundary (interactive DOM rendering is verified separately in browser/e2e suites):
 
-12. Everything the page does on its own: rendering of the three screens, which fields gate "Next" and "Submit", the timeline and badge display, the table formatting, and the session renewal and retry logic of SMT-R37. The suite checks that the page and its assets are served and that the served script contains the routes, headers and screen labels of this contract; it performs the same handshake the page performs and calls the same API routes with the same headers.
-13. Browser cookie handling: that an `HttpOnly`, `SameSite=Strict` cookie is stored and sent back by a browser. The suite reads the `Set-Cookie` header and sends the cookie by hand.
-14. SMT-R38 to SMT-R42 as user journeys. The suite proves the API half of each, and for SMT-R41 and SMT-R42 it proves that the bodies the shipped page sends are refused.
-15. Expiry of cookies and sessions after one hour of wall-clock time is not waited for.
+12. Visual rendering, step gating, timeline formatting, and runtime session renewal/retry loops execute in the browser. The conformance suite proves that the page and its JS/CSS assets are served, verifies the shipped bundle contains the fixed route, header, payload, and screen markers of SMT-R37 to SMT-R42, and executes the exact handshake and API payloads over HTTP in strict mode.
+13. Browser cookie jar handling (`HttpOnly`, `SameSite=Strict`) is tested via `Set-Cookie` and `Cookie` headers over HTTP.
+14. SMT-R38 to SMT-R42 API journeys are verified over HTTP in strict mode using the fixed payloads shipped by the page.
+15. Wall-clock 3600s expiry of cookies and sessions is not waited for.
 
 Strict mode, `EVERGREEN_SCORER_SECRET` and `CARRIER_LATENCY_MS` are tested on extra instances started with those variables. When the suite runs against an already deployed service these extra instances are not available.

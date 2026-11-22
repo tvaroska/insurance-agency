@@ -131,8 +131,7 @@ describe("client_id filter", () => {
       const res = await ctx.api.get(path, { query: { source: "phone" } });
       expect(res.status).toBe(200);
       expect(res.body.data.map((l: any) => l.lead_id)).toEqual(["lead_a"]);
-      // CRM-G03: the LeadSource enum of specs/crm.yaml omits `phone`.
-      contract.check(res, { allow: ['/source: is "phone"'] });
+      contract.check(res);
     }
   });
 
@@ -278,15 +277,16 @@ describe("POST /v1/leads", () => {
     expect((await ctx.svc.table("leads"))[0]).toMatchObject({ client_id: "", tags: "[]" });
   });
 
-  test.todo(
-    "CRM-G02: Lead in specs/crm.yaml allows null for client_id, phone, assigned_producer and tags (the service returns null for them; the file marks none nullable)",
-  () => {},
-  );
-  test.todo("CRM-G03: LeadSource in specs/crm.yaml lists `phone` (the service accepts and stores it; the enum omits it)", () => {});
-  test.todo(
-    "CRM-G04: email `format: email` and the phone pattern of specs/crm.yaml are enforced on create (the service stores any text)",
-  () => {},
-  );
+  test("CRM-G02, CRM-G03, CRM-G04: nullable fields, source=phone, and freeform email/phone pass specs/crm.yaml", async () => {
+    await seedLeads(leadRow({ client_id: null, phone: null, assigned_producer: null, source: "phone" }));
+    const fetched = await ctx.api.get("/v1/leads/lead_a");
+    expect(fetched.status).toBe(200);
+    contract.check(fetched);
+
+    const created = await ctx.api.post("/v1/leads", body({ email: "not-an-email", phone: "12345", source: "phone" }));
+    expect(created.status).toBe(201);
+    contract.check(created);
+  });
 });
 
 describe("PATCH /v1/leads/{id}", () => {

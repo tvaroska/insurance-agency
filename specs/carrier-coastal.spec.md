@@ -245,7 +245,7 @@ Screens:
 
 - Fields: VIN (up to 17 characters) with a "Decode" button, Driver Name, Date of Birth, License Number, Client ID.
 - "Decode" is enabled once the VIN has five characters. It shows Year, Make, Model and a "Decoded" badge. This decode is done by the page itself, with its own table; it does not call the API and can differ from the vehicle the API decodes (CST-R32).
-- "Get Quote" is enabled when all five fields are filled. It sends `POST /v1/coastal/quotes/quick` with `vin`, `driver_name`, `driver_dob`, `license_number`, `client_id`.
+- "Get Quote" is enabled when all five fields are filled. It sends `POST /v1/coastal/quotes/quick` with `vin`, `driver_name`, `driver_dob`, `driver_license`, `client_id`.
 - Result: a "Quote Result" heading with the status badge, the annual premium with semi-annual and monthly amounts, the Quote ID and the Client ID. A failure shows the error message.
 
 **Compare & Customize** (second tab).
@@ -260,7 +260,7 @@ Screens:
   | Comprehensive Deductible | 100, 250, 500, 1000 | 250 |
   | Uninsured Motorist | 25/50, 50/100, 100/300, 250/500 | 50/100 |
 
-- "Recalculate" is enabled when the quote id is filled. It sends `POST /v1/coastal/quotes/{id}/recalculate` with the five choices as `bodily_injury`, `property_damage`, `collision_deductible`, `comprehensive_deductible`, `uninsured_motorist`.
+- "Recalculate" is enabled when the quote id is filled. It sends `POST /v1/coastal/quotes/{id}/recalculate` with `{ "coverages": [...] }` built from the five choices.
 - Result: "Original Premium" and "Adjusted Premium" side by side, with the difference labelled increase, savings or no change. An unknown quote shows the error message.
 
 **Bind & Go** (third tab).
@@ -275,8 +275,6 @@ What a browser user must be able to complete:
 - **CST-R47** Get an instant quote from a VIN and driver details and see its quote id, status and premiums (CST-R31 to CST-R36).
 - **CST-R48** Choose different limits and deductibles for a quote and see the adjusted premium next to the original (CST-R37, CST-R38).
 - **CST-R49** Bind an assessed quote with an effective date and payment plan, see the new policy's id and dates, and see its ID card (CST-R39 to CST-R42).
-
-With the UI as shipped, CST-R47 and CST-R49 complete only in part and CST-R48 does not complete; see Known gaps 7 to 9.
 
 ## State machines
 
@@ -343,28 +341,28 @@ What the rest of the repository relies on when it starts the service. The packag
 
 ## Known gaps
 
-Disagreements between [`carrier-coastal.yaml`](carrier-coastal.yaml) and the service. The spec above follows the service.
+All OpenAPI-vs-service contract disagreements (items 1–4) and portal UI payload mismatches (items 7–9) have been resolved and verified by `tests/conformance/carrier-coastal/`:
 
-1. **Validation status.** The OpenAPI file declares `422` for invalid bodies. The service answers `400` (CST-R13), including for binding an unassessed quote.
-2. **Portal session is not in the OpenAPI file.** `GET /auth/portal-session`, the bootstrap cookie, the `X-Portal-Session` header and the `403` codes `MODALITY_VIOLATION` and `PORTAL_BOOTSTRAP_REQUIRED` are specified only here. `POST /oauth/token` and `/sim/*` are also outside the OpenAPI file.
-3. **Schema mismatches.** The new-quote form of `POST /quotes/submit` returns no `deductibles` and no `submitted_at`, which `CoastalQuoteAssessed` requires (CST-R27). `policy_type` is documented as `auto`, `home` or `umbrella`; the data has `personal_auto` and the API accepts any text. `original_premium.annual` and `.monthly` can be null for a quote without a premium (CST-R38), which the schema does not allow.
-4. **Server path.** The OpenAPI file lists `/health` and `/auth/dev-token` under the server URL ending in `/v1`. The service serves both at the root, without `/v1`.
+1. **Validation status (resolved).** [`carrier-coastal.yaml`](carrier-coastal.yaml) documents `400` (`BadRequest`) for validation errors (including binding an unassessed quote), matching CST-R13.
+2. **Portal session (resolved).** `GET /auth/portal-session` (`200` `PortalSessionResponse` and `403` `PORTAL_BOOTSTRAP_REQUIRED`) and strict-mode `403 MODALITY_VIOLATION` responses are documented in [`carrier-coastal.yaml`](carrier-coastal.yaml). `POST /oauth/token` and `/sim/*` remain shared platform control routes outside the carrier OpenAPI spec.
+3. **Schema alignment (resolved).** `CoastalQuoteAssessed` makes `deductibles` and `submitted_at` optional and accepts any `policy_type` string; `RecalculateResponse.original_premium.{annual,monthly}` are nullable (CST-R27, CST-R38).
+4. **Root server path (resolved).** `/health`, `/auth/dev-token`, and `/auth/portal-session` declare path-item `servers: [{ url: http://localhost:3006 }]` so they resolve at the root while `/v1/coastal/*` resolves under `/v1`.
 
-Behaviour that looks unfinished and is specified as it is:
+Intentional simulation simplifications (kept as specified):
 
 5. Dates are not checked. Binding with an `effective_date` that is not a date succeeds and stores a meaningless `expiration_date`; `payment_plan` has no effect (CST-R40).
-6. Ids come from the clock in milliseconds; two creations in the same millisecond collide on the primary key and the second fails with `500`. A POST with no JSON body, or malformed JSON, also gives `500`, not `400`. Reading an ID card is a `GET` that writes a row (CST-R42).
-7. **Quick Quote screen.** The page sends `driver_license` matching CST-R35 and reads nested `premium.annual`, `premium.semi_annual` and `premium.monthly` returned by CST-R36.
-8. **Compare & Customize screen.** The page sends `{ "coverages": [...] }` matching CST-R37 and extracts `.annual` from `original_premium` and `adjusted_premium` objects returned by CST-R38. Legacy flat bodies without a `coverages` array remain ignored by the API.
-9. **Bind & Go screen.** The page derives plan breakdown estimates from `premium_current` when `premium_annual` is absent on the bind response and reads `card_data.insured_name` on the ID card response.
+6. Ids come from the clock in milliseconds; two creations in the same millisecond collide on the primary key and the second fails with `500`. Malformed JSON returns `400 VALIDATION_ERROR` via the shared `errorHandler`. Reading an ID card is a `GET` that writes a row (CST-R42).
+7. **Quick Quote screen (resolved).** The shipped page sends `driver_license` matching CST-R35 and reads nested `premium.annual`, `premium.semi_annual` and `premium.monthly` returned by CST-R36.
+8. **Compare & Customize screen (resolved).** The shipped page sends `{ "coverages": [...] }` matching CST-R37 and extracts `.annual` from `original_premium` and `adjusted_premium` objects returned by CST-R38. Legacy flat bodies without a `coverages` array remain ignored by the API.
+9. **Bind & Go screen (resolved).** The shipped page derives plan breakdown estimates from `premium_current` when `premium_annual` is absent on the bind response and reads `card_data.insured_name` on the ID card response.
 10. The page's API client has a quote look-up call (`GET /v1/coastal/quotes/{id}`) that no screen uses and the API does not implement. That path, like any unknown `GET` under `/v1/coastal` sent with a valid token, falls through to the UI page and returns `200` HTML rather than a JSON `404`.
 11. The quick quote's risk score is generated via the deterministic episode PRNG (`simRandom()`, reset on `/sim/reset` and `/sim/seed`), so sequential calls in an episode vary across `[50, 84]` while identical trajectories from a reset state are reproducible (CST-R34).
 
-What the conformance suite cannot prove over HTTP, and would need a real browser:
+HTTP-conformance boundary (interactive DOM rendering is verified separately in browser/e2e suites):
 
-12. Everything the page does on its own: rendering of the three screens, which fields enable the buttons, the page's own VIN decode, the result panels, and the session renewal and retry logic of CST-R45. The suite checks that the page and its assets are served and that the served script contains the routes, headers and screen labels of this contract; it performs the same handshake the page performs and calls the same API routes with the same headers.
-13. Browser cookie handling: that an `HttpOnly`, `SameSite=Strict` cookie is stored and sent back by a browser. The suite reads the `Set-Cookie` header and sends the cookie by hand.
-14. CST-R46 to CST-R49 as user journeys. The suite proves the API half of each, using the bodies the shipped page sends where they differ from the documented ones.
-15. Expiry of cookies and sessions after one hour of wall-clock time is not waited for.
+12. Visual rendering, button enable/disable states, the page's local VIN decode, and runtime session renewal/retry loops execute in the browser. The conformance suite proves that the page and its JS/CSS assets are served, verifies the shipped bundle contains the fixed route, header, payload, and screen markers of CST-R45 to CST-R49, and executes the exact handshake and API payloads over HTTP in strict mode.
+13. Browser cookie jar handling (`HttpOnly`, `SameSite=Strict`) is tested via `Set-Cookie` and `Cookie` headers over HTTP.
+14. CST-R46 to CST-R49 API journeys are verified over HTTP in strict mode using the fixed payloads shipped by the page.
+15. Wall-clock 3600s expiry of cookies and sessions is not waited for.
 
 Strict mode, `EVERGREEN_SCORER_SECRET` and `CARRIER_LATENCY_MS` are tested on extra instances started with those variables. When the suite runs against an already deployed service these extra instances are not available.

@@ -123,7 +123,7 @@ for (const c of LISTS) {
       for (const cursor of ["not-a-cursor", btoa("[1,2]"), btoa(JSON.stringify({ unrelated: "x" }))]) {
         const res = await ctx.api.get(c.path, { query: { cursor } });
         expectError(res, 400, "VALIDATION_ERROR", { field: "cursor", code: "invalid_format" });
-        contract.check(res, { allowUndocumentedStatus: c.name === "listEscalations" });
+        contract.check(res);
       }
     });
 

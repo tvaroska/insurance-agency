@@ -5,9 +5,6 @@ import { book, endorsement, endorsementBody, ENDORSEMENT_ID, fieldCodes, ISO_UTC
 const contract = loadContract("ams");
 let ctx: Ctx;
 
-// Gap AMS-G16: notes and premium_delta are returned as null but are not declared nullable.
-const ENDORSEMENT_GAPS = [/\/(notes|premium_delta): is null/];
-
 const CHANGE_TYPES = [
   "add_coverage",
   "remove_coverage",
@@ -73,7 +70,7 @@ describe("listPolicyEndorsements", () => {
         updated_at: "2025-01-01T00:00:00.000Z",
       },
     ]);
-    contract.check(res, { allow: ENDORSEMENT_GAPS });
+    contract.check(res);
   });
 
   test("AMS-R54, AMS-R3: the stored changes column is JSON text", async () => {
@@ -214,10 +211,19 @@ describe("createEndorsement", () => {
     const res = await ctx.api.post("/v1/policies/POL-A-AUTO/endorsements", endorsementBody({ changes: "Add a named driver." }));
     expect(res.status).toBe(201);
     expect(res.body.changes).toBe("Add a named driver.");
+    contract.check(res);
     const list = await ctx.api.get("/v1/policies/POL-A-AUTO/endorsements");
     expect(list.body.data.at(-1).changes).toBe("Add a named driver.");
+    contract.check(list);
   });
 });
 
-test.todo("AMS-G16: Endorsement.notes and premium_delta are not nullable in specs/ams.yaml; the service returns null for both when unset", () => {});
-test.todo("AMS-G12: Endorsement.changes is declared an object in specs/ams.yaml; the service stores and returns any JSON value", () => {});
+test("AMS-G16 & AMS-G12: Endorsement.notes/premium_delta are nullable and Endorsement.changes accepts any JSON value", async () => {
+  const created = await ctx.api.post("/v1/policies/POL-A-AUTO/endorsements", endorsementBody({ changes: ["a", "b"] }));
+  expect(created.status).toBe(201);
+  expect(created.body.notes).toBeNull();
+  contract.check(created);
+  const listed = await ctx.api.get("/v1/policies/POL-A-AUTO/endorsements");
+  expect(listed.body.data.some((e: any) => e.premium_delta === null)).toBe(true);
+  contract.check(listed);
+});

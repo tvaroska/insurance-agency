@@ -102,7 +102,7 @@ Invariants:
 
   The date format check is the pattern `^\d{4}-\d{2}-\d{2}$` only. It does not check that the date exists (`2026-13-45` passes).
 - **AMS-R16** A missing resource is `404` with message `<resource> not found.`, where `<resource>` is `client`, `policy`, `task`, `escalation` or `household`.
-- **AMS-R17** A `POST` or `PATCH` body that is not valid JSON → `500 INTERNAL_ERROR` with message `An unexpected error occurred.`. (See Known gaps: this is current behaviour, not a design goal.)
+- **AMS-R17** A `POST` or `PATCH` body that is not valid JSON → `400 VALIDATION_ERROR` with message `Invalid JSON body.` and detail `{field: "body", message: "Request body must be valid JSON.", code: "invalid_format"}`.
 - **AMS-R113** Unknown fields in a request body are ignored. A client cannot set `id`, `created_at` or `updated_at`.
 
 ### 5.2 Pagination
@@ -178,11 +178,11 @@ The path id is the target (kept); `source_client_id` in the body is merged into 
 - **AMS-R46** Step 1, in this order: `client_id`, `policy_type`, `carrier_code`, `effective_date`, `expiration_date`, `annual_premium` required; `policy_type` enum (AMS-R40 list); `status` enum (AMS-R44 list); `effective_date` format, message `effective_date must be YYYY-MM-DD.`; `expiration_date` format, message `expiration_date must be YYYY-MM-DD.`.
 - **AMS-R47** Step 2: `annual_premium` must be a JSON number `>= 0`; otherwise `400`, field `annual_premium`, code `invalid`, message `annual_premium must be a non-negative number.`. Zero is allowed.
 - **AMS-R48** Step 3: `coverages` must be a non-empty array; otherwise `400`, field `coverages`, code `required`, message `coverages must be a non-empty array.`.
-- **AMS-R49** Step 4: every coverage must have a non-empty string `type`. The first one that does not is reported: field `coverages[<index>].type`, code `required`, message `Each coverage must have a type.`.
+- **AMS-R49** Step 4: every coverage must have a non-empty string `type`, an optional `limit` that is a string, number, or `null` (otherwise `400` on `coverages[<index>].limit`, code `invalid_format`), and an optional `deductible` that is a number or `null` (otherwise `400` on `coverages[<index>].deductible`, code `invalid_format`). The first offending coverage is reported (`coverages[<index>].type`, code `required`, message `Each coverage must have a type.`).
 - **AMS-R50** Then the client must exist, else `404 client`. This comes after all validation and before the compliance checks.
 - **AMS-R51** Then the compliance firewall runs (section 8) in the order state minimums, binding authority, backdating.
 - **AMS-R52** Success is `201 {policy_id, client_id, carrier_code, policy_type, effective_date, expiration_date, annual_premium, status, multi_policy_discount, coverages, created_at, updated_at}`. `policy_id` is `POL-` followed by up to six random characters from `0-9a-z`. `status` defaults to `pending`. `multi_policy_discount` defaults to `false`. `coverages` echoes the request array unchanged.
-- **AMS-R53** Rows written: one `policies` row with `premium_current = annual_premium`, `premium_prior = null`, `created_at = updated_at`; and one `coverages` row per requested coverage with `type`, `limit` (or `null`) and `deductible` (or `null`). `carrier_code` is stored as given (any text). The service does not check that `expiration_date` is after `effective_date`. `policy_number`, `state` and `escalation_id` are not stored. No commission, task or endorsement is created.
+- **AMS-R53** Rows written: one `policies` row with `premium_current = annual_premium`, `premium_prior = null`, `created_at = updated_at`; and one `coverages` row per requested coverage with `type`, `limit` converted to text (or `null`) and `deductible` (or `null`). `carrier_code` is stored as given (any text). The service does not check that `expiration_date` is after `effective_date`. `policy_number`, `state` and `escalation_id` are not stored. No commission, task or endorsement is created.
 
 **listPolicyEndorsements** `GET /v1/policies/{id}/endorsements`
 
@@ -485,46 +485,42 @@ What a rebuild of `services/ams/src` must provide besides the routes. The other 
 
 ## 14. Known gaps
 
-Each gap has an id (`AMS-G<n>`). Where a test would have to assert the documented behaviour, it is a `test.todo` that carries the id.
+All OpenAPI-vs-service contract disagreements (`AMS-G1`–`AMS-G14`, `AMS-G16`) and unintended service defects (`AMS-G17`–`AMS-G19`) have been resolved and verified by `tests/conformance/ams/`.
 
-### 14.1 OpenAPI file and service disagree
+### 14.1 Resolved OpenAPI & service contract items
 
-The service is the reference. Each item is a statement in [`specs/ams.yaml`](ams.yaml) that the service does not honour. The conformance tests still schema-check every response and tolerate exactly these differences.
+- **AMS-G1 (resolved)** `createPolicy` and `createEndorsement` declare `422` (`422ComplianceViolation`) naming `E_EO_STATE_MINIMUM_VIOLATION`, `E_EO_PREMIUM_THRESHOLD_EXCEEDED`, and `E_EO_BACKDATING_PROHIBITED`.
+- **AMS-G2 (resolved)** `ams:policies:write` is declared in `components.securitySchemes.oauth2`.
+- **AMS-G3 (resolved)** Non-UUID identifiers (`CLI-001`, `CL-ab12cd`, `HH-001`, `TSK-001`, `USR-001`, `POL-ab12cd`) drop `format: uuid` and the restrictive `^POL-...` pattern in [`specs/ams.yaml`](ams.yaml).
+- **AMS-G4 (resolved)** `Coverage` requires only `type`; `limit` is nullable `oneOf: [string, number]` and `deductible` is nullable `number`. `createPolicy` accepts numeric `limit` values, evaluates them through `validateStateMinimums`, and stores them as text.
+- **AMS-G5 (resolved)** `PolicyType` includes `renters`; `CarrierCode` uses `SMIT` and `CSTL` (matching the service and seed data).
+- **AMS-G6 (resolved)** `Client.preferred_contact_method` lists `email, sms, phone, mail` (nullable); write schemas accept `email, phone, mail` (nullable).
+- **AMS-G7 (resolved)** Nullable `Client` and `Address` fields are marked `nullable: true`; `Address` has no required fields or rigid `state`/`zip` patterns; `phone` drops the E.164 pattern; `email` drops `format: email` and uses `maxLength: 255`.
+- **AMS-G8 (resolved)** `Task.title` and `TaskCreateRequest.title` use `maxLength: 500`; `Task.description` is nullable; `Task` documents `client_id` and `policy_id` alongside `related_client_id` and `related_policy_id`.
+- **AMS-G9 (resolved)** `listTasks` documents `due_date ASC, id ASC` (nulls first) and declares `related_client_id`, `policy_id`, and `related_policy_id`; `listClients` declares `first_name` and `email`.
+- **AMS-G10 (resolved)** `createPolicy` `201` uses `PolicyCreateResponse` (`annual_premium`); `Policy.coverages` is optional (matching `listPolicies`) and `Coverage` documents optional read-only `id` and `policy_id` (matching `getPolicyById`).
+- **AMS-G11 (resolved)** `PolicyCreateRequest` declares optional `state` and `escalation_id`; `EndorsementRequest` declares optional `escalation_id`.
+- **AMS-G12 (resolved)** `Escalation.reason` includes `claims_specialist` and `claim_specialist`; `EscalationCreate` documents optional `reason_code`; `Escalation.context` and `Endorsement.changes` accept arbitrary JSON values; `EscalationEvent.event_type` includes `principal_workbench_reviewed`.
+- **AMS-G13 (resolved)** `updateTask` drops unused `409`; `updateClient` declares `409`; `listEscalations` declares `400`.
+- **AMS-G14 (resolved)** `FieldError.code` lists `invalid` and the three `E_EO_*` codes.
+- **AMS-G15 (intentional scope boundary)** `/health`, `/oauth/token`, `/sim/*`, `/` and `/workbench/api/*` are platform and UI routes intentionally kept outside the 19-operation `/v1/*` agent tool spec in [`specs/ams.yaml`](ams.yaml); their contracts are defined by sections 4, 9, 11, and 13 of this document.
+- **AMS-G16 (resolved)** `Endorsement.notes` and `Endorsement.premium_delta` are `nullable: true`.
 
-- **AMS-G1** `422` is not declared on createPolicy or createEndorsement, and the three `E_EO_*` codes appear nowhere in the file. The name `EO_COMPLIANCE_VIOLATION` is returned only by the workbench firewall tester (AMS-R108).
-- **AMS-G2** The scope `ams:policies:write` (required by createPolicy) is missing from the security scheme's scope list.
-- **AMS-G3** Identifier formats: `Client.id`, `household_id`, `Task.id`, `assigned_to`, `related_client_id`, `producer_id` and several path and query parameters are declared `format: uuid`; real ids are `CLI-001`, `CL-ab12cd`, `HH-001`, `TSK-001`, `USR-001`. `Policy.policy_id` declares the pattern `^POL-[A-Z]{2,3}-\d{4}-\d{6}$`; created policies get `POL-` plus six random characters.
-- **AMS-G4** `Coverage.limit` is declared a number and `limit` and `deductible` are required; the service stores and returns `limit` as text (`"100000/300000"`) or `null`, `deductible` may be `null`, and a numeric `limit` in createPolicy fails with `500`.
-- **AMS-G5** `PolicyType` lacks `renters`, which the service accepts and the seed uses. `CarrierCode` lists `TRAV` and `PROG`; the service's carrier filter and the seed use `SMIT` and `CSTL` instead.
-- **AMS-G6** `Client.preferred_contact_method` lists `email, sms, phone` in the response schema; writes accept `email, phone, mail`.
-- **AMS-G7** Client fields `dob`, `phone`, the `address` parts, `driver_license_number`, `occupation`, `marital_status`, `household_id`, `preferred_contact_method`, `preferred_contact_time` are not declared nullable but are returned as `null`. `Address` requires all four parts. `Client.phone` declares an E.164 pattern that seed phones (`310-555-0101`) do not match. Nothing validates phone, zip, state or email format. Email max length is 254 in the file and 255 in the service.
-- **AMS-G8** `Task.title` max length is 250 in the file and 500 in the service. The task response carries `client_id` and `policy_id` in addition to the declared fields; `description` is returned as `null` but is not declared nullable.
-- **AMS-G9** listTasks: the file says ties on `due_date` sort by `created_at` descending; the service sorts by `id` ascending. Query parameters `related_client_id`, `policy_id` and `related_policy_id` are accepted but not declared. listClients accepts undeclared `first_name` and `email` filters.
-- **AMS-G10** createPolicy `201` is declared as `Policy` but returns `annual_premium` instead of `premium_current` and has no `premium_prior`. listPolicies items have no `coverages`, which `Policy` requires. getPolicyById coverages carry `id` and `policy_id`.
-- **AMS-G11** createPolicy accepts undeclared `state` and `escalation_id`; createEndorsement accepts undeclared `escalation_id`. `policy_number` is declared but ignored.
-- **AMS-G12** `Escalation.reason` lacks `claims_specialist` and `claim_specialist`; the `reason_code` alias is undeclared; `context` may be any JSON value; `EscalationEvent.event_type` lacks `principal_workbench_reviewed`. `Endorsement.changes` is declared an object but any JSON value is stored and returned.
-- **AMS-G13** Undeclared or unused statuses: updateTask declares `409`, which is never returned; updateClient returns an undeclared `409` for a duplicate email; listEscalations returns an undeclared `400` for invalid filters or cursors.
-- **AMS-G14** `FieldError.code` does not list `invalid` (AMS-R47) or the `E_EO_*` codes.
-- **AMS-G15** `/health`, `/oauth/token`, `/sim/*`, `/` and `/workbench/api/*` are not in the file at all.
-- **AMS-G16** `Endorsement.notes` and `Endorsement.premium_delta` are not declared nullable; the service returns `null` for notes that were not given and for a seed row without a premium delta.
+### 14.2 Resolved defects & intentional simplifications
 
-### 14.2 Behaviour that looks unintended
-
-Documented as it is. A rebuild must reproduce the numbered rules; it may improve what this section calls undefined.
-
-- **AMS-G17** listTasks cannot page past a task without a due date: the `next_cursor` it emits for such a row holds `null`, which the cursor check rejects with `400`. A `test.todo` holds the intended behaviour.
-- **AMS-G18** Malformed JSON bodies answer `500` rather than `400` (AMS-R17, tested as it is).
-- **AMS-G19** Wrong JSON types in bodies are mostly not validated and surface as `500`: a non-string where text is stored (`first_name: 5`), `null` for a required column in updateClient (`first_name: null`), a numeric coverage `limit` that passes the firewall. Not tested; the outcome is undefined.
+- **AMS-G17 (resolved)** `listTasks` pages cleanly past tasks with `due_date: null`.
+- **AMS-G18 (resolved)** Malformed JSON bodies return `400 VALIDATION_ERROR` via the shared `errorHandler` (AMS-R17).
+- **AMS-G19 (resolved)** Wrong JSON types (e.g., `first_name: 5`, `first_name: null` on update, non-string/non-number coverage `limit`, non-number `deductible`) return `400 VALIDATION_ERROR` instead of `500`.
 - Empty filter values are handled unevenly: they fail validation on listClients (`status`, AMS-R24), listClientPolicies (AMS-R40) and listCommissions (AMS-R62), and are ignored on listPolicies, listTasks and listEscalations.
 - createPolicy does not check date order or real calendar dates, and accepts any `carrier_code` (AMS-R53).
 - Merging, creating tasks and creating escalations never check that referenced clients or policies exist.
 - The workbench chaos flag and day offset live in process memory and survive `/sim/reset`; the tests therefore assert changes relative to the value read before.
 - Random ids are not checked for collisions, and may be shorter than their usual length.
 
-### 14.3 Not covered by the conformance tests
+### 14.3 HTTP-conformance boundaries
 
-- **AMS-G20** The workbench page in a browser: tabs, rendering, the in-page calculator, and that each control triggers the right request. The tests check that the page is served as one self-contained document and refers to each workbench route (AMS-R103).
-- **AMS-G21** A governed run-journey with all seven sibling services online (AMS-R106): running the reference agent and reporting the real table diff needs the whole stack. The tests cover the health probe and the fallback. Chaos forwarding and the document PDF pass-through (AMS-R110, AMS-R112) are tested against a stand-in peer.
+- **AMS-G20** Browser DOM rendering, tabs, and the in-page calculator on `/` execute in a real browser (`tests/e2e/`). The conformance suite checks that `/` serves one self-contained HTML document containing all workbench routes, modes, and control hooks (AMS-R103).
+- **AMS-G21** Governed `run-journey` against all seven live sibling services (AMS-R106) is exercised by full-stack integration and harness validation (`eval/validate-harness.ts`, `tests/integration/`). The conformance suite proves the health probe, offline fallback, chaos forwarding, and ECM PDF pass-through against a local stub peer.
 - The `SIMULATED_TODAY` override (section 8.3): the tests run with it unset.
 - `/sim/chaos` error rates strictly between 0 and 1.
 - The fallback database location inside the repository (AMS-R121), which the tests never write to.

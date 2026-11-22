@@ -77,6 +77,7 @@ components:
             ams:clients:read: Read client records
             ams:clients:write: Create and update client records
             ams:policies:read: Read policy data
+            ams:policies:write: Create policy records
             ams:policies:endorsements: Create and manage endorsements
             ams:accounting:read: Read commission and accounting data
             ams:tasks:read: Read task records
@@ -91,32 +92,29 @@ components:
     # ----- Address --------------------------------------------------------
     Address:
       type: object
-      description: US mailing address.
-      required:
-        - street
-        - city
-        - state
-        - zip
+      description: US mailing address (parts may be null when unset).
       properties:
         street:
           type: string
+          nullable: true
           description: Street address including unit/apt number.
           maxLength: 200
           example: "742 Evergreen Terrace, Apt 2B"
         city:
           type: string
+          nullable: true
           description: City name.
           maxLength: 100
           example: Springfield
         state:
           type: string
+          nullable: true
           description: Two-letter US state code (ISO 3166-2:US).
-          pattern: "^[A-Z]{2}$"
           example: IL
         zip:
           type: string
+          nullable: true
           description: Five-digit or ZIP+4 postal code.
-          pattern: "^\\d{5}(-\\d{4})?$"
           example: "62704"
 
     # ----- Client ---------------------------------------------------------
@@ -134,10 +132,9 @@ components:
       properties:
         id:
           type: string
-          format: uuid
           description: Unique client identifier.
           readOnly: true
-          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+          example: "CLI-001"
         first_name:
           type: string
           description: Legal first name.
@@ -151,33 +148,36 @@ components:
         dob:
           type: string
           format: date
+          nullable: true
           description: Date of birth (YYYY-MM-DD).
           example: "1987-04-15"
         email:
           type: string
-          format: email
           description: Primary email address.
-          maxLength: 254
+          maxLength: 255
           example: sarah.chen@example.com
         phone:
           type: string
-          description: Primary phone number in E.164 format.
-          pattern: "^\\+1\\d{10}$"
-          example: "+15035551234"
+          nullable: true
+          description: Primary phone number.
+          example: "310-555-0101"
         address:
           $ref: "#/components/schemas/Address"
         driver_license_number:
           type: string
+          nullable: true
           description: Driver license number (state-specific format).
           maxLength: 30
           example: "D400-1234-5678"
         occupation:
           type: string
+          nullable: true
           description: Current occupation or job title.
           maxLength: 150
           example: Software Engineer
         marital_status:
           type: string
+          nullable: true
           description: Marital status of the client.
           enum:
             - single
@@ -187,22 +187,25 @@ components:
           example: married
         household_id:
           type: string
-          format: uuid
+          nullable: true
           description: |
             Identifier linking members of the same household for
             multi-policy discounts and shared billing.
-          example: "hh-00a1b2c3-d4e5-6789-abcd-ef0123456789"
+          example: "HH-001"
         preferred_contact_method:
           type: string
-          description: How the client prefers to be contacted.
+          nullable: true
+          description: How the client prefers to be contacted (seed records may contain sms; API writes accept email, phone, or mail).
           enum:
             - email
             - sms
             - phone
+            - mail
           default: email
           example: email
         preferred_contact_time:
           type: string
+          nullable: true
           description: |
             Preferred time window for outbound contact (free-form text,
             e.g. "weekday mornings" or "after 5 PM PST").
@@ -250,34 +253,37 @@ components:
           example: Chen
         email:
           type: string
-          format: email
           description: Primary email address.
-          maxLength: 254
+          maxLength: 255
           example: sarah.chen@example.com
         dob:
           type: string
           format: date
+          nullable: true
           description: Date of birth (YYYY-MM-DD).
           example: "1987-04-15"
         phone:
           type: string
-          description: Primary phone number in E.164 format.
-          pattern: "^\\+1\\d{10}$"
-          example: "+15035551234"
+          nullable: true
+          description: Primary phone number.
+          example: "310-555-0101"
         address:
           $ref: "#/components/schemas/Address"
         driver_license_number:
           type: string
+          nullable: true
           description: Driver license number (state-specific format).
           maxLength: 30
           example: "D400-1234-5678"
         occupation:
           type: string
+          nullable: true
           description: Current occupation or job title.
           maxLength: 150
           example: Software Engineer
         marital_status:
           type: string
+          nullable: true
           description: Marital status of the client.
           enum:
             - single
@@ -287,11 +293,12 @@ components:
           example: single
         household_id:
           type: string
-          format: uuid
+          nullable: true
           description: Identifier linking members of the same household.
-          example: "hh-00a1b2c3-d4e5-6789-abcd-ef0123456789"
+          example: "HH-001"
         preferred_contact_method:
           type: string
+          nullable: true
           description: How the client prefers to be contacted.
           enum:
             - email
@@ -299,6 +306,11 @@ components:
             - mail
           default: email
           example: email
+        preferred_contact_time:
+          type: string
+          nullable: true
+          maxLength: 100
+          example: "weekday mornings"
         status:
           type: string
           description: Lifecycle status of the client record.
@@ -325,29 +337,32 @@ components:
           example: Chen
         email:
           type: string
-          format: email
-          maxLength: 254
+          maxLength: 255
           example: sarah.chen@example.com
         dob:
           type: string
           format: date
+          nullable: true
           example: "1987-04-15"
         phone:
           type: string
-          pattern: "^\\+1\\d{10}$"
-          example: "+15035551234"
+          nullable: true
+          example: "310-555-0101"
         address:
           $ref: "#/components/schemas/Address"
         driver_license_number:
           type: string
+          nullable: true
           maxLength: 30
           example: "D400-1234-5678"
         occupation:
           type: string
+          nullable: true
           maxLength: 150
           example: Software Engineer
         marital_status:
           type: string
+          nullable: true
           enum:
             - single
             - married
@@ -356,15 +371,21 @@ components:
           example: married
         household_id:
           type: string
-          format: uuid
-          example: "hh-00a1b2c3-d4e5-6789-abcd-ef0123456789"
+          nullable: true
+          example: "HH-001"
         preferred_contact_method:
           type: string
+          nullable: true
           enum:
             - email
             - phone
             - mail
           example: email
+        preferred_contact_time:
+          type: string
+          nullable: true
+          maxLength: 100
+          example: "weekday mornings"
         status:
           type: string
           enum:
@@ -383,13 +404,14 @@ components:
         title:
           type: string
           description: Short description of the task.
-          maxLength: 250
+          maxLength: 500
           example: "Follow up on Chen renewal — POL-PA-2024-001847"
         description:
           type: string
+          nullable: true
           description: Detailed task instructions or context.
           maxLength: 5000
-          example: "Policy expires 2025-07-01. Client requested competitive quotes from PROG and HRTF."
+          example: "Policy expires 2025-07-01. Client requested competitive quotes from CSTL and HRTF."
         priority:
           type: string
           description: Urgency level.
@@ -402,27 +424,40 @@ components:
           example: high
         task_type:
           type: string
+          nullable: true
           description: Category of the task (e.g. renewal, remarketing, follow_up).
           maxLength: 100
           example: renewal_follow_up
         assigned_to:
           type: string
-          format: uuid
+          nullable: true
           description: User ID of the assigned agent or CSR.
-          example: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+          example: "USR-001"
         due_date:
           type: string
           format: date
+          nullable: true
           description: Target completion date (YYYY-MM-DD).
           example: "2025-06-15"
         client_id:
           type: string
-          format: uuid
+          nullable: true
           description: Client record associated with this task.
-          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+          example: "CLI-001"
+        related_client_id:
+          type: string
+          nullable: true
+          description: Alias for client_id (takes precedence if both are provided).
+          example: "CLI-001"
         policy_id:
           type: string
+          nullable: true
           description: Policy associated with this task.
+          example: "POL-PA-2024-001847"
+        related_policy_id:
+          type: string
+          nullable: true
+          description: Alias for policy_id (takes precedence if both are provided).
           example: "POL-PA-2024-001847"
 
     # ----- Policy Create Request -------------------------------------------
@@ -477,9 +512,17 @@ components:
           description: Whether this policy qualifies for a multi-policy discount.
           default: false
           example: true
+        state:
+          type: string
+          description: Optional two-letter state code overriding the client's address state for auto state-minimum firewall checks.
+          example: "CA"
+        escalation_id:
+          type: string
+          description: Optional approved escalation ID waiving binding authority (premium_threshold) or backdating firewall checks.
+          example: "esc_a1b2c3d4"
         policy_number:
           type: string
-          description: Optional carrier-assigned policy number.
+          description: Optional carrier-assigned policy number (accepted and ignored by storage).
           example: "PA-2025-001847"
 
     # ----- Coverage -------------------------------------------------------
@@ -488,23 +531,31 @@ components:
       description: A single coverage line within a policy.
       required:
         - type
-        - limit
-        - deductible
       properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Auto-increment coverage row identifier (present on getPolicyById).
+        policy_id:
+          type: string
+          readOnly: true
+          description: Owning policy identifier (present on getPolicyById).
         type:
           type: string
           description: Coverage type identifier.
           maxLength: 80
           example: bodily_injury
         limit:
-          type: number
-          format: double
-          description: Per-occurrence or per-person coverage limit in USD.
-          minimum: 0
-          example: 250000.00
+          nullable: true
+          description: Coverage limit as formatted text (e.g., "100000/300000") or numeric USD amount.
+          oneOf:
+            - type: string
+            - type: number
+          example: "100000/300000"
         deductible:
           type: number
           format: double
+          nullable: true
           description: Deductible amount in USD.
           minimum: 0
           example: 500.00
@@ -522,22 +573,17 @@ components:
         - expiration_date
         - premium_current
         - status
-        - coverages
         - created_at
         - updated_at
       properties:
         policy_id:
           type: string
-          description: |
-            Human-readable policy identifier.
-            Format: POL-{TYPE_ABBREV}-{YEAR}-{SEQUENCE}
-          pattern: "^POL-[A-Z]{2,3}-\\d{4}-\\d{6}$"
+          description: Unique policy identifier (e.g., POL-PA-2025-001847 or POL-ab12cd).
           example: "POL-PA-2024-001847"
         client_id:
           type: string
-          format: uuid
           description: Owning client's unique identifier.
-          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+          example: "CLI-001"
         carrier_code:
           $ref: "#/components/schemas/CarrierCode"
         policy_type:
@@ -569,8 +615,7 @@ components:
           $ref: "#/components/schemas/PolicyStatus"
         coverages:
           type: array
-          description: Coverage lines included on this policy.
-          minItems: 1
+          description: Coverage lines included on this policy (present on getPolicyById and listClientPolicies; omitted on listPolicies).
           items:
             $ref: "#/components/schemas/Coverage"
         multi_policy_discount:
@@ -587,6 +632,65 @@ components:
           format: date-time
           readOnly: true
           example: "2025-01-08T16:45:12Z"
+
+    PolicyCreateResponse:
+      type: object
+      description: Response returned when creating a new policy record.
+      required:
+        - policy_id
+        - client_id
+        - carrier_code
+        - policy_type
+        - effective_date
+        - expiration_date
+        - annual_premium
+        - status
+        - multi_policy_discount
+        - coverages
+        - created_at
+        - updated_at
+      properties:
+        policy_id:
+          type: string
+          example: "POL-ab12cd"
+        client_id:
+          type: string
+          example: "CLI-001"
+        carrier_code:
+          type: string
+          example: "SMIT"
+        policy_type:
+          $ref: "#/components/schemas/PolicyType"
+        effective_date:
+          type: string
+          format: date
+          example: "2026-11-01"
+        expiration_date:
+          type: string
+          format: date
+          example: "2027-11-01"
+        annual_premium:
+          type: number
+          format: double
+          minimum: 0
+          example: 1450.00
+        status:
+          $ref: "#/components/schemas/PolicyStatus"
+        multi_policy_discount:
+          type: boolean
+          example: false
+        coverages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Coverage"
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
 
     # ----- Endorsement Request / Response ---------------------------------
     EndorsementRequest:
@@ -617,11 +721,9 @@ components:
             - other
           example: add_vehicle
         changes:
-          type: object
           description: |
-            Free-form object describing the requested modifications.
-            Structure varies by `change_type`.
-          additionalProperties: true
+            Any JSON value describing the requested modifications (typically an
+            object keyed by `change_type`).
           example:
             vehicle:
               year: 2024
@@ -632,9 +734,14 @@ components:
             annual_mileage: 12000
         notes:
           type: string
+          nullable: true
           description: Agent notes or special instructions for the carrier.
           maxLength: 2000
           example: "Client purchased new vehicle; replacing 2018 Civic on the policy."
+        escalation_id:
+          type: string
+          description: Optional approved backdating escalation ID waiving the backdating firewall check.
+          example: "esc_a1b2c3d4"
 
     Endorsement:
       type: object
@@ -674,8 +781,7 @@ components:
             - other
           example: add_vehicle
         changes:
-          type: object
-          additionalProperties: true
+          description: Any JSON value describing the recorded modifications.
           example:
             vehicle:
               year: 2024
@@ -687,7 +793,8 @@ components:
         premium_delta:
           type: number
           format: double
-          description: Change in annualized premium resulting from endorsement (can be negative).
+          nullable: true
+          description: Change in annualized premium resulting from endorsement (can be negative or null).
           example: 312.00
         status:
           type: string
@@ -701,6 +808,7 @@ components:
           example: pending_review
         notes:
           type: string
+          nullable: true
           maxLength: 2000
           example: "Client purchased new vehicle; replacing 2018 Civic on the policy."
         created_at:
@@ -790,10 +898,9 @@ components:
           example: paid
         producer_id:
           type: string
-          format: uuid
           nullable: true
           description: Producing agent's identifier (for split tracking).
-          example: "agt-44a1b2c3-d4e5-6789-abcd-ef0123456789"
+          example: "USR-001"
         created_at:
           type: string
           format: date-time
@@ -814,19 +921,19 @@ components:
       properties:
         id:
           type: string
-          format: uuid
           description: Unique task identifier.
-          example: "t-881a2b3c-4d5e-6f78-9abc-def012345678"
+          example: "TSK-001"
         title:
           type: string
           description: Short description of the task.
-          maxLength: 250
+          maxLength: 500
           example: "Follow up on Chen renewal — POL-PA-2024-001847"
         description:
           type: string
+          nullable: true
           description: Detailed task instructions or context.
           maxLength: 5000
-          example: "Policy expires 2025-07-01. Client requested competitive quotes from PROG and HRTF."
+          example: "Policy expires 2025-07-01. Client requested competitive quotes from CSTL and HRTF."
         status:
           type: string
           description: Current workflow status.
@@ -854,16 +961,24 @@ components:
           example: renewal_follow_up
         assigned_to:
           type: string
-          format: uuid
           nullable: true
           description: User ID of the assigned agent or CSR.
-          example: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+          example: "USR-001"
+        client_id:
+          type: string
+          nullable: true
+          description: Client record associated with this task (mirrors related_client_id).
+          example: "CLI-001"
+        policy_id:
+          type: string
+          nullable: true
+          description: Policy associated with this task (mirrors related_policy_id).
+          example: "POL-PA-2024-001847"
         related_client_id:
           type: string
-          format: uuid
           nullable: true
           description: Client record associated with this task.
-          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+          example: "CLI-001"
         related_policy_id:
           type: string
           nullable: true
@@ -911,9 +1026,8 @@ components:
           example: high
         assigned_to:
           type: string
-          format: uuid
           nullable: true
-          example: "usr-55a1b2c3-d4e5-6789-abcd-ef0123456789"
+          example: "USR-001"
         due_date:
           type: string
           format: date
@@ -921,6 +1035,7 @@ components:
           example: "2025-06-10"
         description:
           type: string
+          nullable: true
           maxLength: 5000
 
     # ----- Escalation ------------------------------------------------------
@@ -970,9 +1085,8 @@ components:
           description: Free-text summary of why escalation is needed.
           example: "Premium of $12,500 exceeds $10K threshold"
         context:
-          type: object
           nullable: true
-          description: Arbitrary JSON context for the escalation.
+          description: Arbitrary JSON context for the escalation (object, array, string, number, boolean, or null).
         status:
           type: string
           enum: [pending, approved, denied, needs_info]
@@ -1025,12 +1139,25 @@ components:
             - attorney_involvement
             - claims_specialist
             - claim_specialist
+        reason_code:
+          type: string
+          description: Optional alias accepted by the service when `reason` is omitted.
+          enum:
+            - premium_threshold
+            - state_minimum_violation
+            - coverage_adequacy
+            - surplus_lines
+            - principal_review
+            - backdating
+            - attorney_involvement
+            - claims_specialist
+            - claim_specialist
         summary:
           type: string
           maxLength: 2000
         context:
-          type: object
           nullable: true
+          description: Arbitrary JSON context for the escalation.
 
     ManagerResponse:
       type: object
@@ -1060,7 +1187,7 @@ components:
           type: string
         event_type:
           type: string
-          enum: [created, manager_reviewed, status_changed]
+          enum: [created, manager_reviewed, status_changed, principal_workbench_reviewed]
         from_status:
           type: string
           nullable: true
@@ -1081,6 +1208,7 @@ components:
       enum:
         - personal_auto
         - homeowners
+        - renters
         - umbrella
         - bop
         - workers_comp
@@ -1103,14 +1231,14 @@ components:
       type: string
       description: Short code identifying an insurance carrier.
       enum:
-        - TRAV
-        - PROG
+        - SMIT
+        - CSTL
         - HRTF
         - ERIE
         - NTNW
         - SAFECO
         - LIBT
-      example: TRAV
+      example: SMIT
 
     USStateCode:
       type: string
@@ -1165,18 +1293,17 @@ components:
           example: "One or more fields failed validation."
         correlation_id:
           type: string
-          format: uuid
-          description: Unique identifier for request tracing (always present on 5xx).
-          example: "corr-12345678-abcd-efgh-ijkl-mnopqrstuvwx"
+          description: Unique identifier for request tracing.
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         details:
           type: array
-          description: Field-level validation errors (present on 400 responses).
+          description: Field-level validation or E&O compliance errors (present on 400 and 422 responses).
           items:
             $ref: "#/components/schemas/FieldError"
 
     FieldError:
       type: object
-      description: Describes a validation failure on a single field.
+      description: Describes a validation or compliance failure on a single field.
       required:
         - field
         - message
@@ -1192,14 +1319,18 @@ components:
           example: "Effective date must be in the future."
         code:
           type: string
-          description: Machine-readable validation rule that failed.
+          description: Machine-readable validation or E&O compliance rule that failed.
           enum:
             - required
+            - invalid
             - invalid_format
             - out_of_range
             - too_long
             - invalid_enum
             - conflict
+            - E_EO_STATE_MINIMUM_VIOLATION
+            - E_EO_PREMIUM_THRESHOLD_EXCEEDED
+            - E_EO_BACKDATING_PROHIBITED
           example: out_of_range
 
   # -----------------------------------------------------------------------
@@ -1285,6 +1416,23 @@ components:
             error_code: CONFLICT
             message: "Cannot endorse policy POL-PA-2024-001847: policy status is 'cancelled'."
 
+    422ComplianceViolation:
+      description: |
+        Unprocessable Entity — blocked by the service-layer E&O and statutory
+        compliance firewall (`E_EO_STATE_MINIMUM_VIOLATION`,
+        `E_EO_PREMIUM_THRESHOLD_EXCEEDED`, or `E_EO_BACKDATING_PROHIBITED`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: E_EO_STATE_MINIMUM_VIOLATION
+            message: "Bodily injury per-person limit ($15,000) is below CA statutory minimum of $30,000 (30/60/15)."
+            details:
+              - field: coverages
+                message: "Bodily injury per-person limit ($15,000) is below CA statutory minimum of $30,000 (30/60/15)."
+                code: E_EO_STATE_MINIMUM_VIOLATION
+
     500InternalServerError:
       description: Unexpected server error.
       content:
@@ -1336,13 +1484,28 @@ paths:
             type: string
             maxLength: 100
           example: Chen
+        - name: first_name
+          in: query
+          description: Case-insensitive prefix search on first name.
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          example: Sarah
+        - name: email
+          in: query
+          description: Exact case-sensitive filter on email address.
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+          example: sarah.chen@example.com
         - name: household_id
           in: query
           description: Filter by household identifier.
           required: false
           schema:
             type: string
-            format: uuid
         - $ref: "#/components/parameters/limitParam"
         - $ref: "#/components/parameters/cursorParam"
       responses:
@@ -1544,12 +1707,11 @@ paths:
       parameters:
         - name: id
           in: path
-          description: Client UUID.
+          description: Client identifier.
           required: true
           schema:
             type: string
-            format: uuid
-          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+          example: "CLI-001"
       requestBody:
         required: true
         content:
@@ -1595,6 +1757,8 @@ paths:
           $ref: "#/components/responses/403Forbidden"
         "404":
           $ref: "#/components/responses/404NotFound"
+        "409":
+          $ref: "#/components/responses/409Conflict"
 
         "500":
           $ref: "#/components/responses/500InternalServerError"
@@ -1813,12 +1977,11 @@ paths:
       parameters:
         - name: id
           in: path
-          description: Client UUID.
+          description: Client identifier.
           required: true
           schema:
             type: string
-            format: uuid
-          example: "c9a1f2e3-4b56-7d89-0abc-def123456789"
+          example: "CLI-001"
         - name: policy_type
           in: query
           description: Filter by line of business.
@@ -2031,7 +2194,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Policy"
+                $ref: "#/components/schemas/PolicyCreateResponse"
         "400":
           $ref: "#/components/responses/400BadRequest"
         "401":
@@ -2040,6 +2203,8 @@ paths:
           $ref: "#/components/responses/403Forbidden"
         "404":
           $ref: "#/components/responses/404NotFound"
+        "422":
+          $ref: "#/components/responses/422ComplianceViolation"
 
         "500":
           $ref: "#/components/responses/500InternalServerError"
@@ -2207,6 +2372,8 @@ paths:
           $ref: "#/components/responses/404NotFound"
         "409":
           $ref: "#/components/responses/409Conflict"
+        "422":
+          $ref: "#/components/responses/422ComplianceViolation"
 
         "500":
           $ref: "#/components/responses/500InternalServerError"
@@ -2283,11 +2450,10 @@ paths:
           example: "2024-12-31"
         - name: producer_id
           in: query
-          description: Filter by producing agent UUID.
+          description: Filter by producing agent identifier.
           required: false
           schema:
             type: string
-            format: uuid
         - $ref: "#/components/parameters/limitParam"
         - $ref: "#/components/parameters/cursorParam"
       responses:
@@ -2357,8 +2523,8 @@ paths:
       summary: List tasks
       description: |
         Retrieve a paginated list of workflow tasks with optional filters.
-        Results are ordered by `due_date` ascending (soonest first), then
-        `created_at` descending.
+        Results are ordered by `due_date` ascending (tasks without a due date
+        first), then `id` ascending.
       tags:
         - Tasks
 
@@ -2393,18 +2559,34 @@ paths:
           example: high
         - name: assigned_to
           in: query
-          description: Filter by assigned user UUID.
+          description: Filter by assigned user identifier.
           required: false
           schema:
             type: string
-            format: uuid
         - name: client_id
           in: query
-          description: Filter by related client UUID.
+          description: Filter by related client identifier.
           required: false
           schema:
             type: string
-            format: uuid
+        - name: related_client_id
+          in: query
+          description: Filter by related client identifier (takes precedence over client_id).
+          required: false
+          schema:
+            type: string
+        - name: policy_id
+          in: query
+          description: Filter by related policy identifier.
+          required: false
+          schema:
+            type: string
+        - name: related_policy_id
+          in: query
+          description: Filter by related policy identifier (takes precedence over policy_id).
+          required: false
+          schema:
+            type: string
         - name: due_date_before
           in: query
           description: Return tasks with due_date on or before this date (YYYY-MM-DD).
@@ -2544,12 +2726,11 @@ paths:
       parameters:
         - name: id
           in: path
-          description: Task UUID.
+          description: Task identifier.
           required: true
           schema:
             type: string
-            format: uuid
-          example: "t-881a2b3c-4d5e-6f78-9abc-def012345678"
+          example: "TSK-001"
       requestBody:
         required: true
         content:
@@ -2588,8 +2769,6 @@ paths:
           $ref: "#/components/responses/403Forbidden"
         "404":
           $ref: "#/components/responses/404NotFound"
-        "409":
-          $ref: "#/components/responses/409Conflict"
 
         "500":
           $ref: "#/components/responses/500InternalServerError"
@@ -2644,6 +2823,8 @@ paths:
                       $ref: "#/components/schemas/Escalation"
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
         "401":
           $ref: "#/components/responses/401Unauthorized"
         "403":

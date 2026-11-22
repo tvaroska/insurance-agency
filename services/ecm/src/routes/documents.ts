@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import {
   requireScopes,
   notFoundError,
+  validationError,
   checkRequired,
   checkEnum,
   throwIfErrors,
@@ -52,7 +53,18 @@ documentsRouter.post(
   "/upload",
   requireScopes("ecm:documents:upload"),
   async (c) => {
-    const formData = await c.req.formData();
+    let formData: FormData;
+    try {
+      formData = await c.req.formData();
+    } catch {
+      throw validationError([
+        {
+          field: "body",
+          message: "Request body must be valid multipart/form-data.",
+          code: "invalid_format",
+        },
+      ]);
+    }
 
     const file = formData.get("file") as File | null;
     const clientId = formData.get("client_id") as string | null;

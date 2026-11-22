@@ -5,7 +5,6 @@ import {
   cents,
   decodeVin,
   DEFAULT_COVERAGES,
-  ENUM_GAPS,
   ISO_TIME,
   policyRow,
   quoteRow,
@@ -251,8 +250,7 @@ describe("POST /quotes/submit, new quote", () => {
     ]);
     expect(res.body).toMatchObject({ client_id: "CLI-001", policy_type: "personal_auto", status: "assessed" });
     expect(res.body.risk_tier).toBe(riskTier(res.body.risk_score));
-    // Tolerated issues are Known gap 3 of specs/carrier-coastal.spec.md.
-    contract.check(res, { allow: [...ENUM_GAPS, /missing required property 'deductibles'/, /missing required property 'submitted_at'/] });
+    contract.check(res);
   });
 
   test("CST-R27: a new quote can be assessed, recalculated and bound straight away", async () => {
@@ -263,8 +261,14 @@ describe("POST /quotes/submit, new quote", () => {
     expect((await post(`/quotes/${id}/bind`, { effective_date: "2026-05-01" })).status).toBe(200);
   });
 
-  test.todo("Known gap 1: an invalid body is 422 (the service answers 400)", () => {});
-  test.todo("Known gap 3: the new-quote response matches CoastalQuoteAssessed (no deductibles or submitted_at; policy_type outside the documented enum)", () => {});
+  test("Known gaps 1 & 3: invalid submit body conforms to 400 BadRequest and new-quote response conforms to CoastalQuoteAssessed", async () => {
+    const invalid = await post("/quotes/submit", {});
+    expectError(invalid, 400, "VALIDATION_ERROR");
+    contract.check(invalid);
+    const created = await post("/quotes/submit", NEW);
+    expect(created.status).toBe(201);
+    contract.check(created);
+  });
 });
 
 describe("POST /quotes/submit, existing quote", () => {
@@ -317,7 +321,7 @@ describe("POST /quotes/submit, existing quote", () => {
     expect(diff.quotes.changed).toHaveLength(1);
     expect([...diff.quotes.changed[0].fields].sort()).toEqual(["assessed_at", "risk_factors", "risk_score", "risk_tier", "status"]);
     expect(JSON.parse(diff.quotes.changed[0].after.risk_factors as string)).toEqual(riskFactors(score));
-    contract.check(res, { allow: ENUM_GAPS });
+    contract.check(res);
   });
 
   test("CST-R29: once assessed, a second submit is a conflict", async () => {
@@ -645,8 +649,7 @@ describe("POST /quotes/{quote_id}/recalculate", () => {
     expect(res.status).toBe(200);
     expect(res.body.original_premium).toEqual({ annual: null, monthly: null });
     expect(res.body.adjusted_premium).toEqual({ annual: 960, semi_annual: 499.2, monthly: 80 });
-    // Tolerated issue is Known gap 3 of specs/carrier-coastal.spec.md.
-    contract.check(res, { allow: [/original_premium\/(annual|monthly): is null/] });
+    contract.check(res);
   });
 
   test("CST-R37: recalculating writes nothing, whatever the quote's state", async () => {
@@ -671,7 +674,12 @@ describe("POST /quotes/{quote_id}/recalculate", () => {
     contract.check(res);
   });
 
-  test.todo("Known gap 3: a recalculation of a quote without a premium matches RecalculateResponse (original premium is null)", () => {});
+  test("Known gap 3: recalculating a quote without a premium conforms strictly to RecalculateResponse", async () => {
+    const res = await recalc([{ type: "property_damage", limit: 25000 }], "QT-NOPREM");
+    expect(res.status).toBe(200);
+    expect(res.body.original_premium).toEqual({ annual: null, monthly: null });
+    contract.check(res);
+  });
 });
 
 describe("POST /quotes/{quote_id}/bind", () => {
@@ -810,7 +818,14 @@ describe("POST /quotes/{quote_id}/bind", () => {
     expect((await ctx.svc.table("policies")).some((p) => p.policy_id === row.policy_id)).toBe(true);
   });
 
-  test.todo("Known gap 1: binding an unassessed quote or sending an invalid body is 422 (the service answers 400)", () => {});
+  test("Known gap 1: binding an unassessed quote or invalid body conforms to 400 BadRequest", async () => {
+    const unassessed = await bind("QT-RAW", { effective_date: "2026-04-01" });
+    expect(unassessed.status).toBe(400);
+    contract.check(unassessed);
+    const invalid = await bind("QT-ASSESSED", {});
+    expectError(invalid, 400, "VALIDATION_ERROR");
+    contract.check(invalid);
+  });
 });
 
 describe("GET /policies/{policy_id}/id-card", () => {

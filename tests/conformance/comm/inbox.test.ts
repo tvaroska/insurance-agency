@@ -213,16 +213,18 @@ describe("REST list routes", () => {
     const res = await ctx.api.get("/v1/messages", { query: { limit: 2 } });
     expect(Object.keys(res.body)).toEqual(["data", "pagination"]);
     expect(Object.keys(res.body.pagination)).toEqual(["limit", "cursor", "next_cursor", "has_more"]);
-    // Tolerated issues are Known gaps 1 and 2 of specs/comm.spec.md.
-    contract.check(res, {
-      allow: [/missing required property 'has_more'/, /missing required property 'attachments'/, /does not match pattern/, /is not a UUID/],
-    });
+    contract.check(res);
     const aliased = await ctx.api.get("/v1/messages/inbox", { query: { channel: "phone" } });
-    contract.check(aliased, {
-      allow: [/missing required property 'has_more'/, /missing required property 'attachments'/, /does not match pattern/, /is not a UUID/, /body: is null/],
-    });
+    contract.check(aliased);
   });
 
-  test.todo("Known gap 1: list responses match InboxResponse (the service returns a pagination object instead of top-level cursor and has_more)", () => {});
-  test.todo("Known gap 2: listed messages match Message (no attachments, null body on calls, MSG-NNN and CLI-NNN ids)", () => {});
+  test("Known gaps 1 & 2: list responses and phone/seed messages conform strictly to specs/comm.yaml", async () => {
+    const res = await ctx.api.get("/v1/messages", { query: { limit: 10 } });
+    expect(res.status).toBe(200);
+    contract.check(res);
+    const phone = await ctx.api.get("/v1/messages/inbox", { query: { channel: "phone" } });
+    expect(phone.status).toBe(200);
+    expect(phone.body.data[0].body).toBeNull();
+    contract.check(phone);
+  });
 });

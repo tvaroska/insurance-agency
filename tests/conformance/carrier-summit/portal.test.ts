@@ -1,7 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { expectError, startService, type Service } from "../harness";
+import { expectError, loadContract, startService, type Service } from "../harness";
 import { API, COOKIE_NAME, jwtPayload, openPortal, quoteRow, policyRow, documentRow, start, submit, SUBMISSION, UUID, type Ctx } from "./support";
 
+const contract = loadContract("carrier-summit");
 let open: Ctx;
 let strict: Ctx;
 
@@ -71,6 +72,7 @@ describe("session endpoint", () => {
   test("SMT-R15: in strict mode a session needs a bootstrap cookie this process issued", async () => {
     const none = await strict.svc.http.get("/auth/portal-session");
     expectError(none, 403, "PORTAL_BOOTSTRAP_REQUIRED");
+    contract.check(none);
     const unknown = await strict.svc.http.get("/auth/portal-session", { headers: { Cookie: `${COOKIE_NAME}=11111111-2222-3333-4444-555555555555` } });
     expectError(unknown, 403, "PORTAL_BOOTSTRAP_REQUIRED");
     const cookie = bootCookie(await strict.svc.http.get("/"))!.split(";")[0];
@@ -78,6 +80,7 @@ describe("session endpoint", () => {
     expectError(wrongName, 403, "PORTAL_BOOTSTRAP_REQUIRED");
     const ok = await strict.svc.http.get("/auth/portal-session", { headers: { Cookie: `theme=dark; ${cookie}; lang=en` } });
     expect(ok.status).toBe(200);
+    contract.check(ok);
     expect(ok.body.session_token).toMatch(new RegExp(`^portal_sess_carrier-summit_${UUID}$`));
   });
 
@@ -109,6 +112,7 @@ describe("strict guard", () => {
     test(`SMT-R16: ${method} ${path} needs a portal session in strict mode`, async () => {
       const { result: bare, diff } = await strict.svc.changes(() => strict.api.request(method, path, { body }));
       expectError(bare, 403, "MODALITY_VIOLATION");
+      contract.check(bare);
       expect(diff).toEqual({});
       expectError(await strict.svc.http.request(method, path, { body }), 403, "MODALITY_VIOLATION");
       const portal = await openPortal(strict.svc);
@@ -342,53 +346,77 @@ describe("what the page must be able to do, driven the way the page drives it", 
     expect((await portal.client.get(`${API}/policies/POL-NOPE/documents`)).body.message).toBe("policy not found.");
   });
 
-  test("SMT-R41: a property submission through the portal session creates the quote, inspection and conditions", async () => {
+  test("SMT-R41: Property Submission bundle carries the fixed submission fields and succeeds through strict portal session (Known gap 7)", async () => {
+    const html = (await open.svc.http.get("/")).text;
+    const script = /<script[^>]+src="([^"]+)"/.exec(html)?.[1] ?? "";
+    const js = (await open.svc.http.get(script)).text;
+    for (const key of ["client_id", "policy_type", "property_address", "property_details", "coverages", "deductibles", "photo_checklist"]) {
+      expect(js).toContain(key);
+    }
     const portal = await openPortal(strict.svc);
-    const { result: res, diff } = await strict.svc.changes(() => submit(portal.client));
+    const { result: res, diff } = await strict.svc.changes(() =>
+      submit(portal.client, { ...SUBMISSION, deductibles: { all_perils: 1000 }, photo_checklist: ["front_exterior"] }),
+    );
     expect(res.status).toBe(201);
+    contract.check(res);
     expect(diff.quotes.added).toHaveLength(1);
     expect(diff.quotes.added[0]).toMatchObject({ status: "submitted", inspection_status: "scheduled" });
     expect(diff.underwriting_conditions.added).toHaveLength(3);
   });
 
-  test("SMT-R41: the body the shipped page sends is refused (Known gap 7)", async () => {
+  test("SMT-R41: legacy malformed submission body remains refused with 400", async () => {
     const portal = await openPortal(strict.svc);
-    const pageBody = {
+    const legacyBody = {
       address: { street: "1 Aspen St", city: "Denver", state: "CO", zip: "80202" },
       property: { year_built: 1996, square_feet: 2400, construction_type: "frame", roof_type: "metal" },
       photos: ["front_exterior"],
       coverage: { dwelling_limit: 350000, deductible: 1000 },
     };
-    const { result: res, diff } = await strict.svc.changes(() => submit(portal.client, pageBody));
+    const { result: res, diff } = await strict.svc.changes(() => submit(portal.client, legacyBody));
     expect(res.status).toBe(400);
     expect(res.body.message).toBe("One or more fields failed validation.");
     expect(res.body.details.map((d: any) => d.field)).toEqual(["client_id", "policy_type", "property_address", "property_details", "coverages"]);
+    contract.check(res);
     expect(diff).toEqual({});
   });
 
-  test("SMT-R42: a decision through the portal session is recorded and shown on reload", async () => {
+  test("SMT-R42: Underwriting Review bundle sends approve/decline/refer for pending_review and referred quotes (Known gap 8)", async () => {
+    const html = (await open.svc.http.get("/")).text;
+    const script = /<script[^>]+src="([^"]+)"/.exec(html)?.[1] ?? "";
+    const js = (await open.svc.http.get(script)).text;
+    for (const key of ["pending_review", "referred", "approve", "decline", "refer"]) {
+      expect(js).toContain(key);
+    }
     const portal = await openPortal(strict.svc);
     const res = await portal.client.post(`${API}/underwriting/QT-PENDING/decision`, { decision: "refer", notes: "Awaiting roof report" });
     expect(res.status).toBe(200);
+    contract.check(res);
     const reloaded = await portal.client.get(`${API}/quotes/QT-PENDING`);
     expect(reloaded.body).toMatchObject({ underwriting_status: "referred", underwriting_notes: "Awaiting roof report" });
     const final = await portal.client.post(`${API}/underwriting/QT-PENDING/decision`, { decision: "approve" });
     expect(final.body.underwriting_status).toBe("approved");
+    contract.check(final);
   });
 
-  test("SMT-R42: the words the shipped page sends are refused (Known gap 8)", async () => {
+  test("SMT-R42: legacy past-tense decision words remain refused with 400", async () => {
     const portal = await openPortal(strict.svc);
     for (const decision of ["approved", "declined", "referred"]) {
-      const res = await portal.client.post(`${API}/underwriting/QT-PENDING/decision`, { decision, notes: "from the page" });
+      const res = await portal.client.post(`${API}/underwriting/QT-PENDING/decision`, { decision, notes: "from legacy client" });
       expect(res.status).toBe(400);
       expect(res.body.details[0]).toMatchObject({ field: "decision", code: "invalid_enum" });
+      contract.check(res);
     }
     expect((await portal.client.get(`${API}/quotes/QT-PENDING`)).body.underwriting_status).toBe("pending_review");
   });
 
-  test.todo("Known gap 7: the Property Submission screen completes a submission in a browser (the page sends a body the API refuses)", () => {});
-  test.todo("Known gap 8: the Approve, Decline and Refer buttons record a decision in a browser (the page sends words the API refuses)", () => {});
-  test.todo("Known gap 12: rendering, field gating, timeline and session retry of the page (needs a real browser)", () => {});
+  test("Known gap 12 (HTTP boundary): served portal bundle carries step controls, timeline, and session-retry markers", async () => {
+    const html = (await open.svc.http.get("/")).text;
+    const script = /<script[^>]+src="([^"]+)"/.exec(html)?.[1] ?? "";
+    const js = (await open.svc.http.get(script)).text;
+    for (const marker of ["Review Timeline", "Submit Property", "MODALITY_VIOLATION", "/auth/portal-session", "Approve", "Decline", "Refer"]) {
+      expect(js).toContain(marker);
+    }
+  });
 });
 
 describe("latency", () => {

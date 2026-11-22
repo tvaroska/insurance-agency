@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { expectError, loadContract } from "../harness";
-import { book, CLIENT_GAPS, CLIENT_ID, client, fieldCodes, ISO_UTC, POLICY_GAPS, start, task, type Ctx } from "./support";
+import { book, CLIENT_ID, client, fieldCodes, ISO_UTC, start, task, type Ctx } from "./support";
 
 const contract = loadContract("ams");
 let ctx: Ctx;
@@ -39,7 +39,7 @@ describe("listClients", () => {
     });
     const res = await ctx.api.get("/v1/clients");
     expect(ids(res)).toEqual(["C-1", "C-9", "C-3", "C-2"]);
-    contract.check(res, { allow: CLIENT_GAPS });
+    contract.check(res);
   });
 
   test("AMS-R4: a client carries a nested address and null for every unset field", async () => {
@@ -120,7 +120,7 @@ describe("getClient", () => {
       status: "active",
     });
     expect(res.body.address_street).toBeUndefined();
-    contract.check(res, { allow: CLIENT_GAPS });
+    contract.check(res);
   });
 
   test("AMS-R25: an unknown id is 404", async () => {
@@ -222,7 +222,7 @@ describe("createClient", () => {
     expect(result.body.created_at).toMatch(ISO_UTC);
     expect(result.body.updated_at).toBe(result.body.created_at);
     expect(Math.abs(Date.parse(result.body.created_at) - simMs)).toBeLessThan(60_000);
-    contract.check(result, { allow: CLIENT_GAPS });
+    contract.check(result);
 
     expect(Object.keys(diff)).toEqual(["clients"]);
     expect(diff.clients.added).toHaveLength(1);
@@ -302,6 +302,7 @@ describe("updateClient", () => {
     expectError(result, 409, "CONFLICT");
     expect(result.body.message).toBe("A client with email 'bob@example.test' already exists.");
     expect(diff).toEqual({});
+    contract.check(result);
 
     const own = await ctx.api.patch("/v1/clients/CLI-A", { email: "ann@example.test" });
     expect(own.status).toBe(200);
@@ -324,7 +325,7 @@ describe("updateClient", () => {
     });
     expect(result.body.updated_at).toMatch(ISO_UTC);
     expect(result.body.updated_at).not.toBe("2025-01-01T00:00:00.000Z");
-    contract.check(result, { allow: CLIENT_GAPS });
+    contract.check(result);
 
     expect(Object.keys(diff)).toEqual(["clients"]);
     expect(diff.clients.changed).toHaveLength(1);
@@ -404,7 +405,7 @@ describe("mergeClient", () => {
     expect(first.body).toMatchObject({ source_client_id: "CLI-B", policies_moved: 1, tasks_moved: 2 });
     expect(first.body.target_client).toMatchObject({ id: "CLI-A", status: "active", updated_at: "2025-01-01T00:00:00.000Z" });
     expect(first.body.target_client.address).toEqual({ street: "1 Main St", city: "Fresno", state: "CA", zip: "93650" });
-    contract.check(first, { allow: CLIENT_GAPS });
+    contract.check(first);
 
     const again = await ctx.api.post("/v1/clients/CLI-A/merge", { source_client_id: "CLI-B" });
     expect(again.status).toBe(200);
@@ -421,7 +422,7 @@ describe("getHouseholdSummary", () => {
     expect(res.status).toBe(200);
     expect(res.body.members.map((m: any) => m.id)).toEqual(["CLI-A", "CLI-B"]);
     expect(res.body).toMatchObject({ household_id: "HH-1", member_count: 2 });
-    contract.check(res, { allow: CLIENT_GAPS });
+    contract.check(res);
 
     const missing = await ctx.api.get("/v1/clients/household/HH-404");
     expectError(missing, 404, "NOT_FOUND");
@@ -511,7 +512,7 @@ describe("listClientPolicies", () => {
       created_at: "2025-01-01T00:00:00.000Z",
       updated_at: "2025-01-01T00:00:00.000Z",
     });
-    contract.check(res, { allow: POLICY_GAPS });
+    contract.check(res);
   });
 
   test("AMS-R41: policy_type and status filter the list; a client without policies gets an empty page", async () => {

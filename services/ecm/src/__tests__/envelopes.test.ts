@@ -292,7 +292,6 @@ describe("GET /v1/envelopes", () => {
       expect(env.client_id).toBe("CLI-003");
       expect(env.envelope_id).toMatch(/^env_/);
       expect(env.document_ids).toEqual(["doc_env_003"]);
-      expect(env.document_Ids).toEqual(["doc_env_003"]);
       expect(env.signer_name).toBe("Maria Rodriguez");
       expect(env.signer_email).toBe("maria.rodriguez@example.com");
       expect(env.status).toBe("created");

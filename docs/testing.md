@@ -3,13 +3,14 @@
 ## Test Command
 
 ```bash
-# Full test suite (showcase:check, shared, 8 services in parallel, eval, contract/hygiene, integration, pytest; or ./scripts/gate.sh in standalone clones):
+# Full test suite (showcase:check, shared, 8 services in parallel, eval, contract/hygiene, integration, conformance, pytest; or ./scripts/gate.sh in standalone clones):
 ../bin/gate test insurance-agency
 
 # Fast targeted subtargets:
 ../bin/gate test insurance-agency <service>        # ams | rater | crm | ecm | comm | carrier-summit | carrier-coastal | claims
 ../bin/gate test insurance-agency eval             # eval/__tests__/ and eval/*/__tests__/
 ../bin/gate test insurance-agency integration      # tests/integration/*.test.ts
+../bin/gate test insurance-agency conformance      # tests/conformance (full HTTP/spec conformance suite)
 ../bin/gate test insurance-agency pytest           # eval/inspect/tests
 ../bin/gate test insurance-agency validate-harness # zero-daemon in-process 20-scenario harness validation
 ```

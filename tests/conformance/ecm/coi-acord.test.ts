@@ -30,8 +30,6 @@ beforeEach(async () => {
 });
 
 const COI_PATHS = ["/v1/documents/coi/generate", "/v1/documents/coi", "/v1/coi/generate", "/v1/coi"];
-// ECM-G03: CoiGenerateResponse in specs/ecm.yaml types coverage limits as numbers and deductibles as non-null.
-const COVERAGE_GAP = [/coverage_summary\/coverages\/\d+\/(limit|deductible): is /];
 const coiBody = (overrides: Record<string, unknown> = {}) => ({
   policy_id: "POL-9",
   certificate_holder: { name: "First Bank", address: { street: "9 Loan Rd", city: "Dallas", state: "TX", zip: "75001" } },
@@ -91,7 +89,7 @@ describe("certificate of insurance: effects", () => {
     test(`ECM-R60, ECM-R64: POST ${path} stores a generated coi document and returns the certificate summary`, async () => {
       const { result: res, diff } = await ctx.svc.changes(() => ctx.api.post(path, coiBody()));
       expect(res.status).toBe(201);
-      check(contract, res, COVERAGE_GAP);
+      contract.check(res);
       expect(res.body).toEqual({
         document_id: expect.stringMatching(DOCUMENT_ID),
         client_id: "CLI-9",
@@ -508,8 +506,9 @@ describe("GET /v1/documents/acord/{form_type}", () => {
     expectError(await acord("35", { claim_id: "CLM-1" }), 404, "NOT_FOUND");
   });
 
-  test.todo(
-    "ECM-G03: coverage_summary.coverages matches specs/ecm.yaml (the file types limit as a number and deductible as non-null; the service passes on AMS values such as \"100/300\" and null)",
-    () => {},
-  );
+  test("ECM-G03: coverage_summary.coverages with string/null limits and null deductibles matches specs/ecm.yaml", async () => {
+    const res = await ctx.api.post("/v1/documents/coi/generate", coiBody());
+    expect(res.status).toBe(201);
+    contract.check(res);
+  });
 });

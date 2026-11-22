@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import {
   requireScopes,
+  applyPrismaCursorPagination,
+  paginatedResponse,
   notFoundError,
   conflictError,
   checkRequired,
@@ -83,21 +85,42 @@ quotesRouter.get(
   async (c) => {
     const query = c.req.query();
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
-    const where: Record<string, unknown> = {};
-    if (query.client_id) where.client_id = query.client_id;
-    if (query.policy_type) where.policy_type = query.policy_type;
-    if (query.status) where.status = query.status;
+    const cursor = query.cursor || undefined;
+
+    const { where: cursorWhere, orderBy, take } = applyPrismaCursorPagination({
+      cursor,
+      limit,
+      orderBy: [{ field: "request_id", direction: "asc" }],
+    });
+
+    const filters: Record<string, unknown>[] = [];
+    if (query.client_id) filters.push({ client_id: query.client_id });
+    if (query.policy_type) filters.push({ policy_type: query.policy_type });
+    if (query.status) filters.push({ status: query.status });
+    if (query.carrier_code) {
+      const matchingQuotes = await prisma.carrierQuote.findMany({
+        where: { carrier_code: query.carrier_code },
+        select: { request_id: true },
+      });
+      const matchingRequestIds = [...new Set(matchingQuotes.map((q) => q.request_id))];
+      filters.push({ request_id: { in: matchingRequestIds } });
+    }
+    if (cursorWhere) filters.push(cursorWhere);
 
     const requests = await prisma.quoteRequest.findMany({
-      where,
-      orderBy: { request_id: "asc" },
-      take: limit,
+      where: filters.length > 0 ? { AND: filters } : undefined,
+      orderBy,
+      take,
     });
-    const requestIds = requests.map((r) => r.request_id);
+    const pageRequests = requests.slice(0, limit);
+    const requestIds = pageRequests.map((r) => r.request_id);
     const carrierQuotes =
       requestIds.length > 0
         ? await prisma.carrierQuote.findMany({
-            where: { request_id: { in: requestIds } },
+            where: {
+              request_id: { in: requestIds },
+              ...(query.carrier_code ? { carrier_code: query.carrier_code } : {}),
+            },
           })
         : [];
 
@@ -108,28 +131,28 @@ quotesRouter.get(
       quotesByRequest.set(q.request_id, list);
     }
 
-    return c.json({
-      data: requests.map((r) => ({
-        request_id: r.request_id,
-        client_id: r.client_id,
-        policy_type: r.policy_type,
-        effective_date: r.effective_date,
-        status: r.status,
-        submitted_at: r.submitted_at,
-        completed_at: r.completed_at,
-        created_at: r.created_at,
-        carriers: (quotesByRequest.get(r.request_id) ?? []).map((q) => ({
-          quote_id: q.status === "declined" ? null : q.quote_id,
-          carrier_code: q.carrier_code,
-          carrier_name: q.carrier_name,
-          status: q.status,
-          premium_annual: q.premium_annual,
-          premium_monthly: q.premium_monthly,
-          decline_reason: q.decline_reason,
-          valid_until: q.valid_until,
-        })),
+    const mapped = requests.map((r) => ({
+      request_id: r.request_id,
+      client_id: r.client_id,
+      policy_type: r.policy_type,
+      effective_date: r.effective_date,
+      status: r.status,
+      submitted_at: r.submitted_at,
+      completed_at: r.completed_at,
+      created_at: r.created_at,
+      carriers: (quotesByRequest.get(r.request_id) ?? []).map((q) => ({
+        quote_id: q.status === "declined" ? null : q.quote_id,
+        carrier_code: q.carrier_code,
+        carrier_name: q.carrier_name,
+        status: q.status,
+        premium_annual: q.premium_annual,
+        premium_monthly: q.premium_monthly,
+        decline_reason: q.decline_reason,
+        valid_until: q.valid_until,
       })),
-    });
+    }));
+
+    return c.json(paginatedResponse(mapped, limit, ["request_id"], cursor));
   },
 );
 

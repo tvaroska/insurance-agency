@@ -56,20 +56,27 @@ export class Contract {
   constructor(service: string, document: any) {
     this.service = service;
     this.document = document;
-    const serverUrl: string = document.servers?.[0]?.url ?? "";
-    let basePath = "";
-    try {
-      basePath = new URL(serverUrl).pathname.replace(/\/+$/, "");
-    } catch {
-      basePath = serverUrl.startsWith("/") ? serverUrl.replace(/\/+$/, "") : "";
-    }
+    const parseBasePath = (url: string): string => {
+      try {
+        return new URL(url).pathname.replace(/\/+$/, "");
+      } catch {
+        return url.startsWith("/") ? url.replace(/\/+$/, "") : "";
+      }
+    };
+    const defaultBasePath = parseBasePath(document.servers?.[0]?.url ?? "");
     const topSecurity = document.security;
     for (const [specPath, rawItem] of Object.entries<any>(document.paths ?? {})) {
       const item = deref(rawItem, document);
+      const itemBasePath = item.servers?.[0]?.url
+        ? parseBasePath(item.servers[0].url)
+        : defaultBasePath;
       for (const method of METHODS) {
         const op = item[method];
         if (!op) continue;
-        const path = `${basePath}${specPath}`;
+        const opBasePath = op.servers?.[0]?.url
+          ? parseBasePath(op.servers[0].url)
+          : itemBasePath;
+        const path = `${opBasePath}${specPath}`;
         const security: Record<string, string[]>[] = op.security ?? topSecurity ?? [];
         const scopes = [...new Set(security.flatMap((entry) => Object.values(entry).flat()))];
         this.ops.push({

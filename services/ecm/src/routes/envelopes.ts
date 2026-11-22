@@ -55,9 +55,7 @@ export function formatEnvelope(e: {
   return {
     envelope_id: e.envelope_id,
     client_id: e.client_id,
-    policy_id: e.policy_id ?? null,
     document_ids: documentIds,
-    document_Ids: documentIds,
     signers,
     signer_name: primarySigner?.name ?? null,
     signer_email: primarySigner?.email ?? null,
@@ -74,26 +72,6 @@ export const envelopesRouter = new Hono<{ Variables: AppVariables }>();
 export const envelopesRoute = envelopesRouter;
 
 // ── GET / ───────────────────────────────────────────────────────────
-
-envelopesRouter.use("/", async (c, next) => {
-  const payload = c.get("jwtPayload");
-  if (payload && typeof payload.scope === "string") {
-    const scopes = payload.scope.split(" ").filter(Boolean);
-    const isAgentClient =
-      typeof payload.sub === "string" && payload.sub.startsWith("agent-");
-    const hasFullEcmScopes =
-      scopes.includes("ecm:documents:read") &&
-      scopes.includes("ecm:envelopes:create");
-    if (
-      !scopes.includes("ecm:envelopes:read") &&
-      ((isAgentClient && scopes.includes("ecm:documents:read")) ||
-        hasFullEcmScopes)
-    ) {
-      payload.scope = [...scopes, "ecm:envelopes:read"].join(" ");
-    }
-  }
-  await next();
-});
 
 envelopesRouter.get(
   "/",

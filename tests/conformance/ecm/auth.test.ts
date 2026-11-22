@@ -16,8 +16,6 @@ beforeEach(async () => {
 });
 
 const concretePath = (template: string) => template.replace("{form_type}", "90").replace(/\{[^}]+\}/g, "x");
-// ECM-R08: no client can hold ecm:envelopes:read; ecm:documents:read stands in for it.
-const effectiveScope = (scope: string) => (scope === "ecm:envelopes:read" ? "ecm:documents:read" : scope);
 
 describe("public endpoints", () => {
   test("ECM-R01: GET /health answers without credentials", async () => {
@@ -62,7 +60,7 @@ describe("authentication and scopes, for every operation in the OpenAPI file", (
 
     test(`ECM-R04: ${label} requires scope ${op.scopes.join(" ")}`, async () => {
       expect(op.scopes).toHaveLength(1);
-      const needed = effectiveScope(op.scopes[0]);
+      const needed = op.scopes[0];
       const lacking = await ctx.svc.client({ scopes: SCOPES.filter((scope) => scope !== needed) });
       const { result, diff } = await ctx.svc.changes(() => lacking.request(op.method, path, { body }));
       expectError(result, 403, "FORBIDDEN");
@@ -80,21 +78,22 @@ describe("authentication and scopes, for every operation in the OpenAPI file", (
     expectError(await ctx.svc.http.get("/v1/no-such-resource"), 401, "AUTH_ERROR");
   });
 
-  test("ECM-R08: ecm:envelopes:read cannot be requested; ecm:documents:read opens the envelope list", async () => {
+  test("ECM-R08: ecm:envelopes:read is grantable to OAuth clients and required by GET /v1/envelopes", async () => {
     const asked = await ctx.svc.http.post("/oauth/token", {
       grant_type: "client_credentials",
       client_id: "agent-full",
       client_secret: "dev-secret",
       scope: "ecm:envelopes:read",
     });
-    expect([asked.status, asked.body.error]).toEqual([400, "invalid_scope"]);
+    expect(asked.status).toBe(200);
+    expect(asked.body.scope).toBe("ecm:envelopes:read");
 
     for (const clientId of ["agent-full", "agent-csr", "agent-readonly"]) {
-      const reader = await ctx.svc.client({ clientId, scopes: ["ecm:documents:read"] });
+      const reader = await ctx.svc.client({ clientId, scopes: ["ecm:envelopes:read"] });
       expect((await reader.get("/v1/envelopes")).status).toBe(200);
     }
-    const creator = await ctx.svc.client({ scopes: ["ecm:envelopes:create", "ecm:assets:read"] });
-    const refused = await creator.get("/v1/envelopes");
+    const withoutScope = await ctx.svc.client({ scopes: ["ecm:documents:read", "ecm:envelopes:create", "ecm:assets:read"] });
+    const refused = await withoutScope.get("/v1/envelopes");
     expectError(refused, 403, "FORBIDDEN");
     expect(refused.body.message).toContain("ecm:envelopes:read");
   });
@@ -135,15 +134,19 @@ describe("error envelope", () => {
     });
   }
 
-  test("ECM-R07: POST /v1/documents/upload answers 500 INTERNAL_ERROR to a body that is not form data", async () => {
+  test("ECM-R07, ECM-G06: POST /v1/documents/upload answers 400 VALIDATION_ERROR to a body that is not form data", async () => {
     const { result, diff } = await ctx.svc.changes(() => ctx.api.post("/v1/documents/upload", { client_id: "CLI-1" }));
-    expectError(result, 500, "INTERNAL_ERROR");
+    expectError(result, 400, "VALIDATION_ERROR", { field: "body", code: "invalid_format" });
+    contract.check(result);
     expect(diff).toEqual({});
   });
 
-  test.todo(
-    "ECM-G01: error bodies match the Error schema of specs/ecm.yaml (the file requires `code`; the service sends `error_code`, `correlation_id` and `details[].{field,message,code}`)",
-  () => {},
-  );
-  test.todo("ECM-G06: a body that cannot be parsed gets a 400 (the service answers 500 INTERNAL_ERROR)", () => {});
+  test("ECM-G01: error bodies match the Error schema in specs/ecm.yaml", async () => {
+    const res = await ctx.api.post("/v1/envelopes/create", { message: "m".repeat(1001) });
+    expectError(res, 400, "VALIDATION_ERROR");
+    contract.check(res);
+    const missing = await ctx.api.get("/v1/coi/nope/pdf");
+    expectError(missing, 404, "NOT_FOUND");
+    contract.check(missing);
+  });
 });

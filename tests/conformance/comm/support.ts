@@ -159,5 +159,5 @@ export function replyScript(): ScriptEntry[] {
   return JSON.parse(block[1]);
 }
 
-/** Known gap 5 of specs/comm.spec.md: the service's error bodies are not the OpenAPI `Error` schema. */
-export const ERROR_ENVELOPE_GAP = [/missing required property 'error'/];
+/** Retained empty after aligning specs/comm.yaml Error schema with the service envelope. */
+export const ERROR_ENVELOPE_GAP: RegExp[] = [];

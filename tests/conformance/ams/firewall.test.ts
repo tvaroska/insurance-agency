@@ -93,7 +93,7 @@ describe("violation shape", () => {
       expectFirewall(result, code, field);
       expect(result.body.correlation_id).toBe(result.headers.get("x-correlation-id"));
       expect(diff).toEqual({});
-      contract.check(result, { allowUndocumentedStatus: true });
+      contract.check(result);
     }
   });
 });
@@ -522,5 +522,14 @@ describe("clock, order and approvals", () => {
   });
 });
 
-test.todo("AMS-G1: specs/ams.yaml documents no 422 for createPolicy or createEndorsement and names none of the E_EO_* codes", () => {});
-test.todo("AMS-G11: createPolicy accepts state and escalation_id, createEndorsement accepts escalation_id; specs/ams.yaml declares neither", () => {});
+test("AMS-G1 & AMS-G11: specs/ams.yaml documents 422 E_EO_* responses and state/escalation_id request fields", () => {
+  expect(contract.operation("createPolicy").statuses).toContain("422");
+  expect(contract.operation("createEndorsement").statuses).toContain("422");
+  const codes: string[] = contract.document.components?.schemas?.FieldError?.properties?.code?.enum ?? [];
+  expect(codes).toEqual(expect.arrayContaining([STATE_MIN, PREMIUM, BACKDATING]));
+  const polProps = contract.document.components?.schemas?.PolicyCreateRequest?.properties ?? {};
+  expect(polProps).toHaveProperty("state");
+  expect(polProps).toHaveProperty("escalation_id");
+  const endProps = contract.document.components?.schemas?.EndorsementRequest?.properties ?? {};
+  expect(endProps).toHaveProperty("escalation_id");
+});

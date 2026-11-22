@@ -107,6 +107,7 @@ components:
             adjuster:
               $ref: '#/components/schemas/Adjuster'
               nullable: true
+              description: Assigned adjuster record (omits `open_claims_count`).
             timeline:
               type: array
               items:
@@ -216,10 +217,14 @@ components:
         loss_location:
           type: string
           maxLength: 500
+        reserve_amount:
+          type: number
+          minimum: 0
+          description: Optional initial reserve amount (canonical field; takes precedence over `estimated_loss`).
         estimated_loss:
           type: number
           minimum: 0
-          description: Optional initial loss estimate persisted as `reserve_amount`.
+          description: Optional alternate alias persisted as `reserve_amount` when `reserve_amount` is absent.
         adjuster_id:
           type: string
           description: Optional adjuster ID to assign immediately during FNOL intake.
@@ -235,12 +240,15 @@ components:
         reserve_amount:
           type: number
           minimum: 0
+          nullable: true
         settlement_amount:
           type: number
           minimum: 0
+          nullable: true
         notes:
           type: string
           maxLength: 5000
+          nullable: true
 
     AssignRequest:
       type: object
@@ -331,6 +339,12 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden — missing claims:write scope
+        '404':
+          description: Adjuster not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /claims:
     post:
@@ -374,6 +388,9 @@ paths:
                   description: Alternate name for `loss_description` (normalized automatically).
                 loss_location:
                   type: string
+                reserve_amount:
+                  type: number
+                  minimum: 0
                 estimated_loss:
                   type: number
                   minimum: 0
@@ -398,6 +415,12 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden — missing claims:write scope
+        '404':
+          description: Adjuster not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
     get:
       tags: [Claims]
@@ -490,6 +513,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClaimDetail'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '404':
           description: Claim not found
           content:
@@ -528,6 +555,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '404':
           description: Claim not found
 
@@ -563,6 +594,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '404':
           description: Claim or adjuster not found
 
@@ -591,6 +626,10 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/TimelineEvent'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '404':
           description: Claim not found
 
@@ -626,6 +665,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '404':
           description: Claim not found
 
@@ -661,3 +704,7 @@ paths:
                       $ref: '#/components/schemas/Adjuster'
         '400':
           description: Validation error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden

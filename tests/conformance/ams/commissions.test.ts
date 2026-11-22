@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { expectError, loadContract } from "../harness";
-import { book, commission, COMMISSION_GAPS, start, type Ctx } from "./support";
+import { book, commission, start, type Ctx } from "./support";
 
 const contract = loadContract("ams");
 let ctx: Ctx;
@@ -37,7 +37,7 @@ describe("listCommissions", () => {
     const res = await list();
     expect(res.status).toBe(200);
     expect(ids(res)).toEqual(["COM-3", "COM-2", "COM-1", "COM-4"]);
-    contract.check(res, { allow: COMMISSION_GAPS });
+    contract.check(res);
   });
 
   test("AMS-R60: an item carries the twelve commission fields", async () => {
@@ -136,4 +136,14 @@ describe("listCommissions", () => {
   });
 });
 
-test.todo("AMS-G5: CarrierCode in specs/ams.yaml lists TRAV and PROG; the service and the seed use SMIT and CSTL", () => {});
+test("AMS-G5: CarrierCode in specs/ams.yaml lists SMIT and CSTL matching service and seed data", () => {
+  expect(contract.document.components?.schemas?.CarrierCode?.enum).toEqual([
+    "SMIT",
+    "CSTL",
+    "HRTF",
+    "ERIE",
+    "NTNW",
+    "SAFECO",
+    "LIBT",
+  ]);
+});

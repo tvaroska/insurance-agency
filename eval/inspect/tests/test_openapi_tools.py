@@ -120,7 +120,7 @@ def test_path_query_and_body_parameters_come_from_the_spec():
     assert "add_vehicle" in body["properties"]["change_type"]["enum"]
 
     list_clients = ops["listClients"]
-    assert list_clients.query_params == ("status", "last_name", "household_id", "limit", "cursor")
+    assert list_clients.query_params == ("status", "last_name", "first_name", "email", "household_id", "limit", "cursor")
     assert list_clients.args_schema["required"] == []
     assert list_clients.args_schema["properties"]["status"]["enum"] == ["active", "inactive", "prospect"]
     assert list_clients.args_schema["properties"]["limit"]["type"] == "integer"

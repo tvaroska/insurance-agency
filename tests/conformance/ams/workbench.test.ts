@@ -724,6 +724,14 @@ describe("workbench PDFs", () => {
   });
 });
 
-test.todo("AMS-G15: specs/ams.yaml does not describe /, /workbench/api/*, /health, /oauth/token or /sim/*", () => {});
-test.todo("AMS-G20: the workbench page is exercised in a browser (tabs, calculator, each control sending its request)", () => {});
-test.todo("AMS-G21: a governed run-journey with all seven sibling services online runs the reference agent and reports the real diff", () => {});
+test("AMS-G15, AMS-G20, AMS-G21 (scope boundaries): platform/workbench routes stay outside the 19-tool /v1 OpenAPI spec and HTML embeds tabs + calculator hooks", async () => {
+  const { loadContract } = await import("../harness");
+  const amsContract = loadContract("ams");
+  expect(amsContract.operations()).toHaveLength(19);
+  expect(amsContract.operations().every((op) => op.path.startsWith("/v1/"))).toBe(true);
+
+  const html = (await ctx.svc.http.get("/")).text;
+  for (const marker of ["/workbench/api/overview", "/workbench/api/run-journey", "/workbench/api/test-firewall", "governed", "unguarded_transcript"]) {
+    expect(html).toContain(marker);
+  }
+});

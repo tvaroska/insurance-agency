@@ -282,10 +282,12 @@ describe("POST /v1/quotes/{quote_id}/bind: premium threshold and escalation", ()
     expect(diff).toEqual({});
   }, 30_000);
 
-  test.todo(
-    "RTR-G02: E&O refusals use the status and body that specs/rater.yaml documents (the file lists them under 409 with eo_rules; the service answers 422, which the file does not document)",
-  () => {},
-  );
+  test("RTR-G02: E&O 422 refusals conform to specs/rater.yaml", async () => {
+    await big();
+    const res = await bind("QT-1", bindBody());
+    expect(res.status).toBe(422);
+    contract.check(res);
+  });
 });
 
 describe("POST /v1/quotes/{quote_id}/bind: state minimum limits", () => {

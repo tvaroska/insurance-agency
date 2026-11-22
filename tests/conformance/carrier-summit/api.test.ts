@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { expectError, loadContract } from "../harness";
-import { API, documentRow, ENUM_GAPS, ISO_TIME, policyRow, quoteRow, start, submit, SUBMISSION, type Ctx } from "./support";
+import { API, documentRow, ISO_TIME, policyRow, quoteRow, start, submit, SUBMISSION, type Ctx } from "./support";
 
 const contract = loadContract("carrier-summit");
 let ctx: Ctx;
@@ -65,7 +65,7 @@ describe("GET /quotes/{quote_id}", () => {
       underwriting_status: "pending_review",
       underwriting_notes: null,
     });
-    contract.check(res, { allow: ENUM_GAPS });
+    contract.check(res);
   });
 
   test("SMT-R21: a declined quote keeps null premiums and its decline reason", async () => {
@@ -79,7 +79,7 @@ describe("GET /quotes/{quote_id}", () => {
       decline_reason: "Roof older than 25 years",
       underwriting_status: "declined",
     });
-    contract.check(res, { allow: ENUM_GAPS });
+    contract.check(res);
   });
 
   test("SMT-R21: an unknown quote is 404 'quote not found.' and reading writes nothing", async () => {
@@ -192,7 +192,7 @@ describe("POST /underwriting/{quote_id}/decision", () => {
     expect(await quote("QT-PENDING")).not.toHaveProperty("decided_at");
     const { decided_at: _, ...rest } = res.body;
     expect((await ctx.api.get(`${API}/quotes/QT-PENDING`)).body).toEqual(rest);
-    contract.check(res, { allow: ENUM_GAPS });
+    contract.check(res);
   });
 
   test("SMT-R24: a referred quote can be decided again, then the decision is final", async () => {
@@ -202,7 +202,11 @@ describe("POST /underwriting/{quote_id}/decision", () => {
     expectError(await decide("QT-PENDING", { decision: "approve" }), 409, "CONFLICT");
   });
 
-  test.todo("Known gap 1: an invalid decision body is 422 (the service answers 400)", () => {});
+  test("Known gap 1: invalid underwriting decision body conforms to 400 BadRequest", async () => {
+    const res = await decide("QT-PENDING", { decision: "approved" });
+    expectError(res, 400, "VALIDATION_ERROR", { field: "decision", code: "invalid_enum" });
+    contract.check(res);
+  });
 });
 
 describe("GET /policies/{policy_id}/documents", () => {
@@ -217,8 +221,7 @@ describe("GET /policies/{policy_id}/documents", () => {
       { document_id: "SDOC-901", document_type: "dec_page", filename: "pol_docs_declarations.pdf", file_size_bytes: 181000, created_at: "2026-01-01T00:00:00Z" },
       { document_id: "SDOC-902", document_type: "id_cards", filename: "pol_docs_id_cards.pdf", file_size_bytes: 96000, created_at: "2026-01-01T00:00:00Z" },
     ]);
-    // Tolerated issue is Known gap 3 of specs/carrier-summit.spec.md.
-    contract.check(res, { allow: [/document_type: is ".*", expected one of/] });
+    contract.check(res);
   });
 
   test("SMT-R27: a policy without documents returns an empty list", async () => {
@@ -362,14 +365,20 @@ describe("POST /submissions", () => {
     const res = await submit(ctx.api);
     const read = await ctx.api.get(`${API}/quotes/${res.body.quote_id}`);
     expect(read.body).toMatchObject({ status: "submitted", underwriting_status: "pending_review", valid_until: null, coverages: SUBMISSION.coverages, deductibles: {} });
-    contract.check(read, { allow: ENUM_GAPS });
+    contract.check(read);
     const decided = await decide(res.body.quote_id, { decision: "approve" });
     expect(decided.body).toMatchObject({ status: "submitted", underwriting_status: "approved" });
   });
 
-  test.todo("Known gap 1: an invalid submission body is 422 (the service answers 400)", () => {});
-  test.todo("Known gap 3: quote responses match SummitQuote (policy_type and status values outside the documented enums)", () => {});
-  test.todo("Known gap 3: document lists match PolicyDocumentsResponse (document_type values outside the documented enum)", () => {});
+  test("Known gaps 1 & 3: invalid submission conforms to 400 BadRequest; quotes and documents conform strictly to specs/carrier-summit.yaml", async () => {
+    const invalid = await submit(ctx.api, {});
+    expectError(invalid, 400, "VALIDATION_ERROR");
+    contract.check(invalid);
+    const bound = await ctx.api.get(`${API}/quotes/QT-APPROVED`);
+    contract.check(bound);
+    const docs = await ctx.api.get(`${API}/policies/POL-DOCS/documents`);
+    contract.check(docs);
+  });
 });
 
 describe("inspections", () => {
@@ -405,8 +414,7 @@ describe("inspections", () => {
       property_address: null,
       property_details: null,
     });
-    // Tolerated issue is Known gap 3 of specs/carrier-summit.spec.md.
-    contract.check(res, { allow: [/inspection_status: is "not_scheduled"/] });
+    contract.check(res);
   });
 
   test("SMT-R33: an unknown quote is 404", async () => {
@@ -454,5 +462,10 @@ describe("inspections", () => {
     expect(b.body.quote_id).not.toBe(a.body.quote_id);
   });
 
-  test.todo("Known gap 3: inspection status matches InspectionStatusResponse for seed quotes (not_scheduled is outside the documented enum)", () => {});
+  test("Known gap 3: inspection status not_scheduled for seed quotes conforms strictly to InspectionStatusResponse", async () => {
+    const res = await ctx.api.get(`${API}/inspections/QT-PENDING`);
+    expect(res.status).toBe(200);
+    expect(res.body.inspection_status).toBe("not_scheduled");
+    contract.check(res);
+  });
 });
