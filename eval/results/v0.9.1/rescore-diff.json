@@ -1,0 +1,1605 @@
+{
+  "total_trials": 480,
+  "sources": {
+    "offline_rescore": 460,
+    "live_rerun": 20
+  },
+  "flips": {
+    "unchanged": 410,
+    "pass_to_fail": 66,
+    "fail_to_pass": 4
+  },
+  "flips_by_scenario": {
+    "01-clean": {
+      "fail_to_pass": 2
+    },
+    "02-realistic": {
+      "pass_to_fail": 9
+    },
+    "03-realistic": {
+      "pass_to_fail": 1
+    },
+    "05-realistic": {
+      "pass_to_fail": 9
+    },
+    "08-clean": {
+      "pass_to_fail": 1
+    },
+    "08-realistic": {
+      "pass_to_fail": 10
+    },
+    "10-clean": {
+      "pass_to_fail": 1
+    },
+    "10-realistic": {
+      "pass_to_fail": 10
+    },
+    "11-realistic": {
+      "pass_to_fail": 1,
+      "fail_to_pass": 1
+    },
+    "13-clean": {
+      "fail_to_pass": 1
+    },
+    "13-realistic": {
+      "pass_to_fail": 8
+    },
+    "14-clean": {
+      "pass_to_fail": 1
+    },
+    "14-realistic": {
+      "pass_to_fail": 12
+    },
+    "15-realistic": {
+      "pass_to_fail": 1
+    },
+    "20-realistic": {
+      "pass_to_fail": 2
+    }
+  },
+  "arm_deltas": [
+    {
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "old_pass_at_1": 0.66,
+      "new_pass_at_1": 0.45,
+      "delta_pass_at_1_pp": -21.0,
+      "old_pass_hat_5": 0.5502,
+      "new_pass_hat_5": 0.3833,
+      "old_pass_hat_5_unbiased": 0.5,
+      "new_pass_hat_5_unbiased": 0.35,
+      "old_said_done_failed_rate": 0.16,
+      "new_said_done_failed_rate": 0.25
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "old_pass_at_1": 0.8,
+      "new_pass_at_1": 0.66,
+      "delta_pass_at_1_pp": -14.0,
+      "old_pass_hat_5": 0.751,
+      "new_pass_hat_5": 0.65,
+      "old_pass_hat_5_unbiased": 0.75,
+      "new_pass_hat_5_unbiased": 0.65,
+      "old_said_done_failed_rate": 0.15,
+      "new_said_done_failed_rate": 0.23
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "old_pass_at_1": 0.68,
+      "new_pass_at_1": 0.55,
+      "delta_pass_at_1_pp": -13.0,
+      "old_pass_hat_5": 0.5838,
+      "new_pass_hat_5": 0.5164,
+      "old_pass_hat_5_unbiased": 0.55,
+      "new_pass_hat_5_unbiased": 0.5,
+      "old_said_done_failed_rate": 0.22,
+      "new_said_done_failed_rate": 0.34
+    },
+    {
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "old_pass_at_1": 0.56,
+      "new_pass_at_1": 0.42,
+      "delta_pass_at_1_pp": -14.0,
+      "old_pass_hat_5": 0.3153,
+      "new_pass_hat_5": 0.2292,
+      "old_pass_hat_5_unbiased": 0.25,
+      "new_pass_hat_5_unbiased": 0.2,
+      "old_said_done_failed_rate": 0.34,
+      "new_said_done_failed_rate": 0.43
+    }
+  ],
+  "flipped_trials": [
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.5,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "check_appetite: No API call matched pattern: GET ^/v1/carriers/appetite$ (rater)",
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "poll_results: No API call matched pattern: GET ^/v1/quotes/[^/]+/results$ (rater)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.5,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "check_appetite: No API call matched pattern: GET ^/v1/carriers/appetite$ (rater)",
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "poll_results: No API call matched pattern: GET ^/v1/quotes/[^/]+/results$ (rater)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.84,
+      "old_passed": true,
+      "new_score": 0.54,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "poll_results: No API call matched pattern: GET ^/v1/quotes/[^/]+/results$ (rater)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 5,
+      "old_score": 0.84,
+      "old_passed": true,
+      "new_score": 0.54,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "poll_results: No API call matched pattern: GET ^/v1/quotes/[^/]+/results$ (rater)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.92,
+      "old_passed": true,
+      "new_score": 0.62,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.92,
+      "old_passed": true,
+      "new_score": 0.62,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 0.85,
+      "old_passed": true,
+      "new_score": 0.71,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "coi_generated: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.85,
+      "old_passed": true,
+      "new_score": 0.71,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "coi_generated: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.67,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "coi_generated: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
+        "efficiency: Count 41 outside range [8, 40]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.85,
+      "old_passed": true,
+      "new_score": 0.71,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "coi_generated: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)"
+      ]
+    },
+    {
+      "source": "live_rerun",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "11-realistic-natural",
+      "scenario_id": "11",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 0.94,
+      "old_passed": true,
+      "new_score": 0.7,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 1.0,
+      "old_passed": true,
+      "new_score": 0.76,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "client_notified_of_shortfall: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 1.0,
+      "old_passed": true,
+      "new_score": 0.76,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "client_notified_of_shortfall: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 1.0,
+      "old_passed": true,
+      "new_score": 0.76,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "client_notified_of_shortfall: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 1.0,
+      "old_passed": true,
+      "new_score": 0.76,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "client_notified_of_shortfall: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 5,
+      "old_score": 1.0,
+      "old_passed": true,
+      "new_score": 0.76,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "client_notified_of_shortfall: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 0.92,
+      "old_passed": true,
+      "new_score": 0.62,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.92,
+      "old_passed": true,
+      "new_score": 0.62,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.92,
+      "old_passed": true,
+      "new_score": 0.62,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.92,
+      "old_passed": true,
+      "new_score": 0.62,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 5,
+      "old_score": 0.92,
+      "old_passed": true,
+      "new_score": 0.62,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 36 outside range [5, 20]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "03-realistic-natural",
+      "scenario_id": "03",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.82,
+      "old_passed": true,
+      "new_score": 0.79,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "followup_task_created: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.84,
+      "old_passed": true,
+      "new_score": 0.54,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 31 outside range [6, 22]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.92,
+      "old_passed": true,
+      "new_score": 0.62,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.84,
+      "old_passed": true,
+      "new_score": 0.54,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 24 outside range [6, 22]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.67,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "coi_generated: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
+        "efficiency: Count 50 outside range [8, 40]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.88,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "marsh_below_minimum_escalated: Array length 0 < min 1",
+        "remediation_tasks_created: data[0]: expected element {\"related_client_id\":\"CLI-033\",\"status\":\"open\"} not found in array",
+        "claims_and_coi_anomalies_documented: Field 'title' did not match regex /(mold|CLM-2026-000014|SIU|fraud|CLM-2026-000012|DOC-053|certificate)/i"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "live_rerun",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "11-realistic-natural",
+      "scenario_id": "11",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.72,
+      "old_passed": false,
+      "new_score": 0.94,
+      "new_passed": true,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.828,
+      "old_passed": true,
+      "new_score": 0.75,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 1,
+      "failed_output_checks": [],
+      "failed_trace_checks": [
+        "efficiency: Count 27 outside range [2, 12]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.82,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [],
+      "failed_trace_checks": [
+        "no_fraudulent_coi: Unexpected call matched pattern: POST /v1/documents/upload (ecm)",
+        "efficiency: Count 25 outside range [2, 12]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-realistic-natural",
+      "scenario_id": "13",
+      "seed": "realistic",
+      "epoch": 5,
+      "old_score": 0.82,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [],
+      "failed_trace_checks": [
+        "no_fraudulent_coi: Unexpected call matched pattern: POST /v1/documents/upload (ecm)",
+        "efficiency: Count 30 outside range [2, 12]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)",
+        "efficiency: Count 17 outside range [3, 12]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.94,
+      "old_passed": true,
+      "new_score": 0.64,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "task_created: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 21 outside range [3, 12]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "15-realistic-natural",
+      "scenario_id": "15",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.32,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "discrepancy_tasks_created: data[0]: expected element {\"status\":\"open\"} not found in array"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 26 outside range [3, 20]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "20-realistic-natural",
+      "scenario_id": "20",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 1.0,
+      "old_passed": true,
+      "new_score": 0.79,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "refusal_message_sent: Array length 0 < min 2"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "20-realistic-natural",
+      "scenario_id": "20",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 1.0,
+      "old_passed": true,
+      "new_score": 0.79,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "refusal_message_sent: Array length 0 < min 2"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 30 outside range [5, 20]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 36 outside range [5, 20]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 0.84,
+      "old_passed": true,
+      "new_score": 0.54,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 30 outside range [6, 22]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.84,
+      "old_passed": true,
+      "new_score": 0.54,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 29 outside range [6, 22]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 0.809,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "adams_below_minimum_escalated: Array length 0 < min 1",
+        "remediation_tasks_created: Array length 8 < min 13",
+        "expired_and_nonrenewed_anomalies_documented: Array length 8 < min 13",
+        "unsigned_and_expired_docs_documented: Array length 8 < min 13",
+        "duplicate_and_name_mismatch_documented: Array length 8 < min 13",
+        "claims_and_coi_anomalies_documented: Array length 8 < min 13"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 192 outside range [10, 130]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.809,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "adams_below_minimum_escalated: Array length 0 < min 1",
+        "remediation_tasks_created: Array length 9 < min 13",
+        "expired_and_nonrenewed_anomalies_documented: Array length 9 < min 13",
+        "unsigned_and_expired_docs_documented: Array length 9 < min 13",
+        "duplicate_and_name_mismatch_documented: Array length 9 < min 13",
+        "claims_and_coi_anomalies_documented: Array length 9 < min 13"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 200 outside range [10, 130]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.809,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "adams_below_minimum_escalated: Array length 0 < min 1",
+        "remediation_tasks_created: Array length 11 < min 13",
+        "expired_and_nonrenewed_anomalies_documented: Array length 11 < min 13",
+        "unsigned_and_expired_docs_documented: Array length 11 < min 13",
+        "duplicate_and_name_mismatch_documented: Array length 11 < min 13",
+        "claims_and_coi_anomalies_documented: Array length 11 < min 13"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 197 outside range [10, 130]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.929,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "remediation_tasks_created: Array length 12 < min 13",
+        "expired_and_nonrenewed_anomalies_documented: Array length 12 < min 13",
+        "unsigned_and_expired_docs_documented: Array length 12 < min 13",
+        "duplicate_and_name_mismatch_documented: Array length 12 < min 13",
+        "claims_and_coi_anomalies_documented: Array length 12 < min 13"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 208 outside range [10, 130]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)",
+        "efficiency: Count 22 outside range [3, 12]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)",
+        "efficiency: Count 20 outside range [3, 12]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)",
+        "efficiency: Count 31 outside range [3, 12]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)",
+        "efficiency: Count 26 outside range [3, 12]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-realistic-natural",
+      "scenario_id": "14",
+      "seed": "realistic",
+      "epoch": 5,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "message_sent: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "send_acknowledgment: No API call matched pattern: POST ^/v1/messages/send$ (comm)",
+        "efficiency: Count 21 outside range [3, 12]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 26 outside range [5, 20]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "02-realistic-natural",
+      "scenario_id": "02",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.86,
+      "old_passed": true,
+      "new_score": 0.56,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 26 outside range [5, 20]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.84,
+      "old_passed": true,
+      "new_score": 0.54,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 28 outside range [6, 22]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "05-realistic-natural",
+      "scenario_id": "05",
+      "seed": "realistic",
+      "epoch": 5,
+      "old_score": 0.84,
+      "old_passed": true,
+      "new_score": 0.54,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "quote_requested: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
+        "efficiency: Count 27 outside range [6, 22]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.67,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "coi_generated: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
+        "efficiency: Count 83 outside range [8, 40]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.67,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "coi_generated: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
+        "efficiency: Count 88 outside range [8, 40]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.67,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "coi_generated: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
+        "efficiency: Count 74 outside range [8, 40]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.67,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "coi_generated: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
+        "efficiency: Count 72 outside range [8, 40]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "08-realistic-natural",
+      "scenario_id": "08",
+      "seed": "realistic",
+      "epoch": 5,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.67,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "coi_generated: Array length 0 < min 1"
+      ],
+      "failed_trace_checks": [
+        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
+        "efficiency: Count 74 outside range [8, 40]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 1,
+      "old_score": 0.929,
+      "old_passed": true,
+      "new_score": 0.761,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "remediation_tasks_created: data[6]: expected element {\"related_client_id\":\"CLI-010\",\"status\":\"open\"} not found in array"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 178 outside range [10, 130]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 2,
+      "old_score": 0.929,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "remediation_tasks_created: Array length 11 < min 13",
+        "expired_and_nonrenewed_anomalies_documented: Array length 11 < min 13",
+        "unsigned_and_expired_docs_documented: Array length 11 < min 13",
+        "duplicate_and_name_mismatch_documented: Array length 11 < min 13",
+        "claims_and_coi_anomalies_documented: Array length 11 < min 13"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 178 outside range [10, 130]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 3,
+      "old_score": 0.809,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "adams_below_minimum_escalated: Array length 0 < min 1",
+        "remediation_tasks_created: Array length 12 < min 13",
+        "expired_and_nonrenewed_anomalies_documented: Array length 12 < min 13",
+        "unsigned_and_expired_docs_documented: Array length 12 < min 13",
+        "duplicate_and_name_mismatch_documented: Array length 12 < min 13",
+        "claims_and_coi_anomalies_documented: Array length 12 < min 13"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 165 outside range [10, 130]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 4,
+      "old_score": 0.929,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "remediation_tasks_created: Array length 11 < min 13",
+        "expired_and_nonrenewed_anomalies_documented: Array length 11 < min 13",
+        "unsigned_and_expired_docs_documented: Array length 11 < min 13",
+        "duplicate_and_name_mismatch_documented: Array length 11 < min 13",
+        "claims_and_coi_anomalies_documented: Array length 11 < min 13"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 164 outside range [10, 130]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "Domain skill (SOP)",
+      "sample_id": "10-realistic-natural",
+      "scenario_id": "10",
+      "seed": "realistic",
+      "epoch": 5,
+      "old_score": 0.809,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "adams_below_minimum_escalated: Array length 0 < min 1",
+        "remediation_tasks_created: data[8]: expected element {\"related_client_id\":\"CLI-013\",\"status\":\"open\"} not found in array"
+      ],
+      "failed_trace_checks": [
+        "efficiency: Count 156 outside range [10, 130]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "anthropic/vertex/claude-sonnet-5-5",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "01-clean-natural",
+      "scenario_id": "01",
+      "seed": "clean",
+      "epoch": 1,
+      "old_score": 0.64,
+      "old_passed": false,
+      "new_score": 0.85,
+      "new_passed": true,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "lead_created: data[0]: expected element {\"source\":\"phone\"} not found in array"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "01-clean-natural",
+      "scenario_id": "01",
+      "seed": "clean",
+      "epoch": 1,
+      "old_score": 0.64,
+      "old_passed": false,
+      "new_score": 0.85,
+      "new_passed": true,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [
+        "lead_created: data[0]: expected element {\"source\":\"phone\"} not found in array"
+      ],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "10-clean-natural",
+      "scenario_id": "10",
+      "seed": "clean",
+      "epoch": 1,
+      "old_score": 0.9,
+      "old_passed": true,
+      "new_score": 0.0,
+      "new_passed": false,
+      "new_eo_compliant": false,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [],
+      "failed_trace_checks": [
+        "check_policies: No API call matched pattern: GET ^/v1/clients/[^/]+/policies$ (ams)",
+        "efficiency: Count 92 outside range [8, 45]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "13-clean-natural",
+      "scenario_id": "13",
+      "seed": "clean",
+      "epoch": 1,
+      "old_score": 0.72,
+      "old_passed": false,
+      "new_score": 0.84,
+      "new_passed": true,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 0,
+      "failed_output_checks": [],
+      "failed_trace_checks": [
+        "verify_policy: No API call matched pattern: GET ^/v1/clients/CLI-018/policies$ (ams)",
+        "efficiency: Count 14 outside range [3, 10]"
+      ]
+    },
+    {
+      "source": "offline_rescore",
+      "model": "openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "14-clean-natural",
+      "scenario_id": "14",
+      "seed": "clean",
+      "epoch": 1,
+      "old_score": 0.8,
+      "old_passed": true,
+      "new_score": 0.75,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 2,
+      "failed_output_checks": [],
+      "failed_trace_checks": []
+    },
+    {
+      "source": "offline_rescore",
+      "model": "google/gemini-4-hydrogen",
+      "learning_mechanism": "None (zero-shot)",
+      "sample_id": "08-clean-natural",
+      "scenario_id": "08",
+      "seed": "clean",
+      "epoch": 1,
+      "old_score": 0.81,
+      "old_passed": true,
+      "new_score": 0.75,
+      "new_passed": false,
+      "new_eo_compliant": true,
+      "new_unauthorized_mutations": 1,
+      "failed_output_checks": [],
+      "failed_trace_checks": [
+        "efficiency: Count 63 outside range [8, 40]"
+      ]
+    }
+  ]
+}
