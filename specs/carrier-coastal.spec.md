@@ -199,14 +199,15 @@ Body: optionally `coverages`, an array of `{ type, limit?, deductible? }`.
 Body: `effective_date` (date) and optionally `payment_plan`.
 
 - **CST-R39** Checks, in order:
-  1. `effective_date` missing, null or empty: detail `{ field: "effective_date", code: "required" }`. `payment_plan` given and not one of `annual`, `monthly`, `semi_annual`: detail `{ field: "payment_plan", code: "invalid_enum" }`. Status `400`.
+  1. `effective_date` missing, null or empty: detail `{ field: "effective_date", code: "required" }`; otherwise `effective_date` not a valid `YYYY-MM-DD` calendar date: detail `{ field: "effective_date", code: "invalid_format" }`. `payment_plan` given and not one of `annual`, `monthly`, `semi_annual`: detail `{ field: "payment_plan", code: "invalid_enum" }`. Status `400`.
   2. Unknown quote: `404`, message `quote not found.`.
   3. `bind_status` already `bound`: `409`, message `Quote has already been bound.`.
   4. `status` not `assessed`: `400` validation error with one detail, `{ field: "quote_id", message: "Quote must be assessed before binding. Current status: '<status>'." }` (this detail has no `code`).
+  5. `effective_date` earlier than `getBackdatingFloor()` (`getSimulatedToday()`): `422` E&O refusal with `error_code: "E_EO_BACKDATING_PROHIBITED"`.
 
   When any check fails nothing is written.
 - **CST-R40** On success one `policies` row is inserted and the quote is updated.
-  - Policy: `policy_id` `POL-CSTL-<epoch milliseconds now>`; `client_id`, `policy_type` and `coverages` copied from the quote; `effective_date` as given; `expiration_date` the same month and day one year later (`2026-04-01` gives `2027-04-01`; the date is not checked, so `2028-02-29` gives `2029-02-29`); `premium_current` the quote's `premium_annual`, or 0 when null; `status` `active`; `created_at` and `updated_at` now.
+  - Policy: `policy_id` `POL-CSTL-<epoch milliseconds now>`; `client_id`, `policy_type` and `coverages` copied from the quote; `effective_date` as given (`YYYY-MM-DD`, on or after `getBackdatingFloor()`); `expiration_date` the same month and day one year later (`2026-11-01` gives `2027-11-01`); `premium_current` the quote's `premium_annual`, or 0 when null; `status` `active`; `created_at` and `updated_at` now.
   - Quote: `status` `bound`, `bind_status` `bound`, `bound_at` now, `policy_id` the new policy.
   - `payment_plan` is validated but not stored and changes nothing.
 - **CST-R41** The response is `200` with `quote_id`, `policy_id`, `bind_status` (`bound`), `effective_date`, `expiration_date`, `premium_current`, `bound_at`.
@@ -326,7 +327,7 @@ An `assessed` quote does not expire. `bound` is final.
 
 ## Simulation control plane and request log
 
-- **CST-R55** The service mounts the shared control plane without authentication: `GET /sim/snapshot`, `POST /sim/reset`, `POST /sim/seed`, `POST /sim/time-travel`, `POST /sim/chaos`, `GET /sim/status` (`{ "status": "ok", "service": "carrier-coastal", "simulated_time", "clock_offset_ms", "chaos": { "enabled", "error_rate", "status_code", "latency_ms" }, "modality_mode" }`, where `modality_mode` is `MODALITY_MODE` or `"permissive"` by default), `GET /sim/trace`.
+- **CST-R55** The service mounts the shared control plane (`GET /sim/snapshot`, `POST /sim/reset`, `POST /sim/seed`, `POST /sim/time-travel`, `POST /sim/chaos`, `GET /sim/status`, `GET /sim/trace`). When `EVERGREEN_SCORER_SECRET` is configured, `/sim/*` requires `X-Evergreen-Scorer-Secret`; under `MODALITY_MODE=strict`, `/sim/*` and `X-Eval-Scorer` / `X-Evergreen-Internal` fail closed (`403`) if `EVERGREEN_SCORER_SECRET` is unset. In permissive mode without `EVERGREEN_SCORER_SECRET`, `/sim/*` answers without credentials.
 - **CST-R56** Chaos applies to `/v1/*` only: `POST /sim/chaos` takes `{ "enabled" (boolean, required), "error_rate" (0 to 1), "status_code", "latency_ms" }` and answers `200` with `{ "status": "ok", "service": "carrier-coastal", "chaos": { "enabled", "error_rate", "status_code", "latency_ms" } }`. With `{ "enabled": true, "error_rate": 1 }` every `/v1/*` request is answered with the configured status (default `503`) and `{ "error_code": "SERVICE_UNAVAILABLE", ... }` without running. `/health`, `/auth/*`, `/sim/*` and the UI are not affected. Reset and seed turn chaos off.
 - **CST-R57** Request log. Every `/v1/*` request is recorded as a span and returned by `GET /sim/trace` in OTLP JSON form, under resource attribute `service.name` = `carrier-coastal`. A span's `url.full` and `server.port` use the canonical port 3006 whatever port the process listens on. Reset and seed clear the log.
 
@@ -350,7 +351,7 @@ All OpenAPI-vs-service contract disagreements (items 1–4) and portal UI payloa
 
 Intentional simulation simplifications (kept as specified):
 
-5. Dates are not checked. Binding with an `effective_date` that is not a date succeeds and stores a meaningless `expiration_date`; `payment_plan` has no effect (CST-R40).
+5. `payment_plan` on bind is validated against the enum but has no effect on stored rows (`effective_date` is validated as a real `YYYY-MM-DD` calendar date and checked against `getBackdatingFloor()`, CST-R39, CST-R40).
 6. Ids come from the clock in milliseconds; two creations in the same millisecond collide on the primary key and the second fails with `500`. Malformed JSON returns `400 VALIDATION_ERROR` via the shared `errorHandler`. Reading an ID card is a `GET` that writes a row (CST-R42).
 7. **Quick Quote screen (resolved).** The shipped page sends `driver_license` matching CST-R35 and reads nested `premium.annual`, `premium.semi_annual` and `premium.monthly` returned by CST-R36.
 8. **Compare & Customize screen (resolved).** The shipped page sends `{ "coverages": [...] }` matching CST-R37 and extracts `.annual` from `original_premium` and `adjusted_premium` objects returned by CST-R38. Legacy flat bodies without a `coverages` array remain ignored by the API.

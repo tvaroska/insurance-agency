@@ -253,6 +253,12 @@ paths:
           $ref: "#/components/responses/Conflict"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "422":
+          description: Backdated effective_date rejected by E&O firewall.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 
   /coastal/quotes/quick:

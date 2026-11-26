@@ -54,7 +54,7 @@ Invariants:
 
 ## 4. Auth and scopes
 
-- **AMS-R7** No authentication on `GET /health`, `POST /oauth/token`, `/sim/*`, `GET /` and `/workbench/api/*`.
+- **AMS-R7** No authentication on `GET /health`, `POST /oauth/token`, `GET /` and `/workbench/api/*`. On `/sim/*` (including `/sim/trace`), `X-Evergreen-Scorer-Secret` matching `EVERGREEN_SCORER_SECRET` is required whenever `EVERGREEN_SCORER_SECRET` is configured (`403 FORBIDDEN` otherwise), and `MODALITY_MODE=strict` rejects `/sim/*` as well as `X-Eval-Scorer` / `X-Evergreen-Internal` markers if `EVERGREEN_SCORER_SECRET` is unset. In `permissive` mode without `EVERGREEN_SCORER_SECRET`, `/sim/*` answers without credentials.
 - **AMS-R8** `POST /oauth/token` implements the client-credentials grant, with a JSON or form-encoded body (`grant_type`, `client_id`, `client_secret`, optional space-separated `scope`). Success is `200 {access_token, token_type: "Bearer", expires_in: 3600, scope}`. The token is an HS256 JWT with `sub`, `scope`, `iat`, `exp`. Three clients exist, all with secret `dev-secret`: `agent-full` (every scope), `agent-csr` (every scope except `ams:policies:endorsements`, carrier underwriting and webhook management), `agent-readonly` (scopes ending in `:read`). Without `scope` the token gets all of the client's scopes; with `scope` it gets exactly the requested ones.
 - **AMS-R9** Token errors use the OAuth shape `{error, error_description}`, not the service error envelope: wrong `grant_type` → `400 unsupported_grant_type`; missing id or secret → `400 invalid_request`; unknown client or wrong secret → `401 invalid_client`; a requested scope the client does not have → `400 invalid_scope`.
 - **AMS-R10** Every path under `/v1/` requires `Authorization: Bearer <token>`. A missing header or one that does not start with `Bearer ` → `401 AUTH_ERROR` with message `Missing or malformed Authorization header.`. A token that is malformed, has a bad signature or is expired → `401 AUTH_ERROR`. This check runs before routing: an unknown `/v1/` path without a token is `401`; with a valid token it is `404`.
@@ -100,7 +100,7 @@ Invariants:
 
   A required field sent as `""` yields only its `required` detail, except where a rule says the second check also fires (AMS-R55, AMS-R72). An optional field sent as `""` in a body is checked like any other value (for example `status: ""` or `priority: ""` is `invalid_enum`, `due_date: ""` is `invalid_format`).
 
-  The date format check is the pattern `^\d{4}-\d{2}-\d{2}$` only. It does not check that the date exists (`2026-13-45` passes).
+  On createPolicy and createEndorsement, `effective_date` and `expiration_date` must be real `YYYY-MM-DD` calendar dates (`2026-13-45` and non-leap `2026-02-29` fail with `invalid_format`). Other date filters check `^\d{4}-\d{2}-\d{2}$`.
 - **AMS-R16** A missing resource is `404` with message `<resource> not found.`, where `<resource>` is `client`, `policy`, `task`, `escalation` or `household`.
 - **AMS-R17** A `POST` or `PATCH` body that is not valid JSON → `400 VALIDATION_ERROR` with message `Invalid JSON body.` and detail `{field: "body", message: "Request body must be valid JSON.", code: "invalid_format"}`.
 - **AMS-R113** Unknown fields in a request body are ignored. A client cannot set `id`, `created_at` or `updated_at`.
@@ -332,7 +332,7 @@ The firewall runs inside createPolicy and createEndorsement, after validation an
 ### 8.1 State minimums
 
 - **AMS-R84** The rule applies only when the policy type is `personal_auto` (the `policy_type` of the request on create; of the existing policy on endorse). Other policy types are never checked, whatever their coverages say.
-- **AMS-R85** The state is, on create, `state` from the request body if given, otherwise the client's address state; on endorse, the address state of the policy's client. It is trimmed and upper-cased. Minimums in US dollars (bodily injury per person / bodily injury per accident / property damage):
+- **AMS-R85** The state is the address state of the policy's client (`client.address_state`, trimmed and upper-cased; `state` in the create request body is ignored so a caller cannot lower statutory minimums). Minimums in US dollars (bodily injury per person / bodily injury per accident / property damage):
 
 | State | Per person | Per accident | Property damage | Shorthand |
 | :--- | ---: | ---: | ---: | :--- |
@@ -348,7 +348,7 @@ The firewall runs inside createPolicy and createEndorsement, after validation an
 | MI | 50,000 | 100,000 | 10,000 | 50/100/10 |
 | any other, or none | 25,000 | 50,000 | 10,000 | 25/50/10, named `DEFAULT` in messages |
 
-- **AMS-R86** Reading a limit. A number is one amount. A string is split on `/`; in each part everything except digits and `.` is dropped; parts that are not positive numbers are discarded. Any amount above 0 and below 1,000 is taken as thousands (`30` means 30,000). One part is a single limit; two parts are per person / per accident; three or more are per person / per accident / property damage.
+- **AMS-R86** Reading a limit. A number is one amount (non-negative; `0` stays `$0`). A string is split on `/`; each part honors optional `k`/`thousand` (`× 1,000`) or `m`/`mil`/`million` (`× 1,000,000`) suffixes and drops other non-numeric characters; non-numeric or negative parts are discarded while `0` is preserved as `$0` so zero limits cannot bypass statutory minimums. Any amount strictly above 0 and below 1,000 without a suffix is taken as thousands (`30` means 30,000). One part is a single limit; two parts are per person / per accident; three or more are per person / per accident / property damage.
 - **AMS-R87** Which items are inspected. On create: each element of `coverages`. On endorse: `changes` itself when it is an object, plus a bodily-injury item built from `changes.bodily_injury_limit` (or `changes.liability_limit`), plus a property-damage item built from `changes.property_damage_limit`, plus each element of `changes.coverages` when that is an array; or each element of `changes` when `changes` is an array. For each item: its kind is `coverage_type`, else `type`, else `coverage`, lower-cased. The limit string is `limit`, else `limits`. Numeric `per_person_limit` and `per_accident_limit` (else `per_occurrence_limit`) take precedence over the parsed string.
   - Kind `bodily_injury`, `liability` or `bi`, or no kind at all but a `per_person_limit` number or a limit with at least two parts: check per person, then per accident, then (three-part limits only) property damage.
   - Kind `property_damage` or `pd`: check the single amount against property damage.
@@ -373,7 +373,7 @@ The firewall's "today" is the fixed benchmark date `2026-10-14`. A deployment ma
 - **AMS-R93** createPolicy waiver: `escalation_id` names an escalation with status `approved`, the same `client_id`, and reason `backdating`. A request carries one `escalation_id`, and one escalation has one reason, so a policy that is both over the premium threshold and backdated cannot be created.
 - **AMS-R94** createEndorsement: the floor is the later of the policy's `effective_date` and a reference date. The reference date is today when the policy's `expiration_date` is on or after today, otherwise the policy's `effective_date`. (With `SIMULATED_TODAY` set, the reference date is always that value.) `effective_date` earlier than the floor → the same `422` as AMS-R92, with the floor in the message. There is no upper bound: an endorsement may take effect after the policy expires.
 - **AMS-R95** createEndorsement waiver: `escalation_id` names an escalation with status `approved`, the `client_id` of the policy's client, reason `backdating`, and a `policy_id` that is either `null` or this policy. With a valid waiver the backdating check is skipped entirely.
-- **AMS-R96** `/sim/time-travel` does not move the firewall's today (see section 10).
+- **AMS-R96** `/sim/time-travel` advances the firewall's today (`getBackdatingFloor()` follows `getSimulatedToday()`, see section 10), and `/sim/reset` or `/sim/seed` resets it to `2026-10-14` (or non-empty `SIMULATED_TODAY`).
 
 ### 8.4 Order and approvals
 
@@ -397,10 +397,10 @@ The service has four notions of time. They are independent.
 | :--- | :--- | :--- |
 | Simulated clock (`2026-10-14T12:00:00.000Z`) | every `/v1/*` timestamp the service writes (AMS-R1); the year in endorsement ids; policy expiry and endorsement application (AMS-R98); `simulated_time` in `/sim/*` responses | `/sim/time-travel`; reset to `2026-10-14T12:00:00.000Z` by `/sim/reset` and `/sim/seed` |
 | Wall clock | `/health` and `/sim/snapshot` `timestamp` metadata, OAuth JWT `iat`/`exp`, stdout access logs | real time |
-| Firewall today, `2026-10-14` | backdating rules (section 8.3) | only the `SIMULATED_TODAY` environment variable |
+| Firewall today (`getBackdatingFloor()`) | backdating rules (section 8.3) | `getSimulatedToday()` (`2026-10-14` or non-empty `SIMULATED_TODAY`, advancing with `/sim/time-travel` and resetting on `/sim/reset` or `/sim/seed`) |
 | Workbench day offset | the workbench time-travel action (AMS-R109) relative to `2026-10-14` | that action; never reset while the process lives |
 
-Consequences a rebuild must keep: after `/sim/time-travel` to any date, createPolicy still accepts `effective_date = 2026-10-14` and still rejects `2026-10-13` (AMS-R96); the workbench time-travel action expires no policy and does not change `simulated_time`.
+Consequences a rebuild must keep: after `/sim/time-travel` forward by `N` days, createPolicy rejects `effective_date` earlier than the new simulated date (AMS-R96); the workbench time-travel action expires no policy and does not change `simulated_time`.
 
 ## 11. Executive Workbench
 

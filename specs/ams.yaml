@@ -514,7 +514,7 @@ components:
           example: true
         state:
           type: string
-          description: Optional two-letter state code overriding the client's address state for auto state-minimum firewall checks.
+          description: Optional two-letter state code (accepted and ignored; auto state-minimum firewall checks always use the client record's address_state).
           example: "CA"
         escalation_id:
           type: string

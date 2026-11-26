@@ -133,7 +133,7 @@ Checks run in this order and stop at the first failure.
   ```
 
   The rule message is `Premium of $<premium with two decimals> exceeds the $10,000 threshold requiring manager approval.` These bodies have no `correlation_id`.
-- **RTR-R43** State minimum limits, for quotes whose request has `policy_type` `personal_auto` only. The state is the first present of `risk_data.state`, `risk_data.address.state`, `risk_data.garaging_state` and `state` in the bind body. The coverage items checked are `risk_data.requested_coverages` followed by the quote's `coverages`.
+- **RTR-R43** State minimum limits (for quotes whose request has `policy_type` `personal_auto`) and backdating floor (`getBackdatingFloor()`, for any quote with a non-null `effective_date`). The state is the first present of `risk_data.state`, `risk_data.address.state` and `risk_data.garaging_state`; when none is present, `DEFAULT` (`25/50/10`) is checked first and any stricter `state` in the bind body is also enforced (`state` in the bind body never overrides a request state or lowers `DEFAULT`). The coverage items checked are `risk_data.requested_coverages` followed by the quote's `coverages`. If `effective_date` precedes `getBackdatingFloor()`, rule `backdating` (`E_EO_BACKDATING_PROHIBITED`, field `effective_date`) is added to `eo_rules` (waivable by an approved same-client `backdating` escalation when no other rule is violated).
 
   Minimums, as bodily injury per person / bodily injury per accident / property damage, in thousands of dollars: CA 30/60/15, TX 30/60/25, FL 10/20/10, NY 25/50/10, IL 25/50/20, PA 15/30/5, OH 25/50/25, GA 25/50/25, NC 50/100/50, MI 50/100/10. Any other or missing state uses 25/50/10 and is named `DEFAULT` in messages.
 
