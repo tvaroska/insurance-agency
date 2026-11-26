@@ -164,6 +164,7 @@ export class Service {
   /** Requests without credentials: /health, /oauth/token, /sim/*. */
   readonly http: Client;
   private readonly tokens = new Map<string, string>();
+  private stopped = false;
 
   constructor(
     readonly name: ServiceName,
@@ -174,6 +175,9 @@ export class Service {
     private readonly output: () => string,
     /** The temporary EVERGREEN_DATA_DIR of the service process (undefined in `external` mode). */
     readonly dataDir?: string,
+    /** Configured EVERGREEN_SCORER_SECRET for this service instance, if any. */
+    readonly scorerSecret?: string,
+    private readonly onStop?: () => Promise<void> | void,
   ) {
     this.http = new Client(baseUrl, fetcher);
   }
@@ -217,7 +221,8 @@ export class Service {
   // ── State control (HTTP only) ──
 
   private async sim(method: string, path: string, body?: unknown): Promise<any> {
-    const res = await this.http.request(method, path, { body });
+    const headers = this.scorerSecret ? { "X-Evergreen-Scorer-Secret": this.scorerSecret } : undefined;
+    const res = await this.http.request(method, path, { body, headers });
     if (res.status !== 200) throw new Error(`${method} ${path} failed: ${res.status} ${res.text}`);
     return res.body;
   }
@@ -309,8 +314,12 @@ export class Service {
     };
   }
 
-  /** Kept for symmetry with `startService`. Service processes are shared and end with the test run. */
-  async stop(): Promise<void> {}
+  /** Stops the child process (if owned) and removes its temporary data directory. */
+  async stop(): Promise<void> {
+    if (this.stopped) return;
+    this.stopped = true;
+    await this.onStop?.();
+  }
 }
 
 // ── Starting services ──
@@ -347,8 +356,24 @@ function serviceEnv(dataDir: string, extra: Record<string, string>): Record<stri
   for (const key of INHERITED_VARS) {
     if (process.env[key] !== undefined) env[key] = process.env[key]!;
   }
+  if (process.env.EVERGREEN_SCORER_SECRET !== undefined) {
+    env.EVERGREEN_SCORER_SECRET = process.env.EVERGREEN_SCORER_SECRET;
+  }
   for (const key of PEER_URL_VARS) env[key] = NO_PEER;
-  return { ...env, NO_PROXY: LOOPBACK, no_proxy: LOOPBACK, EVERGREEN_DATA_DIR: dataDir, ...extra };
+  const merged: Record<string, string> = {
+    ...env,
+    NO_PROXY: LOOPBACK,
+    no_proxy: LOOPBACK,
+    EVERGREEN_DATA_DIR: dataDir,
+    ...extra,
+  };
+  if (
+    (merged.MODALITY_MODE || "").toLowerCase() === "strict" &&
+    merged.EVERGREEN_SCORER_SECRET === undefined
+  ) {
+    merged.EVERGREEN_SCORER_SECRET = "conformance-auto-scorer-secret";
+  }
+  return merged;
 }
 
 async function waitForHealth(http: Client, exited: () => number | null, logs: () => string): Promise<void> {
@@ -369,7 +394,12 @@ async function waitForHealth(http: Client, exited: () => number | null, logs: ()
   throw new Error(`service did not answer GET /health in time (${last})\n${logs()}`);
 }
 
-async function startProcess(name: ServiceName, env: Record<string, string>, dataDir: string): Promise<Service | null> {
+async function startProcess(
+  name: ServiceName,
+  env: Record<string, string>,
+  dataDir: string,
+  cacheKey: string,
+): Promise<Service | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     const port = freePort();
     if (port === null) return null;
@@ -388,7 +418,37 @@ async function startProcess(name: ServiceName, env: Record<string, string>, data
     void collect(child.stderr).catch(() => undefined);
     cleanups.push(() => child.kill());
     const baseUrl = `http://127.0.0.1:${port}`;
-    const service = new Service(name, baseUrl, "process", (req) => fetch(req), () => output, dataDir);
+    const scorerSecret = env.EVERGREEN_SCORER_SECRET || undefined;
+    const service = new Service(
+      name,
+      baseUrl,
+      "process",
+      (req) => fetch(req),
+      () => output,
+      dataDir,
+      scorerSecret,
+      async () => {
+        running.delete(cacheKey);
+        try {
+          child.kill();
+          const exited = await Promise.race([
+            child.exited.then(() => true),
+            Bun.sleep(2000).then(() => false),
+          ]);
+          if (!exited) {
+            child.kill("SIGKILL");
+            await child.exited;
+          }
+        } catch {
+          // already exited
+        }
+        try {
+          rmSync(dataDir, { recursive: true, force: true });
+        } catch {
+          // best effort
+        }
+      },
+    );
     try {
       await waitForHealth(service.http, () => child.exitCode, () => output);
       return service;
@@ -403,12 +463,34 @@ async function startProcess(name: ServiceName, env: Record<string, string>, data
 
 // The single place where service code is loaded into the test process. It is
 // used only when the environment does not allow binding a port.
-async function startInProcess(name: ServiceName, env: Record<string, string>, dataDir: string): Promise<Service> {
+async function startInProcess(
+  name: ServiceName,
+  env: Record<string, string>,
+  dataDir: string,
+  cacheKey: string,
+): Promise<Service> {
   Object.assign(process.env, env);
   const mod = await import(join(REPO_ROOT, "services", name, "src", "index.ts"));
   const app = mod.app ?? mod.default;
   if (typeof app?.fetch !== "function") throw new Error(`services/${name} exports no fetch handler.`);
-  return new Service(name, "http://in-process.invalid", "in-process", (req) => app.fetch(req), () => "", dataDir);
+  const scorerSecret = env.EVERGREEN_SCORER_SECRET || undefined;
+  return new Service(
+    name,
+    "http://in-process.invalid",
+    "in-process",
+    (req) => app.fetch(req),
+    () => "",
+    dataDir,
+    scorerSecret,
+    () => {
+      running.delete(cacheKey);
+      try {
+        rmSync(dataDir, { recursive: true, force: true });
+      } catch {
+        // best effort
+      }
+    },
+  );
 }
 
 function runSeedScript(name: ServiceName, env: Record<string, string>): void {
@@ -442,7 +524,19 @@ export function startService(name: ServiceName, opts: StartOptions = {}): Promis
     started = (async () => {
       const external = process.env[envVarFor(name)];
       if (external) {
-        const service = new Service(name, external.replace(/\/+$/, ""), "external", (req) => fetch(req), () => "");
+        const extSecret = extra.EVERGREEN_SCORER_SECRET || process.env.EVERGREEN_SCORER_SECRET || undefined;
+        const service = new Service(
+          name,
+          external.replace(/\/+$/, ""),
+          "external",
+          (req) => fetch(req),
+          () => "",
+          undefined,
+          extSecret,
+          () => {
+            running.delete(key);
+          },
+        );
         await waitForHealth(service.http, () => null, () => "");
         return service;
       }
@@ -450,10 +544,14 @@ export function startService(name: ServiceName, opts: StartOptions = {}): Promis
       cleanups.push(() => rmSync(dataDir, { recursive: true, force: true }));
       const env = serviceEnv(dataDir, extra);
       if (opts.seedScript) runSeedScript(name, env);
-      const service = (await startProcess(name, env, dataDir)) ?? (await startInProcess(name, env, dataDir));
+      const service =
+        (await startProcess(name, env, dataDir, key)) ?? (await startInProcess(name, env, dataDir, key));
       if (!opts.seedScript) await service.seed({ base: "empty" });
       return service;
-    })();
+    })().catch((err) => {
+      running.delete(key);
+      throw err;
+    });
     running.set(key, started);
   }
   return started;

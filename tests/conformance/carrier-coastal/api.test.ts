@@ -258,7 +258,7 @@ describe("POST /quotes/submit, new quote", () => {
     const id = res.body.quote_id;
     expect((await ctx.api.get(`${API}/quotes/${id}/risk-assessment`)).status).toBe(200);
     expect((await post(`/quotes/${id}/recalculate`)).status).toBe(200);
-    expect((await post(`/quotes/${id}/bind`, { effective_date: "2026-05-01" })).status).toBe(200);
+    expect((await post(`/quotes/${id}/bind`, { effective_date: "2026-11-01" })).status).toBe(200);
   });
 
   test("Known gaps 1 & 3: invalid submit body conforms to 400 BadRequest and new-quote response conforms to CoastalQuoteAssessed", async () => {
@@ -695,7 +695,7 @@ describe("POST /quotes/{quote_id}/bind", () => {
   });
 
   test("CST-R39: an unknown payment plan is an invalid_enum error, reported together with a missing date", async () => {
-    const plan = await bind("QT-ASSESSED", { effective_date: "2026-04-01", payment_plan: "weekly" });
+    const plan = await bind("QT-ASSESSED", { effective_date: "2026-11-01", payment_plan: "weekly" });
     expectError(plan, 400, "VALIDATION_ERROR", { field: "payment_plan", code: "invalid_enum" });
     expect(plan.body.details).toHaveLength(1);
     const both = await bind("QT-ASSESSED", { payment_plan: "quarterly" });
@@ -708,14 +708,14 @@ describe("POST /quotes/{quote_id}/bind", () => {
   });
 
   test("CST-R39: an unknown quote is 404", async () => {
-    const res = await bind("QT-NOPE", { effective_date: "2026-04-01" });
+    const res = await bind("QT-NOPE", { effective_date: "2026-11-01" });
     expectError(res, 404, "NOT_FOUND");
     expect(res.body.message).toBe("quote not found.");
     contract.check(res);
   });
 
   test("CST-R39: a bound quote is 409 and nothing changes", async () => {
-    const { result: res, diff } = await ctx.svc.changes(() => bind("QT-BOUND", { effective_date: "2026-04-01" }));
+    const { result: res, diff } = await ctx.svc.changes(() => bind("QT-BOUND", { effective_date: "2026-11-01" }));
     expectError(res, 409, "CONFLICT");
     expect(res.body.message).toBe("Quote has already been bound.");
     contract.check(res);
@@ -724,7 +724,7 @@ describe("POST /quotes/{quote_id}/bind", () => {
 
   for (const [id, status] of [["QT-RAW", "quoted"], ["QT-EXPIRED", "expired"]]) {
     test(`CST-R39: a ${status} quote must be assessed first: 400 on quote_id, without a code`, async () => {
-      const { result: res, diff } = await ctx.svc.changes(() => bind(id, { effective_date: "2026-04-01" }));
+      const { result: res, diff } = await ctx.svc.changes(() => bind(id, { effective_date: "2026-11-01" }));
       expect(res.status).toBe(400);
       expect(res.body.error_code).toBe("VALIDATION_ERROR");
       expect(res.body.details).toEqual([
@@ -736,7 +736,7 @@ describe("POST /quotes/{quote_id}/bind", () => {
 
   test("CST-R40: binding inserts an active policy copied from the quote and marks the quote bound", async () => {
     const before = (await ctx.svc.now()).getTime();
-    const { result: res, diff } = await ctx.svc.changes(() => bind("QT-ASSESSED", { effective_date: "2026-04-01", payment_plan: "monthly" }));
+    const { result: res, diff } = await ctx.svc.changes(() => bind("QT-ASSESSED", { effective_date: "2026-11-01", payment_plan: "monthly" }));
     expect(res.status).toBe(200);
     const policyId: string = res.body.policy_id;
     expect(policyId).toMatch(/^POL-CSTL-\d{13}$/);
@@ -747,8 +747,8 @@ describe("POST /quotes/{quote_id}/bind", () => {
         policy_id: policyId,
         client_id: "CLI-900",
         policy_type: "personal_auto",
-        effective_date: "2026-04-01",
-        expiration_date: "2027-04-01",
+        effective_date: "2026-11-01",
+        expiration_date: "2027-11-01",
         premium_current: 1000,
         status: "active",
         coverages: '[{"type":"bodily_injury","limit":"100/300"},{"type":"collision","deductible":500}]',
@@ -764,18 +764,26 @@ describe("POST /quotes/{quote_id}/bind", () => {
     expect(res.body.bound_at).toMatch(ISO_TIME);
   });
 
-  test("CST-R40: the expiration date is the same month and day one year later, without checking the date", async () => {
-    const cases: [string, string][] = [["2026-12-31", "2027-12-31"], ["2028-02-29", "2029-02-29"], ["2026-1-5", "2027-01-05"]];
-    await ctx.svc.seed({ tables: { quotes: cases.map((_, i) => quoteRow({ quote_id: `QT-DATE-${i}` })) } });
+  test("CST-R39, CST-R40: valid future calendar dates bind cleanly while non-calendar or backdated dates are refused", async () => {
+    const cases: [string, string][] = [["2026-12-31", "2027-12-31"], ["2028-02-29", "2029-02-29"]];
+    await ctx.svc.seed({ tables: { quotes: cases.map((_, i) => quoteRow({ quote_id: `QT-DATE-${i}` })).concat([quoteRow({ quote_id: "QT-DATE-CHECK" })]) } });
     for (const [i, [effective, expiration]] of cases.entries()) {
       const res = await bind(`QT-DATE-${i}`, { effective_date: effective });
       expect(res.status).toBe(200);
       expect([res.body.effective_date, res.body.expiration_date]).toEqual([effective, expiration]);
     }
+    for (const invalidDate of ["2026-1-5", "2026-13-45", "2026-02-29"]) {
+      const bad = await bind("QT-DATE-CHECK", { effective_date: invalidDate });
+      expectError(bad, 400, "VALIDATION_ERROR", { field: "effective_date", code: "invalid_format" });
+    }
+    const backdated = await bind("QT-DATE-CHECK", { effective_date: "2026-04-01" });
+    expect(backdated.status).toBe(422);
+    expect(backdated.body.error_code).toBe("E_EO_BACKDATING_PROHIBITED");
+    contract.check(backdated);
   });
 
   test("CST-R40: a quote without a premium binds with premium_current 0", async () => {
-    const res = await bind("QT-NOPREM", { effective_date: "2026-04-01" });
+    const res = await bind("QT-NOPREM", { effective_date: "2026-11-01" });
     expect(res.status).toBe(200);
     expect(res.body.premium_current).toBe(0);
     expect((await ctx.svc.table("policies")).find((p) => p.policy_id === res.body.policy_id)!.premium_current).toBe(0);
@@ -785,7 +793,7 @@ describe("POST /quotes/{quote_id}/bind", () => {
     const plans = ["annual", "monthly", "semi_annual", undefined];
     await ctx.svc.seed({ tables: { quotes: plans.map((_, i) => quoteRow({ quote_id: `QT-PLAN-${i}` })) } });
     for (const [i, plan] of plans.entries()) {
-      const res = await bind(`QT-PLAN-${i}`, { effective_date: "2026-04-01", ...(plan ? { payment_plan: plan } : {}) });
+      const res = await bind(`QT-PLAN-${i}`, { effective_date: "2026-11-01", ...(plan ? { payment_plan: plan } : {}) });
       expect(res.status).toBe(200);
       expect(res.body.premium_current).toBe(1000);
     }
@@ -796,22 +804,22 @@ describe("POST /quotes/{quote_id}/bind", () => {
   });
 
   test("CST-R41: the response is 200 with the seven documented fields", async () => {
-    const res = await bind("QT-ASSESSED", { effective_date: "2026-04-01" });
+    const res = await bind("QT-ASSESSED", { effective_date: "2026-11-01" });
     expect(res.status).toBe(200);
     expect(Object.keys(res.body)).toEqual(["quote_id", "policy_id", "bind_status", "effective_date", "expiration_date", "premium_current", "bound_at"]);
-    expect(res.body).toMatchObject({ quote_id: "QT-ASSESSED", bind_status: "bound", effective_date: "2026-04-01", expiration_date: "2027-04-01", premium_current: 1000 });
+    expect(res.body).toMatchObject({ quote_id: "QT-ASSESSED", bind_status: "bound", effective_date: "2026-11-01", expiration_date: "2027-11-01", premium_current: 1000 });
     contract.check(res);
   });
 
   test("CST-R41: a second bind of the same quote is a conflict and creates no second policy", async () => {
-    await bind("QT-ASSESSED", { effective_date: "2026-04-01" });
-    const { result: res, diff } = await ctx.svc.changes(() => bind("QT-ASSESSED", { effective_date: "2026-05-01" }));
+    await bind("QT-ASSESSED", { effective_date: "2026-11-01" });
+    const { result: res, diff } = await ctx.svc.changes(() => bind("QT-ASSESSED", { effective_date: "2026-12-01" }));
     expectError(res, 409, "CONFLICT");
     expect(diff).toEqual({});
   });
 
   test("CST-R2: a quote bound through the API points at an existing policy", async () => {
-    const res = await bind("QT-ASSESSED", { effective_date: "2026-04-01" });
+    const res = await bind("QT-ASSESSED", { effective_date: "2026-11-01" });
     const row = await quote("QT-ASSESSED");
     expect(row).toMatchObject({ status: "bound", bind_status: "bound", policy_id: res.body.policy_id });
     expect(row.bound_at).toBe(res.body.bound_at);
@@ -819,7 +827,7 @@ describe("POST /quotes/{quote_id}/bind", () => {
   });
 
   test("Known gap 1: binding an unassessed quote or invalid body conforms to 400 BadRequest", async () => {
-    const unassessed = await bind("QT-RAW", { effective_date: "2026-04-01" });
+    const unassessed = await bind("QT-RAW", { effective_date: "2026-11-01" });
     expect(unassessed.status).toBe(400);
     contract.check(unassessed);
     const invalid = await bind("QT-ASSESSED", {});
@@ -901,14 +909,14 @@ describe("GET /policies/{policy_id}/id-card", () => {
   });
 
   test("CST-R42: the card of a freshly bound policy reflects the bind", async () => {
-    const bound = await post("/quotes/QT-ASSESSED/bind", { effective_date: "2026-04-01" });
+    const bound = await post("/quotes/QT-ASSESSED/bind", { effective_date: "2026-11-01" });
     const res = await ctx.api.get(`${API}/policies/${bound.body.policy_id}/id-card`);
     expect(res.status).toBe(200);
     expect(res.body.card_data).toMatchObject({
       policy_number: bound.body.policy_id,
       insured_name: "CLI-900",
-      effective_date: "2026-04-01",
-      expiration_date: "2027-04-01",
+      effective_date: "2026-11-01",
+      expiration_date: "2027-11-01",
       coverages_summary: [{ type: "bodily_injury", limit: "100/300" }, { type: "collision" }],
     });
     contract.check(res);

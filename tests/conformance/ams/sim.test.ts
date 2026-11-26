@@ -283,7 +283,10 @@ describe("time travel", () => {
     await ctx.svc.timeTravel({ days: 400 });
     const simNow = (await ctx.svc.now()).getTime();
     const created = await ctx.api.post("/v1/tasks", { title: "Written in the simulated future" });
-    const policyRes = await ctx.api.post("/v1/policies", policyBody());
+    const policyRes = await ctx.api.post(
+      "/v1/policies",
+      policyBody({ effective_date: "2027-12-01", expiration_date: "2028-12-01" }),
+    );
     for (const stamp of [created.body.created_at, policyRes.body.created_at]) {
       expect(stamp).toMatch(ISO_UTC);
       expect(Math.abs(Date.parse(stamp) - simNow)).toBeLessThan(60_000);

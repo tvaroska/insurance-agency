@@ -64,10 +64,14 @@ export function runtimeContractTests(opts: RuntimeContractOptions): void {
   describe(`${service}: process, database and seeding`, () => {
     test(`${rules.process}, ${rules.database}: the seed script and the server share the database file under EVERGREEN_DATA_DIR`, async () => {
       const seeded = await startService(service, { env: { SEED_MODE: "clean" }, seedScript: true });
-      if (seeded.mode === "external") return;
-      expect(await counts(seeded)).toEqual(opts.seedCounts.clean);
-      expect(existsSync(join(seeded.dataDir!, `${service}.db`))).toBe(true);
-      expect((await seeded.http.get("/health")).body).toMatchObject({ status: "ok", service });
+      try {
+        if (seeded.mode === "external") return;
+        expect(await counts(seeded)).toEqual(opts.seedCounts.clean);
+        expect(existsSync(join(seeded.dataDir!, `${service}.db`))).toBe(true);
+        expect((await seeded.http.get("/health")).body).toMatchObject({ status: "ok", service });
+      } finally {
+        await seeded.stop();
+      }
     }, 30_000);
 
     test(`${rules.database}: DATABASE_URL overrides the database location`, async () => {
@@ -75,21 +79,34 @@ export function runtimeContractTests(opts: RuntimeContractOptions): void {
       process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
       const file = join(dir, "custom.db");
       const custom = await startService(service, { env: { DATABASE_URL: `file:${file}` } });
-      if (custom.mode === "external") return;
-      await custom.reset("clean");
-      expect(await counts(custom)).toEqual(opts.seedCounts.clean);
-      expect(existsSync(file)).toBe(true);
-      expect(existsSync(join(custom.dataDir!, `${service}.db`))).toBe(false);
+      try {
+        if (custom.mode === "external") return;
+        await custom.reset("clean");
+        expect(await counts(custom)).toEqual(opts.seedCounts.clean);
+        expect(existsSync(file)).toBe(true);
+        expect(existsSync(join(custom.dataDir!, `${service}.db`))).toBe(false);
+      } finally {
+        await custom.stop();
+        rmSync(dir, { recursive: true, force: true });
+      }
     }, 30_000);
 
     test(`${rules.seeding}: POST /sim/reset without a body loads the data set named by SEED_MODE, realistic when unset`, async () => {
       const cleanDefault = await startService(service, { env: { SEED_MODE: "clean" }, seedScript: true });
-      if (cleanDefault.mode !== "external") {
-        const res = await cleanDefault.http.post("/sim/reset");
-        expect(res.body).toMatchObject({ status: "reset", service, seed_mode: "clean" });
-        expect(await counts(cleanDefault)).toEqual(opts.seedCounts.clean);
+      try {
+        if (cleanDefault.mode !== "external") {
+          const headers = cleanDefault.scorerSecret
+            ? { "X-Evergreen-Scorer-Secret": cleanDefault.scorerSecret }
+            : undefined;
+          const res = await cleanDefault.http.post("/sim/reset", undefined, { headers });
+          expect(res.body).toMatchObject({ status: "reset", service, seed_mode: "clean" });
+          expect(await counts(cleanDefault)).toEqual(opts.seedCounts.clean);
+        }
+      } finally {
+        await cleanDefault.stop();
       }
-      const res = await svc.http.post("/sim/reset");
+      const headers = svc.scorerSecret ? { "X-Evergreen-Scorer-Secret": svc.scorerSecret } : undefined;
+      const res = await svc.http.post("/sim/reset", undefined, { headers });
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ status: "reset", service, seed_mode: "realistic" });
       expect(await counts(svc)).toEqual(opts.seedCounts.realistic);

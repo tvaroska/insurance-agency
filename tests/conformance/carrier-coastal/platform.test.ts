@@ -30,8 +30,8 @@ const seedJson = (mode: "seed" | "seed-clean", file: string): any[] =>
 const apiOperations = contract.operations().filter((o) => o.path.startsWith(API));
 const concrete = (path: string) => path.replace("{quote_id}", "QT-ASSESSED").replace("{policy_id}", "POL-OLD");
 const BODIES: Record<string, unknown> = {
-  submitQuote: { client_id: "CLI-001", policy_type: "personal_auto", effective_date: "2026-04-01" },
-  bindQuote: { effective_date: "2026-04-01" },
+  submitQuote: { client_id: "CLI-001", policy_type: "personal_auto", effective_date: "2026-11-01" },
+  bindQuote: { effective_date: "2026-11-01" },
   quickQuote: { vin: "1HGCM82633A004352", client_id: "CLI-003", driver_name: "Driver" },
   recalculateQuote: {},
 };
@@ -143,10 +143,10 @@ describe("authentication and scopes", () => {
     const noScope = await ctx.svc.client({ scopes: [SCOPES.quotesRead] });
     expectError(await noScope.post(path("QT-NOPE"), {}), 403, "FORBIDDEN");
     expectError(await ctx.api.post(path("QT-NOPE"), {}), 400, "VALIDATION_ERROR");
-    expectError(await ctx.api.post(path("QT-BOUND"), { payment_plan: "weekly", effective_date: "2026-04-01" }), 400, "VALIDATION_ERROR");
-    expectError(await ctx.api.post(path("QT-NOPE"), { effective_date: "2026-04-01" }), 404, "NOT_FOUND");
-    expectError(await ctx.api.post(path("QT-BOUND"), { effective_date: "2026-04-01" }), 409, "CONFLICT");
-    expectError(await ctx.api.post(path("QT-RAW"), { effective_date: "2026-04-01" }), 400, "VALIDATION_ERROR");
+    expectError(await ctx.api.post(path("QT-BOUND"), { payment_plan: "weekly", effective_date: "2026-11-01" }), 400, "VALIDATION_ERROR");
+    expectError(await ctx.api.post(path("QT-NOPE"), { effective_date: "2026-11-01" }), 404, "NOT_FOUND");
+    expectError(await ctx.api.post(path("QT-BOUND"), { effective_date: "2026-11-01" }), 409, "CONFLICT");
+    expectError(await ctx.api.post(path("QT-RAW"), { effective_date: "2026-11-01" }), 400, "VALIDATION_ERROR");
   });
 
   test("CST-R13: validation, not-found and conflict errors use the shared envelope", async () => {
@@ -163,7 +163,7 @@ describe("authentication and scopes", () => {
     expect(Object.keys(missing.body).sort()).toEqual(["correlation_id", "error_code", "message"]);
     expect(missing.body).toMatchObject({ error_code: "NOT_FOUND", message: "policy not found." });
 
-    const conflict = await ctx.api.post(`${API}/quotes/QT-BOUND/bind`, { effective_date: "2026-04-01" });
+    const conflict = await ctx.api.post(`${API}/quotes/QT-BOUND/bind`, { effective_date: "2026-11-01" });
     expect(Object.keys(conflict.body).sort()).toEqual(["correlation_id", "error_code", "message"]);
     expect(conflict.body.error_code).toBe("CONFLICT");
   });
@@ -509,7 +509,7 @@ describe("control plane, chaos and request log", () => {
 
   test("CST-R56: chaos fails API requests without running them and spares everything else", async () => {
     await ctx.svc.chaos({ enabled: true, error_rate: 1 });
-    const { result: res, diff } = await ctx.svc.changes(() => ctx.api.post(`${API}/quotes/QT-ASSESSED/bind`, { effective_date: "2026-04-01" }));
+    const { result: res, diff } = await ctx.svc.changes(() => ctx.api.post(`${API}/quotes/QT-ASSESSED/bind`, { effective_date: "2026-11-01" }));
     expectError(res, 503, "SERVICE_UNAVAILABLE");
     expect(diff).toEqual({});
     expect((await ctx.svc.http.get("/health")).status).toBe(200);

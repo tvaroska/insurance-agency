@@ -233,7 +233,7 @@
     "reserve_amount": 40000.0,
     "settlement_amount": null,
     "adjuster_id": "ADJ-002",
-    "notes": "E&O TRIGGER — policy has mold exclusion but agent did not disclose limitation at binding. Client relied on agent's representation that 'water damage is fully covered.' Mold remediation estimate $22K. Coverage gap discovered during investigation. Agency E&O exposure if client pursues complaint.",
+    "notes": "COVERAGE GAP REVIEW — policy contains a fungi and mold remediation exclusion that was not documented as discussed on the binding checklist. Insured states they understood slow-leak water and resulting mold damage were covered in full. Mold remediation estimate is $22,000; refer file to licensed producer and claims manager before communicating coverage position.",
     "created_at": "2026-09-28T11:30:00Z",
     "updated_at": "2026-10-12T04:14:08Z"
   }

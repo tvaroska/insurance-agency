@@ -182,34 +182,45 @@ describe("strict guard", () => {
     expectError(await strict.svc.http.get("/auth/portal-session", { headers: { Cookie: cookie } }), 403, "PORTAL_BOOTSTRAP_REQUIRED");
   }, 30_000);
 
-  test("SMT-R19: X-Eval-Scorer: true passes the guard without a session; token and scope still apply", async () => {
-    const scorer = { "X-Eval-Scorer": "true" };
+  test("SMT-R19: X-Eval-Scorer: true with X-Evergreen-Scorer-Secret passes the guard without a session; token and scope still apply", async () => {
+    const scorer = {
+      "X-Eval-Scorer": "true",
+      "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret!,
+    };
     expect((await strict.api.get(`${API}/quotes/QT-PENDING`, { headers: scorer })).status).toBe(200);
+    expectError(await strict.api.get(`${API}/quotes/QT-PENDING`, { headers: { "X-Eval-Scorer": "true" } }), 403, "MODALITY_VIOLATION");
     expectError(await strict.svc.http.get(`${API}/quotes/QT-PENDING`, { headers: scorer }), 401, "AUTH_ERROR");
     const narrow = await strict.svc.client({ scopes: ["carrier:policies:read"] });
     expectError(await narrow.get(`${API}/quotes/QT-PENDING`, { headers: scorer }), 403, "FORBIDDEN");
-    expectError(await strict.api.get(`${API}/quotes/QT-PENDING`, { headers: { "X-Eval-Scorer": "1" } }), 403, "MODALITY_VIOLATION");
-    expectError(await strict.api.get(`${API}/quotes/QT-PENDING`, { headers: { "X-Evergreen-Internal": "1" } }), 403, "MODALITY_VIOLATION");
+    expectError(await strict.api.get(`${API}/quotes/QT-PENDING`, { headers: { "X-Eval-Scorer": "1", "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret! } }), 403, "MODALITY_VIOLATION");
+    expectError(await strict.api.get(`${API}/quotes/QT-PENDING`, { headers: { "X-Evergreen-Internal": "1", "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret! } }), 403, "MODALITY_VIOLATION");
   });
 
   test("SMT-R19: with EVERGREEN_SCORER_SECRET set the scorer must also present the secret", async () => {
     const guarded = await start({ MODALITY_MODE: "strict", EVERGREEN_SCORER_SECRET: "conformance-scorer-secret" });
-    await guarded.svc.seed(SEED);
-    const path = `${API}/quotes/QT-PENDING`;
-    expectError(await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true" } }), 403, "MODALITY_VIOLATION");
-    expectError(await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true", "X-Evergreen-Scorer-Secret": "wrong" } }), 403, "MODALITY_VIOLATION");
-    const ok = await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true", "X-Evergreen-Scorer-Secret": "conformance-scorer-secret" } });
-    expect(ok.status).toBe(200);
-    const portal = await openPortal(guarded.svc);
-    expect((await portal.client.get(path)).status).toBe(200);
+    try {
+      await guarded.svc.seed(SEED);
+      const path = `${API}/quotes/QT-PENDING`;
+      expectError(await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true" } }), 403, "MODALITY_VIOLATION");
+      expectError(await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true", "X-Evergreen-Scorer-Secret": "wrong" } }), 403, "MODALITY_VIOLATION");
+      const ok = await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true", "X-Evergreen-Scorer-Secret": "conformance-scorer-secret" } });
+      expect(ok.status).toBe(200);
+      const portal = await openPortal(guarded.svc);
+      expect((await portal.client.get(path)).status).toBe(200);
+    } finally {
+      await guarded.svc.stop();
+    }
   }, 30_000);
 
-  test("SMT-R20: health, dev token, OAuth tokens, the control plane and the page stay open in strict mode", async () => {
+  test("SMT-R20: health, dev token, OAuth tokens and the page stay open in strict mode while /sim/* requires the scorer secret", async () => {
     expect((await strict.svc.http.get("/health")).status).toBe(200);
     expect((await strict.svc.http.get("/auth/dev-token")).status).toBe(200);
     expect(typeof (await strict.svc.token({ clientId: "agent-readonly" }))).toBe("string");
-    expect((await strict.svc.http.get("/sim/snapshot")).status).toBe(200);
-    expect((await strict.svc.http.get("/sim/trace")).status).toBe(200);
+    expect((await strict.svc.http.get("/sim/snapshot")).status).toBe(403);
+    expect((await strict.svc.http.get("/sim/trace")).status).toBe(403);
+    const sec = { "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret! };
+    expect((await strict.svc.http.get("/sim/snapshot", { headers: sec })).status).toBe(200);
+    expect((await strict.svc.http.get("/sim/trace", { headers: sec })).status).toBe(200);
     expect((await strict.svc.http.get("/")).status).toBe(200);
   });
 });

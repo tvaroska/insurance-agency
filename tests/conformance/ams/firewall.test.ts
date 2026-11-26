@@ -3,6 +3,7 @@ import { loadContract, type HttpResult } from "../harness";
 import {
   autoPolicyBody,
   book,
+  client,
   DAY_BEFORE_FIREWALL_TODAY,
   endorsementBody,
   escalation,
@@ -114,7 +115,17 @@ describe("state minimums", () => {
   describe("AMS-R85: minimums per state", () => {
     for (const [state, person, accident, pd, shorthand] of MINIMUMS) {
       test(`AMS-R85, AMS-R88: ${state} requires ${shorthand}`, async () => {
-        const body = (limit: string) => autoPolicyBody([{ type: "bodily_injury", limit }], { state });
+        const clientId = `CLI-ST-${state}`;
+        await ctx.svc.seed({
+          tables: book({
+            clients: [
+              ...book().clients,
+              client(clientId, { email: `${state.toLowerCase()}@example.test`, address_state: state }),
+            ],
+            escalations: WAIVERS,
+          }),
+        });
+        const body = (limit: string) => autoPolicyBody([{ type: "bodily_injury", limit }], { client_id: clientId });
         expect((await createPolicy(body(`${person}/${accident}/${pd}`))).status).toBe(201);
 
         expectFirewall(
@@ -139,7 +150,17 @@ describe("state minimums", () => {
     }
 
     test("AMS-R85: any other state, or no state, falls back to 25/50/10 and is called DEFAULT", async () => {
-      for (const overrides of [{ state: "WA" }, { state: "??" }, { client_id: "CLI-D" }]) {
+      await ctx.svc.seed({
+        tables: book({
+          clients: [
+            ...book().clients,
+            client("CLI-WA", { email: "wa@example.test", address_state: "WA" }),
+            client("CLI-QQ", { email: "qq@example.test", address_state: "??" }),
+          ],
+          escalations: WAIVERS,
+        }),
+      });
+      for (const overrides of [{ client_id: "CLI-WA" }, { client_id: "CLI-QQ" }, { client_id: "CLI-D" }, { client_id: "CLI-D", state: "FL" }]) {
         const body = (limit: string) => autoPolicyBody([{ type: "bodily_injury", limit }], overrides);
         expect((await createPolicy(body("25000/50000/10000"))).status).toBe(201);
         expectFirewall(
@@ -154,12 +175,12 @@ describe("state minimums", () => {
     });
   });
 
-  test("AMS-R85: on create, state in the body wins over the client's address, trimmed and upper-cased", async () => {
-    // CLI-A lives in CA (30/60/15); FL needs only 10/20/10.
+  test("AMS-R85: on create, the client's address_state wins and state in the body cannot lower it", async () => {
+    // CLI-A lives in CA (30/60/15); passing FL (10/20/10) in body.state must still enforce CA.
     const floridaLimits = [{ type: "bodily_injury", limit: "10000/20000/10000" }];
     expectFirewall(await createPolicy(autoPolicyBody(floridaLimits)), STATE_MIN, "coverages");
-    expect((await createPolicy(autoPolicyBody(floridaLimits, { state: "FL" }))).status).toBe(201);
-    expect((await createPolicy(autoPolicyBody(floridaLimits, { state: " fl " }))).status).toBe(201);
+    expectFirewall(await createPolicy(autoPolicyBody(floridaLimits, { state: "FL" })), STATE_MIN, "coverages");
+    expectFirewall(await createPolicy(autoPolicyBody(floridaLimits, { state: " fl " })), STATE_MIN, "coverages");
     // CLI-C lives in TX (property damage 25,000).
     expectFirewall(
       await createPolicy(autoPolicyBody([{ type: "property_damage", limit: "20000" }], { client_id: "CLI-C" })),
@@ -199,8 +220,8 @@ describe("state minimums", () => {
     expectFirewall(await bi("29000"), STATE_MIN, "coverages");
     // A number is one amount; it is rejected here before anything is stored.
     expectFirewall(await bi(25), STATE_MIN, "coverages", "Bodily injury per-person limit ($25,000) is below CA statutory minimum of $30,000 (30/60/15).");
-    // Parts that are not positive numbers are dropped, so "0/60" is the single amount 60,000.
-    expect((await bi("0/60")).status).toBe(201);
+    // Zero parts are preserved as $0 (not dropped) so "0/60" cannot bypass statutory minimums.
+    expectFirewall(await bi("0/60"), STATE_MIN, "coverages", "Bodily injury per-person limit ($0) is below CA statutory minimum of $30,000 (30/60/15).");
   });
 
   test("AMS-R87: bodily_injury, liability and bi are bodily-injury items; property_damage and pd are property-damage items", async () => {
@@ -455,23 +476,23 @@ describe("backdating on createEndorsement", () => {
 });
 
 describe("clock, order and approvals", () => {
-  test("AMS-R96: /sim/time-travel does not move the firewall's today", async () => {
+  test("AMS-R96: /sim/time-travel advances the firewall's today", async () => {
     // Late enough to matter, early enough that POL-D-AUTO (to 2027-10-01) is not expired by the move.
-    await ctx.svc.timeTravel({ target_date: "2026-12-01T00:00:00.000Z" });
-    expect((await createPolicy(policyBody({ effective_date: FIREWALL_TODAY }))).status).toBe(201);
+    await ctx.svc.timeTravel({ target_date: "2026-12-01T12:00:00.000Z" });
+    expect((await createPolicy(policyBody({ effective_date: "2026-12-01" }))).status).toBe(201);
     expectFirewall(
-      await createPolicy(policyBody({ effective_date: DAY_BEFORE_FIREWALL_TODAY })),
+      await createPolicy(policyBody({ effective_date: "2026-11-30" })),
       BACKDATING,
       "effective_date",
-      backdatingMessage(DAY_BEFORE_FIREWALL_TODAY, FIREWALL_TODAY),
+      backdatingMessage("2026-11-30", "2026-12-01"),
     );
     expectFirewall(
-      await endorse("POL-D-AUTO", { effective_date: DAY_BEFORE_FIREWALL_TODAY }),
+      await endorse("POL-D-AUTO", { effective_date: "2026-11-30" }),
       BACKDATING,
       "effective_date",
-      backdatingMessage(DAY_BEFORE_FIREWALL_TODAY, FIREWALL_TODAY),
+      backdatingMessage("2026-11-30", "2026-12-01"),
     );
-    expect((await endorse("POL-D-AUTO", { effective_date: FIREWALL_TODAY })).status).toBe(201);
+    expect((await endorse("POL-D-AUTO", { effective_date: "2026-12-01" })).status).toBe(201);
   });
 
   test("AMS-R51, AMS-R97: createPolicy checks state minimums, then binding authority, then backdating", async () => {

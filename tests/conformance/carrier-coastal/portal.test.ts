@@ -102,7 +102,7 @@ describe("strict guard", () => {
     ["GET", `${API}/quotes/QT-ASSESSED/risk-assessment`, undefined],
     ["POST", `${API}/quotes/quick`, { vin: "1HGCM82633A004352", client_id: "CLI-003", driver_name: "Driver" }],
     ["POST", `${API}/quotes/QT-ASSESSED/recalculate`, {}],
-    ["POST", `${API}/quotes/QT-OTHER/bind`, { effective_date: "2026-04-01" }],
+    ["POST", `${API}/quotes/QT-OTHER/bind`, { effective_date: "2026-11-01" }],
     ["GET", `${API}/policies/POL-OLD/id-card`, undefined],
   ];
   for (const [method, path, body] of routes) {
@@ -181,35 +181,46 @@ describe("strict guard", () => {
     expectError(await strict.svc.http.get("/auth/portal-session", { headers: { Cookie: cookie } }), 403, "PORTAL_BOOTSTRAP_REQUIRED");
   }, 30_000);
 
-  test("CST-R19: X-Eval-Scorer: true passes the guard without a session; token and scope still apply", async () => {
-    const scorer = { "X-Eval-Scorer": "true" };
+  test("CST-R19: X-Eval-Scorer: true with X-Evergreen-Scorer-Secret passes the guard without a session; token and scope still apply", async () => {
+    const scorer = {
+      "X-Eval-Scorer": "true",
+      "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret!,
+    };
     const path = `${API}/quotes/QT-ASSESSED/risk-assessment`;
     expect((await strict.api.get(path, { headers: scorer })).status).toBe(200);
+    expectError(await strict.api.get(path, { headers: { "X-Eval-Scorer": "true" } }), 403, "MODALITY_VIOLATION");
     expectError(await strict.svc.http.get(path, { headers: scorer }), 401, "AUTH_ERROR");
     const narrow = await strict.svc.client({ scopes: ["carrier:policies:read"] });
     expectError(await narrow.get(path, { headers: scorer }), 403, "FORBIDDEN");
-    expectError(await strict.api.get(path, { headers: { "X-Eval-Scorer": "1" } }), 403, "MODALITY_VIOLATION");
-    expectError(await strict.api.get(path, { headers: { "X-Evergreen-Internal": "1" } }), 403, "MODALITY_VIOLATION");
+    expectError(await strict.api.get(path, { headers: { "X-Eval-Scorer": "1", "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret! } }), 403, "MODALITY_VIOLATION");
+    expectError(await strict.api.get(path, { headers: { "X-Evergreen-Internal": "1", "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret! } }), 403, "MODALITY_VIOLATION");
   });
 
-  test("CST-R19: with EVERGREEN_SCORER_SECRET set the scorer must also present the secret", async () => {
+  test("CST-R19: with EVERGREEN_SCORER_SECRET set (or unset in strict mode) the scorer and /sim/* fail closed without matching secret", async () => {
     const guarded = await start({ MODALITY_MODE: "strict", EVERGREEN_SCORER_SECRET: "conformance-scorer-secret" });
-    await guarded.svc.seed(SEED);
-    const path = `${API}/quotes/QT-ASSESSED/risk-assessment`;
-    expectError(await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true" } }), 403, "MODALITY_VIOLATION");
-    expectError(await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true", "X-Evergreen-Scorer-Secret": "wrong" } }), 403, "MODALITY_VIOLATION");
-    const ok = await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true", "X-Evergreen-Scorer-Secret": "conformance-scorer-secret" } });
-    expect(ok.status).toBe(200);
-    const portal = await openPortal(guarded.svc);
-    expect((await portal.client.get(path)).status).toBe(200);
+    try {
+      await guarded.svc.seed(SEED);
+      const path = `${API}/quotes/QT-ASSESSED/risk-assessment`;
+      expectError(await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true" } }), 403, "MODALITY_VIOLATION");
+      expectError(await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true", "X-Evergreen-Scorer-Secret": "wrong" } }), 403, "MODALITY_VIOLATION");
+      const ok = await guarded.api.get(path, { headers: { "X-Eval-Scorer": "true", "X-Evergreen-Scorer-Secret": "conformance-scorer-secret" } });
+      expect(ok.status).toBe(200);
+      const portal = await openPortal(guarded.svc);
+      expect((await portal.client.get(path)).status).toBe(200);
+    } finally {
+      await guarded.svc.stop();
+    }
   }, 30_000);
 
-  test("CST-R20: health, dev token, OAuth tokens, the control plane and the page stay open in strict mode", async () => {
+  test("CST-R20: health, dev token, OAuth tokens and the page stay open in strict mode while /sim/* requires the scorer secret", async () => {
     expect((await strict.svc.http.get("/health")).status).toBe(200);
     expect((await strict.svc.http.get("/auth/dev-token")).status).toBe(200);
     expect(typeof (await strict.svc.token({ clientId: "agent-readonly" }))).toBe("string");
-    expect((await strict.svc.http.get("/sim/snapshot")).status).toBe(200);
-    expect((await strict.svc.http.get("/sim/trace")).status).toBe(200);
+    expect((await strict.svc.http.get("/sim/snapshot")).status).toBe(403);
+    expect((await strict.svc.http.get("/sim/trace")).status).toBe(403);
+    const sec = { "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret! };
+    expect((await strict.svc.http.get("/sim/snapshot", { headers: sec })).status).toBe(200);
+    expect((await strict.svc.http.get("/sim/trace", { headers: sec })).status).toBe(200);
     expect((await strict.svc.http.get("/")).status).toBe(200);
   });
 });
@@ -386,7 +397,7 @@ describe("what the page must be able to do, driven the way the page drives it", 
 
     const portal = await openPortal(strict.svc);
     const { result: bound, diff } = await strict.svc.changes(() =>
-      spaced(() => portal.client.post(`${API}/quotes/QT-ASSESSED/bind`, { effective_date: "2026-04-01", payment_plan: "semi_annual" })),
+      spaced(() => portal.client.post(`${API}/quotes/QT-ASSESSED/bind`, { effective_date: "2026-11-01", payment_plan: "semi_annual" })),
     );
     expect(bound.status).toBe(200);
     for (const field of ["policy_id", "bind_status", "effective_date", "expiration_date", "premium_current", "bound_at"]) expect(bound.body[field]).toBeDefined();
@@ -396,7 +407,7 @@ describe("what the page must be able to do, driven the way the page drives it", 
     expect(card.status).toBe(200);
     expect(card.body.card_data.insured_name).toBe("CLI-900");
     contract.check(card);
-    const again = await portal.client.post(`${API}/quotes/QT-ASSESSED/bind`, { effective_date: "2026-04-01", payment_plan: "semi_annual" });
+    const again = await portal.client.post(`${API}/quotes/QT-ASSESSED/bind`, { effective_date: "2026-11-01", payment_plan: "semi_annual" });
     expect(again.status).toBe(409);
     expect(again.body.message).toBe("Quote has already been bound.");
   });

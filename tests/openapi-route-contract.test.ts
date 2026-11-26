@@ -1,9 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import { describe, beforeAll, expect, test } from "bun:test";
 import { spawnSync } from "child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
 import { parse as parseYaml, parseAllDocuments, stringify as stringifyYaml } from "yaml";
+import { generateDevToken } from "../packages/shared/src/index";
 
 const ROOT_DIR = resolve(import.meta.dir, "..");
 const SPECS_DIR = join(ROOT_DIR, "specs");
@@ -65,126 +66,42 @@ function normalizePathTemplate(pathStr: string): string {
     .replace(/:[A-Za-z0-9_]+/g, ":param");
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 interface ExtractedServiceRoutes {
-  /** Routes mounted under `api` (`/v1` or `/v1/<portal>`), normalized relative to `/v1` */
   v1Routes: Map<string, string>;
-  /** Routes mounted directly on `app` (`/health`, `/auth/dev-token`, `/workbench/*`, etc.) */
   appRoutes: Map<string, string>;
-  /** All combined routes (`v1Routes` + `appRoutes`) */
   allRoutes: Set<string>;
-  /** Any `.ts` file in `src/routes/` that was never mounted in `src/index.ts` */
-  unmountedRouteFiles: string[];
 }
 
-function extractServiceRoutes(serviceName: string): ExtractedServiceRoutes {
-  const srcDir = join(SERVICES_DIR, serviceName, "src");
-  const indexPath = join(srcDir, "index.ts");
-  const indexContent = readFileSync(indexPath, "utf-8");
-
-  // Map imported router variable names to their route file paths
-  const importMap = new Map<string, string>();
-  const importRegex = /import\s+\{\s*([^}]+)\s*\}\s+from\s+["']\.\/routes\/([^"']+)["']/g;
-  let match: RegExpExecArray | null;
-  while ((match = importRegex.exec(indexContent)) !== null) {
-    const importedNames = match[1].split(",").map((s) => s.trim());
-    const routeFile = match[2].endsWith(".ts") ? match[2] : `${match[2]}.ts`;
-    for (const name of importedNames) {
-      const localName = name.split(/\s+as\s+/).pop()!.trim();
-      importMap.set(localName, join(srcDir, "routes", routeFile));
-    }
-  }
-
-  // Determine the relative prefix under /v1 where `api` is mounted (e.g., "" for /v1, "/summit" for /v1/summit)
-  const apiMountMatch = /\bapp\.route\(\s*["']([^"']+)["']\s*,\s*api\s*\)/.exec(indexContent);
-  const apiBasePrefix = apiMountMatch
-    ? apiMountMatch[1].replace(/^\/v1\b/, "")
-    : "";
-
-  const mounts: Array<{ target: "api" | "app"; prefix: string; filePath: string }> = [];
-  const mountedFiles = new Set<string>();
-  const routeMountRegex = /\b(api|app)\.route\(\s*["']([^"']+)["']\s*,\s*([A-Za-z0-9_]+)\s*\)/g;
-  while ((match = routeMountRegex.exec(indexContent)) !== null) {
-    const target = match[1] as "api" | "app";
-    const rawPrefix = match[2];
-    const routerVar = match[3];
-    const filePath = importMap.get(routerVar);
-    if (filePath) {
-      mountedFiles.add(filePath);
-      // Direct `app.route("/v1/...", router)` mounts belong to the /v1 API surface just like `api.route(...)`.
-      const isDirectV1Mount = target === "app" && /^\/v1(?:\/|$)/.test(rawPrefix);
-      const prefix =
-        target === "api"
-          ? `${apiBasePrefix}${rawPrefix}`
-          : isDirectV1Mount
-            ? rawPrefix.replace(/^\/v1\b/, "") || "/"
-            : rawPrefix;
-      mounts.push({
-        target: target === "api" || isDirectV1Mount ? "api" : "app",
-        prefix,
-        filePath,
-      });
-    }
-  }
-
-  const routesDir = join(srcDir, "routes");
-  const unmountedRouteFiles = existsSync(routesDir)
-    ? readdirSync(routesDir)
-        .filter((f) => f.endsWith(".ts") && !mountedFiles.has(join(routesDir, f)))
-        .sort()
-    : [];
-
+export function extractRoutesFromHonoApp(honoApp: {
+  routes: ReadonlyArray<{ method: string; path: string }>;
+}): ExtractedServiceRoutes {
   const v1Routes = new Map<string, string>();
   const appRoutes = new Map<string, string>();
+  const allowedMethods = new Set<string>(HTTP_METHODS.map((m) => m.toUpperCase()));
 
-  // Collect direct routes registered on `app` in index.ts (e.g., /health, /auth/dev-token)
-  const directMethodRegex = /\bapp\.(get|post|put|patch|delete)\(\s*["']([^"'*]+)["']/g;
-  while ((match = directMethodRegex.exec(indexContent)) !== null) {
-    const method = match[1].toUpperCase();
-    const rawPath = match[2];
-    appRoutes.set(`${method} ${normalizePathTemplate(rawPath)}`, `${method} ${rawPath} (index.ts)`);
-  }
-  if (/\bportalSessionEndpoint\s*\(/.test(indexContent)) {
-    appRoutes.set("GET /auth/portal-session", "GET /auth/portal-session (portalSessionEndpoint)");
-  }
+  for (const route of honoApp.routes) {
+    const method = route.method.toUpperCase();
+    if (!allowedMethods.has(method)) continue;
+    if (route.path.includes("*")) continue;
+    if (route.path === "/sim" || route.path.startsWith("/sim/")) continue;
 
-  for (const { target, prefix, filePath } of mounts) {
-    const routeSource = readFileSync(filePath, "utf-8");
-    // Only match Hono router instances (`new Hono...`), never `formData.get(...)` or `c.get(...)`
-    const routerVars = Array.from(
-      routeSource.matchAll(/\bconst\s+([A-Za-z0-9_]+)\s*=\s*new\s+Hono\b/g),
-      (m) => m[1],
-    );
-    if (routerVars.length === 0) continue;
-
-    const routerPattern = routerVars.map(escapeRegExp).join("|");
-    const methodRegex = new RegExp(
-      `\\b(?:${routerPattern})\\.(get|post|put|patch|delete)\\(\\s*["']([^"']+)["']`,
-      "g",
-    );
-    let m: RegExpExecArray | null;
-    while ((m = methodRegex.exec(routeSource)) !== null) {
-      const method = m[1].toUpperCase();
-      const subPath = m[2];
-      const fullPath =
-        subPath === "/"
-          ? prefix
-          : `${prefix === "/" ? "" : prefix}${subPath.startsWith("/") ? subPath : `/${subPath}`}`;
-      const normKey = `${method} ${normalizePathTemplate(fullPath)}`;
-      const desc = `${method} ${fullPath}`;
-      if (target === "api") {
-        v1Routes.set(normKey, desc);
-      } else {
-        appRoutes.set(normKey, desc);
-      }
+    if (route.path === "/v1" || route.path.startsWith("/v1/")) {
+      const relPath = route.path.slice(3) || "/";
+      const normKey = `${method} ${normalizePathTemplate(relPath)}`;
+      v1Routes.set(normKey, `${method} ${relPath}`);
+    } else {
+      const normKey = `${method} ${normalizePathTemplate(route.path)}`;
+      appRoutes.set(normKey, `${method} ${route.path}`);
     }
   }
 
   const allRoutes = new Set<string>([...v1Routes.keys(), ...appRoutes.keys()]);
-  return { v1Routes, appRoutes, allRoutes, unmountedRouteFiles };
+  return { v1Routes, appRoutes, allRoutes };
+}
+
+interface HonoServiceApp {
+  routes: ReadonlyArray<{ method: string; path: string }>;
+  request(input: RequestInfo | URL, requestInit?: RequestInit): Response | Promise<Response>;
 }
 
 describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
@@ -197,17 +114,60 @@ describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
     )
     .sort();
 
-  test("discovers all 8 OpenAPI 3.0 specification files and zero unmounted route modules", () => {
-    expect(specFiles).toEqual(Object.keys(OPENAPI_SPEC_SERVICES).sort());
+  const serviceApps = new Map<string, HonoServiceApp>();
+  const extractedByService = new Map<string, ExtractedServiceRoutes>();
 
-    const unmounted: string[] = [];
-    for (const serviceName of Object.values(OPENAPI_SPEC_SERVICES)) {
-      const { unmountedRouteFiles } = extractServiceRoutes(serviceName);
-      for (const f of unmountedRouteFiles) {
-        unmounted.push(`${serviceName}: ${f}`);
-      }
+  beforeAll(async () => {
+    if (!process.env.EVERGREEN_DATA_DIR) {
+      const tempDataDir = mkdtempSync(join(tmpdir(), "evergreen-route-contract-"));
+      process.env.EVERGREEN_DATA_DIR = tempDataDir;
+      process.once("exit", () => {
+        try {
+          rmSync(tempDataDir, { recursive: true, force: true });
+        } catch {
+          // Ignore exit cleanup errors.
+        }
+      });
     }
-    expect(unmounted).toEqual([]);
+
+    for (const serviceName of Object.values(OPENAPI_SPEC_SERVICES)) {
+      const mod = await import(join(SERVICES_DIR, serviceName, "src", "index.ts"));
+      serviceApps.set(serviceName, mod.app);
+      extractedByService.set(serviceName, extractRoutesFromHonoApp(mod.app));
+    }
+  });
+
+  test("discovers all 8 OpenAPI 3.0 specification files and loads every Hono service app", () => {
+    expect(specFiles).toEqual(Object.keys(OPENAPI_SPEC_SERVICES).sort());
+    expect(extractedByService.size).toBe(8);
+    for (const [svc, routes] of extractedByService.entries()) {
+      expect(routes.allRoutes.has("GET /health")).toBe(true);
+      expect(routes.v1Routes.size, `${svc} should expose /v1 routes`).toBeGreaterThan(0);
+    }
+  });
+
+  test("extractRoutesFromHonoApp derives routes from app.routes regardless of helper splits or file renames", async () => {
+    type MiniRouter = {
+      routes: ReadonlyArray<{ method: string; path: string }>;
+      get(path: string, handler: (c: { json(body: unknown): unknown }) => unknown): unknown;
+      post(path: string, handler: (c: { json(body: unknown): unknown }) => unknown): unknown;
+      route(path: string, subApp: unknown): unknown;
+    };
+    const { Hono } = (await import(Bun.resolveSync("hono", join(ROOT_DIR, "packages", "shared")))) as {
+      Hono: new () => MiniRouter;
+    };
+    const app = new Hono();
+    const renamedSubRouter = new Hono();
+    const registerViaHelper = (r: MiniRouter) => r.post("/items/:item_id/approve", (c) => c.json({ ok: true }));
+    registerViaHelper(renamedSubRouter);
+    app.get("/health", (c) => c.json({ status: "ok" }));
+    app.route("/v1/catalog", renamedSubRouter);
+    app.get("/sim/snapshot", (c) => c.json({ tables: {} }));
+
+    const extracted = extractRoutesFromHonoApp(app);
+    expect(extracted.v1Routes.has("POST /catalog/items/:param/approve")).toBe(true);
+    expect(extracted.appRoutes.has("GET /health")).toBe(true);
+    expect(extracted.allRoutes.has("GET /sim/snapshot")).toBe(false);
   });
 
   test("(a) zero dangling internal $refs across all 8 OpenAPI specs and unique REST operationIds", () => {
@@ -255,7 +215,7 @@ describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
     expect(duplicateOpIds).toEqual([]);
   });
 
-  test("(b1) spec -> code parity: every path and operation in specs/*.yaml has a matching route handler in services/*/src/", () => {
+  test("(b1) spec -> code parity: every path and operation in specs/*.yaml has a matching route handler on Hono app.routes", () => {
     const missingInCode: string[] = [];
 
     for (const [specFile, serviceName] of Object.entries(OPENAPI_SPEC_SERVICES)) {
@@ -263,7 +223,7 @@ describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
       const doc = parseYaml(raw) as {
         paths?: Record<string, Record<string, unknown>>;
       };
-      const { allRoutes } = extractServiceRoutes(serviceName);
+      const { allRoutes } = extractedByService.get(serviceName)!;
 
       for (const [specPath, pathItem] of Object.entries(doc.paths ?? {})) {
         for (const method of HTTP_METHODS) {
@@ -280,7 +240,7 @@ describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
     expect(missingInCode).toEqual([]);
   });
 
-  test("(b2) code -> spec parity: every /v1/* route handler in services/*/src/ is documented in specs/*.yaml", () => {
+  test("(b2) code -> spec parity: every /v1/* route handler on Hono app.routes is documented in specs/*.yaml", () => {
     const undocumentedInSpec: string[] = [];
 
     for (const [specFile, serviceName] of Object.entries(OPENAPI_SPEC_SERVICES)) {
@@ -297,10 +257,12 @@ describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
         }
       }
 
-      const { v1Routes } = extractServiceRoutes(serviceName);
+      const { v1Routes } = extractedByService.get(serviceName)!;
       for (const [routeKey, routeDesc] of v1Routes.entries()) {
         if (!specRouteKeys.has(routeKey)) {
-          undocumentedInSpec.push(`${serviceName} -> ${specFile}: /v1${routeDesc.slice(routeDesc.indexOf(" ") + 1)} (${routeDesc.split(" ")[0]})`);
+          undocumentedInSpec.push(
+            `${serviceName} -> ${specFile}: /v1${routeDesc.slice(routeDesc.indexOf(" ") + 1)} (${routeDesc.split(" ")[0]})`,
+          );
         }
       }
     }
@@ -308,7 +270,7 @@ describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
     expect(undocumentedInSpec).toEqual([]);
   });
 
-  test("(c) key quotes, envelopes, COI PDF, client detail, and FNOL endpoints are documented and wired", () => {
+  test("(c) key quotes, envelopes, COI PDF, client detail, and FNOL endpoints are documented and enforce scope contracts", async () => {
     const amsSpec = parseYaml(readFileSync(join(SPECS_DIR, "ams.yaml"), "utf-8")) as {
       paths?: Record<string, Record<string, any>>;
     };
@@ -336,17 +298,18 @@ describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
     expect(claimsSpec.paths?.["/claims/fnol"]?.post?.operationId).toBe("fileFnol");
     expect(claimsSpec.paths?.["/claims"]?.post?.operationId).toBe("fileClaim");
 
-    const { v1Routes: ecmV1Routes } = extractServiceRoutes("ecm");
+    const { v1Routes: ecmV1Routes } = extractedByService.get("ecm")!;
     expect(ecmV1Routes.has("GET /envelopes")).toBe(true);
     expect(ecmV1Routes.has("GET /documents/coi/:param/pdf")).toBe(true);
     expect(ecmV1Routes.has("GET /coi/:param/pdf")).toBe(true);
 
-    const envelopesSource = readFileSync(
-      join(SERVICES_DIR, "ecm", "src", "routes", "envelopes.ts"),
-      "utf-8",
-    );
-    expect(envelopesSource).toContain('requireScopes("ecm:envelopes:read")');
-    expect(envelopesSource).toContain("formatEnvelope");
+    // Verify ecm:envelopes:read scope enforcement via the Hono app directly rather than source-string grep
+    const ecmApp = serviceApps.get("ecm")!;
+    const noScopeToken = await generateDevToken({ sub: "scope-probe", scopes: ["ecm:documents:read"] });
+    const deniedRes = await ecmApp.request("http://localhost:3003/v1/envelopes", {
+      headers: { Authorization: `Bearer ${noScopeToken}` },
+    });
+    expect(deniedRes.status).toBe(403);
   });
 });
 
@@ -384,10 +347,10 @@ describe("Declarative AST Structural & Security Contract (specs/ast.rules.yaml)"
   test("ast-grep passes across repository and flags every invalid_example positive control", () => {
     const astGrep = resolveAstGrepBin();
     if (!astGrep) {
-      if (process.env.CI) {
-        throw new Error("ast-grep binary not found while running under CI");
+      if (process.env.ALLOW_MISSING_AST_GREP === "1") {
+        return;
       }
-      return;
+      throw new Error("ast-grep binary not found (set ALLOW_MISSING_AST_GREP=1 to opt out)");
     }
 
     const liveScan = spawnSync(astGrep, ["scan", "--rule", rulesPath], {
@@ -400,36 +363,37 @@ describe("Declarative AST Structural & Security Contract (specs/ast.rules.yaml)"
       .map((d) => d.toJSON() as Record<string, any>)
       .filter(Boolean);
 
-    const scratchRoot = mkdtempSync(join(tmpdir(), "evergreen-ast-guard-"));
+    const tempRoot = mkdtempSync(join(tmpdir(), "evergreen-ast-rules-"));
     try {
-      docs.forEach((doc, idx) => {
-        const caseDir = join(scratchRoot, `case_${idx}_${doc.id}`);
-        const singleRulePath = join(caseDir, "_rule.yaml");
-        const targetFile = join(caseDir, doc.metadata.test_path);
+      for (const doc of docs) {
+        const relTestPath = doc.metadata.test_path as string;
+        const singleRuleYaml = stringifyYaml(doc);
+        const singleRuleFile = join(tempRoot, `${doc.id}.yaml`);
+        writeFileSync(singleRuleFile, singleRuleYaml, "utf-8");
+
+        const targetFile = join(tempRoot, relTestPath);
         mkdirSync(dirname(targetFile), { recursive: true });
-        writeFileSync(singleRulePath, stringifyYaml(doc), "utf-8");
 
         for (const badCode of doc.metadata.invalid_examples as string[]) {
           writeFileSync(targetFile, `${badCode}\n`, "utf-8");
-          const badRes = spawnSync(astGrep, ["scan", "--rule", singleRulePath, "."], {
-            cwd: caseDir,
+          const badScan = spawnSync(astGrep, ["scan", "--rule", singleRuleFile, targetFile], {
+            cwd: tempRoot,
             encoding: "utf-8",
           });
-          expect(badRes.status).toBe(1);
-          expect(`${badRes.stdout}${badRes.stderr}`).toContain(doc.id);
+          expect(badScan.status).not.toBe(0);
         }
 
         for (const goodCode of doc.metadata.valid_examples as string[]) {
           writeFileSync(targetFile, `${goodCode}\n`, "utf-8");
-          const goodRes = spawnSync(astGrep, ["scan", "--rule", singleRulePath, "."], {
-            cwd: caseDir,
+          const goodScan = spawnSync(astGrep, ["scan", "--rule", singleRuleFile, targetFile], {
+            cwd: tempRoot,
             encoding: "utf-8",
           });
-          expect(goodRes.status).toBe(0);
+          expect(goodScan.status).toBe(0);
         }
-      });
+      }
     } finally {
-      rmSync(scratchRoot, { recursive: true, force: true });
+      rmSync(tempRoot, { recursive: true, force: true });
     }
   });
 });

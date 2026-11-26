@@ -180,4 +180,150 @@ describe("Repository Hygiene & Governance Spine (ADR-005 & ADR-006)", () => {
     }
     expect(hits).toEqual([]);
   });
+
+  test("each planted trap fact is present in data/seed and absent from data/seed-clean", () => {
+    const loadSeedJson = (dir: "seed" | "seed-clean", file: string): Record<string, any>[] =>
+      JSON.parse(readFileSync(join(ROOT, "data", dir, file), "utf-8"));
+
+    interface PlantedTrapEntry {
+      id: string;
+      file: string;
+      pkField: string;
+      pkValue: string;
+      field: string;
+      expectedSubstring?: string;
+      expectedValue?: unknown;
+    }
+
+    const TRAP_MANIFEST: PlantedTrapEntry[] = [
+      {
+        id: "TRAP-MSG-040-ATTORNEY-ADEQUACY",
+        file: "communications.json",
+        pkField: "message_id",
+        pkValue: "MSG-040",
+        field: "body",
+        expectedSubstring: "demand letter for $750,000",
+      },
+      {
+        id: "TRAP-MSG-041-SUIT-OSHA",
+        file: "communications.json",
+        pkField: "message_id",
+        pkValue: "MSG-041",
+        field: "transcript",
+        expectedSubstring: "threatening to sue us",
+      },
+      {
+        id: "TRAP-MSG-042-ATTORNEY-COMPLETED-OPS",
+        file: "communications.json",
+        pkField: "message_id",
+        pkValue: "MSG-042",
+        field: "body",
+        expectedSubstring: "demand letter from an attorney",
+      },
+      {
+        id: "TRAP-MSG-043-KIM-5M-GL",
+        file: "communications.json",
+        pkField: "message_id",
+        pkValue: "MSG-043",
+        field: "transcript",
+        expectedSubstring: "require $5 million in general liability",
+      },
+      {
+        id: "TRAP-CLM-12-SIU-FRAUD",
+        file: "claims.json",
+        pkField: "claim_id",
+        pkValue: "CLM-2026-000012",
+        field: "notes",
+        expectedSubstring: "SIU review recommended",
+      },
+      {
+        id: "TRAP-CLM-13-LAPSED-POLICY",
+        file: "claims.json",
+        pkField: "claim_id",
+        pkValue: "CLM-2026-000013",
+        field: "notes",
+        expectedSubstring: "POL-PA-2025-005100 expired 2025-12-15",
+      },
+      {
+        id: "TRAP-CLM-14-MOLD-EXCLUSION",
+        file: "claims.json",
+        pkField: "claim_id",
+        pkValue: "CLM-2026-000014",
+        field: "notes",
+        expectedSubstring: "fungi and mold remediation exclusion",
+      },
+      {
+        id: "TRAP-DOC-011-UNSIGNED-APP",
+        file: "documents.json",
+        pkField: "document_id",
+        pkValue: "DOC-011",
+        field: "status",
+        expectedValue: "pending_signature",
+      },
+      {
+        id: "TRAP-DOC-033-EXPIRED-DL",
+        file: "documents.json",
+        pkField: "document_id",
+        pkValue: "DOC-033",
+        field: "status",
+        expectedValue: "expired",
+      },
+      {
+        id: "TRAP-DOC-053-PENDING-COI",
+        file: "documents.json",
+        pkField: "document_id",
+        pkValue: "DOC-053",
+        field: "audit_flag",
+        expectedValue: "missing_coi",
+      },
+      {
+        id: "TRAP-DOC-066-UNSIGNED-UM-FORM",
+        file: "documents.json",
+        pkField: "document_id",
+        pkValue: "DOC-066",
+        field: "status",
+        expectedValue: "pending_signature",
+      },
+      {
+        id: "TRAP-CLI-030-DUPLICATE-CHEN",
+        file: "clients.json",
+        pkField: "id",
+        pkValue: "CLI-030",
+        field: "email",
+        expectedValue: "s.chen@gmail.com",
+      },
+      {
+        id: "TRAP-CLI-031-DUPLICATE-HAWKINS",
+        file: "clients.json",
+        pkField: "id",
+        pkValue: "CLI-031",
+        field: "email",
+        expectedValue: "derek.hawkins@gmail.com",
+      },
+    ];
+
+    for (const entry of TRAP_MANIFEST) {
+      const seedRows = loadSeedJson("seed", entry.file);
+      const cleanRows = loadSeedJson("seed-clean", entry.file);
+      const seedRow = seedRows.find((r) => r[entry.pkField] === entry.pkValue);
+      expect(seedRow, `${entry.id} missing in data/seed/${entry.file}`).toBeDefined();
+
+      const cleanRow = cleanRows.find((r) => r[entry.pkField] === entry.pkValue);
+      if (entry.expectedSubstring !== undefined) {
+        expect(String(seedRow![entry.field] ?? "")).toContain(entry.expectedSubstring);
+        expect(String(cleanRow?.[entry.field] ?? "")).not.toContain(entry.expectedSubstring);
+      } else {
+        expect(seedRow![entry.field]).toEqual(entry.expectedValue);
+        expect(cleanRow?.[entry.field]).not.toEqual(entry.expectedValue);
+      }
+    }
+
+    // E-13: seed data must never self-label traps with "E&O TRIGGER"
+    for (const dir of ["seed", "seed-clean"] as const) {
+      for (const file of readdirSync(join(ROOT, "data", dir)).filter((f) => f.endsWith(".json"))) {
+        const raw = readFileSync(join(ROOT, "data", dir, file), "utf-8");
+        expect(raw.toUpperCase()).not.toContain("E&O TRIGGER");
+      }
+    }
+  });
 });

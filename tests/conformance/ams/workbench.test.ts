@@ -24,8 +24,9 @@ beforeAll(async () => {
     },
   });
 }, 60_000);
-afterAll(() => {
+afterAll(async () => {
   peers?.stop();
+  await live?.stop();
 });
 beforeEach(async () => {
   await ctx.svc.seed({ tables: book() });

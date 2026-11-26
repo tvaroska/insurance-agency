@@ -193,17 +193,27 @@ describe("strict mode", () => {
     expect((await ctx.api.get("/v1/messages")).status).toBe(200);
   });
 
-  test("COMM-R11: X-Eval-Scorer: true passes the strict check; token and scope still apply", async () => {
-    const scorer = { "X-Eval-Scorer": "true" };
+  test("COMM-R11: X-Eval-Scorer: true with X-Evergreen-Scorer-Secret passes the strict check; token and scope still apply", async () => {
+    const scorer = {
+      "X-Eval-Scorer": "true",
+      "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret!,
+    };
     const ok = await strict.api.get("/v1/messages", { headers: scorer });
     expect(ok.status).toBe(200);
     expect(ok.body.data.length).toBeGreaterThan(0);
-    expect((await strict.api.get("/v1/messages", { headers: { "X-Eval-Scorer": "TRUE" } })).status).toBe(200);
+    expect(
+      (
+        await strict.api.get("/v1/messages", {
+          headers: { "X-Eval-Scorer": "TRUE", "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret! },
+        })
+      ).status,
+    ).toBe(200);
+    expectError(await strict.api.get("/v1/messages", { headers: { "X-Eval-Scorer": "true" } }), 403, "MODALITY_VIOLATION");
     expectError(await strict.svc.http.get("/v1/messages", { headers: scorer }), 401, "AUTH_ERROR");
     const callsOnly = await strict.svc.client({ scopes: [SCOPES.calls] });
     expectError(await callsOnly.get("/v1/messages", { headers: scorer }), 403, "FORBIDDEN");
-    expectError(await strict.api.get("/v1/messages", { headers: { "X-Eval-Scorer": "yes" } }), 403, "MODALITY_VIOLATION");
-    expectError(await strict.api.get("/v1/messages", { headers: { "X-Evergreen-Internal": "1" } }), 403, "MODALITY_VIOLATION");
+    expectError(await strict.api.get("/v1/messages", { headers: { "X-Eval-Scorer": "yes", "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret! } }), 403, "MODALITY_VIOLATION");
+    expectError(await strict.api.get("/v1/messages", { headers: { "X-Evergreen-Internal": "1", "X-Evergreen-Scorer-Secret": strict.svc.scorerSecret! } }), 403, "MODALITY_VIOLATION");
   });
 
   test("COMM-R11: with EVERGREEN_SCORER_SECRET set the scorer must also present the secret", async () => {
