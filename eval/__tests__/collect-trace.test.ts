@@ -1,18 +1,16 @@
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
 
 import { runBaselineAgent } from "../agents/baseline-agent";
 import { collectTrace, mergeTraces, resolveBaseUrls, summarizeTrace } from "../collect-trace";
-import { defaultBaseUrls } from "../evaluators/output";
+import { defaultBaseUrls, scorerHeaders } from "../evaluators/output";
 import { evaluateTrace, parseOtlpTrace } from "../evaluators/trace";
 import { generateReport } from "../report";
 import { scenarios } from "../scenarios/index";
 import type { ApiCall, OtlpSpan, OtlpTrace, ScopeSpan } from "../types";
 import { PORT_SERVICE_MAP } from "../types";
-import { createRequestLog } from "../../packages/shared/src/request-log";
-import { fetchAllClients, fetchClient, fetchClientPolicies } from "../../services/ecm/src/clients/ams-client";
-import { fetchClaim } from "../../services/ecm/src/clients/claims-client";
+import { createRequestLog, getInternalRequestHeaders } from "../../packages/shared/src/index";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 
@@ -168,26 +166,35 @@ describe("service wiring for the request log", () => {
   });
 });
 
-describe("service-to-service calls are marked internal", () => {
-  let fetchSpy: ReturnType<typeof spyOn> | undefined;
-  afterEach(() => fetchSpy?.mockRestore());
+describe("service-to-service calls are marked internal via @evergreen/shared", () => {
+  const prevSecret = process.env.EVERGREEN_SCORER_SECRET;
+  afterEach(() => {
+    if (prevSecret === undefined) delete process.env.EVERGREEN_SCORER_SECRET;
+    else process.env.EVERGREEN_SCORER_SECRET = prevSecret;
+  });
 
-  test("ECM's AMS and claims clients send X-Evergreen-Internal: 1", async () => {
-    const seen: Record<string, string>[] = [];
-    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (_input: unknown, init?: RequestInit) => {
-      seen.push(init?.headers as Record<string, string>);
-      return new Response(JSON.stringify({ data: [], pagination: { has_more: false } }), { status: 200 });
-    }) as unknown as typeof fetch);
+  test("getInternalRequestHeaders omits peer service traffic from GET /sim/trace under EVERGREEN_SCORER_SECRET", async () => {
+    process.env.EVERGREEN_SCORER_SECRET = "trace-internal-secret";
+    const log = createRequestLog({ serviceName: "ams", port: 3000 });
+    const app = new Hono();
+    app.use("*", log.middleware);
+    app.route("/sim", log.router);
+    app.get("/v1/clients", (c: any) => c.json({ data: [] }));
 
-    await fetchClient("CLI-001", "Bearer agent-token");
-    await fetchClientPolicies("CLI-001", "Bearer agent-token");
-    await fetchAllClients("Bearer agent-token");
-    await fetchClaim("CLM-2026-000010", "Bearer agent-token");
+    await app.request("http://localhost:3000/v1/clients", {
+      headers: { Authorization: "Bearer agent-token", ...getInternalRequestHeaders() },
+    });
+    await app.request("http://localhost:3000/v1/clients", {
+      headers: { Authorization: "Bearer agent-token" },
+    });
 
-    expect(seen).toHaveLength(4);
-    for (const headers of seen) {
-      expect(headers).toEqual({ Authorization: "Bearer agent-token", "X-Evergreen-Internal": "1" });
-    }
+    const traceRes = await app.request("http://localhost:3000/sim/trace", {
+      headers: scorerHeaders(),
+    });
+    expect(traceRes.status).toBe(200);
+    const calls = parseOtlpTrace((await traceRes.json()) as OtlpTrace);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].path).toBe("/v1/clients");
   });
 });
 
@@ -249,14 +256,17 @@ describe("service-side traces score like the scripted agent's own trace", () => 
     expect(commCalls).toBeGreaterThan(20);
   });
 
-  test("generateReport caps overall.score at 0 when apiCallCount is 0", () => {
+  test("generateReport scores 0-call runs from real check outcomes without a call-count override", () => {
+    const traceScores = evaluateTrace(scenarios["04"].variants.clean.traceChecks, []);
+    expect(traceScores.every((c) => !c.passed)).toBe(true);
+
     const report = generateReport({
       runId: "noop-run",
       scenario: "04",
       caseId: "clean-scripted",
       seed: "clean",
-      traceScores: [{ name: "no_unnecessary_deletes", passed: true, weight: 0.3 }],
-      outputScores: [{ name: "clients_intact", passed: true, weight: 0.5 }],
+      traceScores,
+      outputScores: [{ name: "audit_task_created", passed: false, weight: 1.0 }],
       eoTrapResults: [],
       apiCallCount: 0,
       expectedRange: [5, 20],

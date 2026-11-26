@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
@@ -12,7 +12,7 @@ import {
   matchFieldValue,
   validateStateScenario,
 } from "../evaluators/state-contract";
-import { verifyDeterministicSuite } from "../run-state-scenarios";
+import { teardownInProcessServices, verifyDeterministicSuite } from "../run-state-scenarios";
 
 function emptySnapshot(): GymSnapshot {
   return {
@@ -37,6 +37,9 @@ function emptySnapshot(): GymSnapshot {
 }
 
 describe("Pure 32-Table DB State-Contract Evaluator", () => {
+  afterAll(() => {
+    teardownInProcessServices();
+  });
   test("field matchers handle primitives, regex, contains, numeric bounds, jsonMatch, and anyOf", () => {
     expect(matchFieldValue("POL-1", "POL-1")).toBe(true);
     expect(matchFieldValue("POL-1", "POL-2")).toBe(false);
@@ -347,5 +350,42 @@ describe("Pure 32-Table DB State-Contract Evaluator", () => {
     expect(badRes.passed).toBe(false);
     expect(badRes.unexpectedWrites).toHaveLength(1);
     expect(badRes.unexpectedWrites[0].table).toBe("escalations");
+  });
+
+  test("verifyDeterministicSuite ignores a listener on the default AMS port unless asked", async () => {
+    teardownInProcessServices();
+    const initialFetch = globalThis.fetch;
+    const initialSecret = process.env.EVERGREEN_SCORER_SECRET;
+
+    let listenerHits = 0;
+    const server = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch() {
+        listenerHits++;
+        return new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    });
+
+    try {
+      const customUrls = resolveBaseUrls(
+        JSON.stringify({ ams: `http://127.0.0.1:${server.port}` }),
+        "39100",
+      );
+      const dt01 = loadStateScenarios().filter((s) => s.id === "DT-01");
+      const { ok } = await verifyDeterministicSuite(dt01, customUrls);
+      expect(ok).toBe(true);
+      expect(listenerHits).toBe(0);
+
+      teardownInProcessServices();
+      expect(globalThis.fetch).toBe(initialFetch);
+      expect(process.env.EVERGREEN_SCORER_SECRET).toBe(initialSecret);
+    } finally {
+      server.stop(true);
+      teardownInProcessServices();
+    }
   });
 });

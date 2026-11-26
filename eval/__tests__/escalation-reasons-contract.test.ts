@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test";
 import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import YAML from "yaml";
-import { ESCALATION_REASONS } from "../../services/ams/src/routes/escalations";
+import { ESCALATION_REASONS } from "../../packages/shared/src/index";
 
 describe("Escalation reason_code contract across scenarios and specs", () => {
   const validReasons = new Set<string>(ESCALATION_REASONS);
