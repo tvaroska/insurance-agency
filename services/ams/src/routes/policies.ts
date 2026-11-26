@@ -105,6 +105,11 @@ policiesRouter.get("/:id", requireScopes("ams:policies:read"), async (c) => {
 
 policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
   const body = await c.req.json();
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw validationError([
+      { field: "body", message: "Request body must be a JSON object.", code: "invalid_format" },
+    ]);
+  }
 
   // Validate required fields
   throwIfErrors([
@@ -140,7 +145,7 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
 
   for (let i = 0; i < body.coverages.length; i++) {
     const cov = body.coverages[i];
-    if (!cov.type || typeof cov.type !== "string") {
+    if (!cov || typeof cov !== "object" || Array.isArray(cov) || !cov.type || typeof cov.type !== "string") {
       throw validationError([
         { field: `coverages[${i}].type`, message: "Each coverage must have a type.", code: "required" },
       ]);

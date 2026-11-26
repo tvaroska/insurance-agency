@@ -234,9 +234,9 @@ class EvergreenGymEnv:
                 cookie_header = ""
         boot_headers = {"Cookie": cookie_header} if cookie_header else {}
         status_code, payload = self._request_json(
-            "POST",
+            "GET",
             f"{self.host}:{port}/auth/portal-session",
-            {"agent_code": "AG-EVERGREEN-01"},
+            None,
             boot_headers,
         )
         out_headers: dict[str, str] = {}

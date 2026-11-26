@@ -290,8 +290,13 @@ export function validateStateMinimums(
       BODILY_INJURY_KINDS.has(covType) ||
       (!covType && (perPerson !== undefined || parsedLimit.perAccidentBi !== undefined))
     ) {
+      const isCombinedSingleLimit =
+        covType === "csl" || covType === "combined_single_limit";
       const biPerson = perPerson ?? parsedLimit.perPersonBi;
-      const biAccident = perAccident ?? parsedLimit.perAccidentBi;
+      const biAccident =
+        perAccident ??
+        parsedLimit.perAccidentBi ??
+        (isCombinedSingleLimit ? parsedLimit.singleLimit : undefined);
       const pdLimit = explicitPd ?? parsedLimit.propertyDamage;
 
       if (biPerson !== undefined && biPerson < minimums.per_person_bi) {

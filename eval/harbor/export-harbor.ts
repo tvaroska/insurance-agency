@@ -229,9 +229,8 @@ def _resolve_gym_root() -> Path:
 
 def _scorer_headers() -> dict[str, str]:
     headers = {"X-Eval-Scorer": "true"}
-    secret = os.environ.get("EVERGREEN_SCORER_SECRET")
-    if secret:
-        headers["X-Evergreen-Scorer-Secret"] = secret
+    secret = os.environ.get("EVERGREEN_SCORER_SECRET") or "evergreen-dev-scorer-secret"
+    headers["X-Evergreen-Scorer-Secret"] = secret
     return headers
 
 
@@ -243,11 +242,11 @@ def capture_live_snapshot(out_path: Path) -> Path:
         effective_port = base_port + (port - 3000)
         url = f"http://localhost:{effective_port}/sim/snapshot"
         req = urllib.request.Request(url, headers=headers, method="GET")
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                snapshot[service] = json.loads(resp.read().decode("utf-8"))
-        except Exception:
-            snapshot[service] = {}
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status != 200:
+                raise RuntimeError(f"{service} /sim/snapshot returned {resp.status}")
+            payload = json.loads(resp.read().decode("utf-8"))
+            snapshot[service] = payload.get("tables", payload) if isinstance(payload, dict) else payload
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(snapshot, indent=2))
     return out_path
@@ -255,28 +254,23 @@ def capture_live_snapshot(out_path: Path) -> Path:
 
 def _collect_service_trace(gym_root: Path, out_dir: Path) -> Path:
     collected = out_dir / "service-trace.json"
+    env = dict(os.environ)
+    env.setdefault("EVERGREEN_SCORER_SECRET", "evergreen-dev-scorer-secret")
     collect_cmd = ["bun", "eval/collect-trace.ts", "--out", str(collected)]
     res = subprocess.run(
         collect_cmd,
         cwd=str(gym_root),
+        env=env,
         capture_output=True,
         text=True,
         timeout=30,
         check=False,
     )
-    if res.returncode == 0 and collected.exists():
-        return collected
-
-    for candidate in [
-        os.environ.get("OTEL_TRACES_PATH"),
-        "/workspace/traces/trace.json",
-    ]:
-        if candidate and Path(candidate).exists():
-            return Path(candidate)
-
-    empty = out_dir / "empty-trace.json"
-    empty.write_text(json.dumps({"resourceSpans": []}))
-    return empty
+    if res.returncode != 0 or not collected.exists():
+        raise RuntimeError(
+            f"Service-side trace collection failed (rc={res.returncode}): {res.stderr.strip()}"
+        )
+    return collected
 
 
 def run_evergreen_scorer() -> dict:
@@ -393,7 +387,7 @@ services:
     environment:
       - SEED_MODE=\${SEED_MODE:-realistic}
       - SCENARIO_ID=\${SCENARIO_ID:-}
-      - EVERGREEN_SCORER_SECRET=\${EVERGREEN_SCORER_SECRET:-}
+      - EVERGREEN_SCORER_SECRET=\${EVERGREEN_SCORER_SECRET:-evergreen-dev-scorer-secret}
     volumes:
       - harbor-traces:/workspace/traces
     depends_on:

@@ -12,7 +12,7 @@ x-service-base: &service-base
     JWT_SECRET: dev-secret
     SEED_MODE: ${SEED_MODE:-realistic}
     MODALITY_MODE: ${MODALITY_MODE:-strict}
-    EVERGREEN_SCORER_SECRET: ${EVERGREEN_SCORER_SECRET:-}
+    EVERGREEN_SCORER_SECRET: ${EVERGREEN_SCORER_SECRET:-evergreen-dev-scorer-secret}
 
 services:
   ams:

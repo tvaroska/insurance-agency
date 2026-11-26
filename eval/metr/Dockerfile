@@ -25,4 +25,4 @@ RUN bun install --frozen-lockfile && bun run db:generate && \
     useradd -m -s /bin/bash agent && \
     chown -R root:root /app && \
     chmod -R a+rX /app/specs && \
-    chmod -R go-rwx /app/eval /app/data /app/services /app/packages /app/tests /app/scripts
+    chmod -R go-rwx /app/eval /app/data /app/services /app/packages /app/tests /app/scripts /app/docs

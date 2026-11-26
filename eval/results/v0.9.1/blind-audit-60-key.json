@@ -1,6 +1,6 @@
 {
   "schema_version": "1.1",
-  "grader_version": "v0.9.1",
+  "grader_version": "v0.9.3",
   "source_manifest": "eval/results/v0.9.1/replay-manifest.json",
   "source_rescore_diff": "eval/results/v0.9.1/rescore-diff.json",
   "seed": 20261126,
@@ -992,7 +992,7 @@
       "eval_file": "eval/results/v0.9/realistic-natural/claude-sonnet-5-5/2026-11-15T21-20-25-00-00_evergreen-langchain_XuqiZFQXiUtDX84iiUeB2o.eval",
       "artifacts_dir": "eval/results/v0.9/artifacts/claude-sonnet-5-5/realistic-natural/08-realistic-natural-e5",
       "grader_passed": false,
-      "grader_score": 0.603,
+      "grader_score": 0.75,
       "output_score": null,
       "trace_score": null,
       "eo_compliant": true,
@@ -1511,7 +1511,7 @@
       "eval_file": "eval/results/v0.9/realistic-natural/deepseek-v4.1-flash/2026-11-15T22-43-05-00-00_evergreen-langchain_hSpAUrSo6XpdPvhohKwx3B.eval",
       "artifacts_dir": "eval/results/v0.9/artifacts/deepseek-v4.1-flash/realistic-natural/08-realistic-natural-e4",
       "grader_passed": false,
-      "grader_score": 0.67,
+      "grader_score": 0.75,
       "output_score": null,
       "trace_score": null,
       "eo_compliant": true,
@@ -1521,10 +1521,9 @@
       "v091_flipped": true,
       "taxonomy": "T4_INCOMPLETE_PRIMARY_STATE_CHANGE",
       "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
+        "coi_generated: coi_document_issued_within_limits: Array length 0 < min 1 | coi_shortfall_communicated_to_kim: Array length 0 < min 1 | coi_shortfall_escalated: data[0]: expected element {\"client_id\":\"CLI-008\",\"reason\":\"coverage_adequacy\"} not found in array"
       ],
       "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
         "efficiency: Count 50 outside range [8, 40]"
       ],
       "missed_eo_traps": [],

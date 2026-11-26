@@ -68,7 +68,7 @@ describe("Harbor / Terminal-Bench 2.0 Exporter (S2-INTOP-1)", () => {
     expect(compose).toContain("../../docker-compose.yml");
     expect(compose).toContain("harbor-snapshot-init:");
     expect(compose).toContain("SCENARIO_ID=${SCENARIO_ID:-}");
-    expect(compose).toContain("EVERGREEN_SCORER_SECRET=${EVERGREEN_SCORER_SECRET:-}");
+    expect(compose).toContain("EVERGREEN_SCORER_SECRET=${EVERGREEN_SCORER_SECRET:-evergreen-dev-scorer-secret}");
     expect(compose).toContain("scenario_id: scenarioId");
     expect(compose).toContain("/workspace/traces/snapshot-before.json");
     expect(compose).toContain("harbor-agent:");

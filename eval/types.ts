@@ -43,6 +43,7 @@ export interface OutputCheck {
   path: string;
   episodeScope?: "inserted" | "updated" | "mutated";
   snapshotTable?: string;
+  anyOf?: OutputCheck[];
   expect: {
     status: number;
     bodyMatch?: Record<string, unknown>;

@@ -94,7 +94,7 @@ app.get("/auth/dev-token", async (c) => {
 
 // ── Authenticated routes ─────────────────────────────────────────────
 const api = new Hono<{ Variables: AppVariables }>();
-api.use("*", strictModalityGuard("web-portal"));
+api.use("*", strictModalityGuard("web-portal", "carrier-summit"));
 api.use("*", jwtAuth);
 api.use("*", carrierLatency);
 

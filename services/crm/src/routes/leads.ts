@@ -279,9 +279,15 @@ leadsRouter.patch(
 
     // Validate provided fields
     throwIfErrors([
-      body.status !== undefined
-        ? checkEnum("status", body.status, LEAD_STATUSES)
-        : null,
+      body.status === null
+        ? {
+            field: "status",
+            message: `status must be one of: ${LEAD_STATUSES.join(", ")}.`,
+            code: "invalid_enum",
+          }
+        : body.status !== undefined
+          ? checkEnum("status", body.status, LEAD_STATUSES)
+          : null,
       body.score !== undefined
         ? checkRange("score", body.score, { min: 0, max: 100 })
         : null,

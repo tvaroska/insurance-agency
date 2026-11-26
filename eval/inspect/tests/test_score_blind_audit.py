@@ -147,11 +147,18 @@ def test_committed_v091_blind_audit_sheet_is_strictly_blind_and_matches_sealed_k
 
     assert "**Rater ID:**" in sheet_text
     assert sba.parse_rater_id(sheet_text) is None
-    assert key_doc["grader_version"] == "v0.9.1"
+    assert key_doc["grader_version"] == "v0.9.3"
     assert key_doc["total_items"] == 60
     assert len(key_doc["items"]) == 60
     assert len(parsed) == 60
     assert all(v["passed"] is None for v in parsed.values())
+
+    manifest = json.loads((v091_dir / "replay-manifest.json").read_text(encoding="utf-8"))
+    manifest_by_dir = {t["artifacts_dir"]: t for t in manifest["trials"]}
+    for item in key_doc["items"]:
+        m_row = manifest_by_dir[item["artifacts_dir"]]
+        assert bool(item["grader_passed"]) == bool(m_row["passed"])
+        assert round(float(item["grader_score"]), 3) == round(float(m_row["score"]), 3)
 
     forbidden_home = "/".join(["", "usr", "local", "google"])
     for forbidden in (

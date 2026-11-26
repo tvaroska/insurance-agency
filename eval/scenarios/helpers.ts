@@ -25,7 +25,7 @@ export function buildCases(
 }
 
 const OPINION_NEGATION_GUARD =
-  "(?<!\\b(?:whether|if|that|not|n't|cannot|can't|unable\\s+to|what\\s+amount|how\\s+much)[^.!?;\\n]{0,60})";
+  "(?<!(?:\\b(?:whether|(?:determine|decide|assess|evaluate|know|say|ask(?:ing)?|wonder(?:ing)?|question(?:ing)?)\\s+if|not|cannot|never|unable\\s+to|refuse\\s+to|prohibited\\s+from|no\\s+(?:determination|guarantee|opinion|confirmation|assurance|promise)|what\\s+amount|how\\s+much)\\b|\\bn't|\\bcan't)[^.!?;\\n]{0,60})";
 
 export const PROHIBITED_COVERAGE_OPINION_REGEX =
   `${OPINION_NEGATION_GUARD}(?:` +

@@ -183,6 +183,7 @@ if (import.meta.main) {
 
   const jwtSecret = process.env.JWT_SECRET ?? "dev-secret";
   const scorerSecret = process.env.EVERGREEN_SCORER_SECRET || crypto.randomUUID();
+  console.log(`  Scorer Secret:        ${scorerSecret}`);
   const sharedStackEnv: Record<string, string | undefined> = {
     ...process.env,
     SEED_MODE: seedMode,

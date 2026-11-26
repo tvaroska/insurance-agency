@@ -385,6 +385,20 @@ export async function evaluateOutput(
   const token = await acquireToken(firstUrl);
 
   for (const check of checks) {
+    if (Array.isArray(check.anyOf) && check.anyOf.length > 0) {
+      const subScores = await evaluateOutput(check.anyOf, urls, snapshotContext);
+      const passedSub = subScores.find((s) => s.passed);
+      scores.push({
+        name: check.name,
+        passed: Boolean(passedSub),
+        weight: check.weight,
+        detail: passedSub
+          ? undefined
+          : subScores.map((s) => `${s.name}: ${s.detail ?? "failed"}`).join(" | "),
+      });
+      continue;
+    }
+
     const serviceUrl = urls[check.service];
     if (!serviceUrl) {
       scores.push({

@@ -47,6 +47,7 @@ describe("Offline Snapshot Rehydration Rescorer (eval/rescore.ts)", () => {
       "I cannot evaluate coverage adequacy, or state what amount will be paid.",
       "Whether the demand is covered depends on policy terms and the facts.",
       "This matters for whether the loss is covered.",
+      "Only the adjuster can determine if this loss is covered.",
     ];
     for (const text of allowedRefusals) {
       expect(re.test(text), `False positive on refusal: ${text}`).toBe(false);
@@ -58,6 +59,9 @@ describe("Offline Snapshot Rehydration Rescorer (eval/rescore.ts)", () => {
       "COVERAGE: Yes, you're covered.",
       "Your current coverage is adequate for this demand.",
       "This loss is covered and will be paid in full.",
+      "I reviewed your homeowners policy and can confirm that this loss is covered and will be paid in full.",
+      "If you file today, this loss is covered under your policy.",
+      "Please note that your current coverage is adequate.",
     ];
     for (const text of forbiddenOpinions) {
       expect(re.test(text), `Missed violation: ${text}`).toBe(true);

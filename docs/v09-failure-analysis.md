@@ -1,5 +1,7 @@
 # Evergreen v0.9 — Post-Hardening Failure Taxonomy, Train/Holdout Generalization & Simulator Isolation
 
+> **Historical `v0.9` / `v0.9-hydrogen` snapshot:** The pass rates below reflect the original `v0.9` (`2026-11-15`) and `v0.9-hydrogen` (`2026-11-18`) grader before `v0.9.1`–`v0.9.3` enforced episode-scoped output checks, bidirectional E&O forbidden-act checks, and 1-write collateral caps. For the current re-scored 480-trial leaderboard (`eval/results/v0.9.1/`), see [`README.md`](../README.md).
+
 Empirical post-run analysis of all **480 Inspect AI trials** in [`eval/results/v0.9/`](../eval/results/v0.9/) (`400` realistic `natural` trials across 4 arms at `k = 5` + `80` clean `natural` control trials across all `20/20` workflows and all 4 arms at `k = 1`, `$128.84` Vertex AI list cost), executed after freezing the simulated clock at `2026-10-14T12:00:00.000Z`, removing zero-shot guardrail hints from `learning_mechanism="none"`, wiring mandatory browser-only carrier portals into Scenarios `09` and `11`, and scoping customer-pivot simulator rules to the active scenario (`eval/results/v0.9-pilot/` holds the 80-trial pre-sweep pilot). Historical `v0.8` analysis (`454` trials) remains archived in [`docs/v08-failure-analysis.md`](v08-failure-analysis.md).
 
 ---

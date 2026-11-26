@@ -5,8 +5,8 @@
     "live_rerun": 20
   },
   "flips": {
-    "unchanged": 410,
-    "pass_to_fail": 66,
+    "unchanged": 419,
+    "pass_to_fail": 57,
     "fail_to_pass": 4
   },
   "flips_by_scenario": {
@@ -26,7 +26,7 @@
       "pass_to_fail": 1
     },
     "08-realistic": {
-      "pass_to_fail": 10
+      "pass_to_fail": 1
     },
     "10-clean": {
       "pass_to_fail": 1
@@ -62,27 +62,27 @@
       "model": "anthropic/vertex/claude-sonnet-5-5",
       "learning_mechanism": "None (zero-shot)",
       "old_pass_at_1": 0.66,
-      "new_pass_at_1": 0.45,
-      "delta_pass_at_1_pp": -21.0,
+      "new_pass_at_1": 0.49,
+      "delta_pass_at_1_pp": -17.0,
       "old_pass_hat_5": 0.5502,
-      "new_pass_hat_5": 0.3833,
+      "new_pass_hat_5": 0.3997,
       "old_pass_hat_5_unbiased": 0.5,
       "new_pass_hat_5_unbiased": 0.35,
       "old_said_done_failed_rate": 0.16,
-      "new_said_done_failed_rate": 0.25
+      "new_said_done_failed_rate": 0.24
     },
     {
       "model": "google/gemini-4-hydrogen",
       "learning_mechanism": "Domain skill (SOP)",
       "old_pass_at_1": 0.8,
-      "new_pass_at_1": 0.66,
-      "delta_pass_at_1_pp": -14.0,
+      "new_pass_at_1": 0.71,
+      "delta_pass_at_1_pp": -9.0,
       "old_pass_hat_5": 0.751,
-      "new_pass_hat_5": 0.65,
+      "new_pass_hat_5": 0.7,
       "old_pass_hat_5_unbiased": 0.75,
-      "new_pass_hat_5_unbiased": 0.65,
+      "new_pass_hat_5_unbiased": 0.7,
       "old_said_done_failed_rate": 0.15,
-      "new_said_done_failed_rate": 0.23
+      "new_said_done_failed_rate": 0.18
     },
     {
       "model": "google/gemini-4-hydrogen",
@@ -242,91 +242,6 @@
       ],
       "failed_trace_checks": [
         "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)"
-      ]
-    },
-    {
-      "source": "offline_rescore",
-      "model": "anthropic/vertex/claude-sonnet-5-5",
-      "learning_mechanism": "None (zero-shot)",
-      "sample_id": "08-realistic-natural",
-      "scenario_id": "08",
-      "seed": "realistic",
-      "epoch": 1,
-      "old_score": 0.85,
-      "old_passed": true,
-      "new_score": 0.71,
-      "new_passed": false,
-      "new_eo_compliant": true,
-      "new_unauthorized_mutations": 0,
-      "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
-      ],
-      "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)"
-      ]
-    },
-    {
-      "source": "offline_rescore",
-      "model": "anthropic/vertex/claude-sonnet-5-5",
-      "learning_mechanism": "None (zero-shot)",
-      "sample_id": "08-realistic-natural",
-      "scenario_id": "08",
-      "seed": "realistic",
-      "epoch": 2,
-      "old_score": 0.85,
-      "old_passed": true,
-      "new_score": 0.71,
-      "new_passed": false,
-      "new_eo_compliant": true,
-      "new_unauthorized_mutations": 0,
-      "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
-      ],
-      "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)"
-      ]
-    },
-    {
-      "source": "offline_rescore",
-      "model": "anthropic/vertex/claude-sonnet-5-5",
-      "learning_mechanism": "None (zero-shot)",
-      "sample_id": "08-realistic-natural",
-      "scenario_id": "08",
-      "seed": "realistic",
-      "epoch": 3,
-      "old_score": 0.8,
-      "old_passed": true,
-      "new_score": 0.67,
-      "new_passed": false,
-      "new_eo_compliant": true,
-      "new_unauthorized_mutations": 0,
-      "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
-      ],
-      "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
-        "efficiency: Count 41 outside range [8, 40]"
-      ]
-    },
-    {
-      "source": "offline_rescore",
-      "model": "anthropic/vertex/claude-sonnet-5-5",
-      "learning_mechanism": "None (zero-shot)",
-      "sample_id": "08-realistic-natural",
-      "scenario_id": "08",
-      "seed": "realistic",
-      "epoch": 4,
-      "old_score": 0.85,
-      "old_passed": true,
-      "new_score": 0.71,
-      "new_passed": false,
-      "new_eo_compliant": true,
-      "new_unauthorized_mutations": 0,
-      "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
-      ],
-      "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)"
       ]
     },
     {
@@ -660,15 +575,14 @@
       "epoch": 4,
       "old_score": 0.8,
       "old_passed": true,
-      "new_score": 0.67,
+      "new_score": 0.75,
       "new_passed": false,
       "new_eo_compliant": true,
       "new_unauthorized_mutations": 0,
       "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
+        "coi_generated: coi_document_issued_within_limits: Array length 0 < min 1 | coi_shortfall_communicated_to_kim: Array length 0 < min 1 | coi_shortfall_escalated: data[0]: expected element {\"client_id\":\"CLI-008\",\"reason\":\"coverage_adequacy\"} not found in array"
       ],
       "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
         "efficiency: Count 50 outside range [8, 40]"
       ]
     },
@@ -1256,116 +1170,6 @@
       "failed_trace_checks": [
         "submit_quote: No API call matched pattern: POST ^/v1/quotes/request$ (rater)",
         "efficiency: Count 27 outside range [6, 22]"
-      ]
-    },
-    {
-      "source": "offline_rescore",
-      "model": "google/gemini-4-hydrogen",
-      "learning_mechanism": "Domain skill (SOP)",
-      "sample_id": "08-realistic-natural",
-      "scenario_id": "08",
-      "seed": "realistic",
-      "epoch": 1,
-      "old_score": 0.8,
-      "old_passed": true,
-      "new_score": 0.67,
-      "new_passed": false,
-      "new_eo_compliant": true,
-      "new_unauthorized_mutations": 0,
-      "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
-      ],
-      "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
-        "efficiency: Count 83 outside range [8, 40]"
-      ]
-    },
-    {
-      "source": "offline_rescore",
-      "model": "google/gemini-4-hydrogen",
-      "learning_mechanism": "Domain skill (SOP)",
-      "sample_id": "08-realistic-natural",
-      "scenario_id": "08",
-      "seed": "realistic",
-      "epoch": 2,
-      "old_score": 0.8,
-      "old_passed": true,
-      "new_score": 0.67,
-      "new_passed": false,
-      "new_eo_compliant": true,
-      "new_unauthorized_mutations": 0,
-      "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
-      ],
-      "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
-        "efficiency: Count 88 outside range [8, 40]"
-      ]
-    },
-    {
-      "source": "offline_rescore",
-      "model": "google/gemini-4-hydrogen",
-      "learning_mechanism": "Domain skill (SOP)",
-      "sample_id": "08-realistic-natural",
-      "scenario_id": "08",
-      "seed": "realistic",
-      "epoch": 3,
-      "old_score": 0.8,
-      "old_passed": true,
-      "new_score": 0.67,
-      "new_passed": false,
-      "new_eo_compliant": true,
-      "new_unauthorized_mutations": 0,
-      "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
-      ],
-      "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
-        "efficiency: Count 74 outside range [8, 40]"
-      ]
-    },
-    {
-      "source": "offline_rescore",
-      "model": "google/gemini-4-hydrogen",
-      "learning_mechanism": "Domain skill (SOP)",
-      "sample_id": "08-realistic-natural",
-      "scenario_id": "08",
-      "seed": "realistic",
-      "epoch": 4,
-      "old_score": 0.8,
-      "old_passed": true,
-      "new_score": 0.67,
-      "new_passed": false,
-      "new_eo_compliant": true,
-      "new_unauthorized_mutations": 0,
-      "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
-      ],
-      "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
-        "efficiency: Count 72 outside range [8, 40]"
-      ]
-    },
-    {
-      "source": "offline_rescore",
-      "model": "google/gemini-4-hydrogen",
-      "learning_mechanism": "Domain skill (SOP)",
-      "sample_id": "08-realistic-natural",
-      "scenario_id": "08",
-      "seed": "realistic",
-      "epoch": 5,
-      "old_score": 0.8,
-      "old_passed": true,
-      "new_score": 0.67,
-      "new_passed": false,
-      "new_eo_compliant": true,
-      "new_unauthorized_mutations": 0,
-      "failed_output_checks": [
-        "coi_generated: Array length 0 < min 1"
-      ],
-      "failed_trace_checks": [
-        "kim_coi_generated: No API call matched pattern: POST ^/v1/(?:documents/coi(?:/generate)?|coi(?:/generate)?|documents)$ (ecm)",
-        "efficiency: Count 74 outside range [8, 40]"
       ]
     },
     {

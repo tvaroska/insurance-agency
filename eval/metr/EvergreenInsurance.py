@@ -15,6 +15,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
@@ -30,9 +31,22 @@ if _INSPECT_DIR not in sys.path:
 import control_plane as _control_plane  # noqa: E402
 
 PASS_THRESHOLD = 0.80
-SNAPSHOT_BEFORE_PATH = Path("/tmp/metr-snapshot-before.json")
-SNAPSHOT_AFTER_PATH = Path("/tmp/metr-snapshot-after.json")
-COLLECTED_TRACE_PATH = Path("/tmp/metr-service-trace.json")
+
+
+def _default_metr_scorer_dir() -> Path:
+    explicit = os.environ.get("METR_SCORER_DIR")
+    if explicit:
+        return Path(explicit)
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        return Path("/root/.evergreen-metr")
+    uid = os.getuid() if hasattr(os, "getuid") else 0
+    return Path(tempfile.gettempdir()) / f"evergreen-metr-{uid}"
+
+
+METR_SCORER_DIR = _default_metr_scorer_dir()
+SNAPSHOT_BEFORE_PATH = METR_SCORER_DIR / "metr-snapshot-before.json"
+SNAPSHOT_AFTER_PATH = METR_SCORER_DIR / "metr-snapshot-after.json"
+COLLECTED_TRACE_PATH = METR_SCORER_DIR / "metr-service-trace.json"
 SCORER_SECRET_FILE = Path("/root/.evergreen-scorer-secret")
 
 PORT_SERVICE_MAP: dict[int, str] = dict(_control_plane.PORT_SERVICE_MAP)
@@ -95,8 +109,9 @@ def _capture_snapshot(out_path: Path) -> Path:
         _service_urls(),
         secret=_resolve_scorer_secret(),
     )
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
     out_path.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
+    out_path.chmod(0o600)
     return out_path
 
 
@@ -184,8 +199,9 @@ class TaskFamily:
             COLLECTED_TRACE_PATH.unlink(missing_ok=True)
 
         trace = export_otlp_trace()
-        COLLECTED_TRACE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        COLLECTED_TRACE_PATH.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
         COLLECTED_TRACE_PATH.write_text(json.dumps(trace, indent=2), encoding="utf-8")
+        COLLECTED_TRACE_PATH.chmod(0o600)
 
         scorer_env = {**os.environ}
         secret = _resolve_scorer_secret()

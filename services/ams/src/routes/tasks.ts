@@ -181,12 +181,24 @@ tasksRouter.patch(
 
     // Validate provided fields
     throwIfErrors([
-      body.status !== undefined
-        ? checkEnum("status", body.status, TASK_STATUSES)
-        : null,
-      body.priority !== undefined
-        ? checkEnum("priority", body.priority, TASK_PRIORITIES)
-        : null,
+      body.status === null
+        ? {
+            field: "status",
+            message: `status must be one of: ${TASK_STATUSES.join(", ")}.`,
+            code: "invalid_enum",
+          }
+        : body.status !== undefined
+          ? checkEnum("status", body.status, TASK_STATUSES)
+          : null,
+      body.priority === null
+        ? {
+            field: "priority",
+            message: `priority must be one of: ${TASK_PRIORITIES.join(", ")}.`,
+            code: "invalid_enum",
+          }
+        : body.priority !== undefined
+          ? checkEnum("priority", body.priority, TASK_PRIORITIES)
+          : null,
       body.due_date !== undefined && body.due_date !== null
         ? checkFormat(
             "due_date",

@@ -552,11 +552,10 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     expect(second).toEqual(first);
   });
 
-  test("strict mode rejects /sim/* without the scorer secret", async () => {
+  test("strict mode rejects /sim/* without the scorer secret (including standalone createSimRouter)", async () => {
     const requestLog = createRequestLog({ serviceName: "ams", port: 3000 });
     const app = new Hono();
     app.use("*", requestLog.middleware);
-    app.route("/sim", requestLog.router);
     app.route(
       "/sim",
       createSimRouter({
@@ -565,10 +564,40 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
         tables: [],
       }),
     );
+    app.route("/sim", requestLog.router);
     app.get("/v1/clients", (c) => c.json({ data: [] }));
+
+    const standaloneSimApp = new Hono();
+    standaloneSimApp.route(
+      "/sim",
+      createSimRouter({
+        serviceName: "ams",
+        prisma: {},
+        tables: [],
+      }),
+    );
 
     process.env.MODALITY_MODE = "strict";
     delete process.env.EVERGREEN_SCORER_SECRET;
+
+    for (const [method, path] of [
+      ["GET", "/sim/status"],
+      ["GET", "/sim/snapshot"],
+      ["POST", "/sim/reset"],
+      ["POST", "/sim/seed"],
+    ] as const) {
+      const standaloneRes = await standaloneSimApp.request(path, {
+        method,
+        ...(method === "POST"
+          ? {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({}),
+            }
+          : {}),
+      });
+      expect(standaloneRes.status).toBe(403);
+      expect((await standaloneRes.json()).error_code).toBe("FORBIDDEN");
+    }
 
     for (const [method, path] of [
       ["GET", "/sim/status"],
@@ -644,5 +673,41 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     const run2 = [simRandomId(8), simRandomId(8), simRandomUuid()];
     expect(run2).toEqual(run1);
     expect(getBackdatingFloor()).toBe("2026-10-14");
+  });
+
+  test("service-scoped strictModalityGuard rejects cross-portal X-Portal-Session tokens", async () => {
+    process.env.MODALITY_MODE = "strict";
+    const summit = new Hono();
+    summit.use("*", portalBootstrapMiddleware("carrier-summit"));
+    summit.get("/", (c) => c.html("<html>Summit</html>"));
+    summit.route("/", portalSessionEndpoint("carrier-summit"));
+    summit.use("/v1/summit/*", strictModalityGuard("web-portal", "carrier-summit"));
+    summit.get("/v1/summit/quotes", (c) => c.json({ data: ["S-1"] }));
+
+    const coastal = new Hono();
+    coastal.use("*", portalBootstrapMiddleware("carrier-coastal"));
+    coastal.get("/", (c) => c.html("<html>Coastal</html>"));
+    coastal.route("/", portalSessionEndpoint("carrier-coastal"));
+    coastal.use("/v1/coastal/*", strictModalityGuard("web-portal", "carrier-coastal"));
+    coastal.get("/v1/coastal/quotes", (c) => c.json({ data: ["C-1"] }));
+
+    const boot = await summit.request("/");
+    const cookie = (boot.headers.get("Set-Cookie") ?? "").split(";")[0]!;
+    const sessRes = await summit.request("/auth/portal-session", {
+      headers: { Cookie: cookie },
+    });
+    expect(sessRes.status).toBe(200);
+    const { session_token: summitToken } = await sessRes.json();
+
+    const okSummit = await summit.request("/v1/summit/quotes", {
+      headers: { "X-Portal-Session": summitToken },
+    });
+    expect(okSummit.status).toBe(200);
+
+    const crossCoastal = await coastal.request("/v1/coastal/quotes", {
+      headers: { "X-Portal-Session": summitToken },
+    });
+    expect(crossCoastal.status).toBe(403);
+    expect((await crossCoastal.json()).error_code).toBe("MODALITY_VIOLATION");
   });
 });

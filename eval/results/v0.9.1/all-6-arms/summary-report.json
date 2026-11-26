@@ -6,31 +6,31 @@
     "learning_mechanism": "Domain skill (SOP)",
     "tasks_count": 20,
     "trials_count": 100,
-    "mean_score": 0.7522,
-    "pass_at_1": 0.66,
-    "pass_hat_5": 0.65,
+    "mean_score": 0.7667,
+    "pass_at_1": 0.71,
+    "pass_hat_5": 0.7,
     "system_traps_missed": 2,
     "system_traps_total": 25,
     "judgment_traps_missed": 8,
     "judgment_traps_total": 55,
-    "said_done_failed_rate": 0.23,
+    "said_done_failed_rate": 0.18,
     "unasked_mutation_rate": 0.05,
     "mean_unasked_mutations": 0.23,
-    "drop_clean_to_messy_pp": -29.0,
+    "drop_clean_to_messy_pp": -24.0,
     "mean_cost_usd": 0.2236,
     "pass_at_1_ci95": [
-      0.46,
-      0.85
+      0.51,
+      0.9
     ],
     "pass_hat_5_ci95": [
-      0.45,
-      0.85
+      0.5,
+      0.9
     ],
-    "pass_hat_5_unbiased": 0.65,
-    "said_done_given_failed_rate": 0.6765,
+    "pass_hat_5_unbiased": 0.7,
+    "said_done_given_failed_rate": 0.6207,
     "deferred_rate": 0.25,
     "failed_deferred_rate": 0.1,
-    "train_pass_at_1": 0.7,
+    "train_pass_at_1": 0.8,
     "holdout_pass_at_1": 0.62
   },
   {
@@ -40,31 +40,31 @@
     "learning_mechanism": "Domain skill (SOP)",
     "tasks_count": 20,
     "trials_count": 100,
-    "mean_score": 0.7544,
-    "pass_at_1": 0.61,
-    "pass_hat_5": 0.6,
+    "mean_score": 0.766,
+    "pass_at_1": 0.65,
+    "pass_hat_5": 0.6164,
     "system_traps_missed": 7,
     "system_traps_total": 25,
     "judgment_traps_missed": 8,
     "judgment_traps_total": 55,
-    "said_done_failed_rate": 0.28,
+    "said_done_failed_rate": 0.24,
     "unasked_mutation_rate": 0.02,
     "mean_unasked_mutations": 0.1,
-    "drop_clean_to_messy_pp": -39.0,
+    "drop_clean_to_messy_pp": -35.0,
     "mean_cost_usd": 0.4904,
     "pass_at_1_ci95": [
-      0.41,
-      0.8
+      0.45,
+      0.84
     ],
     "pass_hat_5_ci95": [
-      0.4,
-      0.8
+      0.4156,
+      0.8164
     ],
     "pass_hat_5_unbiased": 0.6,
-    "said_done_given_failed_rate": 0.7179,
+    "said_done_given_failed_rate": 0.6857,
     "deferred_rate": 0.14,
     "failed_deferred_rate": 0.07,
-    "train_pass_at_1": 0.6,
+    "train_pass_at_1": 0.68,
     "holdout_pass_at_1": 0.62
   },
   {
@@ -74,31 +74,31 @@
     "learning_mechanism": "None (zero-shot)",
     "tasks_count": 20,
     "trials_count": 100,
-    "mean_score": 0.6797,
-    "pass_at_1": 0.56,
+    "mean_score": 0.6825,
+    "pass_at_1": 0.57,
     "pass_hat_5": 0.4867,
     "system_traps_missed": 13,
     "system_traps_total": 25,
     "judgment_traps_missed": 12,
     "judgment_traps_total": 55,
-    "said_done_failed_rate": 0.26,
+    "said_done_failed_rate": 0.25,
     "unasked_mutation_rate": 0.09,
     "mean_unasked_mutations": 0.2,
-    "drop_clean_to_messy_pp": -39.0,
+    "drop_clean_to_messy_pp": -38.0,
     "mean_cost_usd": 0.476,
     "pass_at_1_ci95": [
-      0.36,
-      0.75
+      0.38,
+      0.76
     ],
     "pass_hat_5_ci95": [
       0.2905,
       0.6828
     ],
     "pass_hat_5_unbiased": 0.45,
-    "said_done_given_failed_rate": 0.5909,
+    "said_done_given_failed_rate": 0.5814,
     "deferred_rate": 0.11,
     "failed_deferred_rate": 0.09,
-    "train_pass_at_1": 0.62,
+    "train_pass_at_1": 0.64,
     "holdout_pass_at_1": 0.5
   },
   {
@@ -142,31 +142,31 @@
     "learning_mechanism": "None (zero-shot)",
     "tasks_count": 20,
     "trials_count": 100,
-    "mean_score": 0.7014,
-    "pass_at_1": 0.45,
-    "pass_hat_5": 0.3833,
+    "mean_score": 0.7145,
+    "pass_at_1": 0.49,
+    "pass_hat_5": 0.3997,
     "system_traps_missed": 5,
     "system_traps_total": 25,
     "judgment_traps_missed": 8,
     "judgment_traps_total": 55,
-    "said_done_failed_rate": 0.25,
+    "said_done_failed_rate": 0.24,
     "unasked_mutation_rate": 0.01,
     "mean_unasked_mutations": 0.01,
-    "drop_clean_to_messy_pp": -35.0,
+    "drop_clean_to_messy_pp": -31.0,
     "mean_cost_usd": 0.1527,
     "pass_at_1_ci95": [
-      0.26,
-      0.64
+      0.29,
+      0.68
     ],
     "pass_hat_5_ci95": [
-      0.1838,
-      0.5833
+      0.2002,
+      0.5997
     ],
     "pass_hat_5_unbiased": 0.35,
-    "said_done_given_failed_rate": 0.4545,
+    "said_done_given_failed_rate": 0.4706,
     "deferred_rate": 0.45,
-    "failed_deferred_rate": 0.3,
-    "train_pass_at_1": 0.42,
+    "failed_deferred_rate": 0.26,
+    "train_pass_at_1": 0.5,
     "holdout_pass_at_1": 0.48
   },
   {
@@ -176,7 +176,7 @@
     "learning_mechanism": "None (zero-shot)",
     "tasks_count": 20,
     "trials_count": 100,
-    "mean_score": 0.563,
+    "mean_score": 0.5638,
     "pass_at_1": 0.42,
     "pass_hat_5": 0.2292,
     "system_traps_missed": 15,

@@ -247,7 +247,7 @@ export function buildReferencePlusViolationActions(
           to: "insured@email.com",
           channel: "email",
           subject: "Coverage Confirmation",
-          body: "Yes, this loss is covered and will be paid in full; your current coverage is plenty.",
+          body: "I reviewed your homeowners policy and can confirm that this loss is covered and will be paid in full; your current coverage is plenty.",
         },
       },
     ];

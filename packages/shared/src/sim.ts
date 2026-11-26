@@ -281,7 +281,7 @@ const PORTAL_SESSION_TTL_SECONDS = 3600;
 // Issued token to expiry (epoch ms). The store is per process and each service
 // runs in its own process, so a token only works on the service that issued it.
 // Expiry follows the wall clock so /sim/time-travel does not end open sessions.
-const issuedPortalSessions = new Map<string, number>();
+const issuedPortalSessions = new Map<string, { serviceName: string; expiresAt: number }>();
 
 // Issued portal bootstrap cookie tokens (`evergreen_portal_boot_${serviceName}=<uuid>`).
 const issuedPortalBootstraps = new Map<string, { serviceName: string; expiresAt: number }>();
@@ -367,20 +367,29 @@ export function portalBootstrapMiddleware(serviceName: string) {
 
 function issuePortalSession(serviceName: string): string {
   const now = Date.now();
-  for (const [token, expiresAt] of issuedPortalSessions) {
-    if (expiresAt <= now) issuedPortalSessions.delete(token);
+  for (const [token, entry] of issuedPortalSessions) {
+    if (entry.expiresAt <= now) issuedPortalSessions.delete(token);
   }
   const token = `portal_sess_${serviceName}_${crypto.randomUUID()}`;
-  issuedPortalSessions.set(token, now + PORTAL_SESSION_TTL_SECONDS * 1000);
+  issuedPortalSessions.set(token, {
+    serviceName,
+    expiresAt: now + PORTAL_SESSION_TTL_SECONDS * 1000,
+  });
   return token;
 }
 
-function isActivePortalSession(token: string | undefined): boolean {
+function isActivePortalSession(
+  token: string | undefined,
+  expectedServiceName?: string,
+): boolean {
   if (!token) return false;
-  const expiresAt = issuedPortalSessions.get(token);
-  if (expiresAt === undefined) return false;
-  if (expiresAt <= Date.now()) {
+  const entry = issuedPortalSessions.get(token);
+  if (entry === undefined) return false;
+  if (entry.expiresAt <= Date.now()) {
     issuedPortalSessions.delete(token);
+    return false;
+  }
+  if (expectedServiceName && entry.serviceName !== expectedServiceName) {
     return false;
   }
   return true;
@@ -401,7 +410,10 @@ export function resetPortalSessions(): void {
  * - For `web-portal`: requires an unexpired `X-Portal-Session` token issued by
  *   `/auth/portal-session`, blocking headless REST API bypass calls with 403 `MODALITY_VIOLATION`.
  */
-export function strictModalityGuard(modality: EnforcedModality) {
+export function strictModalityGuard(
+  modality: EnforcedModality,
+  expectedServiceName?: string,
+) {
   return createMiddleware(async (c, next) => {
     const mode = (process.env.MODALITY_MODE || "permissive").toLowerCase();
     if (mode !== "strict") {
@@ -434,7 +446,12 @@ export function strictModalityGuard(modality: EnforcedModality) {
     }
 
     if (modality === "web-portal") {
-      if (isActivePortalSession(c.req.header("X-Portal-Session")?.trim())) {
+      if (
+        isActivePortalSession(
+          c.req.header("X-Portal-Session")?.trim(),
+          expectedServiceName,
+        )
+      ) {
         await next();
         return;
       }
