@@ -7,10 +7,10 @@
 Use `bun run showcase` for zero-Docker local execution of all 8 services (`:3000`–`:3007`) and the Executive Workbench (`http://localhost:3000/`), or `docker compose` for containerized execution:
 
 ```bash
-# Canonical single-command runner (runs showcase:check, shared, 8 services in parallel, eval, contract, integration, conformance, and pytest; from the parent workspace, use `gate test insurance-agency [subtarget]`):
+# Canonical single-command runner (runs ast-grep, check_docs_and_specs, showcase:check, typecheck, shared, 8 services in parallel, eval, contract, integration, conformance, validate-harness, and pytest; from the parent workspace, use `gate test insurance-agency [subtarget]`):
 scripts/gate.sh
 
-# Fast targeted subtargets (~0.5s–1.5s; conformance ~2.5m):
+# Fast targeted subtargets (~0.5s–1.5s; validate-harness ~25s; conformance ~2.5m):
 scripts/gate.sh claims               # single service: ams|rater|crm|ecm|comm|carrier-summit|carrier-coastal|claims
 scripts/gate.sh eval                 # eval/__tests__/ + eval/*/__tests__/
 scripts/gate.sh integration          # tests/integration/*.test.ts
@@ -45,7 +45,7 @@ SEED_MODE=clean docker compose up                # clean (no adversarial data)
 4. a 1-token call to each provider succeeds (Vertex Model Garden access; pass `--project` if Claude runs on a separate GCP project)
 5. custom harnesses pass `scenario_id` on `POST /sim/reset` so multi-turn customer simulator rules on shared seed clients (`CLI-001/002/003/018`) do not fire in single-turn tasks
 
-Fix everything the pilot surfaces in one pass, then run the production sweep once as-is. After any multi-batch sweep, verify every `.eval` header has `status == "success"` (`20/20` scenarios per arm) before writing `summary.md` and `replay-manifest.json`, because `run_baseline.py` skips `status == "error"` batches (e.g. transient Vertex MaaS `choices=None` responses) when printing its table.
+Fix everything the pilot surfaces in one pass, then run the production sweep once as-is. `run_baseline.py` retries transient failed batches (including Vertex MaaS `choices=None` errors) before raising; after any multi-batch sweep, verify every `.eval` header has `status == "success"` (`20/20` scenarios per arm) before writing `summary.md` and `replay-manifest.json`, because `summarize_inspect.py` skips non-`success` headers when printing its table.
 
 **Sweep cost, archival, and cleanup:** state the expected cost before launching, using `summarize_inspect.py` rates (calibrated against the billing export; at list price about $0.48 per trial for `gemini-3.8-flash`, $0.22–$0.26 for `gemini-4-hydrogen` on 20-workflow sweeps [$0.15 on `DT`], $0.15 for `claude-sonnet-5-5`, $0.04 for `DeepSeek-V4.1-Flash`, and $0.013 for `gpt-oss-120b`; `gemini-3.8-flash` gets a 50% credit). Never leave paid Inspect `.eval` logs solely in `/tmp/`: persist every completed run into `eval/results/<run>/` (`.eval` logs, `summary.md`, `summary-report.json`, and `replay-manifest.json` in git) and sync its gitignored `artifacts/` bundles to `gs://btvaroska/insurance-agency/results/<run>/artifacts/` before wrapping up. Check actual spend afterwards with `bq` against the billing export (it lags 3 to 5 hours). After cancelling or finishing a sweep, kill its stacks before relaunching (with `BypassSandbox: true`: `pgrep -f "[r]un-showcase.ts --strict"` and `pgrep -f "[i]nsurance-agency/services/.*/src/index.ts"`), because the runner attaches to any stack already listening on `3100+`.
 

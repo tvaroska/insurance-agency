@@ -7,8 +7,15 @@ cd "${REPO_ROOT}"
 
 export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${PATH}"
 
-if [[ -f "specs/ast.rules.yaml" ]] && command -v ast-grep >/dev/null 2>&1; then
-  ast-grep scan --rule specs/ast.rules.yaml
+if [[ -f "specs/ast.rules.yaml" ]]; then
+  if command -v ast-grep >/dev/null 2>&1; then
+    ast-grep scan --rule specs/ast.rules.yaml
+  elif [[ "${ALLOW_MISSING_AST_GREP:-0}" == "1" ]]; then
+    echo "WARN: ast-grep not found; skipping specs/ast.rules.yaml (ALLOW_MISSING_AST_GREP=1)." >&2
+  else
+    echo "ERROR: ast-grep not found in PATH (set ALLOW_MISSING_AST_GREP=1 to opt out)." >&2
+    exit 1
+  fi
 fi
 
 python3 scripts/check_docs_and_specs.py
@@ -19,7 +26,7 @@ if ! command -v bun >/dev/null 2>&1; then
 fi
 
 if [[ ! -d "node_modules" ]]; then
-  bun install
+  bun install --frozen-lockfile
 fi
 if [[ ! -d "services/ams/src/generated/prisma" ]]; then
   bun run db:generate
@@ -45,8 +52,14 @@ if [[ $# -eq 0 ]]; then
   bun test tests/*.test.ts
   bun test tests/integration/*.test.ts
   bun test tests/conformance
+  bun eval/validate-harness.ts
   if [[ -x "${HOME}/.venvs/evergreen-inspect/bin/pytest" ]]; then
     PYTHONDONTWRITEBYTECODE=1 "${HOME}/.venvs/evergreen-inspect/bin/pytest" -p no:cacheprovider eval/inspect/tests
+  elif [[ "${ALLOW_MISSING_PYTEST_VENV:-0}" == "1" ]]; then
+    echo "WARN: ${HOME}/.venvs/evergreen-inspect/bin/pytest not found; skipping pytest (ALLOW_MISSING_PYTEST_VENV=1)." >&2
+  else
+    echo "ERROR: ${HOME}/.venvs/evergreen-inspect/bin/pytest not found (set ALLOW_MISSING_PYTEST_VENV=1 to opt out)." >&2
+    exit 1
   fi
   exit 0
 fi
