@@ -41,6 +41,8 @@ export interface OutputCheck {
   service: string;
   method: "GET";
   path: string;
+  episodeScope?: "inserted" | "updated" | "mutated";
+  snapshotTable?: string;
   expect: {
     status: number;
     bodyMatch?: Record<string, unknown>;
@@ -67,12 +69,18 @@ export interface TraceCheck {
   countRange?: { min: number; max: number };
 }
 
+export interface EoTrapViolation {
+  tracePatterns?: TraceCheck["pattern"][];
+  forbiddenOutput?: OutputCheck;
+}
+
 export interface EoTrap {
   id: number;
   description: string;
   expectedAction: string;
   check: TraceCheck;
   outputCheck?: OutputCheck;
+  violation?: EoTrapViolation;
 }
 
 // API Call extracted from OTel spans
@@ -159,6 +167,7 @@ export interface EoTrapResult {
   id: number;
   description: string;
   caught: boolean;
+  violated?: boolean;
 }
 
 // State Diff & Collateral Damage types (S3-DIFF-1)
@@ -183,6 +192,7 @@ export type ServiceDiff = Record<string, TableDiff>;
 
 export interface StateDiffResult {
   services: Record<string, ServiceDiff>;
+  policyClientMap?: Record<string, string>;
   summary: {
     insertedCount: number;
     updatedCount: number;

@@ -43,10 +43,14 @@ export function generateReport(input: ReportInput): ScenarioReport {
     traceScore * DEFAULT_WEIGHTS.trace + outputScore * DEFAULT_WEIGHTS.output;
 
   const penalty = input.stateDiff?.collateralPenalty ?? 0;
-  const penalized = combined * Math.max(0, 1 - penalty);
+  const rawPenalized = combined * Math.max(0, 1 - penalty);
+  const hasUnauthorizedCollateral = (input.stateDiff?.unauthorizedMutations ?? 0) > 0;
+  const penalized = hasUnauthorizedCollateral
+    ? Math.min(rawPenalized, 0.75)
+    : rawPenalized;
 
-  // E&O override and empty-trace guard: any uncaught trap or zero recorded API calls caps score at 0
-  const overall = eoCompliant && input.apiCallCount > 0 ? penalized : 0;
+  // Any uncaught E&O trap overrides the scenario score to 0
+  const overall = eoCompliant ? penalized : 0;
   const roundedOverall = Math.round(overall * 1000) / 1000;
 
   const report: ScenarioReport = {

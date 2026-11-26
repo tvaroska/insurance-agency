@@ -1,5 +1,6 @@
-import type { OutputCheck, OutputScore } from "../types";
+import type { GymSnapshot, OutputCheck, OutputScore, StateDiffResult } from "../types";
 import { PORT_SERVICE_MAP } from "../types";
+import { diffSnapshots, PRIMARY_KEY_CANDIDATES } from "./state-diff";
 
 // ── Auth & Scorer Headers ───────────────────────────────────────────
 
@@ -16,6 +17,7 @@ export function scorerHeaders(
 
 interface TokenCache {
   baseUrl: string;
+  fetchRef: typeof fetch;
   token: string;
   expiresAt: number;
 }
@@ -26,6 +28,7 @@ async function acquireToken(baseUrl: string): Promise<string> {
   if (
     cachedToken &&
     cachedToken.baseUrl === baseUrl &&
+    cachedToken.fetchRef === globalThis.fetch &&
     cachedToken.expiresAt > Date.now()
   ) {
     return cachedToken.token;
@@ -50,6 +53,7 @@ async function acquireToken(baseUrl: string): Promise<string> {
   const data = (await res.json()) as { access_token: string; expires_in: number };
   cachedToken = {
     baseUrl,
+    fetchRef: globalThis.fetch,
     token: data.access_token,
     expiresAt: Date.now() + (data.expires_in - 30) * 1000,
   };
@@ -234,12 +238,146 @@ export function evaluateBodyForbiddenRegex(
 
 // ── Output evaluator ────────────────────────────────────────────────
 
+export interface OutputSnapshotContext {
+  snapshotBefore?: GymSnapshot;
+  snapshotAfter?: GymSnapshot;
+}
+
+const SNAPSHOT_TABLE_PK_MAP: Record<string, string> = {
+  clients: "id",
+  policies: "policy_id",
+  endorsements: "endorsement_id",
+  commissions: "commission_id",
+  escalations: "escalation_id",
+  tasks: "id",
+  quote_requests: "request_id",
+  carrier_quotes: "quote_id",
+  leads: "lead_id",
+  campaign_enrollments: "enrollment_id",
+  documents: "document_id",
+  envelopes: "envelope_id",
+  messages: "message_id",
+  quotes: "quote_id",
+  claims: "claim_id",
+};
+
+function resolveSnapshotTable(service: string, path: string, explicitTable?: string): string | undefined {
+  if (explicitTable) return explicitTable;
+  const pathname = path.split("?")[0];
+  if (service === "ams") {
+    if (pathname.startsWith("/clients")) return "clients";
+    if (/^\/policies\/[^/]+\/endorsements$/.test(pathname)) return "endorsements";
+    if (pathname.startsWith("/policies")) return "policies";
+    if (pathname.startsWith("/tasks")) return "tasks";
+    if (pathname.startsWith("/escalations")) return "escalations";
+    if (pathname.startsWith("/accounting/commissions")) return "commissions";
+  }
+  if (service === "rater") {
+    if (/^\/quotes\/[^/]+\/results$/.test(pathname)) return "carrier_quotes";
+    if (pathname.startsWith("/quotes")) return "quote_requests";
+  }
+  if (service === "crm") {
+    if (pathname.startsWith("/leads")) return "leads";
+    if (pathname.startsWith("/campaigns")) return "campaign_enrollments";
+  }
+  if (service === "ecm") {
+    if (pathname.startsWith("/documents")) return "documents";
+    if (pathname.startsWith("/envelopes")) return "envelopes";
+  }
+  if (service === "comm" && pathname.startsWith("/messages")) return "messages";
+  if ((service === "summit-fire" || service === "coastal-star") && pathname.includes("/")) return "quotes";
+  if (service === "claims" && pathname.startsWith("/claims")) return "claims";
+  return undefined;
+}
+
+function extractRawRowId(row: Record<string, unknown>, tableName: string): string | undefined {
+  const preferred = SNAPSHOT_TABLE_PK_MAP[tableName];
+  if (preferred) {
+    const val = row[preferred];
+    if (val !== undefined && val !== null && val !== "") return String(val);
+  }
+  for (const key of PRIMARY_KEY_CANDIDATES) {
+    const val = row[key];
+    if (val !== undefined && val !== null && val !== "") return String(val);
+  }
+  return undefined;
+}
+
+function hasSnapshotTable(
+  snapshotBefore: GymSnapshot | undefined,
+  snapshotAfter: GymSnapshot | undefined,
+  service: string,
+  table: string,
+): boolean {
+  return (
+    Array.isArray(snapshotBefore?.[service]?.[table]) ||
+    Array.isArray(snapshotAfter?.[service]?.[table])
+  );
+}
+
+function collectEpisodeRowIds(
+  diff: StateDiffResult,
+  service: string,
+  table: string,
+  scope: "inserted" | "updated" | "mutated",
+): Set<string> {
+  const tableDiff = diff.services[service]?.[table];
+  const ids = new Set<string>();
+  if (!tableDiff) return ids;
+  if (scope === "inserted" || scope === "mutated") {
+    for (const row of tableDiff.inserted) {
+      const id = extractRawRowId(row, table);
+      if (id) ids.add(id);
+    }
+  }
+  if (scope === "updated" || scope === "mutated") {
+    for (const upd of tableDiff.updated) {
+      const id = extractRawRowId(upd.after, table);
+      if (id) ids.add(id);
+    }
+  }
+  return ids;
+}
+
+function filterBodyToEpisodeIds(
+  body: unknown,
+  table: string,
+  allowedIds: Set<string>,
+): { filteredBody: unknown; singleRecordMissing: boolean } {
+  const matchesRow = (item: unknown): boolean => {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) return false;
+    const id = extractRawRowId(item as Record<string, unknown>, table);
+    return id !== undefined && allowedIds.has(id);
+  };
+  if (Array.isArray(body)) {
+    return { filteredBody: body.filter(matchesRow), singleRecordMissing: false };
+  }
+  if (typeof body === "object" && body !== null) {
+    const obj = body as Record<string, unknown>;
+    if (Array.isArray(obj.data)) {
+      return {
+        filteredBody: { ...obj, data: obj.data.filter(matchesRow) },
+        singleRecordMissing: false,
+      };
+    }
+    if (!matchesRow(obj)) {
+      return { filteredBody: null, singleRecordMissing: true };
+    }
+  }
+  return { filteredBody: body, singleRecordMissing: false };
+}
+
 export async function evaluateOutput(
   checks: OutputCheck[],
   baseUrls?: Record<string, string>,
+  snapshotContext?: OutputSnapshotContext,
 ): Promise<OutputScore[]> {
   const urls = baseUrls ?? defaultBaseUrls();
   const scores: OutputScore[] = [];
+  const episodeDiff =
+    snapshotContext?.snapshotBefore && snapshotContext?.snapshotAfter
+      ? diffSnapshots(snapshotContext.snapshotBefore, snapshotContext.snapshotAfter)
+      : undefined;
 
   // Acquire token from the first available service
   const firstUrl = Object.values(urls)[0];
@@ -259,24 +397,88 @@ export async function evaluateOutput(
     }
 
     try {
-      const res = await fetch(`${serviceUrl}/v1${check.path}`, {
-        headers: scorerHeaders({
-          Authorization: `Bearer ${token}`,
-        }),
-      });
+      let resStatus = 200;
+      let rawBody: unknown;
+
+      if (check.snapshotTable) {
+        if (episodeDiff) {
+          if (
+            hasSnapshotTable(
+              snapshotContext?.snapshotBefore,
+              snapshotContext?.snapshotAfter,
+              check.service,
+              check.snapshotTable,
+            )
+          ) {
+            const tableDiff = episodeDiff.services[check.service]?.[check.snapshotTable];
+            const rows =
+              check.episodeScope === "inserted"
+                ? (tableDiff?.inserted ?? [])
+                : check.episodeScope === "updated"
+                  ? (tableDiff?.updated.map((u) => u.after) ?? [])
+                  : check.episodeScope === "mutated"
+                    ? [...(tableDiff?.inserted ?? []), ...(tableDiff?.updated.map((u) => u.after) ?? [])]
+                    : (snapshotContext?.snapshotAfter?.[check.service]?.[check.snapshotTable] ?? []);
+            rawBody = { data: rows };
+          } else {
+            rawBody = { data: [] };
+          }
+        } else {
+          const snapRes = await fetch(`${serviceUrl}/sim/snapshot`, {
+            headers: scorerHeaders(),
+          });
+          resStatus = snapRes.status;
+          const snapJson = (await snapRes.json()) as { tables?: Record<string, unknown[]> };
+          rawBody = { data: snapJson.tables?.[check.snapshotTable] ?? [] };
+        }
+      } else {
+        const res = await fetch(`${serviceUrl}/v1${check.path}`, {
+          headers: scorerHeaders({
+            Authorization: `Bearer ${token}`,
+          }),
+        });
+        resStatus = res.status;
+        rawBody = await res.json();
+      }
 
       // Status check
-      if (res.status !== check.expect.status) {
+      if (resStatus !== check.expect.status) {
         scores.push({
           name: check.name,
           passed: false,
           weight: check.weight,
-          detail: `Expected status ${check.expect.status}, got ${res.status}`,
+          detail: `Expected status ${check.expect.status}, got ${resStatus}`,
         });
         continue;
       }
 
-      const body = await res.json();
+      let body = rawBody;
+      if (check.episodeScope && !check.snapshotTable && episodeDiff) {
+        const snapTable = resolveSnapshotTable(check.service, check.path);
+        const tableAvailable = Boolean(
+          snapTable &&
+            hasSnapshotTable(
+              snapshotContext?.snapshotBefore,
+              snapshotContext?.snapshotAfter,
+              check.service,
+              snapTable,
+            ),
+        );
+        const allowedIds = tableAvailable
+          ? collectEpisodeRowIds(episodeDiff, check.service, snapTable!, check.episodeScope)
+          : new Set<string>();
+        const filtered = filterBodyToEpisodeIds(rawBody, snapTable ?? "", allowedIds);
+        if (filtered.singleRecordMissing) {
+          scores.push({
+            name: check.name,
+            passed: false,
+            weight: check.weight,
+            detail: `Record was not ${check.episodeScope} during this episode`,
+          });
+          continue;
+        }
+        body = filtered.filteredBody;
+      }
 
       // Array length checks
       if (check.expect.arrayMinLength !== undefined || check.expect.arrayMaxLength !== undefined) {

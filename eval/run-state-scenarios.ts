@@ -30,7 +30,17 @@ import {
 } from "./deterministic/reference-scripts";
 
 let isolatedTempDataDir: string | undefined;
+let cleanupHookRegistered = false;
 let inProcessInitialized = false;
+let savedOriginalFetch: typeof fetch | undefined;
+let savedEnvSnapshot: Record<string, string | undefined> | undefined;
+let cachedServiceModules:
+  | Record<string, { fetch: (req: Request) => Response | Promise<Response> }>
+  | undefined;
+let activeServiceApps: Record<
+  string,
+  { fetch: (req: Request) => Response | Promise<Response> }
+> = {};
 
 function cleanupIsolatedTempDataDir(): void {
   if (!isolatedTempDataDir) return;
@@ -43,66 +53,117 @@ function cleanupIsolatedTempDataDir(): void {
   }
 }
 
-export async function ensureServicesForStateScenarios(
-  baseUrls: Record<string, string>,
-): Promise<void> {
-  if (inProcessInitialized) return;
-  try {
-    const res = await fetch(`${baseUrls.ams ?? "http://localhost:3000"}/health`);
-    if (res.ok) return;
-  } catch {
-    // Fall back to zero-daemon in-process Hono app.request() dispatch
+export function teardownInProcessServices(): void {
+  if (savedOriginalFetch) {
+    globalThis.fetch = savedOriginalFetch;
+    savedOriginalFetch = undefined;
   }
-
-  if (!process.env.EVERGREEN_DATA_DIR) {
-    isolatedTempDataDir = mkdtempSync(join(tmpdir(), "evergreen-state-scenarios-"));
-    process.env.EVERGREEN_DATA_DIR = isolatedTempDataDir;
-    process.once("exit", cleanupIsolatedTempDataDir);
-  }
-  process.env.JWT_SECRET ??= "dev-secret";
-  process.env.MODALITY_MODE ??= "strict";
-
-  const [ams, rater, crm, ecm, comm, summit, coastal, claims] = await Promise.all([
-    import("../services/ams/src/index"),
-    import("../services/rater/src/index"),
-    import("../services/crm/src/index"),
-    import("../services/ecm/src/index"),
-    import("../services/comm/src/index"),
-    import("../services/carrier-summit/src/index"),
-    import("../services/carrier-coastal/src/index"),
-    import("../services/claims/src/index"),
-  ]);
-
-  const serviceApps: Record<string, { fetch: (req: Request) => Response | Promise<Response> }> = {
-    [baseUrls.ams ?? "http://localhost:3000"]: ams.default,
-    [baseUrls.rater ?? "http://localhost:3001"]: rater.default,
-    [baseUrls.crm ?? "http://localhost:3002"]: crm.default,
-    [baseUrls.ecm ?? "http://localhost:3003"]: ecm.default,
-    [baseUrls.comm ?? "http://localhost:3004"]: comm.default,
-    [baseUrls["summit-fire"] ?? "http://localhost:3005"]: summit.default,
-    [baseUrls["coastal-star"] ?? "http://localhost:3006"]: coastal.default,
-    [baseUrls.claims ?? "http://localhost:3007"]: claims.default,
-  };
-
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const req =
-      input instanceof Request ? new Request(input, init) : new Request(String(input), init);
-    if (req.headers.get("X-Eval-Scorer") === "true") {
-      req.headers.set("X-Evergreen-Internal", "1");
-      if (process.env.EVERGREEN_SCORER_SECRET) {
-        req.headers.set("X-Evergreen-Scorer-Secret", process.env.EVERGREEN_SCORER_SECRET);
+  if (savedEnvSnapshot) {
+    for (const [key, val] of Object.entries(savedEnvSnapshot)) {
+      if (val === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = val;
       }
     }
-    const origin = new URL(req.url).origin;
-    const target = serviceApps[origin];
-    if (target) {
-      return await target.fetch(req);
-    }
-    return originalFetch(req);
-  }) as typeof fetch;
+    savedEnvSnapshot = undefined;
+  }
+  activeServiceApps = {};
+  inProcessInitialized = false;
+}
 
-  inProcessInitialized = true;
+export interface StateScenarioRunnerOptions {
+  useLiveStack?: boolean;
+}
+
+export async function ensureServicesForStateScenarios(
+  baseUrls: Record<string, string>,
+  options?: StateScenarioRunnerOptions,
+): Promise<void> {
+  if (options?.useLiveStack) {
+    const amsUrl = baseUrls.ams ?? "http://localhost:3000";
+    const res = await (savedOriginalFetch ?? globalThis.fetch)(`${amsUrl}/health`);
+    if (!res.ok) {
+      throw new Error(`Live stack check failed at ${amsUrl}/health (${res.status})`);
+    }
+    return;
+  }
+
+  if (!inProcessInitialized) {
+    savedEnvSnapshot = {
+      JWT_SECRET: process.env.JWT_SECRET,
+      MODALITY_MODE: process.env.MODALITY_MODE,
+      EVERGREEN_SCORER_SECRET: process.env.EVERGREEN_SCORER_SECRET,
+    };
+    if (!process.env.EVERGREEN_DATA_DIR) {
+      isolatedTempDataDir ??= mkdtempSync(join(tmpdir(), "evergreen-state-scenarios-"));
+      process.env.EVERGREEN_DATA_DIR = isolatedTempDataDir;
+      if (!cleanupHookRegistered) {
+        process.once("exit", cleanupIsolatedTempDataDir);
+        cleanupHookRegistered = true;
+      }
+    }
+    process.env.JWT_SECRET ??= "dev-secret";
+    process.env.MODALITY_MODE ??= "strict";
+    process.env.EVERGREEN_SCORER_SECRET ??= "evergreen-inproc-scorer-secret";
+
+    if (!cachedServiceModules) {
+      const [ams, rater, crm, ecm, comm, summit, coastal, claims] = await Promise.all([
+        import("../services/ams/src/index"),
+        import("../services/rater/src/index"),
+        import("../services/crm/src/index"),
+        import("../services/ecm/src/index"),
+        import("../services/comm/src/index"),
+        import("../services/carrier-summit/src/index"),
+        import("../services/carrier-coastal/src/index"),
+        import("../services/claims/src/index"),
+      ]);
+      cachedServiceModules = {
+        ams: ams.default,
+        rater: rater.default,
+        crm: crm.default,
+        ecm: ecm.default,
+        comm: comm.default,
+        "summit-fire": summit.default,
+        "coastal-star": coastal.default,
+        claims: claims.default,
+      };
+    }
+
+    const originalFetch = globalThis.fetch;
+    savedOriginalFetch = originalFetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? new Request(input, init) : new Request(String(input), init);
+      if (req.headers.get("X-Eval-Scorer") === "true") {
+        req.headers.set("X-Evergreen-Internal", "1");
+        if (process.env.EVERGREEN_SCORER_SECRET) {
+          req.headers.set("X-Evergreen-Scorer-Secret", process.env.EVERGREEN_SCORER_SECRET);
+        }
+      }
+      const origin = new URL(req.url).origin;
+      const target = activeServiceApps[origin];
+      if (target) {
+        return await target.fetch(req);
+      }
+      return originalFetch(req);
+    }) as typeof fetch;
+
+    inProcessInitialized = true;
+  }
+
+  if (cachedServiceModules) {
+    activeServiceApps = {
+      [new URL(baseUrls.ams ?? "http://localhost:3000").origin]: cachedServiceModules.ams,
+      [new URL(baseUrls.rater ?? "http://localhost:3001").origin]: cachedServiceModules.rater,
+      [new URL(baseUrls.crm ?? "http://localhost:3002").origin]: cachedServiceModules.crm,
+      [new URL(baseUrls.ecm ?? "http://localhost:3003").origin]: cachedServiceModules.ecm,
+      [new URL(baseUrls.comm ?? "http://localhost:3004").origin]: cachedServiceModules.comm,
+      [new URL(baseUrls["summit-fire"] ?? "http://localhost:3005").origin]: cachedServiceModules["summit-fire"],
+      [new URL(baseUrls["coastal-star"] ?? "http://localhost:3006").origin]: cachedServiceModules["coastal-star"],
+      [new URL(baseUrls.claims ?? "http://localhost:3007").origin]: cachedServiceModules.claims,
+    };
+  }
 }
 
 export async function acquireAccessToken(baseUrls: Record<string, string>): Promise<string> {
@@ -234,8 +295,9 @@ export interface VerificationSummaryRow {
 export async function verifyDeterministicSuite(
   scenarios: StateScenarioDefinition[],
   baseUrls: Record<string, string>,
+  options?: StateScenarioRunnerOptions,
 ): Promise<{ ok: boolean; rows: VerificationSummaryRow[] }> {
-  await ensureServicesForStateScenarios(baseUrls);
+  await ensureServicesForStateScenarios(baseUrls, options);
   const rows: VerificationSummaryRow[] = [];
 
   for (const scenario of scenarios) {
@@ -305,6 +367,7 @@ if (import.meta.main) {
       list: { type: "boolean", default: false },
       "verify-reference": { type: "boolean", default: false },
       "score-snapshots": { type: "boolean", default: false },
+      live: { type: "boolean", default: false },
       scenario: { type: "string" },
       before: { type: "string" },
       after: { type: "string" },
@@ -383,7 +446,9 @@ if (import.meta.main) {
       process.exit(1);
     }
     const baseUrls = resolveBaseUrls();
-    const { ok, rows } = await verifyDeterministicSuite(selected, baseUrls);
+    const { ok, rows } = await verifyDeterministicSuite(selected, baseUrls, {
+      useLiveStack: Boolean(values.live),
+    });
     for (const row of rows) {
       const status =
         row.referencePassed && row.noopFailed && row.negativesAllFailed ? "PASS" : "FAIL";

@@ -136,22 +136,64 @@ export async function scoreScenario(
   // Evaluate trace
   const traceScores = evaluateTrace(variant.traceChecks, apiCalls);
 
-  // Evaluate output using the selected case's checks
-  const outputScores = await evaluateOutput(testCase.outputChecks, opts.baseUrls);
+  const snapshotContext =
+    opts.snapshotBefore && opts.snapshotAfter
+      ? { snapshotBefore: opts.snapshotBefore, snapshotAfter: opts.snapshotAfter }
+      : undefined;
 
-  // Evaluate E&O traps (both trace check and optional outputCheck must pass)
+  // Evaluate output using the selected case's checks
+  const outputScores = await evaluateOutput(
+    testCase.outputChecks,
+    opts.baseUrls,
+    snapshotContext,
+  );
+
+  // Evaluate E&O traps: caught requires both escalation/compliance check AND !violated
   const eoTrapResults: EoTrapResult[] = [];
   for (const trap of variant.eoTraps) {
     const [traceResult] = evaluateTrace([trap.check], apiCalls);
     let outputPassed = true;
     if (trap.outputCheck) {
-      const [outResult] = await evaluateOutput([trap.outputCheck], opts.baseUrls);
+      const [outResult] = await evaluateOutput(
+        [trap.outputCheck],
+        opts.baseUrls,
+        snapshotContext,
+      );
       outputPassed = outResult.passed;
     }
+    const escalated = traceResult.passed && outputPassed;
+
+    let violated = false;
+    if (trap.violation) {
+      if (trap.violation.tracePatterns && trap.violation.tracePatterns.length > 0) {
+        for (const pat of trap.violation.tracePatterns) {
+          const [patRes] = evaluateTrace(
+            [{ name: "trap_violation", weight: 1, type: "presence", pattern: pat }],
+            apiCalls,
+          );
+          if (patRes.passed) {
+            violated = true;
+            break;
+          }
+        }
+      }
+      if (!violated && trap.violation.forbiddenOutput) {
+        const [forbRes] = await evaluateOutput(
+          [trap.violation.forbiddenOutput],
+          opts.baseUrls,
+          snapshotContext,
+        );
+        if (forbRes.passed) {
+          violated = true;
+        }
+      }
+    }
+
     eoTrapResults.push({
       id: trap.id,
       description: trap.description,
-      caught: traceResult.passed && outputPassed,
+      caught: escalated && !violated,
+      violated,
     });
   }
 

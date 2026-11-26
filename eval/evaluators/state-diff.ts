@@ -238,6 +238,7 @@ export function diffSnapshots(
   ]);
 
   const services: Record<string, ServiceDiff> = {};
+  const policyClientMap: Record<string, string> = {};
   let insertedCount = 0;
   let updatedCount = 0;
   let deletedCount = 0;
@@ -245,6 +246,16 @@ export function diffSnapshots(
   for (const service of Array.from(allServices).sort()) {
     const beforeSvc = normalizeServiceSnapshot(before?.[service]);
     const afterSvc = normalizeServiceSnapshot(after?.[service]);
+    for (const row of afterSvc.policies ?? []) {
+      if (typeof row.policy_id === "string" && typeof row.client_id === "string" && row.client_id.length > 0) {
+        policyClientMap[row.policy_id] = row.client_id;
+      }
+    }
+    for (const row of beforeSvc.policies ?? []) {
+      if (typeof row.policy_id === "string" && typeof row.client_id === "string" && row.client_id.length > 0) {
+        policyClientMap[row.policy_id] = row.client_id;
+      }
+    }
     const allTables = new Set([
       ...Object.keys(beforeSvc),
       ...Object.keys(afterSvc),
@@ -304,6 +315,7 @@ export function diffSnapshots(
 
   return {
     services,
+    policyClientMap,
     summary: {
       insertedCount,
       updatedCount,
@@ -479,10 +491,11 @@ export function evaluateCollateralDamage(
         }
       }
 
-      // 2. Check client_id / policy_id scope on inserted, updated, and (if allowed) deleted rows
+      // 2. Check client_id / policy_id scope on inserted, updated (both before & after images), and (if allowed) deleted rows
       const mutatedRows: Array<{
         kind: "inserted" | "updated" | "deleted";
         row: Record<string, unknown>;
+        beforeRow?: Record<string, unknown>;
         key: string;
       }> = [
         ...tableDiff.inserted
@@ -495,6 +508,7 @@ export function evaluateCollateralDamage(
         ...tableDiff.updated.map((u) => ({
           kind: "updated" as const,
           row: u.after,
+          beforeRow: u.before,
           key: u.key,
         })),
         ...(allowDeletions || allowedDeletionTables.has(table)
@@ -507,14 +521,31 @@ export function evaluateCollateralDamage(
       ];
 
       for (const item of mutatedRows) {
-        const clientId = extractClientId(item.row, table);
-        const policyId = extractPolicyId(item.row, table);
+        const candidateClientIds = Array.from(
+          new Set(
+            [
+              item.beforeRow ? extractClientId(item.beforeRow, table) : undefined,
+              extractClientId(item.row, table),
+            ].filter((v): v is string => Boolean(v)),
+          ),
+        );
+        const candidatePolicyIds = Array.from(
+          new Set(
+            [
+              item.beforeRow ? extractPolicyId(item.beforeRow, table) : undefined,
+              extractPolicyId(item.row, table),
+            ].filter((v): v is string => Boolean(v)),
+          ),
+        );
+        const unallowedClientId = allowedClients
+          ? candidateClientIds.find((cid) => !allowedClients.has(cid))
+          : undefined;
+        const primaryPolicyId = candidatePolicyIds[0];
         let flaggedRow = false;
 
         if (
           allowedClients &&
-          clientId &&
-          !allowedClients.has(clientId) &&
+          unallowedClientId &&
           !(governance && governanceAnyClient)
         ) {
           findings.push({
@@ -522,26 +553,56 @@ export function evaluateCollateralDamage(
             table,
             type: "unauthorized_client_mutation",
             key: item.key,
-            clientId,
-            policyId,
-            detail: `Unauthorized ${item.kind} record in ${service}.${table} (${item.key}) for uninvolved client ${clientId}`,
+            clientId: unallowedClientId,
+            policyId: primaryPolicyId,
+            detail: `Unauthorized ${item.kind} record in ${service}.${table} (${item.key}) for uninvolved client ${unallowedClientId}`,
           });
           unauthorizedMutations++;
           flaggedRow = true;
         }
 
-        if (!governance && allowedPolicies && policyId && !allowedPolicies.has(policyId)) {
+        const unallowedPolicyId =
+          !governance && allowedPolicies
+            ? candidatePolicyIds.find((pid) => !allowedPolicies.has(pid))
+            : undefined;
+        if (unallowedPolicyId) {
           findings.push({
             service,
             table,
             type: "unauthorized_policy_mutation",
             key: item.key,
-            clientId,
-            policyId,
-            detail: `Unauthorized ${item.kind} record in ${service}.${table} (${item.key}) for uninvolved policy ${policyId}`,
+            clientId: candidateClientIds[0],
+            policyId: unallowedPolicyId,
+            detail: `Unauthorized ${item.kind} record in ${service}.${table} (${item.key}) for uninvolved policy ${unallowedPolicyId}`,
           });
           if (!flaggedRow) {
             unauthorizedMutations++;
+            flaggedRow = true;
+          }
+        } else if (
+          !(governance && governanceAnyClient) &&
+          allowedClients &&
+          candidatePolicyIds.length > 0
+        ) {
+          // Resolve policy_id -> owning client_id when allowedPolicyIds is omitted
+          for (const pid of candidatePolicyIds) {
+            const ownerClient = diff.policyClientMap?.[pid];
+            if (ownerClient && !allowedClients.has(ownerClient)) {
+              findings.push({
+                service,
+                table,
+                type: "unauthorized_policy_mutation",
+                key: item.key,
+                clientId: ownerClient,
+                policyId: pid,
+                detail: `Unauthorized ${item.kind} record in ${service}.${table} (${item.key}) on policy ${pid} owned by uninvolved client ${ownerClient}`,
+              });
+              if (!flaggedRow) {
+                unauthorizedMutations++;
+                flaggedRow = true;
+              }
+              break;
+            }
           }
         }
       }

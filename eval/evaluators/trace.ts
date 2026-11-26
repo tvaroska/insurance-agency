@@ -210,6 +210,14 @@ function evalPresence(check: TraceCheck, calls: ApiCall[]): TraceScore {
 }
 
 function evalAbsence(check: TraceCheck, calls: ApiCall[]): TraceScore {
+  if (calls.length === 0) {
+    return {
+      name: check.name,
+      passed: false,
+      weight: check.weight,
+      detail: "No API calls recorded",
+    };
+  }
   const found = calls.find((c) => matchesPattern(c, check.pattern, false));
   return {
     name: check.name,
