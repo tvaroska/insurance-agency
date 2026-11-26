@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeAll } from "bun:test";
-import { mock } from "bun:test";
+import { describe, it, expect, beforeAll, afterAll, mock, spyOn } from "bun:test";
 import { Database } from "bun:sqlite";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
@@ -64,13 +63,34 @@ const mockPolicies = [
   },
 ];
 
-mock.module("../clients/ams-client", () => ({
-  fetchAllClients: async () => mockClients,
-  fetchClientPolicies: async (clientId: string) =>
-    mockPolicies.filter((p) => p.client_id === clientId),
-  fetchClient: async (clientId: string) =>
-    mockClients.find((c) => c.id === clientId),
-}));
+let fetchSpy: ReturnType<typeof spyOn> | undefined;
+beforeAll(() => {
+  fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (input: unknown) => {
+    const url = String(input);
+    const polMatch = url.match(/\/v1\/clients\/([^/?]+)\/policies/);
+    if (polMatch) {
+      const cid = polMatch[1];
+      return new Response(
+        JSON.stringify({ data: mockPolicies.filter((p) => p.client_id === cid) }),
+        { status: 200 },
+      );
+    }
+    const cliMatch = url.match(/\/v1\/clients\/([^/?]+)$/);
+    if (cliMatch) {
+      const found = mockClients.find((c) => c.id === cliMatch[1]);
+      return found
+        ? new Response(JSON.stringify(found), { status: 200 })
+        : new Response(JSON.stringify({ error_code: "NOT_FOUND" }), { status: 404 });
+    }
+    if (url.includes("/v1/clients")) {
+      return new Response(JSON.stringify({ data: mockClients, pagination: { has_more: false } }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ error_code: "NOT_FOUND" }), { status: 404 });
+  }) as unknown as typeof fetch);
+});
+afterAll(() => {
+  fetchSpy?.mockRestore();
+});
 
 import { resetSimRandom } from "@evergreen/shared";
 import { coiRouter, clearCoiPdfStore } from "../routes/coi";

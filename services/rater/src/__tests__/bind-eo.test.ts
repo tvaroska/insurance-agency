@@ -293,7 +293,7 @@ describe("E&O - state minimum violation", () => {
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
           policy_type: "personal_auto",
-          effective_date: "2026-04-01",
+          effective_date: "2026-11-01",
           client: {
             first_name: "Tanya",
             last_name: "Marsh",
@@ -335,5 +335,48 @@ describe("E&O - no regression on normal bind", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.bind_status).toBe("bound");
+  });
+
+  test("bind rejects a past effective_date", async () => {
+    const headers = await authHeader(["rater:quotes:bind", "rater:quotes:create"]);
+    insertSqliteRow(
+      testSqlite,
+      "quote_requests",
+      makeQuoteRequest({
+        request_id: "QR-EO-PAST",
+        client_id: "CLI-011",
+        effective_date: "2026-10-05",
+        status: "completed",
+      }),
+    );
+    insertSqliteRow(
+      testSqlite,
+      "carrier_quotes",
+      makeCarrierQuote({
+        quote_id: "QT-PAST-EFF",
+        request_id: "QR-EO-PAST",
+        premium_annual: 1200,
+        premium_monthly: 100,
+        status: "quoted",
+      }),
+    );
+
+    const rejected = await postBind("QT-PAST-EFF", validBindBody, headers);
+    expect(rejected.status).toBe(422);
+    const rejectedBody = await rejected.json();
+    expect(rejectedBody.error_code).toBe("E_EO_BACKDATING_PROHIBITED");
+
+    // Invalid calendar date on /request returns 400
+    const badDateReq = await app.request("/v1/quotes/request", {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        policy_type: "renters",
+        effective_date: "2026-13-45",
+        client: { first_name: "Carlos", last_name: "Gutierrez", address: { state: "TX" } },
+        requested_coverages: [{ coverage_type: "personal_property", limit: 30000 }],
+      }),
+    });
+    expect(badDateReq.status).toBe(400);
   });
 });

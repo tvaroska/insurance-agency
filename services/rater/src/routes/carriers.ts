@@ -48,19 +48,29 @@ const listCarriers = async (c: any) => {
     if (query.policy_type) {
       filters.push({ policy_types: { contains: query.policy_type } });
     }
-    if (query.risk_category) {
-      filters.push({ risk_categories: { contains: `"${query.risk_category}"` } });
-    }
     if (cursorWhere) filters.push(cursorWhere);
 
-    const rows = await prisma.carrier.findMany({
+    const candidateRows = await prisma.carrier.findMany({
       where: filters.length > 0 ? { AND: filters } : undefined,
       orderBy,
-      take,
+      ...(query.risk_category ? {} : { take }),
     });
 
+    const filteredRows = query.risk_category
+      ? candidateRows
+          .filter((row) => {
+            try {
+              const parsed = JSON.parse(row.risk_categories);
+              return Array.isArray(parsed) && parsed.includes(query.risk_category);
+            } catch {
+              return false;
+            }
+          })
+          .slice(0, take)
+      : candidateRows;
+
     // Parse JSON fields for response
-    const mapped = rows.map((row) => ({
+    const mapped = filteredRows.map((row) => ({
       carrier_code: row.carrier_code,
       carrier_name: row.carrier_name,
       states: JSON.parse(row.states),

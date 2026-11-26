@@ -217,7 +217,7 @@ describe("POST /v1/coastal/quotes/:quote_id/bind", () => {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify({
-        effective_date: "2026-03-15",
+        effective_date: "2026-11-15",
         payment_plan: "annual",
       }),
     });
@@ -227,9 +227,39 @@ describe("POST /v1/coastal/quotes/:quote_id/bind", () => {
     expect(body.quote_id).toBe("QT-ASSESSED-CSTL");
     expect(body.policy_id).toBeDefined();
     expect(body.bind_status).toBe("bound");
-    expect(body.effective_date).toBe("2026-03-15");
-    expect(body.expiration_date).toBe("2027-03-15");
+    expect(body.effective_date).toBe("2026-11-15");
+    expect(body.expiration_date).toBe("2027-11-15");
     expect(body.bound_at).toBeDefined();
+  });
+
+  it("rejects backdated effective_date with 422 and impossible calendar date with 400", async () => {
+    insertSqliteRow(
+      testSqlite,
+      "quotes",
+      makeQuote({
+        quote_id: "QT-BACKDATE-CSTL",
+        status: "assessed",
+        risk_score: 70,
+        risk_tier: "standard",
+        risk_factors: JSON.stringify([]),
+        assessed_at: new Date().toISOString(),
+      }),
+    );
+    const headers = await authHeader(["carrier:underwriting:write"]);
+    const backdated = await app.request("/v1/coastal/quotes/QT-BACKDATE-CSTL/bind", {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ effective_date: "2026-03-15", payment_plan: "annual" }),
+    });
+    expect(backdated.status).toBe(422);
+    expect((await backdated.json()).error_code).toBe("E_EO_BACKDATING_PROHIBITED");
+
+    const invalidCal = await app.request("/v1/coastal/quotes/QT-BACKDATE-CSTL/bind", {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ effective_date: "2026-13-45", payment_plan: "annual" }),
+    });
+    expect(invalidCal.status).toBe(400);
   });
 
   it("returns 404 for non-existent quote", async () => {
@@ -238,7 +268,7 @@ describe("POST /v1/coastal/quotes/:quote_id/bind", () => {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify({
-        effective_date: "2026-03-15",
+        effective_date: "2026-11-15",
         payment_plan: "annual",
       }),
     });
@@ -251,7 +281,7 @@ describe("POST /v1/coastal/quotes/:quote_id/bind", () => {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify({
-        effective_date: "2026-03-15",
+        effective_date: "2026-11-15",
         payment_plan: "annual",
       }),
     });
@@ -264,7 +294,7 @@ describe("POST /v1/coastal/quotes/:quote_id/bind", () => {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify({
-        effective_date: "2026-03-15",
+        effective_date: "2026-11-15",
         payment_plan: "annual",
       }),
     });

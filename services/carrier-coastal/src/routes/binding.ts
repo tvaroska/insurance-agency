@@ -5,8 +5,12 @@ import {
   conflictError,
   validationError,
   checkRequired,
+  checkCalendarDate,
   checkEnum,
   throwIfErrors,
+  getBackdatingFloor,
+  validateBackdating,
+  eoFirewallError,
   getSimulatedNow,
   nextSimulatedEpochMs,
   type AuthVariables,
@@ -26,8 +30,16 @@ bindingRouter.post(
     const quoteId = c.req.param("quote_id");
     const body = await c.req.json();
 
+    const missingEffective = checkRequired("effective_date", body.effective_date);
     throwIfErrors([
-      checkRequired("effective_date", body.effective_date),
+      missingEffective,
+      !missingEffective
+        ? checkCalendarDate(
+            "effective_date",
+            body.effective_date,
+            "effective_date must be YYYY-MM-DD.",
+          )
+        : null,
       checkEnum("payment_plan", body.payment_plan, [
         "annual",
         "monthly",
@@ -57,6 +69,18 @@ bindingRouter.post(
           message: `Quote must be assessed before binding. Current status: '${quote.status}'.`,
         },
       ]);
+    }
+
+    const backdateCheck = validateBackdating(
+      body.effective_date,
+      getBackdatingFloor(),
+    );
+    if (!backdateCheck.valid) {
+      throw eoFirewallError(
+        "E_EO_BACKDATING_PROHIBITED",
+        backdateCheck.message,
+        "effective_date",
+      );
     }
 
     const now = getSimulatedNow().toISOString();

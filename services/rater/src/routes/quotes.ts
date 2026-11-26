@@ -7,8 +7,11 @@ import {
   conflictError,
   checkRequired,
   checkFormat,
+  checkCalendarDate,
   checkEnum,
   throwIfErrors,
+  getBackdatingFloor,
+  validateBackdating,
   validateBindingAuthority,
   validateStateMinimums,
   getInternalRequestHeaders,
@@ -169,10 +172,9 @@ quotesRouter.post(
       checkRequired("policy_type", body.policy_type),
       checkEnum("policy_type", body.policy_type, POLICY_TYPES),
       checkRequired("effective_date", body.effective_date),
-      checkFormat(
+      checkCalendarDate(
         "effective_date",
         body.effective_date,
-        /^\d{4}-\d{2}-\d{2}$/,
         "effective_date must be YYYY-MM-DD.",
       ),
       checkRequired("client", body.client),
@@ -408,12 +410,18 @@ quotesRouter.post(
         "insured_signature_date",
         body.insured_signature_date,
       ),
-      checkFormat(
+      checkCalendarDate(
         "insured_signature_date",
         body.insured_signature_date,
-        /^\d{4}-\d{2}-\d{2}$/,
         "insured_signature_date must be YYYY-MM-DD.",
       ),
+      body.effective_date !== undefined
+        ? checkCalendarDate(
+            "effective_date",
+            body.effective_date,
+            "effective_date must be YYYY-MM-DD.",
+          )
+        : null,
     ]);
 
     if (body.insured_signature_collected !== true) {
@@ -484,11 +492,10 @@ quotesRouter.post(
 
     if (quoteRequest && quoteRequest.policy_type === "personal_auto") {
       const riskData = JSON.parse(quoteRequest.risk_data);
-      const stateCode =
+      const requestState: string | null =
         riskData.state ??
         riskData.address?.state ??
         riskData.garaging_state ??
-        body.state ??
         null;
       const coverages = [
         ...(Array.isArray(riskData.requested_coverages)
@@ -498,12 +505,36 @@ quotesRouter.post(
           ? JSON.parse(quote.coverages || "[]")
           : []),
       ];
-      const stateMinCheck = validateStateMinimums(stateCode, coverages);
+      let stateMinCheck = validateStateMinimums(requestState, coverages);
+      if (
+        stateMinCheck.valid &&
+        requestState === null &&
+        typeof body.state === "string" &&
+        body.state.trim() !== ""
+      ) {
+        stateMinCheck = validateStateMinimums(body.state, coverages);
+      }
       if (!stateMinCheck.valid) {
         eoRules.push({
           rule: stateMinCheck.rule,
           error_code: stateMinCheck.errorCode,
           message: stateMinCheck.message,
+        });
+      }
+    }
+
+    const effectiveDateToBind: string | null =
+      body.effective_date ?? quoteRequest?.effective_date ?? null;
+    if (effectiveDateToBind !== null) {
+      const backdateCheck = validateBackdating(
+        effectiveDateToBind,
+        getBackdatingFloor(),
+      );
+      if (!backdateCheck.valid) {
+        eoRules.push({
+          rule: backdateCheck.rule,
+          error_code: backdateCheck.errorCode,
+          message: backdateCheck.message,
         });
       }
     }
@@ -542,7 +573,11 @@ quotesRouter.post(
               "This bind request triggers E&O rules that require manager escalation.",
             details: eoRules.map((r) => ({
               field:
-                r.rule === "premium_threshold" ? "premium_annual" : "coverages",
+                r.rule === "premium_threshold"
+                  ? "premium_annual"
+                  : r.rule === "backdating"
+                    ? "effective_date"
+                    : "coverages",
               message: r.message,
               code: r.error_code ?? primaryCode,
             })),
@@ -590,27 +625,31 @@ quotesRouter.post(
       }
 
       const escData = await escRes.json();
+      const requiredReason = eoRules[0]?.rule ?? "premium_threshold";
+      const unmetRule = eoRules.find((r) => r.rule !== escData.reason);
       if (
         escData.status !== "approved" ||
         escData.client_id !== quoteRequest?.client_id ||
-        escData.reason !== "premium_threshold"
+        Boolean(unmetRule)
       ) {
+        const expectedReason = unmetRule?.rule ?? requiredReason;
+        const mismatchCode = unmetRule?.error_code ?? primaryCode;
         const reasonMsg =
           escData.status !== "approved"
             ? `Escalation ${escalationId} has status '${escData.status}', but 'approved' is required.`
             : escData.client_id !== quoteRequest?.client_id
               ? `Escalation ${escalationId} belongs to client '${escData.client_id}', not '${quoteRequest?.client_id}'.`
-              : `Escalation ${escalationId} has reason '${escData.reason}', but 'premium_threshold' is required.`;
+              : `Escalation ${escalationId} has reason '${escData.reason}', but '${expectedReason}' is required.`;
         return c.json(
           {
             error: "ESCALATION_NOT_APPROVED",
-            error_code: primaryCode,
+            error_code: mismatchCode,
             message: reasonMsg,
             details: [
               {
                 field: "escalation_id",
                 message: reasonMsg,
-                code: primaryCode,
+                code: mismatchCode,
               },
             ],
             eo_rules: eoRules,
@@ -633,7 +672,7 @@ quotesRouter.post(
     const policyId = `POL-${quote.carrier_code}-${year}-${policySeq}`;
 
     // Calculate expiration date (1 year from effective date)
-    const effectiveDate = quoteRequest?.effective_date ?? null;
+    const effectiveDate = effectiveDateToBind;
     let expirationDate: string | null = null;
     if (effectiveDate) {
       const expDate = new Date(effectiveDate);

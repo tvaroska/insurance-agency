@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeAll } from "bun:test";
-import { mock } from "bun:test";
+import { describe, it, expect, beforeAll, afterAll, mock, spyOn } from "bun:test";
 import { Database } from "bun:sqlite";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
@@ -95,32 +94,36 @@ const mockClaim = {
 let amsClientShouldFail = false;
 let claimsShouldFail = false;
 
-// Mock the global fetch to intercept cross-service calls
-const originalFetch = globalThis.fetch;
-mock.module("../clients/ams-client", () => ({
-  fetchClient: async (id: string) => {
-    if (amsClientShouldFail) throw Object.assign(new Error("AMS client lookup failed"), { status: 404 });
-    if (id === "CLI-001") return mockClient;
-    throw Object.assign(new Error("AMS client lookup failed"), { status: 404 });
-  },
-  fetchClientPolicies: async (id: string) => {
-    if (amsClientShouldFail) throw Object.assign(new Error("AMS policy lookup failed"), { status: 404 });
-    if (id === "CLI-001") return [mockAutoPolicy, mockHomePolicy];
-    return [];
-  },
-  fetchAllClients: async () => {
-    if (amsClientShouldFail) throw Object.assign(new Error("AMS client list failed"), { status: 500 });
-    return [mockClient];
-  },
-}));
-
-mock.module("../clients/claims-client", () => ({
-  fetchClaim: async (id: string) => {
-    if (claimsShouldFail) throw Object.assign(new Error("Claims lookup failed"), { status: 404 });
-    if (id === "CLM-2025-000001") return mockClaim;
-    throw Object.assign(new Error("Claims lookup failed"), { status: 404 });
-  },
-}));
+// Intercept cross-service HTTP calls via globalThis.fetch so real client modules stay unmocked
+let fetchSpy: ReturnType<typeof spyOn> | undefined;
+beforeAll(() => {
+  fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (input: unknown) => {
+    const url = String(input);
+    if (url.includes("/v1/claims/")) {
+      if (claimsShouldFail) throw new Error("Claims service unavailable");
+      if (url.endsWith("/v1/claims/CLM-2025-000001")) {
+        return new Response(JSON.stringify(mockClaim), { status: 200 });
+      }
+      return new Response(JSON.stringify({ error_code: "NOT_FOUND" }), { status: 404 });
+    }
+    if (amsClientShouldFail) {
+      return new Response(JSON.stringify({ error_code: "INTERNAL_ERROR" }), { status: 500 });
+    }
+    if (url.includes("/v1/clients/CLI-001/policies")) {
+      return new Response(JSON.stringify({ data: [mockAutoPolicy, mockHomePolicy] }), { status: 200 });
+    }
+    if (url.includes("/v1/clients/CLI-001")) {
+      return new Response(JSON.stringify(mockClient), { status: 200 });
+    }
+    if (url.includes("/v1/clients")) {
+      return new Response(JSON.stringify({ data: [mockClient], pagination: { has_more: false } }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ error_code: "NOT_FOUND" }), { status: 404 });
+  }) as unknown as typeof fetch);
+});
+afterAll(() => {
+  fetchSpy?.mockRestore();
+});
 
 import { acordRouter } from "../routes/acord";
 import { createTestApp, createTables, authHeader } from "./setup";
