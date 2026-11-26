@@ -182,11 +182,13 @@ if (import.meta.main) {
   }
 
   const jwtSecret = process.env.JWT_SECRET ?? "dev-secret";
+  const scorerSecret = process.env.EVERGREEN_SCORER_SECRET || crypto.randomUUID();
   const sharedStackEnv: Record<string, string | undefined> = {
     ...process.env,
     SEED_MODE: seedMode,
     MODALITY_MODE: modalityMode,
     JWT_SECRET: jwtSecret,
+    EVERGREEN_SCORER_SECRET: scorerSecret,
     EVERGREEN_BASE_PORT: String(basePort),
     ...(effectiveDataDir ? { EVERGREEN_DATA_DIR: effectiveDataDir } : {}),
     AMS_BASE_URL: `http://localhost:${basePort}`,

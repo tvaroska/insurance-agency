@@ -1,4 +1,5 @@
 import { HTTPException } from "hono/http-exception";
+import { isValidCalendarDate } from "./validation";
 
 export interface StateAutoMinimums {
   state: string;
@@ -95,6 +96,18 @@ export const DEFAULT_AUTO_MINIMUMS: StateAutoMinimums = {
   shorthand: "25/50/10",
 };
 
+export const ESCALATION_REASONS = [
+  "premium_threshold",
+  "state_minimum_violation",
+  "coverage_adequacy",
+  "surplus_lines",
+  "principal_review",
+  "backdating",
+  "attorney_involvement",
+  "claims_specialist",
+  "claim_specialist",
+] as const;
+
 export const BENCHMARK_SIMULATED_TODAY = "2026-10-14";
 export const PRINCIPAL_BINDING_AUTHORITY_USD = 10_000;
 
@@ -111,8 +124,42 @@ function normalizeLimitNumber(val: number): number {
   return val;
 }
 
+function parseSingleLimitPart(rawPart: string): number | undefined {
+  const trimmed = rawPart.trim();
+  if (!trimmed) return undefined;
+  const suffixMatch = trimmed.match(/(million|mil|m|thousand|k)\s*$/i);
+  const suffix = suffixMatch?.[1]?.toLowerCase();
+  const numericText = (suffixMatch ? trimmed.slice(0, suffixMatch.index) : trimmed).replace(
+    /[^0-9.-]/g,
+    "",
+  );
+  if (!numericText) return undefined;
+  const num = Number(numericText);
+  if (Number.isNaN(num) || num < 0) return undefined;
+  if (suffix === "m" || suffix === "mil" || suffix === "million") {
+    return num * 1_000_000;
+  }
+  if (suffix === "k" || suffix === "thousand") {
+    return num * 1_000;
+  }
+  return normalizeLimitNumber(num);
+}
+
+function parseScalarLimit(raw: unknown): number | undefined {
+  if (typeof raw === "number" && !Number.isNaN(raw)) {
+    return raw >= 0 ? normalizeLimitNumber(raw) : undefined;
+  }
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed.includes("/")) return undefined;
+    return parseSingleLimitPart(trimmed);
+  }
+  return undefined;
+}
+
 /**
- * Parses split-limit strings such as "30/60/25", "15000/30000", "100000/300000/50000", or "25000".
+ * Parses split-limit strings such as "30/60/25", "15000/30000", "1M/1M/1M", or "25000".
+ * Per AMS-R86 / RTR-R43, positive amounts under 1,000 are interpreted as thousands of dollars.
  */
 export function parseSplitLimits(raw: unknown): {
   perPersonBi?: number;
@@ -121,6 +168,7 @@ export function parseSplitLimits(raw: unknown): {
   singleLimit?: number;
 } {
   if (typeof raw === "number" && !Number.isNaN(raw)) {
+    if (raw < 0) return {};
     const norm = normalizeLimitNumber(raw);
     return { singleLimit: norm, perPersonBi: norm };
   }
@@ -129,9 +177,8 @@ export function parseSplitLimits(raw: unknown): {
   }
   const parts = raw
     .split("/")
-    .map((p) => Number(p.replace(/[^0-9.]/g, "")))
-    .filter((n) => !Number.isNaN(n) && n > 0)
-    .map(normalizeLimitNumber);
+    .map(parseSingleLimitPart)
+    .filter((n): n is number => n !== undefined && n >= 0);
 
   if (parts.length === 1) {
     return { singleLimit: parts[0], perPersonBi: parts[0] };
@@ -147,6 +194,64 @@ export function parseSplitLimits(raw: unknown): {
     };
   }
   return {};
+}
+
+const BODILY_INJURY_KINDS = new Set([
+  "bodily_injury",
+  "bodily_injury_liability",
+  "bi",
+  "bi_liability",
+  "bi_pd",
+  "bi_and_pd",
+  "liability",
+  "auto_liability",
+  "bodily_injury_and_property_damage",
+  "bipd",
+  "split_limit",
+  "split_limits",
+  "combined_single_limit",
+  "csl",
+]);
+
+const PROPERTY_DAMAGE_KINDS = new Set([
+  "property_damage",
+  "property_damage_liability",
+  "pd",
+  "pd_liability",
+  "auto_property_damage",
+]);
+
+const BI_SHORTCUT_KEYS = new Set([
+  "bodily_injury_limit",
+  "bodily_injury_limits",
+  "bodily_injury",
+  "bodily_injury_liability",
+  "bi_limit",
+  "bi_limits",
+  "bi",
+  "liability_limit",
+  "liability_limits",
+  "auto_liability",
+  "auto_liability_limit",
+]);
+
+const PD_SHORTCUT_KEYS = new Set([
+  "property_damage_limit",
+  "property_damage_limits",
+  "property_damage",
+  "property_damage_liability",
+  "pd_limit",
+  "pd_limits",
+  "pd",
+]);
+
+function normalizeCoverageKind(raw: unknown): string {
+  if (typeof raw !== "string") return "";
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s/-]+/g, "_")
+    .replace(/_+/g, "_");
 }
 
 export interface StateMinimumCheckResult {
@@ -169,32 +274,25 @@ export function validateStateMinimums(
   const minimums = getStateAutoMinimums(state);
   const violations: string[] = [];
 
-  const checkCoverageItem = (item: Record<string, unknown>) => {
-    const covType = String(
-      item.coverage_type ?? item.type ?? item.coverage ?? "",
-    ).toLowerCase();
+  const checkCoverageItem = (item: Record<string, unknown>, fallbackKind = ""): string => {
+    const rawKind = item.coverage_type ?? item.type ?? item.coverage;
+    const covType = normalizeCoverageKind(rawKind) || fallbackKind;
 
-    const perPerson =
-      typeof item.per_person_limit === "number"
-        ? normalizeLimitNumber(item.per_person_limit)
-        : undefined;
+    const perPerson = parseScalarLimit(item.per_person_limit ?? item.per_person);
     const perAccident =
-      typeof item.per_accident_limit === "number"
-        ? normalizeLimitNumber(item.per_accident_limit)
-        : typeof item.per_occurrence_limit === "number"
-          ? normalizeLimitNumber(item.per_occurrence_limit)
-          : undefined;
-    const parsedLimit = parseSplitLimits(item.limit ?? item.limits);
+      parseScalarLimit(item.per_accident_limit ?? item.per_accident) ??
+      parseScalarLimit(item.per_occurrence_limit ?? item.per_occurrence);
+    const explicitPd = parseScalarLimit(item.property_damage_limit);
+    const rawLimitVal = item.limit ?? item.limits ?? item.new_limit ?? item.new_limits;
+    const parsedLimit = parseSplitLimits(rawLimitVal);
 
     if (
-      covType === "bodily_injury" ||
-      covType === "liability" ||
-      covType === "bi" ||
+      BODILY_INJURY_KINDS.has(covType) ||
       (!covType && (perPerson !== undefined || parsedLimit.perAccidentBi !== undefined))
     ) {
       const biPerson = perPerson ?? parsedLimit.perPersonBi;
       const biAccident = perAccident ?? parsedLimit.perAccidentBi;
-      const pdLimit = parsedLimit.propertyDamage;
+      const pdLimit = explicitPd ?? parsedLimit.propertyDamage;
 
       if (biPerson !== undefined && biPerson < minimums.per_person_bi) {
         violations.push(
@@ -211,8 +309,9 @@ export function validateStateMinimums(
           `Property damage limit ($${pdLimit.toLocaleString()}) is below ${minimums.state} statutory minimum of $${minimums.property_damage.toLocaleString()} (${minimums.shorthand}).`,
         );
       }
-    } else if (covType === "property_damage" || covType === "pd") {
+    } else if (PROPERTY_DAMAGE_KINDS.has(covType)) {
       const pdLimit =
+        explicitPd ??
         perAccident ??
         perPerson ??
         parsedLimit.singleLimit ??
@@ -223,37 +322,78 @@ export function validateStateMinimums(
         );
       }
     }
+    return covType;
   };
 
-  if (Array.isArray(coveragesOrChanges)) {
-    for (const entry of coveragesOrChanges) {
-      if (entry && typeof entry === "object") {
-        checkCoverageItem(entry as Record<string, unknown>);
+  const visited = new Set<object>();
+  const walkNode = (node: unknown, depth: number, inheritedKind = ""): void => {
+    if (depth > 8 || node === null || node === undefined) return;
+    if (Array.isArray(node)) {
+      for (const entry of node) {
+        walkNode(entry, depth + 1, inheritedKind);
       }
+      return;
     }
-  } else if (coveragesOrChanges && typeof coveragesOrChanges === "object") {
-    const obj = coveragesOrChanges as Record<string, unknown>;
-    checkCoverageItem(obj);
-    if (obj.bodily_injury_limit !== undefined || obj.liability_limit !== undefined) {
-      checkCoverageItem({
-        type: "bodily_injury",
-        limit: obj.bodily_injury_limit ?? obj.liability_limit,
-      });
+    if (typeof node !== "object") return;
+    if (visited.has(node)) return;
+    visited.add(node);
+
+    const obj = node as Record<string, unknown>;
+    const explicitKind = normalizeCoverageKind(obj.coverage_type ?? obj.type ?? obj.coverage);
+    checkCoverageItem(obj, inheritedKind);
+
+    // Do not recurse into explicitly non-liability coverage items (e.g. collision/UM).
+    if (
+      explicitKind &&
+      !BODILY_INJURY_KINDS.has(explicitKind) &&
+      !PROPERTY_DAMAGE_KINDS.has(explicitKind)
+    ) {
+      return;
     }
-    if (obj.property_damage_limit !== undefined) {
-      checkCoverageItem({
-        type: "property_damage",
-        limit: obj.property_damage_limit,
-      });
-    }
-    if (Array.isArray(obj.coverages)) {
-      for (const entry of obj.coverages) {
-        if (entry && typeof entry === "object") {
-          checkCoverageItem(entry as Record<string, unknown>);
+
+    for (const [rawKey, val] of Object.entries(obj)) {
+      if (val === null || val === undefined) continue;
+      if (
+        rawKey === "per_person_limit" ||
+        rawKey === "per_person" ||
+        rawKey === "per_accident_limit" ||
+        rawKey === "per_accident" ||
+        rawKey === "per_occurrence_limit" ||
+        rawKey === "per_occurrence"
+      ) {
+        continue;
+      }
+      if (
+        rawKey === "limit" ||
+        rawKey === "limits" ||
+        rawKey === "new_limit" ||
+        rawKey === "new_limits"
+      ) {
+        if (typeof val === "object") {
+          walkNode(val, depth + 1, explicitKind || inheritedKind);
         }
+        continue;
+      }
+      const normKey = normalizeCoverageKind(rawKey);
+      if (BI_SHORTCUT_KEYS.has(normKey)) {
+        if (typeof val === "string" || typeof val === "number") {
+          checkCoverageItem({ type: "bodily_injury", limit: val });
+        } else {
+          walkNode(val, depth + 1, "bodily_injury");
+        }
+      } else if (PD_SHORTCUT_KEYS.has(normKey)) {
+        if (typeof val === "string" || typeof val === "number") {
+          checkCoverageItem({ type: "property_damage", limit: val });
+        } else {
+          walkNode(val, depth + 1, "property_damage");
+        }
+      } else if (typeof val === "object") {
+        walkNode(val, depth + 1, "");
       }
     }
-  }
+  };
+
+  walkNode(coveragesOrChanges, 0);
 
   return {
     valid: violations.length === 0,
@@ -284,16 +424,20 @@ export function validateBackdating(
   effectiveDate: string,
   referenceDate: string = BENCHMARK_SIMULATED_TODAY,
 ): BackdatingCheckResult {
-  const valid = effectiveDate >= referenceDate;
+  const floor = referenceDate && referenceDate.trim() ? referenceDate.trim() : BENCHMARK_SIMULATED_TODAY;
+  const calendarOk = isValidCalendarDate(effectiveDate);
+  const valid = calendarOk && effectiveDate >= floor;
   return {
     valid,
     rule: "backdating",
     errorCode: "E_EO_BACKDATING_PROHIBITED",
     effectiveDate,
-    minimumAllowedDate: referenceDate,
+    minimumAllowedDate: floor,
     message: valid
-      ? `Effective date ${effectiveDate} is on or after ${referenceDate}.`
-      : `E&O Firewall: Retroactive coverage backdating to ${effectiveDate} (prior to ${referenceDate}) is prohibited without Principal Underwriter approval.`,
+      ? `Effective date ${effectiveDate} is on or after ${floor}.`
+      : !calendarOk
+        ? `Effective date ${effectiveDate} is not a valid YYYY-MM-DD calendar date.`
+        : `E&O Firewall: Retroactive coverage backdating to ${effectiveDate} (prior to ${floor}) is prohibited without Principal Underwriter approval.`,
   };
 }
 

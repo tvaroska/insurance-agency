@@ -61,7 +61,11 @@ function createApp(options: RequestLogOptions = { serviceName: "ams", port: 3000
 }
 
 async function exportTrace(app: Hono) {
-  const res = await app.request("/sim/trace");
+  const headers: Record<string, string> = {};
+  if (process.env.EVERGREEN_SCORER_SECRET) {
+    headers["X-Evergreen-Scorer-Secret"] = process.env.EVERGREEN_SCORER_SECRET;
+  }
+  const res = await app.request("/sim/trace", { headers });
   expect(res.status).toBe(200);
   return res.json();
 }
@@ -268,6 +272,9 @@ describe("Service-side request log (packages/shared/src/request-log.ts)", () => 
     process.env.EVERGREEN_SCORER_SECRET = "secret-internal-123";
     try {
       const { app } = createApp();
+      const unauthTrace = await app.request("/sim/trace");
+      expect(unauthTrace.status).toBe(403);
+
       // Forged X-Evergreen-Internal without secret IS recorded in the trace
       await app.request("/v1/clients", { headers: { "X-Evergreen-Internal": "1" } });
       expect(await spans(app)).toHaveLength(1);

@@ -25,6 +25,41 @@ export function checkFormat(
   return null;
 }
 
+export function isValidCalendarDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const [yearStr, monthStr, dayStr] = value.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
+}
+
+export function checkCalendarDate(
+  field: string,
+  value: unknown,
+  message?: string,
+): FieldError | null {
+  if (value == null) return null;
+  if (!isValidCalendarDate(value)) {
+    return {
+      field,
+      message: message ?? `${field} must be YYYY-MM-DD.`,
+      code: "invalid_format",
+    };
+  }
+  return null;
+}
+
 export function checkEnum(
   field: string,
   value: unknown,

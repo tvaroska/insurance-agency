@@ -2,12 +2,14 @@ import { describe, expect, test, beforeEach, afterEach, setSystemTime } from "bu
 import { Hono } from "hono";
 import {
   createSimRouter,
+  createRequestLog,
   chaosMiddleware,
   strictModalityGuard,
   portalSessionEndpoint,
   portalBootstrapMiddleware,
   resetPortalSessions,
   getSimulatedNow,
+  getBackdatingFloor,
   advanceSimulatedClock,
   resetSimulatedClock,
   resetChaosConfig,
@@ -259,11 +261,11 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     const blockedBody = await blockedRes.json();
     expect(blockedBody.error_code).toBe("MODALITY_VIOLATION");
 
-    // X-Eval-Scorer: true bypasses strict guard when EVERGREEN_SCORER_SECRET is unset
-    const scorerRes = await app.request("/v1/messages", {
+    // X-Eval-Scorer: true is rejected in strict mode when EVERGREEN_SCORER_SECRET is unset
+    const scorerWithoutSecretEnvRes = await app.request("/v1/messages", {
       headers: { "X-Eval-Scorer": "true" },
     });
-    expect(scorerRes.status).toBe(200);
+    expect(scorerWithoutSecretEnvRes.status).toBe(403);
 
     // When EVERGREEN_SCORER_SECRET is configured, forged X-Eval-Scorer without secret is blocked
     process.env.EVERGREEN_SCORER_SECRET = "s3cr3t-scorer-key";
@@ -318,9 +320,13 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     });
     expect(portalRes.status).toBe(200);
 
-    // Request with X-Eval-Scorer: true succeeds
+    // Request with X-Eval-Scorer: true + secret succeeds
+    process.env.EVERGREEN_SCORER_SECRET = "portal-scorer-secret";
     const evalRes = await app.request("/v1/summit/quotes", {
-      headers: { "X-Eval-Scorer": "true" },
+      headers: {
+        "X-Eval-Scorer": "true",
+        "X-Evergreen-Scorer-Secret": "portal-scorer-secret",
+      },
     });
     expect(evalRes.status).toBe(200);
   });
@@ -377,6 +383,7 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     );
 
     process.env.MODALITY_MODE = "strict";
+    process.env.EVERGREEN_SCORER_SECRET = "reset-secret";
     const bootCookie = await fetchBootstrapCookie(app);
     const sessRes = await app.request("/auth/portal-session", {
       headers: { Cookie: bootCookie },
@@ -387,10 +394,13 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
     // Token works before reset
     expect((await app.request("/v1/summit/quotes", { headers })).status).toBe(200);
 
-    // Trigger /sim/reset
+    // Trigger /sim/reset with scorer secret
     const resetRes = await app.request("/sim/reset", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Evergreen-Scorer-Secret": "reset-secret",
+      },
       body: JSON.stringify({ seed_mode: "realistic" }),
     });
     expect(resetRes.status).toBe(200);
@@ -540,5 +550,99 @@ describe("Simulation Control Plane (packages/shared/src/sim.ts)", () => {
       num: simRandom(),
     };
     expect(second).toEqual(first);
+  });
+
+  test("strict mode rejects /sim/* without the scorer secret", async () => {
+    const requestLog = createRequestLog({ serviceName: "ams", port: 3000 });
+    const app = new Hono();
+    app.use("*", requestLog.middleware);
+    app.route("/sim", requestLog.router);
+    app.route(
+      "/sim",
+      createSimRouter({
+        serviceName: "ams",
+        prisma: {},
+        tables: [],
+      }),
+    );
+    app.get("/v1/clients", (c) => c.json({ data: [] }));
+
+    process.env.MODALITY_MODE = "strict";
+    delete process.env.EVERGREEN_SCORER_SECRET;
+
+    for (const [method, path] of [
+      ["GET", "/sim/status"],
+      ["GET", "/sim/snapshot"],
+      ["GET", "/sim/trace"],
+      ["POST", "/sim/reset"],
+      ["POST", "/sim/seed"],
+    ] as const) {
+      const res = await app.request(path, {
+        method,
+        ...(method === "POST"
+          ? {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({}),
+            }
+          : {}),
+      });
+      expect(res.status).toBe(403);
+      expect((await res.json()).error_code).toBe("FORBIDDEN");
+    }
+
+    // Forged X-Evergreen-Internal without a secret in strict mode does NOT hide the span
+    await app.request("/v1/clients", {
+      headers: { "X-Evergreen-Internal": "1" },
+    });
+
+    process.env.EVERGREEN_SCORER_SECRET = "strict-stack-secret";
+    expect((await app.request("/sim/status")).status).toBe(403);
+    expect(
+      (
+        await app.request("/sim/status", {
+          headers: { "X-Evergreen-Scorer-Secret": "wrong-secret" },
+        })
+      ).status,
+    ).toBe(403);
+
+    const traceRes = await app.request("/sim/trace", {
+      headers: { "X-Evergreen-Scorer-Secret": "strict-stack-secret" },
+    });
+    expect(traceRes.status).toBe(200);
+    const traceBody = await traceRes.json();
+    expect(traceBody.resourceSpans[0].scopeSpans[0].spans).toHaveLength(1);
+  });
+
+  test("POST /sim/reset replays identical simRandomId() output", async () => {
+    const app = new Hono();
+    app.route(
+      "/sim",
+      createSimRouter({
+        serviceName: "ams",
+        prisma: {},
+        tables: [],
+      }),
+    );
+
+    await app.request("/sim/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seed_mode: "realistic" }),
+    });
+    const run1 = [simRandomId(8), simRandomId(8), simRandomUuid()];
+
+    // Advance PRNG and clock arbitrarily
+    simRandomId(8);
+    advanceSimulatedClock({ days: 30 });
+    expect(getBackdatingFloor()).toBe("2026-11-13");
+
+    await app.request("/sim/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seed_mode: "realistic" }),
+    });
+    const run2 = [simRandomId(8), simRandomId(8), simRandomUuid()];
+    expect(run2).toEqual(run1);
+    expect(getBackdatingFloor()).toBe("2026-10-14");
   });
 });

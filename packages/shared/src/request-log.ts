@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
+import { createErrorResponse } from "./errors";
 
 // Service-side request log (ADR-005): each service records the agent's API calls as
 // OTLP client spans and exports them at GET /sim/trace, so every harness is scored
@@ -34,7 +35,8 @@ function readHeader(headers: HeaderSource, name: string): string | undefined {
 /**
  * Verifies whether a request carrying `X-Eval-Scorer: true` or `X-Evergreen-Internal: 1`
  * is authorized. When `process.env.EVERGREEN_SCORER_SECRET` is non-empty, the request must
- * also carry `X-Evergreen-Scorer-Secret === process.env.EVERGREEN_SCORER_SECRET`.
+ * also carry `X-Evergreen-Scorer-Secret === process.env.EVERGREEN_SCORER_SECRET`. Under
+ * `MODALITY_MODE=strict`, markers are rejected if no secret is configured.
  */
 export function isAuthorizedScorerOrInternal(
   headers: HeaderSource,
@@ -54,7 +56,52 @@ export function isAuthorizedScorerOrInternal(
   if (expectedSecret && expectedSecret.length > 0) {
     return readHeader(headers, SCORER_SECRET_HEADER) === expectedSecret;
   }
+  const mode = (process.env.MODALITY_MODE || "permissive").toLowerCase();
+  if (mode === "strict") {
+    return false;
+  }
   return true;
+}
+
+/**
+ * Guards `/sim/*` control-plane routes (including `/sim/trace`). Requires matching
+ * `X-Evergreen-Scorer-Secret` whenever `EVERGREEN_SCORER_SECRET` is configured, and
+ * fails closed (`403 FORBIDDEN`) in `MODALITY_MODE=strict` if no secret is configured.
+ */
+export function requireScorerSecretMiddleware() {
+  return createMiddleware(async (c, next) => {
+    const expectedSecret = process.env.EVERGREEN_SCORER_SECRET;
+    const mode = (process.env.MODALITY_MODE || "permissive").toLowerCase();
+    const correlationId = (c as any).get?.("correlationId") ?? crypto.randomUUID();
+
+    if (expectedSecret && expectedSecret.length > 0) {
+      if (c.req.header(SCORER_SECRET_HEADER) !== expectedSecret) {
+        return c.json(
+          createErrorResponse(
+            "FORBIDDEN",
+            "Missing or invalid X-Evergreen-Scorer-Secret header for /sim/* control plane.",
+            { correlationId },
+          ),
+          403,
+        );
+      }
+      await next();
+      return;
+    }
+
+    if (mode === "strict") {
+      return c.json(
+        createErrorResponse(
+          "FORBIDDEN",
+          "MODALITY_MODE=strict requires EVERGREEN_SCORER_SECRET and X-Evergreen-Scorer-Secret on /sim/*.",
+          { correlationId },
+        ),
+        403,
+      );
+    }
+
+    await next();
+  });
 }
 
 /**
@@ -208,6 +255,7 @@ export function createRequestLog(options: RequestLogOptions) {
   });
 
   const router = new Hono();
+  router.use("*", requireScorerSecretMiddleware());
   router.get("/trace", (c) =>
     c.json({
       resourceSpans: [

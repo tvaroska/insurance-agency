@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { BENCHMARK_SIMULATED_TODAY } from "./compliance-firewall";
 import { createErrorResponse } from "./errors";
-import { isAuthorizedScorerOrInternal } from "./request-log";
+import { isAuthorizedScorerOrInternal, requireScorerSecretMiddleware } from "./request-log";
 
 // ── Simulated Clock & Deterministic PRNG State ──────────────────────
 
@@ -116,6 +116,14 @@ export function getSimulatedNow(): Date {
  */
 export function getSimulatedToday(): string {
   return getSimulatedNow().toISOString().slice(0, 10);
+}
+
+/**
+ * Returns the canonical backdating floor (`YYYY-MM-DD`) derived from `getSimulatedToday()`
+ * (advancing with `/sim/time-travel` and rejecting empty `SIMULATED_TODAY=""`).
+ */
+export function getBackdatingFloor(): string {
+  return getSimulatedToday();
 }
 
 /**
@@ -523,6 +531,7 @@ function normalizeSeedRow(row: Record<string, unknown>): Record<string, unknown>
 
 export function createSimRouter(options: SimRouterOptions) {
   const router = new Hono();
+  router.use("*", requireScorerSecretMiddleware());
   // Serializes /sim/reset per service so overlapping resets (e.g. a harness retry while a
   // previous reset is still running) never interleave DROP/CREATE/INSERT and hit P2002.
   let resetChain: Promise<void> = Promise.resolve();
