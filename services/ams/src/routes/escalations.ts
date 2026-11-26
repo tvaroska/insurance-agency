@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import {
+  ESCALATION_REASONS,
   requireScopes,
   parsePaginationParams,
   applyPrismaCursorPagination,
@@ -22,17 +23,7 @@ type AppVariables = CorrelationVariables & AuthVariables;
 
 const escalationsRouter = new Hono<{ Variables: AppVariables }>();
 
-export const ESCALATION_REASONS = [
-  "premium_threshold",
-  "state_minimum_violation",
-  "coverage_adequacy",
-  "surplus_lines",
-  "principal_review",
-  "backdating",
-  "attorney_involvement",
-  "claims_specialist",
-  "claim_specialist",
-] as const;
+export { ESCALATION_REASONS };
 
 // ── POST / ──────────────────────────────────────────────────────────
 

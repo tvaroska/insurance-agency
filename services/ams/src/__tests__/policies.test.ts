@@ -659,5 +659,30 @@ describe("POST /v1/policies - E&O firewall", () => {
     });
     expect(res.status).toBe(201);
   });
+
+  test("body.state cannot lower it", async () => {
+    // TX_CLIENT lives in TX (30/60/25); passing FL (10/20/10) in body.state must still enforce TX
+    const res = await postPolicy({
+      ...VALID_CREATE,
+      client_id: TX_CLIENT,
+      state: "FL",
+      coverages: [{ type: "bodily_injury", limit: "10000/20000/10000", deductible: null }],
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error_code).toBe("E_EO_STATE_MINIMUM_VIOLATION");
+    expect(body.message).toContain("TX");
+  });
+
+  test("rejects impossible calendar dates such as 2026-13-45 and non-leap 2026-02-29 with 400", async () => {
+    for (const badDate of ["2026-13-45", "2026-02-29"]) {
+      const res = await postPolicy({
+        ...VALID_CREATE,
+        client_id: TX_CLIENT,
+        effective_date: badDate,
+      });
+      expect(res.status).toBe(400);
+    }
+  });
 });
 

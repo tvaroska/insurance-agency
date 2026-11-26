@@ -31,6 +31,7 @@ beforeEach(async () => {
   resetSimulatedClock();
   resetChaosConfig();
   delete process.env.MODALITY_MODE;
+  delete process.env.EVERGREEN_SCORER_SECRET;
 
   await testCtx.prisma.escalationEvent.deleteMany();
   await testCtx.prisma.escalation.deleteMany();
@@ -65,6 +66,7 @@ afterAll(async () => {
   resetSimulatedClock();
   resetChaosConfig();
   delete process.env.MODALITY_MODE;
+  delete process.env.EVERGREEN_SCORER_SECRET;
   await testCtx.cleanup();
 });
 
@@ -149,9 +151,23 @@ describe("AMS /sim/* Control Plane & Strict Modality Enforcement", () => {
     expect(mcpBlocked.status).toBe(403);
     expect((await mcpBlocked.json()).error_code).toBe("MODALITY_VIOLATION");
 
-    // 2. MCP guard allows X-Eval-Scorer: true
-    const mcpScorer = await modApp.request("/v1/comm/messages", {
+    // 2. MCP guard rejects bare X-Eval-Scorer in strict mode when secret is unset or missing, and allows with matching secret
+    const mcpBareScorer = await modApp.request("/v1/comm/messages", {
       headers: { "X-Eval-Scorer": "true" },
+    });
+    expect(mcpBareScorer.status).toBe(403);
+
+    process.env.EVERGREEN_SCORER_SECRET = "ams-strict-secret";
+    const mcpMissingSecret = await modApp.request("/v1/comm/messages", {
+      headers: { "X-Eval-Scorer": "true" },
+    });
+    expect(mcpMissingSecret.status).toBe(403);
+
+    const mcpScorer = await modApp.request("/v1/comm/messages", {
+      headers: {
+        "X-Eval-Scorer": "true",
+        "X-Evergreen-Scorer-Secret": "ams-strict-secret",
+      },
     });
     expect(mcpScorer.status).toBe(200);
 

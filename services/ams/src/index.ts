@@ -81,7 +81,7 @@ app.use("*", async (c, next) => {
   const path = c.req.path;
   if (
     (path === "/" || path.startsWith("/workbench")) &&
-    process.env.MODALITY_MODE === "strict" &&
+    (process.env.MODALITY_MODE || "permissive").toLowerCase() === "strict" &&
     process.env.ENABLE_SHOWCASE_WORKBENCH !== "1"
   ) {
     return c.json(

@@ -5,14 +5,14 @@ import {
   conflictError,
   validationError,
   checkRequired,
-  checkFormat,
+  checkCalendarDate,
   checkEnum,
   checkMaxLength,
   throwIfErrors,
   parsePaginationParams,
   applyPrismaCursorPagination,
   paginatedResponse,
-  BENCHMARK_SIMULATED_TODAY,
+  getBackdatingFloor,
   getSimulatedNow,
   simRandom,
   simRandomId,
@@ -114,10 +114,10 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
     body.policy_type ? checkEnum("policy_type", body.policy_type, POLICY_TYPES) : null,
     body.status !== undefined ? checkEnum("status", body.status, POLICY_STATUSES) : null,
     body.effective_date
-      ? checkFormat("effective_date", body.effective_date, /^\d{4}-\d{2}-\d{2}$/, "effective_date must be YYYY-MM-DD.")
+      ? checkCalendarDate("effective_date", body.effective_date, "effective_date must be YYYY-MM-DD.")
       : null,
     body.expiration_date
-      ? checkFormat("expiration_date", body.expiration_date, /^\d{4}-\d{2}-\d{2}$/, "expiration_date must be YYYY-MM-DD.")
+      ? checkCalendarDate("expiration_date", body.expiration_date, "expiration_date must be YYYY-MM-DD.")
       : null,
   ]);
 
@@ -172,7 +172,7 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
   // (a) Enforce 10-state statutory auto liability minimums UNCONDITIONALLY (statutory law cannot be waived)
   if (body.policy_type === "personal_auto") {
     const stateCheck = validateStateMinimums(
-      body.state ?? client.address_state,
+      client.address_state,
       body.coverages,
     );
     if (!stateCheck.valid) {
@@ -210,7 +210,7 @@ policiesRouter.post("/", requireScopes("ams:policies:write"), async (c) => {
   // (c) Enforce effective_date backdating firewall unless scoped approved backdating escalation is provided
   const backdateCheck = validateBackdating(
     body.effective_date,
-    process.env.SIMULATED_TODAY ?? BENCHMARK_SIMULATED_TODAY,
+    getBackdatingFloor(),
   );
   if (!backdateCheck.valid) {
     const hasApprovedBackdatingEscalation =
@@ -352,10 +352,9 @@ policiesRouter.post(
     // Validate request body
     throwIfErrors([
       checkRequired("effective_date", body.effective_date),
-      checkFormat(
+      checkCalendarDate(
         "effective_date",
         body.effective_date,
-        /^\d{4}-\d{2}-\d{2}$/,
         "effective_date must be YYYY-MM-DD.",
       ),
       checkRequired("change_type", body.change_type),
@@ -403,13 +402,9 @@ policiesRouter.post(
     }
 
     if (!hasApprovedBackdatingEscalation) {
-      // 1. Backdating guard: reject effective_date earlier than policy effective_date
-      // or earlier than the benchmark reference date ("2026-10-14") for active 2026 policies.
+      const today = getBackdatingFloor();
       const referenceFloor =
-        process.env.SIMULATED_TODAY ??
-        (policy.expiration_date >= BENCHMARK_SIMULATED_TODAY
-          ? BENCHMARK_SIMULATED_TODAY
-          : policy.effective_date);
+        policy.expiration_date >= today ? today : policy.effective_date;
       const effectiveFloor =
         policy.effective_date > referenceFloor
           ? policy.effective_date
