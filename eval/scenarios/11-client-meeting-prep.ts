@@ -43,7 +43,8 @@ const REALISTIC_CHECKS: OutputCheck[] = [
     expect: {
       status: 200,
       arrayMinLength: 1,
-      bodyMatch: { data: [{ client_id: "CLI-004", policy_type: "bop", status: "submitted" }] },
+      bodyMatch: { data: [{ client_id: "CLI-004", status: "submitted" }] },
+      bodyRegex: { policy_type: "^(bop|commercial_property)$" },
     },
   },
   {

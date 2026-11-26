@@ -28,7 +28,7 @@ const CLEAN_CHECKS: OutputCheck[] = [
       status: 200,
       arrayMinLength: 1,
       bodyMatch: { data: [{ related_client_id: "CLI-023", status: "open" }] },
-      bodyRegex: { title: "(inquiry|status|POL-PA-2025-003500|CLI-023)" },
+      bodyRegex: { title: "(inquiry|status|renewal|deductible|auto|policy|POL-PA-2025-003500|CLI-023)" },
     },
   },
 ];

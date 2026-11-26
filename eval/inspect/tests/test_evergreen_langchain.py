@@ -188,6 +188,8 @@ def test_mcp_tools_authenticate_comm_with_bearer_token_and_drop_browser_code_exe
         opened.append(name)
         yield name
 
+    invoked_urls: list[str] = []
+
     async def fake_load(session: str, server_name: str):
         names = {
             "comm": ["get_inbox", "send_message"],
@@ -199,7 +201,16 @@ def test_mcp_tools_authenticate_comm_with_bearer_token_and_drop_browser_code_exe
                 "browser_click",
             ],
         }[server_name]
-        return [StructuredTool.from_function(func=lambda url="": url, name=n, description=n) for n in names]
+
+        def _make_tool(tool_name: str) -> StructuredTool:
+            def _fn(url: str = "") -> str:
+                if tool_name == "browser_navigate":
+                    invoked_urls.append(url)
+                return url
+
+            return StructuredTool.from_function(func=_fn, name=tool_name, description=tool_name)
+
+        return [_make_tool(n) for n in names]
 
     monkeypatch.setattr(harness, "httpx", types.SimpleNamespace(AsyncClient=FakeAuthClient))
     monkeypatch.setattr(harness.MultiServerMCPClient, "session", fake_session)
@@ -207,7 +218,8 @@ def test_mcp_tools_authenticate_comm_with_bearer_token_and_drop_browser_code_exe
 
     async def run():
         async with AsyncExitStack() as stack:
-            tools = await harness.open_mcp_tools(stack, service_base_urls(), tmp_path)
+            urls = service_base_urls()
+            tools = await harness.open_mcp_tools(stack, urls, tmp_path)
             nav_tool = next(t for t in tools if t.name == "browser_navigate")
             assert await nav_tool.ainvoke({"url": "http://localhost:3005/"}) == "http://localhost:3005/"
             for bad_url in (
@@ -220,12 +232,19 @@ def test_mcp_tools_authenticate_comm_with_bearer_token_and_drop_browser_code_exe
                 "http://localhost:3005/portal/../sim/seed",
             ):
                 with pytest.raises(ValueError):
-                    await nav_tool.ainvoke({"url": bad_url})
+                    harness.validate_portal_navigation_url(bad_url, urls)
+                err_msg = await nav_tool.ainvoke({"url": bad_url})
+                assert isinstance(err_msg, str) and "browser_navigate" in err_msg
             return [tool.name for tool in tools]
 
     assert asyncio.run(run()) == ["get_inbox", "send_message", "browser_navigate", "browser_click"]
+    assert invoked_urls == ["http://localhost:3005/"]
     assert opened == ["comm", "portals"]
     assert captured_connections["comm"]["headers"] == {"Authorization": "Bearer mcp-tok-42"}
+    assert harness.rewrite_portal_urls_for_stack(
+        "Use http://localhost:3005 and http://localhost:3006.",
+        {"summit-fire": "http://localhost:3405", "coastal-star": "http://localhost:3406"},
+    ) == "Use http://localhost:3405 and http://localhost:3406."
 
 
 def test_take_snapshot_forwards_scorer_secret_when_configured(monkeypatch: pytest.MonkeyPatch):

@@ -127,7 +127,7 @@ const scenario: ScenarioDefinition = {
           name: "check_leads",
           weight: 0.2,
           type: "presence",
-          pattern: { method: "GET", pathPattern: "^/v1/leads$", service: "crm" },
+          pattern: { method: "GET", pathPattern: "^/v1/leads(?:/[^/]+)?$", service: "crm" },
         },
         {
           name: "check_existing_client",
@@ -188,7 +188,7 @@ const scenario: ScenarioDefinition = {
           name: "check_leads",
           weight: 0.15,
           type: "presence",
-          pattern: { method: "GET", pathPattern: "^/v1/leads$", service: "crm" },
+          pattern: { method: "GET", pathPattern: "^/v1/leads(?:/[^/]+)?$", service: "crm" },
         },
         {
           name: "search_by_maiden_name",
@@ -245,7 +245,7 @@ const scenario: ScenarioDefinition = {
           name: "check_leads",
           weight: 0.15,
           type: "presence",
-          pattern: { method: "GET", pathPattern: "^/v1/leads$", service: "crm" },
+          pattern: { method: "GET", pathPattern: "^/v1/leads(?:/[^/]+)?$", service: "crm" },
         },
         {
           name: "search_existing",

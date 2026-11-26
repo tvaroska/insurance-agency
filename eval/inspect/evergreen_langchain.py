@@ -58,7 +58,7 @@ from inspect_ai.solver import Generate, Solver, TaskState, solver
 from inspect_ai.tool import ToolChoice, ToolInfo
 from inspect_ai.util import store, subprocess
 from langchain.agents import create_agent
-from langchain_core.tools import BaseTool, StructuredTool
+from langchain_core.tools import BaseTool, StructuredTool, ToolException
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_openai import ChatOpenAI
@@ -253,10 +253,13 @@ def _guard_browser_navigate_tool(tool: BaseTool, urls: dict[str, str]) -> BaseTo
     orig_func = getattr(tool, "func", None)
 
     def _extract_and_validate(args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
-        if args and "url" not in kwargs and isinstance(args[0], str):
-            validate_portal_navigation_url(args[0], urls)
-        else:
-            validate_portal_navigation_url(str(kwargs.get("url", "")), urls)
+        try:
+            if args and "url" not in kwargs and isinstance(args[0], str):
+                validate_portal_navigation_url(args[0], urls)
+            else:
+                validate_portal_navigation_url(str(kwargs.get("url", "")), urls)
+        except ValueError as exc:
+            raise ToolException(str(exc)) from exc
 
     async def _guarded_coro(*args: Any, **kwargs: Any) -> Any:
         _extract_and_validate(args, kwargs)
@@ -279,6 +282,7 @@ def _guard_browser_navigate_tool(tool: BaseTool, urls: dict[str, str]) -> BaseTo
         func=_guarded_func if orig_func is not None else None,
         coroutine=_guarded_coro,
         response_format=getattr(tool, "response_format", "content"),
+        handle_tool_error=True,
     )
 
 
@@ -386,6 +390,18 @@ async def run_bun(*args: str):
         raise RuntimeError(f"bun {' '.join(args)} failed ({result.returncode}): {result.stderr or result.stdout}")
 
 
+def rewrite_portal_urls_for_stack(text: str, urls: dict[str, str]) -> str:
+    """Rewrite default :3005/:3006 portal URLs in prompts to the active parallel-stack ports."""
+    out = text
+    summit = urls.get("summit-fire", "").rstrip("/")
+    coastal = urls.get("coastal-star", "").rstrip("/")
+    if summit and summit != "http://localhost:3005":
+        out = out.replace("http://localhost:3005", summit)
+    if coastal and coastal != "http://localhost:3006":
+        out = out.replace("http://localhost:3006", coastal)
+    return out
+
+
 @solver
 def prepare_services():
     """Take the service stack, reset it for the sample's seed (which also clears the trace), and snapshot it."""
@@ -397,6 +413,9 @@ def prepare_services():
         state.store.set(WORK_DIR_KEY, str(work_dir))
         state.store.set(MODALITY_MODE_KEY, state.metadata["modality_mode"])
         urls = service_base_urls()
+        for msg in state.messages:
+            if getattr(msg, "role", None) == "user" and isinstance(getattr(msg, "content", None), str):
+                msg.content = rewrite_portal_urls_for_stack(msg.content, urls)
         async with httpx.AsyncClient(timeout=120) as http:
             await check_modality(http, urls, state.metadata["modality_mode"])
             await reset_services(

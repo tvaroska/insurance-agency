@@ -326,4 +326,27 @@ describe("Repository Hygiene & Governance Spine (ADR-005 & ADR-006)", () => {
       }
     }
   });
+
+  test("eval/metr/tasks.json prompts stay in sync with eval/scenarios/*.ts", async () => {
+    const { scenarios } = await import("../eval/scenarios/index");
+    const tasks = JSON.parse(readFileSync(join(ROOT, "eval", "metr", "tasks.json"), "utf-8")) as Record<
+      string,
+      { prompt: string; case_id: string }
+    >;
+    let expectedCount = 0;
+    for (const [id, scenario] of Object.entries(scenarios)) {
+      for (const [seed, variant] of Object.entries(scenario.variants)) {
+        for (const testCase of variant.cases) {
+          expectedCount++;
+          const taskId = `${id}-${seed}-${testCase.difficulty}`;
+          expect(tasks[taskId], `Missing ${taskId} in eval/metr/tasks.json`).toBeDefined();
+          expect(tasks[taskId]!.prompt, `Stale prompt for ${taskId} in eval/metr/tasks.json`).toBe(
+            testCase.prompt,
+          );
+          expect(tasks[taskId]!.case_id).toBe(testCase.id);
+        }
+      }
+    }
+    expect(Object.keys(tasks).length).toBe(expectedCount);
+  });
 });

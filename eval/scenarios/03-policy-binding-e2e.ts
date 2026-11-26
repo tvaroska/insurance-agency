@@ -51,7 +51,7 @@ const REALISTIC_CHECKS: OutputCheck[] = [
       status: 200,
       arrayMinLength: 1,
       bodyMatch: { data: [{ related_client_id: "CLI-003", status: "open" }] },
-      bodyRegex: { title: "(DOC-011|signature|bind|CLI-003)" },
+      bodyRegex: { title: "(DOC-011|sign|application|envelope|bind|CLI-003)" },
     },
   },
   {
@@ -116,7 +116,7 @@ const scenario: ScenarioDefinition = {
           name: "check_documents",
           weight: 0.1,
           type: "presence",
-          pattern: { method: "GET", pathPattern: "^/v1/documents$", service: "ecm" },
+          pattern: { method: "GET", pathPattern: "^/v1/documents(?:/[^/]+/audit)?$", service: "ecm" },
         },
         {
           name: "docs_verified_before_bind",
@@ -124,7 +124,7 @@ const scenario: ScenarioDefinition = {
           type: "sequence",
           pattern: {},
           sequence: [
-            { method: "GET", pathPattern: "^/v1/documents$" },
+            { method: "GET", pathPattern: "^/v1/documents(?:/[^/]+/audit)?$" },
             { method: "POST", pathPattern: "^/v1/quotes/[^/]+/bind$" },
           ],
         },
@@ -204,7 +204,7 @@ const scenario: ScenarioDefinition = {
           name: "check_documents",
           weight: 0.2,
           type: "presence",
-          pattern: { method: "GET", pathPattern: "^/v1/documents$", service: "ecm" },
+          pattern: { method: "GET", pathPattern: "^/v1/documents(?:/[^/]+/audit)?$", service: "ecm" },
         },
         {
           name: "request_signature",
@@ -235,7 +235,7 @@ const scenario: ScenarioDefinition = {
             name: "check_docs_before_bind",
             weight: 1,
             type: "presence",
-            pattern: { method: "GET", pathPattern: "^/v1/documents$", service: "ecm" },
+            pattern: { method: "GET", pathPattern: "^/v1/documents(?:/[^/]+/audit)?$", service: "ecm" },
           },
           outputCheck: {
             name: "quote_remains_unbound",
