@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import queue
+import secrets
 import shutil
 import signal
 import subprocess
@@ -189,8 +190,10 @@ def build_vertex_env(
 
 
 def verify_services(modality_mode: str = "strict", base_port: int = 3000, timeout: float = 5.0) -> None:
+    secret = os.environ.get("EVERGREEN_SCORER_SECRET", "")
+    headers = {"X-Eval-Scorer": "true", **({"X-Evergreen-Scorer-Secret": secret} if secret else {})}
     for port in range(base_port, base_port + 8):
-        resp = httpx.get(f"http://localhost:{port}/sim/status", timeout=timeout)
+        resp = httpx.get(f"http://localhost:{port}/sim/status", headers=headers, timeout=timeout)
         resp.raise_for_status()
         actual = resp.json().get("modality_mode")
         if actual != modality_mode:
@@ -237,10 +240,15 @@ def ensure_parallel_stacks(
             "--data-dir",
             str(data_dir),
         ]
+        stack_secret = os.environ.setdefault(
+            "EVERGREEN_SCORER_SECRET",
+            f"evergreen-baseline-{secrets.token_hex(16)}",
+        )
         stack_env = dict(os.environ)
         stack_env["MODALITY_MODE"] = modality_mode
         stack_env["EVERGREEN_BASE_PORT"] = str(base_port)
         stack_env["EVERGREEN_DATA_DIR"] = str(data_dir)
+        stack_env["EVERGREEN_SCORER_SECRET"] = stack_secret
         log_file = (data_dir / "showcase.log").open("wb")
         print(f"[stack-{i}] Launching isolated stack on :{base_port}..:{base_port + 7} (data={data_dir})", flush=True)
         proc = subprocess.Popen(
@@ -360,19 +368,37 @@ def run_inspect_batch(
             f"| learning={learning_mechanism} | epochs={epochs} | port={port_tag} (attempt {attempt}/{max_batch_attempts}) ===",
             flush=True,
         )
-        subprocess.run(cmd, cwd=str(GYM_ROOT), env=env, check=True)
+        proc = subprocess.run(
+            cmd,
+            cwd=str(GYM_ROOT),
+            env=env,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if proc.stdout:
+            print(proc.stdout, end="", flush=True)
+        if proc.stderr:
+            print(proc.stderr, end="", file=sys.stderr, flush=True)
         new_files = sorted(set(log_dir.glob("*.eval")) - before_files)
         bad_statuses: list[str] = []
+        matching_files: list[Path] = []
         norm_expected = ",".join(parse_scenarios_arg(scenario))
         for nf in new_files:
             hdr = read_eval_log(str(nf), header_only=True)
             task_sc = str((hdr.eval.task_args or {}).get("scenario", ""))
             if ",".join(parse_scenarios_arg(task_sc)) != norm_expected:
                 continue  # belongs to a sibling parallel worker sharing log_dir
-            if hdr.status != "success":
+            matching_files.append(nf)
+            if hdr.status != "success" or proc.returncode != 0:
                 err_msg = str(getattr(hdr, "error", "") or "")[:240]
                 bad_statuses.append(f"{nf.name}: status={hdr.status} ({err_msg})")
                 nf.unlink(missing_ok=True)
+        if proc.returncode != 0 and not bad_statuses:
+            tail = (proc.stderr or proc.stdout or "").strip()[-240:]
+            bad_statuses.append(f"exit={proc.returncode} ({tail})")
+        elif not matching_files and not bad_statuses:
+            bad_statuses.append("no .eval log produced")
         if not bad_statuses:
             return
         if attempt == max_batch_attempts:
@@ -381,7 +407,7 @@ def run_inspect_batch(
                 + "; ".join(bad_statuses)
             )
         print(
-            f"[retry] Transient non-success .eval log for {model_id} scenario={scenario} seed={seed}; retrying once...",
+            f"[retry] Transient batch failure for {model_id} scenario={scenario} seed={seed} ({'; '.join(bad_statuses)}); retrying once...",
             flush=True,
         )
 

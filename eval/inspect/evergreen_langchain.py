@@ -32,6 +32,7 @@ import os
 import re
 import shutil
 import tempfile
+import urllib.parse
 from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any
@@ -57,7 +58,7 @@ from inspect_ai.solver import Generate, Solver, TaskState, solver
 from inspect_ai.tool import ToolChoice, ToolInfo
 from inspect_ai.util import store, subprocess
 from langchain.agents import create_agent
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, StructuredTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_openai import ChatOpenAI
@@ -73,9 +74,27 @@ LEARNING_MECHANISM_LABELS: dict[str, str] = {
     "policy_prompt": "Policy prompt (10-rule guardrails)",
     "domain_skill": "Domain skill (SOP)",
 }
-# Both run arbitrary JavaScript: browser_run_code_unsafe inside the MCP server
-# process (a shell), browser_evaluate inside the page (a generic HTTP client).
-BLOCKED_BROWSER_TOOLS = frozenset({"browser_run_code_unsafe", "browser_evaluate"})
+# Explicit allow-list of safe UI interaction tools on the carrier portal MCP server
+# (blocks browser_evaluate, browser_run_code*, file upload, network inspection, etc.).
+ALLOWED_BROWSER_TOOLS = frozenset(
+    {
+        "browser_navigate",
+        "browser_navigate_back",
+        "browser_snapshot",
+        "browser_click",
+        "browser_type",
+        "browser_fill_form",
+        "browser_select_option",
+        "browser_press_key",
+        "browser_hover",
+        "browser_drag",
+        "browser_wait_for",
+        "browser_tabs",
+        "browser_handle_dialog",
+        "browser_resize",
+        "browser_close",
+    }
+)
 WORK_DIR_KEY = "evergreen_langchain:work_dir"
 STACK_HELD_KEY = "evergreen_langchain:stack_held"
 MODALITY_MODE_KEY = "evergreen_langchain:modality_mode"
@@ -203,6 +222,66 @@ def playwright_mcp_args(urls: dict[str, str], output_dir: Path):
     ]
 
 
+def validate_portal_navigation_url(raw_url: str, urls: dict[str, str]) -> str:
+    """Allow http(s) navigation strictly to the two carrier portal origins outside /sim and /auth."""
+    candidate = str(raw_url or "").strip()
+    parsed = urllib.parse.urlsplit(candidate)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError(f"browser_navigate allows only http(s) portal URLs; got {raw_url!r}")
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    allowed_origins = {
+        f"{p.scheme}://{p.netloc}"
+        for key in ("summit-fire", "coastal-star")
+        if key in urls
+        for p in [urllib.parse.urlsplit(urls[key])]
+    }
+    if origin not in allowed_origins:
+        raise ValueError(f"browser_navigate origin {origin!r} is outside allowed carrier portals {sorted(allowed_origins)}")
+    raw_path = parsed.path or "/"
+    unquoted = urllib.parse.unquote(raw_path)
+    if "//" in raw_path or "//" in unquoted or "\\" in unquoted or any(seg in (".", "..") for seg in unquoted.split("/")):
+        raise ValueError(f"browser_navigate rejected malformed path in {raw_url!r}")
+    lower_unquoted = unquoted.lower()
+    for blocked_prefix in ("/sim", "/auth", "/oauth"):
+        if lower_unquoted == blocked_prefix or lower_unquoted.startswith(f"{blocked_prefix}/"):
+            raise ValueError(f"browser_navigate to control-plane path {blocked_prefix}/* is forbidden")
+    return candidate
+
+
+def _guard_browser_navigate_tool(tool: BaseTool, urls: dict[str, str]) -> BaseTool:
+    orig_coro = getattr(tool, "coroutine", None)
+    orig_func = getattr(tool, "func", None)
+
+    def _extract_and_validate(args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
+        if args and "url" not in kwargs and isinstance(args[0], str):
+            validate_portal_navigation_url(args[0], urls)
+        else:
+            validate_portal_navigation_url(str(kwargs.get("url", "")), urls)
+
+    async def _guarded_coro(*args: Any, **kwargs: Any) -> Any:
+        _extract_and_validate(args, kwargs)
+        if orig_coro is not None:
+            return await orig_coro(*args, **kwargs)
+        if orig_func is not None:
+            return orig_func(*args, **kwargs)
+        raise RuntimeError("browser_navigate has no underlying implementation")
+
+    def _guarded_func(*args: Any, **kwargs: Any) -> Any:
+        _extract_and_validate(args, kwargs)
+        if orig_func is not None:
+            return orig_func(*args, **kwargs)
+        raise RuntimeError("browser_navigate requires async invocation")
+
+    return StructuredTool(
+        name=tool.name,
+        description=tool.description,
+        args_schema=tool.args_schema,
+        func=_guarded_func if orig_func is not None else None,
+        coroutine=_guarded_coro,
+        response_format=getattr(tool, "response_format", "content"),
+    )
+
+
 async def open_mcp_tools(
     stack: AsyncExitStack,
     urls: dict[str, str],
@@ -231,8 +310,19 @@ async def open_mcp_tools(
     tools: list[BaseTool] = []
     for name in client.connections:
         session = await stack.enter_async_context(client.session(name))
-        tools += await load_mcp_tools(session, server_name=name)
-    return [tool for tool in tools if tool.name not in BLOCKED_BROWSER_TOOLS]
+        loaded = await load_mcp_tools(session, server_name=name)
+        if name == "portals":
+            for tool in loaded:
+                if tool.name not in ALLOWED_BROWSER_TOOLS:
+                    continue
+                tools.append(
+                    _guard_browser_navigate_tool(tool, urls)
+                    if tool.name == "browser_navigate"
+                    else tool
+                )
+        else:
+            tools.extend(loaded)
+    return tools
 
 
 def seed_mode(seed: str):
@@ -250,8 +340,9 @@ def scorer_headers() -> dict[str, str]:
 
 
 async def check_modality(http: httpx.AsyncClient, urls: dict[str, str], modality_mode: str):
+    headers = scorer_headers()
     for name, url in urls.items():
-        resp = await http.get(f"{url}/sim/status")
+        resp = await http.get(f"{url}/sim/status", headers=headers)
         resp.raise_for_status()
         actual = resp.json().get("modality_mode", "permissive")
         if actual != modality_mode:
@@ -269,9 +360,10 @@ async def reset_services(
     payload: dict[str, Any] = {"seed_mode": seed_mode(seed)}
     if scenario_id:
         payload["scenario_id"] = str(scenario_id).strip().zfill(2)
+    headers = scorer_headers()
 
     async def reset(url: str):
-        resp = await http.post(f"{url}/sim/reset", json=payload)
+        resp = await http.post(f"{url}/sim/reset", json=payload, headers=headers)
         resp.raise_for_status()
 
     await asyncio.gather(*(reset(url) for url in urls.values()))
@@ -340,7 +432,7 @@ def bridge_filters():
     saved_ids: dict[tuple[str, ...], str | None] = {}
 
     async def on_response(model: Model, output: ModelOutput, generate_input: GenerateInput):
-        for choice in output.choices:
+        for choice in output.choices or []:
             msg = choice.message
             if msg.tool_calls:
                 key = tuple(tc.id for tc in msg.tool_calls)

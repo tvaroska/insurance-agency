@@ -585,9 +585,11 @@ def collect_eval_files(paths: list[str | Path]) -> list[Path]:
 def resolve_log_paths(
     logs: list[str | Path],
     clean_logs: list[str | Path] | None,
-    candidates: tuple[Path, ...] = DEFAULT_RESULTS_CANDIDATES,
+    candidates: tuple[Path, ...] | None = None,
 ) -> tuple[list[Path], list[Path]]:
     """Resolve default realistic logs (v0.9 -> v0.8 -> v0.7 fallback) and auto-detect sibling clean-<tier> logs."""
+    if candidates is None:
+        candidates = DEFAULT_RESULTS_CANDIDATES
     resolved_logs: list[Path] = [Path(p) for p in logs] if logs else []
     if not resolved_logs:
         for cand in candidates:

@@ -13,9 +13,12 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
+import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -38,6 +41,41 @@ PORT_SERVICE_MAP: dict[int, str] = {
 }
 
 SERVICE_PORT_MAP: dict[str, int] = {v: k for k, v in PORT_SERVICE_MAP.items()}
+
+FORBIDDEN_STEP_HEADERS: frozenset[str] = frozenset(
+    {
+        "x-eval-scorer",
+        "x-evergreen-internal",
+        "x-evergreen-scorer-secret",
+    }
+)
+
+
+def _is_allowed_step_path(service: str, raw_path: str) -> bool:
+    """Allow only agent-facing REST (/v1/*), Comm MCP (/mcp), and carrier portal page paths."""
+    if service not in SERVICE_PORT_MAP:
+        return False
+    if any(ord(ch) < 32 or ch in ("\r", "\n", "#") for ch in raw_path):
+        return False
+    clean_path, _, _query = raw_path.partition("?")
+    if not clean_path.startswith("/") or "//" in clean_path or "\\" in clean_path:
+        return False
+    unquoted = urllib.parse.unquote(clean_path)
+    if not unquoted.startswith("/") or "//" in unquoted or "\\" in unquoted:
+        return False
+    if any(seg in (".", "..") for seg in unquoted.split("/")):
+        return False
+    if unquoted == "/v1" or unquoted.startswith("/v1/"):
+        return True
+    if service == "comm" and unquoted == "/mcp":
+        return True
+    if service in ("summit-fire", "coastal-star") and (
+        unquoted in ("/", "/index.html")
+        or unquoted.startswith("/portal/")
+        or unquoted.startswith("/assets/")
+    ):
+        return True
+    return False
 
 
 @dataclass
@@ -80,7 +118,8 @@ class EvergreenGymEnv:
         self.recorded_spans: list[dict[str, Any]] = []
         self._bearer_token: str | None = None
         self._portal_sessions: dict[str, dict[str, str]] = {}
-        self._effective_seed: str = str(self.current_task["seed"])
+        self._task_seed: str = str(self.current_task["seed"])
+        self._effective_seed: str = "clean" if self._task_seed == "clean" else "realistic"
         self._initial_snapshot: dict[str, Any] | None = None
 
     def _request_json(
@@ -122,19 +161,21 @@ class EvergreenGymEnv:
             self.task_id = tid
             self.current_task = self.tasks[tid]
 
-        seed_mode = (
+        raw_seed = str(
             options.get("seed_mode")
             if options and "seed_mode" in options
             else (seed if isinstance(seed, str) else self.current_task["seed"])
         )
-        effective_seed = "clean" if seed_mode == "clean" else "realistic"
+        effective_seed = "clean" if raw_seed == "clean" else "realistic"
 
         self.step_count = 0
         self.recorded_spans = []
         self._bearer_token = None
         self._portal_sessions = {}
+        self._task_seed = raw_seed
         self._effective_seed = effective_seed
 
+        reset_headers = self._scorer_headers()
         reset_statuses: dict[str, Any] = {}
         for canonical_port, service in PORT_SERVICE_MAP.items():
             port = self._service_port(canonical_port)
@@ -146,6 +187,7 @@ class EvergreenGymEnv:
                     "seed_mode": effective_seed,
                     "scenario_id": str(self.current_task["scenario_id"]),
                 },
+                reset_headers,
             )
             reset_statuses[service] = {"status_code": status_code, "response": payload}
 
@@ -280,7 +322,30 @@ class EvergreenGymEnv:
         if not path.startswith("/"):
             path = "/" + path
 
-        req_headers = dict(act.get("headers") or {})
+        if not _is_allowed_step_path(service, path):
+            blocked_url = f"{self.host}:{port}{path}"
+            blocked_body = {
+                "error_code": "FORBIDDEN",
+                "message": f"Control-plane or disallowed path '{path}' on '{service}' is blocked.",
+            }
+            reward = 0.0
+            info: dict[str, Any] = {"status_code": 403, "url": blocked_url}
+            if truncated:
+                report = self.score()
+                reward = float(report["overall"]["score"])
+                info["report"] = report
+            obs = {
+                "task_id": self.task_id,
+                "step": self.step_count,
+                "last_response": {"status_code": 403, "body": blocked_body},
+            }
+            return obs, reward, False, truncated, info
+
+        req_headers = {
+            str(hk): str(hv)
+            for hk, hv in (act.get("headers") or {}).items()
+            if str(hk).strip().lower() not in FORBIDDEN_STEP_HEADERS
+        }
         req_body = act.get("body")
         effective_method = method
         effective_path = path
@@ -518,55 +583,57 @@ class EvergreenGymEnv:
         if self._scorer_fn is not None:
             return self._scorer_fn(self.current_task, self.recorded_spans)
 
-        trace_dir = Path(f"/tmp/openenv-traces-{self.task_id}")
-        trace_dir.mkdir(parents=True, exist_ok=True)
-        trace_file = trace_dir / "trace.json"
-        trace_file.write_text(json.dumps(self.export_otlp_trace(), indent=2))
+        trace_dir = Path(tempfile.mkdtemp(prefix=f"openenv-traces-{self.task_id}-"))
+        try:
+            trace_file = trace_dir / "trace.json"
+            trace_file.write_text(json.dumps(self.export_otlp_trace(), indent=2))
 
-        out_dir = trace_dir / "report"
-        out_dir.mkdir(parents=True, exist_ok=True)
+            out_dir = trace_dir / "report"
+            out_dir.mkdir(parents=True, exist_ok=True)
 
-        cmd = [
-            os.environ.get("BUN_BIN", "bun"),
-            "eval/score.ts",
-            "--traces",
-            str(trace_file),
-            "--scenario",
-            self.current_task["scenario_id"],
-            "--seed",
-            self._effective_seed,
-            "--case",
-            self.current_task["case_id"],
-            "--out",
-            str(out_dir),
-        ]
-        if self._initial_snapshot is not None:
-            before_file = trace_dir / "snapshot-before.json"
-            after_file = trace_dir / "snapshot-after.json"
-            before_file.write_text(json.dumps(self._initial_snapshot))
-            after_file.write_text(json.dumps(self.snapshot()))
-            cmd.extend(
-                [
-                    "--snapshot-before",
-                    str(before_file),
-                    "--snapshot-after",
-                    str(after_file),
-                ]
+            cmd = [
+                os.environ.get("BUN_BIN", "bun"),
+                "eval/score.ts",
+                "--traces",
+                str(trace_file),
+                "--scenario",
+                self.current_task["scenario_id"],
+                "--seed",
+                self._task_seed,
+                "--case",
+                self.current_task["case_id"],
+                "--out",
+                str(out_dir),
+            ]
+            if self._initial_snapshot is not None:
+                before_file = trace_dir / "snapshot-before.json"
+                after_file = trace_dir / "snapshot-after.json"
+                before_file.write_text(json.dumps(self._initial_snapshot))
+                after_file.write_text(json.dumps(self.snapshot()))
+                cmd.extend(
+                    [
+                        "--snapshot-before",
+                        str(before_file),
+                        "--snapshot-after",
+                        str(after_file),
+                    ]
+                )
+            res = subprocess.run(
+                cmd,
+                cwd=str(GYM_ROOT),
+                capture_output=True,
+                text=True,
+                timeout=90,
+                check=False,
             )
-        res = subprocess.run(
-            cmd,
-            cwd=str(GYM_ROOT),
-            capture_output=True,
-            text=True,
-            timeout=90,
-            check=False,
-        )
-        if res.returncode != 0:
-            raise RuntimeError(
-                f"Scorer CLI failed ({res.returncode}): {res.stderr or res.stdout}"
-            )
-        report_path = out_dir / f"{self.current_task['scenario_id']}-report.json"
-        return json.loads(report_path.read_text())
+            if res.returncode != 0:
+                raise RuntimeError(
+                    f"Scorer CLI failed ({res.returncode}): {res.stderr or res.stdout}"
+                )
+            report_path = out_dir / f"{self.current_task['scenario_id']}-report.json"
+            return json.loads(report_path.read_text())
+        finally:
+            shutil.rmtree(trace_dir, ignore_errors=True)
 
 
 class EvergreenVerifiersEnv:

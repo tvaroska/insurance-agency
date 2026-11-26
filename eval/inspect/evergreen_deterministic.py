@@ -105,6 +105,9 @@ else:
         return None
 
 
+_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 def load_deterministic_scenarios(
     scenarios_dir: Path | str = DETERMINISTIC_DIR,
 ) -> list[dict[str, Any]]:
@@ -114,7 +117,7 @@ def load_deterministic_scenarios(
         raise FileNotFoundError(f"Deterministic scenarios directory not found: {root}")
     scenarios: list[dict[str, Any]] = []
     for path in sorted(root.glob("*.yaml")):
-        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        raw = yaml.load(path.read_text(encoding="utf-8"), Loader=_YAML_LOADER)
         if not isinstance(raw, dict):
             raise ValueError(f"{path}: expected YAML mapping")
         for req in ("id", "slug", "name", "description", "difficulty", "services", "start_state", "turns", "expected_diff"):

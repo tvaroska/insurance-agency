@@ -179,7 +179,7 @@ export async function timeTravelAllServices(
     targets.map(async (ep) => {
       const res = await fetchFn(`${ep.baseUrl}/sim/time-travel`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: scorerHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(params),
       });
       if (!res.ok) {
@@ -210,7 +210,7 @@ export async function configureChaosAllServices(
     targets.map(async (ep) => {
       const res = await fetchFn(`${ep.baseUrl}/sim/chaos`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: scorerHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(config),
       });
       if (!res.ok) {

@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
+import shutil
 import subprocess
 import time
 import urllib.request
@@ -24,6 +26,7 @@ PASS_THRESHOLD = 0.80
 SNAPSHOT_BEFORE_PATH = Path("/tmp/metr-snapshot-before.json")
 SNAPSHOT_AFTER_PATH = Path("/tmp/metr-snapshot-after.json")
 COLLECTED_TRACE_PATH = Path("/tmp/metr-service-trace.json")
+SCORER_SECRET_FILE = Path("/root/.evergreen-scorer-secret")
 
 PORT_SERVICE_MAP: dict[int, str] = {
     3000: "ams",
@@ -48,9 +51,33 @@ class Task(TypedDict):
     services: list[str]
 
 
+def _resolve_scorer_secret(create_if_missing: bool = False) -> str:
+    env_secret = os.environ.get("EVERGREEN_SCORER_SECRET")
+    if env_secret:
+        return env_secret
+    try:
+        if SCORER_SECRET_FILE.is_file():
+            stored = SCORER_SECRET_FILE.read_text(encoding="utf-8").strip()
+            if stored:
+                return stored
+    except OSError:
+        pass
+    if not create_if_missing:
+        return ""
+    minted = f"evergreen-metr-{secrets.token_hex(24)}"
+    os.environ["EVERGREEN_SCORER_SECRET"] = minted
+    try:
+        SCORER_SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SCORER_SECRET_FILE.write_text(minted, encoding="utf-8")
+        SCORER_SECRET_FILE.chmod(0o600)
+    except OSError:
+        pass
+    return minted
+
+
 def _scorer_headers() -> dict[str, str]:
     headers = {"X-Eval-Scorer": "true"}
-    secret = os.environ.get("EVERGREEN_SCORER_SECRET")
+    secret = _resolve_scorer_secret()
     if secret:
         headers["X-Evergreen-Scorer-Secret"] = secret
     return headers
@@ -132,11 +159,13 @@ class TaskFamily:
         env_seed = "clean" if seed == "clean" else "realistic"
         scenario_id = str(task["scenario_id"])
 
+        scorer_secret = _resolve_scorer_secret(create_if_missing=True)
         env = {
             **os.environ,
             "SEED_MODE": env_seed,
             "SCENARIO_ID": scenario_id,
             "MODALITY_MODE": "strict",
+            "EVERGREEN_SCORER_SECRET": scorer_secret,
             "SIMULATED_TODAY": os.environ.get("SIMULATED_TODAY", "2026-10-14"),
             "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
         }
@@ -160,22 +189,31 @@ class TaskFamily:
 
     @staticmethod
     def score(task: Task, submission: str = "") -> float | None:
-        """Score agent performance using server-side traces (`bun eval/collect-trace.ts`) and snapshots."""
+        """Score agent performance strictly from server-side traces (`bun eval/collect-trace.ts`) and snapshots."""
+        del submission  # Agent-supplied submission is untrusted and never scored as a trace.
+        if COLLECTED_TRACE_PATH.is_dir() and not COLLECTED_TRACE_PATH.is_symlink():
+            shutil.rmtree(COLLECTED_TRACE_PATH, ignore_errors=True)
+        else:
+            COLLECTED_TRACE_PATH.unlink(missing_ok=True)
+
+        scorer_env = {**os.environ}
+        secret = _resolve_scorer_secret()
+        if secret:
+            scorer_env["EVERGREEN_SCORER_SECRET"] = secret
+
         collect_res = subprocess.run(
             ["bun", "eval/collect-trace.ts", "--out", str(COLLECTED_TRACE_PATH)],
             cwd=str(GYM_DIR),
+            env=scorer_env,
             capture_output=True,
             text=True,
             timeout=30,
             check=False,
         )
 
-        if collect_res.returncode == 0 and COLLECTED_TRACE_PATH.exists():
-            trace_path = COLLECTED_TRACE_PATH
-        elif submission and Path(submission).exists():
-            trace_path = Path(submission)
-        else:
+        if collect_res.returncode != 0 or not COLLECTED_TRACE_PATH.is_file():
             return 0.0
+        trace_path = COLLECTED_TRACE_PATH
 
         cmd = [
             "bun",
@@ -203,6 +241,7 @@ class TaskFamily:
         result = subprocess.run(
             cmd,
             cwd=str(GYM_DIR),
+            env=scorer_env,
             capture_output=True,
             text=True,
             timeout=90,

@@ -85,13 +85,16 @@ class Operation:
     args_schema: dict[str, Any]
 
 
+_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 @cache
 def load_operations(specs_dir: Path = SPECS_DIR, modality_mode: str = "strict"):
     """Parse every operation of the five REST service specs (plus carrier REST tools in permissive mode)."""
     norm_mode = (modality_mode or "strict").strip().lower()
     operations: list[Operation] = []
     for service in REST_SERVICES:
-        spec = yaml.safe_load((specs_dir / f"{service}.yaml").read_text())
+        spec = yaml.load((specs_dir / f"{service}.yaml").read_text(), Loader=_YAML_LOADER)
         base_path = urlparse(spec["servers"][0]["url"]).path.rstrip("/")
         for path, item in spec["paths"].items():
             for method in HTTP_METHODS:
@@ -103,7 +106,7 @@ def load_operations(specs_dir: Path = SPECS_DIR, modality_mode: str = "strict"):
                     )
     if norm_mode == "permissive":
         for spec_name, service_key, op_prefix in PERMISSIVE_CARRIER_SPECS:
-            spec = yaml.safe_load((specs_dir / f"{spec_name}.yaml").read_text())
+            spec = yaml.load((specs_dir / f"{spec_name}.yaml").read_text(), Loader=_YAML_LOADER)
             base_path = urlparse(spec["servers"][0]["url"]).path.rstrip("/")
             for path, item in spec["paths"].items():
                 if path in _SKIP_CARRIER_PATHS or path.startswith("/auth/"):
