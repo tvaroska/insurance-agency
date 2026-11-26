@@ -261,9 +261,120 @@ def test_multi_task_five_epoch_uses_task_clustered_bootstrap_ci_not_pseudoreplic
     assert set(summarize_inspect.TRAIN_SCENARIOS).isdisjoint(summarize_inspect.HOLDOUT_SCENARIOS)
 
 
+def _write_fixture_eval_log(
+    out_path: Path,
+    *,
+    model: str,
+    learning_mechanism: str,
+    seed: str,
+    scenarios: list[tuple[str, float, bool]],
+) -> None:
+    from inspect_ai.log import (
+        EvalConfig,
+        EvalDataset,
+        EvalLog,
+        EvalPlan,
+        EvalResults,
+        EvalSample,
+        EvalSpec,
+        EvalStats,
+        write_eval_log,
+    )
+    from inspect_ai.model import ModelUsage
+    from inspect_ai.scorer import Score
+
+    samples = [
+        EvalSample(
+            id=f"{sc_id}-{seed}-natural",
+            epoch=1,
+            input=f"Prompt for {sc_id}",
+            target=sc_id,
+            metadata={"scenario_id": sc_id, "seed": seed},
+            model_usage={model: ModelUsage(input_tokens=10_000, output_tokens=1_000, total_tokens=11_000)},
+            scores={
+                "service_trace_scorer": Score(
+                    value=score_val,
+                    answer="Completed workflow.",
+                    metadata={
+                        "eo_compliant": eo_ok,
+                        "output_score": score_val,
+                        "trace_score": 1.0,
+                        "api_calls": 6,
+                        "eo_traps": [{"id": 2, "description": "TX state minimum 30/60/25", "caught": eo_ok}],
+                        "collateral": {"unauthorized_mutations": 0},
+                    },
+                )
+            },
+        )
+        for sc_id, score_val, eo_ok in scenarios
+    ]
+    log = EvalLog(
+        status="success",
+        eval=EvalSpec(
+            run_id="run_fixture",
+            task_id="task_fixture",
+            created="2026-10-14T12:00:00+00:00",
+            task="evergreen_langchain",
+            dataset=EvalDataset(name="evergreen", samples=len(samples)),
+            model=model,
+            config=EvalConfig(),
+            metadata={
+                "harness_label": "Inspect + LangChain",
+                "learning_mechanism": learning_mechanism,
+            },
+        ),
+        plan=EvalPlan(),
+        results=EvalResults(),
+        stats=EvalStats(),
+        samples=samples,
+    )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    write_eval_log(log, str(out_path))
+
+
 def test_default_cli_args_exit_zero_and_export_json_and_replay_manifest(
-    capsys: pytest.CaptureFixture[str], tmp_path: Path
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ):
+    realistic_dir = tmp_path / "results" / "realistic-natural"
+    clean_dir = tmp_path / "results" / "clean-natural"
+    sample_specs = [
+        ("01", 1.0, True),
+        ("02", 1.0, True),
+        ("03", 0.5, True),
+        ("07", 1.0, True),
+        ("14", 1.0, True),
+        ("20", 0.0, False),
+    ]
+    _write_fixture_eval_log(
+        realistic_dir / "flash-zero.eval",
+        model="google/gemini-3.8-flash",
+        learning_mechanism="None (zero-shot)",
+        seed="realistic",
+        scenarios=sample_specs,
+    )
+    _write_fixture_eval_log(
+        realistic_dir / "flash-sop.eval",
+        model="google/gemini-3.8-flash",
+        learning_mechanism="Domain skill (SOP)",
+        seed="realistic",
+        scenarios=[(sc, 1.0, True) for sc, _, _ in sample_specs],
+    )
+    _write_fixture_eval_log(
+        realistic_dir / "sonnet-zero.eval",
+        model="anthropic/vertex/claude-sonnet-5-5",
+        learning_mechanism="None (zero-shot)",
+        seed="realistic",
+        scenarios=sample_specs,
+    )
+    _write_fixture_eval_log(
+        clean_dir / "flash-clean.eval",
+        model="google/gemini-3.8-flash",
+        learning_mechanism="None (zero-shot)",
+        seed="clean",
+        scenarios=[(sc, 1.0, True) for sc, _, _ in sample_specs],
+    )
+    monkeypatch.setattr(summarize_inspect, "DEFAULT_RESULTS_CANDIDATES", (realistic_dir,))
+
     json_out = tmp_path / "summary-report.json"
     manifest_out = tmp_path / "replay-manifest.json"
     rc = summarize_inspect.main(
@@ -281,12 +392,14 @@ def test_default_cli_args_exit_zero_and_export_json_and_replay_manifest(
     assert "`gemini-3.8-flash`" in stdout
 
     parsed_summary = json.loads(json_out.read_text())
-    assert len(parsed_summary) >= 3
+    assert len(parsed_summary) == 3
     assert all("pass_at_1_ci95" in item for item in parsed_summary)
+    flash_zero = next(item for item in parsed_summary if item["model"] == "google/gemini-3.8-flash" and item["learning_mechanism"] == "None (zero-shot)")
+    assert flash_zero["drop_clean_to_messy_pp"] is not None
 
     manifest = json.loads(manifest_out.read_text())
     assert manifest["benchmark"] == "evergreen_insurance_gym"
-    assert manifest["total_trials"] >= 18
+    assert manifest["total_trials"] == 24
 
 
 def test_drop_uses_only_the_arms_own_clean_runs_on_shared_scenarios():

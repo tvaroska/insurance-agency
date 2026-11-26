@@ -30,8 +30,11 @@ BASE_URLS = {
 }
 
 
+_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 def spec_operation_ids(service: str):
-    spec = yaml.safe_load((SPECS_DIR / f"{service}.yaml").read_text())
+    spec = yaml.load((SPECS_DIR / f"{service}.yaml").read_text(), Loader=_YAML_LOADER)
     return [
         op["operationId"]
         for item in spec["paths"].values()

@@ -96,8 +96,7 @@ def test_scenario_given_as_yaml_integer_still_filters():
 
 
 def test_bridge_filters_preserve_assistant_reasoning_and_empty_list_content():
-    from inspect_ai._util.content import ContentReasoning, ContentText
-    from inspect_ai.model import ChatCompletionChoice, ChatMessageAssistant, GenerateConfig
+    from inspect_ai.model import ChatCompletionChoice, ChatMessageAssistant, ContentReasoning, ContentText, GenerateConfig
     from inspect_ai.tool import ToolCall
 
     in_filter, out_filter = harness.bridge_filters()
@@ -192,9 +191,15 @@ def test_mcp_tools_authenticate_comm_with_bearer_token_and_drop_browser_code_exe
     async def fake_load(session: str, server_name: str):
         names = {
             "comm": ["get_inbox", "send_message"],
-            "portals": ["browser_navigate", "browser_evaluate", "browser_run_code_unsafe", "browser_click"],
+            "portals": [
+                "browser_navigate",
+                "browser_evaluate",
+                "browser_run_code_unsafe",
+                "browser_network_requests",
+                "browser_click",
+            ],
         }[server_name]
-        return [StructuredTool.from_function(func=lambda: "", name=n, description=n) for n in names]
+        return [StructuredTool.from_function(func=lambda url="": url, name=n, description=n) for n in names]
 
     monkeypatch.setattr(harness, "httpx", types.SimpleNamespace(AsyncClient=FakeAuthClient))
     monkeypatch.setattr(harness.MultiServerMCPClient, "session", fake_session)
@@ -203,6 +208,19 @@ def test_mcp_tools_authenticate_comm_with_bearer_token_and_drop_browser_code_exe
     async def run():
         async with AsyncExitStack() as stack:
             tools = await harness.open_mcp_tools(stack, service_base_urls(), tmp_path)
+            nav_tool = next(t for t in tools if t.name == "browser_navigate")
+            assert await nav_tool.ainvoke({"url": "http://localhost:3005/"}) == "http://localhost:3005/"
+            for bad_url in (
+                "data:text/html,<form action='http://localhost:3005/sim/reset' method='POST'></form>",
+                "javascript:alert(1)",
+                "file:" + "///etc/passwd",
+                "http://localhost:3000/v1/clients",
+                "http://localhost:3005/sim/reset",
+                "http://localhost:3006/auth/portal-session",
+                "http://localhost:3005/portal/../sim/seed",
+            ):
+                with pytest.raises(ValueError):
+                    await nav_tool.ainvoke({"url": bad_url})
             return [tool.name for tool in tools]
 
     assert asyncio.run(run()) == ["get_inbox", "send_message", "browser_navigate", "browser_click"]
@@ -473,7 +491,6 @@ def test_archive_sample_artifacts_separates_learning_mechanism_arms(tmp_path: Pa
 
 def test_transient_vertex_400_retries_only_opaque_internal_decode_errors():
     from google.genai.errors import ClientError as GenAIClientError
-    from inspect_ai.model._providers.google import GoogleGenAIAPI
 
     opaque_400 = GenAIClientError(
         400,
@@ -507,9 +524,7 @@ def test_transient_vertex_400_retries_only_opaque_internal_decode_errors():
     wrapped_schema = RuntimeError("Request:\n{}\n\nClientError")
     wrapped_schema.__cause__ = schema_400
 
-    dummy_api = types.SimpleNamespace(_oauth=False)
-    dec_opaque = GoogleGenAIAPI.should_retry(dummy_api, wrapped_opaque)  # type: ignore[arg-type]
-    dec_schema = GoogleGenAIAPI.should_retry(dummy_api, wrapped_schema)  # type: ignore[arg-type]
-
-    assert getattr(dec_opaque, "retry", bool(dec_opaque)) is True
-    assert getattr(dec_schema, "retry", bool(dec_schema)) is False
+    assert harness.is_transient_vertex_400(wrapped_opaque) is True
+    assert harness.is_transient_vertex_400(opaque_400) is True
+    assert harness.is_transient_vertex_400(wrapped_schema) is False
+    assert harness.is_transient_vertex_400(schema_400) is False

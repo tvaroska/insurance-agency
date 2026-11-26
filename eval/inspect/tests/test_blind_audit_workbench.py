@@ -182,7 +182,7 @@ def test_http_server_is_strictly_blind_and_persists_verdicts(tmp_path: Path):
     store = wb.BlindAuditStore(sheet_path=sheet, key_path=key, gym_root=tmp_path)
     server = wb.create_server(store, host="127.0.0.1", port=0)
     port = server.server_address[1]
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
     thread.start()
     opener = _opener()
     try:

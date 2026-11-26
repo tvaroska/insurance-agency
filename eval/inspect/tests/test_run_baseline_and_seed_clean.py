@@ -71,6 +71,54 @@ def test_ensure_parallel_stacks_attaches_to_prelaunched_stacks(monkeypatch: pyte
     run_baseline.shutdown_stacks(handles)
 
 
+def test_run_inspect_batch_retries_transient_choices_none_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    from types import SimpleNamespace
+
+    calls = 0
+
+    def fake_run(cmd, cwd=None, env=None, check=False, capture_output=False, text=False):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            (tmp_path / "fail.eval").write_text("err")
+            return SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr="TypeError: 'NoneType' object is not iterable (choices=None)",
+            )
+        (tmp_path / "ok.eval").write_text("ok")
+        return SimpleNamespace(returncode=0, stdout="done\n", stderr="")
+
+    def fake_read_header(path_str: str, header_only: bool = False):
+        status = "error" if path_str.endswith("fail.eval") else "success"
+        return SimpleNamespace(
+            status=status,
+            error="choices=None" if status == "error" else None,
+            eval=SimpleNamespace(task_args={"scenario": "01"}),
+        )
+
+    monkeypatch.setattr(run_baseline.subprocess, "run", fake_run)
+    monkeypatch.setattr(run_baseline, "read_eval_log", fake_read_header)
+
+    run_baseline.run_inspect_batch(
+        python_bin="python3",
+        model_id="openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas",
+        scenario="01",
+        seed="realistic",
+        difficulty="natural",
+        modality_mode="strict",
+        epochs=1,
+        turn_limit=30,
+        log_dir=tmp_path,
+        env={},
+    )
+    assert calls == 2
+    assert not (tmp_path / "fail.eval").exists()
+    assert (tmp_path / "ok.eval").exists()
+
+
 def test_seed_clean_foreign_key_integrity_and_clean_control_purity():
     seed_clean = GYM_ROOT / "data" / "seed-clean"
     seed_realistic = GYM_ROOT / "data" / "seed"

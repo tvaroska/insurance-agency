@@ -219,98 +219,182 @@ def test_prepare_and_multiturn_agent_pass_turns_via_store_not_agent_state_metada
     if not ed._HAS_INSPECT:
         pytest.skip("inspect_ai not installed")
 
+    import types
+    import httpx
+    from inspect_ai import eval as inspect_eval
     from inspect_ai.agent import AgentState
+    from inspect_ai.model import ModelOutput, ModelUsage, get_model
 
-    fake_store: dict[str, object] = {}
+    assert not hasattr(AgentState(messages=[]), "metadata")
 
-    class _FakeStore:
-        def get(self, key: str, default=None):
-            return fake_store.get(key, default)
+    monkeypatch.delenv("EVERGREEN_BASE_URLS", raising=False)
+    monkeypatch.delenv("EVERGREEN_BASE_PORT", raising=False)
+    monkeypatch.setattr(tempfile := __import__("tempfile"), "tempdir", str(tmp_path))
 
-        def set(self, key: str, value: object):
-            fake_store[key] = value
+    seeded_calls = 0
 
-    class _FakeTaskState:
-        sample_id = "DT-01-household-endorsement-swap"
-        epoch = 1
-        metadata = {
-            "modality_mode": "strict",
-            "start_state": {"base": "empty", "tables": {}},
-            "turns": [
-                {"role": "client", "message": "turn 1"},
-                {"role": "client", "message": "turn 2"},
-            ],
-        }
-        store = _FakeStore()
+    def mock_services(request: httpx.Request) -> httpx.Response:
+        nonlocal seeded_calls
+        path = request.url.path
+        if path == "/sim/status":
+            return httpx.Response(200, json={"modality_mode": "strict"})
+        if path == "/sim/seed":
+            seeded_calls += 1
+            return httpx.Response(200, json={"status": "seeded"})
+        if path == "/sim/snapshot":
+            return httpx.Response(200, json={"tables": {"clients": [], "endorsements": []}})
+        if path == "/oauth/token":
+            return httpx.Response(200, json={"access_token": "tok", "expires_in": 3600})
+        return httpx.Response(200, json={"data": []})
 
-    async def _noop_modality(http, urls, mode):
-        return None
+    class FakeAsyncClient(httpx.AsyncClient):
+        def __init__(self, **kwargs):
+            super().__init__(transport=httpx.MockTransport(mock_services), **kwargs)
 
-    async def _noop_seed(http, urls, start_state):
-        return None
-
-    async def _fake_snapshot(http, urls):
-        return {"ams": {}}
-
-    monkeypatch.setattr(ed, "check_modality", _noop_modality)
-    monkeypatch.setattr(ed, "seed_services", _noop_seed)
-    monkeypatch.setattr(ed, "take_snapshot", _fake_snapshot)
-
-    async def _run_prepare():
-        solver = ed.prepare_state_scenario()
-        state = _FakeTaskState()
-        try:
-            await solver(state, None)
-        finally:
-            await ed.release_services(state)
-
-    asyncio.run(_run_prepare())
-    assert fake_store[ed.TURNS_KEY] == _FakeTaskState.metadata["turns"]
-    assert Path(str(fake_store[ed.WORK_DIR_KEY]), "snapshot-before.json").exists()
-
-    # Confirm real AgentState has no `.metadata` attribute and multiturn agent reads store().
-    agent_state = AgentState(messages=[])
-    assert not hasattr(agent_state, "metadata")
-    observed_turns: list[dict] = []
-
-    class _FakeBridge:
-        def __init__(self, st):
-            self.state = st
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
-    async def _fake_open_mcp(stack, urls, work_dir):
+    async def no_mcp_tools(_stack, _urls, work_dir: Path):
+        assert work_dir.is_dir()
         return []
 
-    async def _fake_run_mt(graph, turns):
-        observed_turns.extend(turns)
-        return []
+    async def fake_run_bun(*args: str):
+        out_path = Path(args[args.index("--out") + 1])
+        out_path.write_text(
+            json.dumps(
+                {
+                    "scenario_id": "DT-01",
+                    "base": "empty",
+                    "passed": True,
+                    "score": 1,
+                    "summary": "PASS",
+                    "matchedInserts": [],
+                    "missingInserts": [],
+                    "matchedUpdates": [],
+                    "missingUpdates": [],
+                    "matchedDeletes": [],
+                    "missingDeletes": [],
+                    "unexpectedWrites": [],
+                    "allowedExtrasUsed": [],
+                    "extraGovernanceWrites": 0,
+                    "systemAuditWrites": 0,
+                    "diffSummary": {},
+                }
+            )
+        )
 
-    monkeypatch.setattr(ed, "store", lambda: _FakeStore())
-    monkeypatch.setattr(ed, "open_mcp_tools", _fake_open_mcp)
-    monkeypatch.setattr(ed, "build_rest_tools", lambda rc, **kw: [])
-    monkeypatch.setattr(ed, "create_agent", lambda model, tools, system_prompt: object())
-    monkeypatch.setattr(ed, "agent_bridge", lambda st, **kw: _FakeBridge(st))
-    monkeypatch.setattr(ed, "run_multiturn_conversation", _fake_run_mt)
+    monkeypatch.setattr(ed, "httpx", types.SimpleNamespace(AsyncClient=FakeAsyncClient))
+    monkeypatch.setattr(ed, "open_mcp_tools", no_mcp_tools)
+    monkeypatch.setattr(ed, "run_bun", fake_run_bun)
 
-    agent_fn = ed.multiturn_langchain_agent()
-    asyncio.run(agent_fn(agent_state))
-    assert observed_turns == _FakeTaskState.metadata["turns"]
+    outputs = [
+        ModelOutput.from_content("mockllm/model", f"Turn {idx} response")
+        for idx in range(1, 4)
+    ]
+    for out in outputs:
+        out.usage = ModelUsage(input_tokens=1, output_tokens=1, total_tokens=2)
+
+    (log,) = inspect_eval(
+        ed.evergreen_deterministic(scenario="DT-01", artifacts_dir=str(tmp_path / "artifacts")),
+        model=get_model("mockllm/model", custom_outputs=outputs),
+        log_dir=str(tmp_path / "logs"),
+        display="none",
+    )
+    assert log.status == "success", log.error
+    assert seeded_calls == 8
+    assert log.samples is not None and len(log.samples) == 1
+    user_turns = [m.text for m in log.samples[0].messages if m.role == "user"]
+    assert len(user_turns) == 3
 
 
-def test_summarize_deterministic_reads_archived_v1_logs_and_manifest(tmp_path: Path):
+def test_summarize_deterministic_reads_fixture_logs_and_manifest(tmp_path: Path):
     if not ed._HAS_INSPECT:
         pytest.skip("inspect_ai not installed")
 
+    from inspect_ai.log import (
+        EvalConfig,
+        EvalDataset,
+        EvalLog,
+        EvalPlan,
+        EvalResults,
+        EvalSample,
+        EvalSpec,
+        EvalStats,
+        write_eval_log,
+    )
+    from inspect_ai.model import ChatMessageAssistant, ModelUsage
+    from inspect_ai.scorer import Score
     import summarize_deterministic as sd
 
-    logs_dir = ed.GYM_ROOT / "eval" / "results" / "deterministic-v1" / "logs"
-    if not logs_dir.is_dir():
-        pytest.skip("deterministic-v1 logs not present")
+    logs_dir = tmp_path / "logs"
+    artifacts_dir = tmp_path / "artifacts"
+    models = [
+        ("anthropic/vertex/claude-sonnet-5-5", "claude-sonnet-5-5", 2),
+        ("google/gemini-4-hydrogen", "gemini-4-hydrogen", 2),
+        ("google/gemini-3.8-flash", "gemini-3.8-flash", 1),
+        ("openai-api/vertex-maas/deepseek-ai/deepseek-v4.1-flash-maas", "deepseek-v4.1-flash", 1),
+        ("openai-api/vertex-maas/openai/gpt-oss-120b-maas", "gpt-oss-120b", 0),
+    ]
+    for model_id, slug, pass_count in models:
+        samples = []
+        for idx, sc_id in enumerate(("DT-01", "DT-02"), start=1):
+            passed = idx <= pass_count
+            sample_id = f"{sc_id}-fixture"
+            bundle = artifacts_dir / slug / "deterministic" / f"{sample_id}-e1"
+            bundle.mkdir(parents=True, exist_ok=True)
+            (bundle / "contract-report.json").write_text('{"passed": true}')
+            (bundle / "sha256sums.txt").write_text("deadbeef  contract-report.json\n")
+            samples.append(
+                EvalSample(
+                    id=sample_id,
+                    epoch=1,
+                    input="turn 1",
+                    target=sc_id,
+                    messages=[ChatMessageAssistant(content="done")],
+                    metadata={"scenario_id": sc_id, "start_state": {"base": "realistic"}},
+                    model_usage={model_id: ModelUsage(input_tokens=5_000, output_tokens=500, total_tokens=5_500)},
+                    total_time=12.5,
+                    scores={
+                        "state_contract_scorer": Score(
+                            value=1.0 if passed else 0.0,
+                            answer="done",
+                            explanation=f"{sc_id}: {'PASS' if passed else 'FAIL'}",
+                            metadata={
+                                "passed": passed,
+                                "scenario_id": sc_id,
+                                "base": "realistic",
+                                "extra_governance_writes": 0,
+                                "system_audit_writes": 1,
+                                "missing_inserts": [] if passed else [{"label": "expected_row", "detail": "missing"}],
+                                "missing_updates": [],
+                                "missing_deletes": [],
+                                "unexpected_writes": [],
+                                "artifacts_dir": str(bundle),
+                            },
+                        )
+                    },
+                )
+            )
+        eval_log = EvalLog(
+            status="success",
+            eval=EvalSpec(
+                run_id=f"run_{slug}",
+                task_id=f"task_{slug}",
+                created="2026-10-14T12:00:00+00:00",
+                task="evergreen_deterministic",
+                dataset=EvalDataset(name="evergreen_deterministic_state", samples=len(samples)),
+                model=model_id,
+                config=EvalConfig(),
+                metadata={
+                    "harness": "langchain create_agent direct multi-turn via inspect agent_bridge",
+                    "learning_mechanism": "None (zero-shot)",
+                },
+            ),
+            plan=EvalPlan(),
+            results=EvalResults(),
+            stats=EvalStats(),
+            samples=samples,
+        )
+        out_eval = logs_dir / slug / "fixture.eval"
+        out_eval.parent.mkdir(parents=True, exist_ok=True)
+        write_eval_log(eval_log, str(out_eval))
 
     md_out = tmp_path / "summary.md"
     json_out = tmp_path / "summary-report.json"
@@ -319,7 +403,7 @@ def test_summarize_deterministic_reads_archived_v1_logs_and_manifest(tmp_path: P
         [
             str(logs_dir),
             "--artifacts-dir",
-            str(ed.GYM_ROOT / "eval" / "results" / "deterministic-v1" / "artifacts"),
+            str(artifacts_dir),
             "--md-out",
             str(md_out),
             "--json-out",
@@ -330,7 +414,7 @@ def test_summarize_deterministic_reads_archived_v1_logs_and_manifest(tmp_path: P
     )
     assert rc == 0
     report = json.loads(json_out.read_text(encoding="utf-8"))
-    assert report["total_trials"] == 50
+    assert report["total_trials"] == 10
     assert len(report["models"]) == 5
     md_text = md_out.read_text(encoding="utf-8")
     assert "None: None" not in md_text
@@ -340,5 +424,5 @@ def test_summarize_deterministic_reads_archived_v1_logs_and_manifest(tmp_path: P
 
     manifest = json.loads(manifest_out.read_text(encoding="utf-8"))
     assert manifest["benchmark"] == "evergreen_deterministic_state"
-    assert manifest["total_trials"] == 50
-    assert all(t["eval_log"].startswith("eval/results/deterministic-v1/logs/") for t in manifest["trials"])
+    assert manifest["total_trials"] == 10
+    assert all(t["sha256"].get("contract-report.json") == "deadbeef" for t in manifest["trials"])

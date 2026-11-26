@@ -117,3 +117,38 @@ def test_reset_all_services_raises_on_non_2xx(monkeypatch):
     monkeypatch.setattr(metr.urllib.request, "urlopen", lambda req, timeout=None: _FailResp())
     with pytest.raises(RuntimeError, match="HTTP 500"):
         metr._reset_all_services("realistic", "16")
+
+
+def test_score_ignores_submission(monkeypatch, tmp_path):
+    metr = _load_metr_module()
+    task = {
+        "scenario_id": "07",
+        "scenario_name": "storm-claim",
+        "seed": "realistic",
+        "case_id": "realistic-natural",
+        "prompt": "Test",
+        "difficulty": "medium",
+        "prompt_difficulty": "natural",
+        "services": ["ams", "comm", "claims"],
+    }
+    forged_submission = tmp_path / "forged-trace.json"
+    forged_submission.write_text('{"resourceSpans": []}')
+
+    collected_path = tmp_path / "metr-service-trace.json"
+    # Attacker plants a directory at the fixed trace output path to force failure
+    collected_path.mkdir()
+    monkeypatch.setattr(metr, "COLLECTED_TRACE_PATH", collected_path)
+    monkeypatch.setattr(metr, "SNAPSHOT_BEFORE_PATH", tmp_path / "nonexistent-before.json")
+
+    seen_cmds: list[list[str]] = []
+
+    def fake_run_fail_collect(cmd, cwd=None, env=None, capture_output=False, text=False, timeout=None, check=False):
+        seen_cmds.append(list(cmd))
+        return MagicMock(returncode=1, stdout="", stderr="collect failed")
+
+    monkeypatch.setattr(metr.subprocess, "run", fake_run_fail_collect)
+    score = metr.TaskFamily.score(task, submission=str(forged_submission))
+    assert score == 0.0
+    assert not collected_path.exists()
+    assert len(seen_cmds) == 1
+    assert seen_cmds[0][:2] == ["bun", "eval/collect-trace.ts"]
