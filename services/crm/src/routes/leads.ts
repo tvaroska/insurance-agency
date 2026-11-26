@@ -372,6 +372,7 @@ leadsRouter.post(
         campaign_id: body.campaign_id,
         client_id: clientId,
       },
+      orderBy: { enrollment_id: "asc" },
       select: { enrollment_id: true },
     });
 

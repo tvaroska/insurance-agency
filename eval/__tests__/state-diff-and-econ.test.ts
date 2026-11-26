@@ -104,6 +104,7 @@ describe("S3-DIFF-1: state-diff evaluator", () => {
   });
 
   test("fetchGymSnapshot sends X-Eval-Scorer header and unwraps /sim/snapshot tables", async () => {
+    const prevFetch = globalThis.fetch;
     const fetchMock = mock((url: string | URL | Request, init?: RequestInit) => {
       const headers = init?.headers as Record<string, string> | undefined;
       expect(headers?.["X-Eval-Scorer"]).toBe("true");
@@ -129,14 +130,52 @@ describe("S3-DIFF-1: state-diff evaluator", () => {
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const snap = await fetchGymSnapshot({
-      ams: "http://localhost:3000",
-      crm: "http://localhost:3002",
-    });
+    try {
+      const snap = await fetchGymSnapshot({
+        ams: "http://localhost:3000",
+        crm: "http://localhost:3002",
+      });
 
-    expect(snap.ams.clients).toHaveLength(1);
-    expect(snap.ams.clients[0].id).toBe("CLI-001");
-    expect(snap.crm).toEqual({});
+      expect(snap.ams.clients).toHaveLength(1);
+      expect(snap.ams.clients[0].id).toBe("CLI-001");
+      expect(snap.crm).toEqual({});
+    } finally {
+      globalThis.fetch = prevFetch;
+    }
+  });
+
+  test("fetchGymSnapshot rejects a failed service", async () => {
+    const prevFetch = globalThis.fetch;
+    const fetchMock = mock((url: string | URL | Request) => {
+      const urlStr = String(url);
+      if (urlStr.includes("3001/sim/snapshot")) {
+        return Promise.resolve(new Response("Forbidden", { status: 403 }));
+      }
+      if (urlStr.includes("3002/sim/snapshot")) {
+        return Promise.reject(new Error("ECONNREFUSED"));
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ tables: { clients: [] } }), { status: 200 }),
+      );
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      const err = await fetchGymSnapshot({
+        ams: "http://localhost:3000",
+        rater: "http://localhost:3001",
+        crm: "http://localhost:3002",
+      }).then(
+        () => undefined,
+        (e: Error) => e,
+      );
+
+      expect(err).toBeInstanceOf(Error);
+      expect(err?.message).toContain("rater: GET http://localhost:3001/sim/snapshot returned 403");
+      expect(err?.message).toContain("crm: GET http://localhost:3002/sim/snapshot failed: ECONNREFUSED");
+    } finally {
+      globalThis.fetch = prevFetch;
+    }
   });
 
   test("evaluateCollateralDamage passes when all mutations match allowedClientIds and allowedPolicyIds", () => {

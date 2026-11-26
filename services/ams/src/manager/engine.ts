@@ -13,18 +13,16 @@ export interface ManagerDecision {
   response_text: string;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export function processEscalation(input: EscalationInput): ManagerDecision {
-  const summaryLower = input.summary.toLowerCase();
+  const context = isRecord(input.context) ? input.context : null;
 
   for (const rule of RULES) {
-    // If rule specifies a reason, it must match
     if (rule.reason && rule.reason !== input.reason) continue;
-
-    // If rule specifies keywords, at least one must appear in the summary
-    if (rule.keywords) {
-      const matched = rule.keywords.some((kw) => summaryLower.includes(kw.toLowerCase()));
-      if (!matched) continue;
-    }
+    if (rule.when && !rule.when(context)) continue;
 
     const template = TEMPLATES[rule.template_id];
     if (!template) continue;

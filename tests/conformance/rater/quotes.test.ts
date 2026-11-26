@@ -275,9 +275,9 @@ describe("POST /v1/quotes/request: effects", () => {
     ]);
     expect(JSON.parse(diff.quote_requests.added[0].risk_data as string)).toEqual({
       state: "TX",
-      address: { state: "TX" },
+      address: body.client.address,
       requested_coverages: body.requested_coverages,
-      property: { year_built: 1999 },
+      property: body.property,
       business: { employees: 3 },
     });
 
@@ -338,7 +338,16 @@ describe("POST /v1/quotes/request: effects", () => {
   test("RTR-R21, RTR-R24: with no eligible carrier the request is stored as pending and no quote is written", async () => {
     await ctx.svc.seed({ tables: { carriers: CARRIERS } });
     const { result: res, diff } = await ctx.svc.changes(() =>
-      submit(quoteRequestBody({ client: { first_name: "Q", last_name: "Q", address: { state: "WY" } } })),
+      submit(
+        quoteRequestBody({
+          client: {
+            first_name: "Q",
+            last_name: "Q",
+            date_of_birth: "1985-04-12",
+            address: { street: "100 Main St", city: "Cheyenne", state: "WY", zip: "82001" },
+          },
+        }),
+      ),
     );
     expect(res.status).toBe(202);
     contract.check(res);

@@ -150,41 +150,7 @@ coiRouter.get(
     const documentId = c.req.param("document_id");
     const cached = coiPdfStore.get(documentId);
     if (!cached) {
-      const docRecord = await prisma.document.findUnique({
-        where: { document_id: documentId },
-      });
-      if (!docRecord || docRecord.document_type !== "coi") {
-        throw notFoundError("COI document");
-      }
-      const fallbackPdf = await generateAcord25({
-        client: {
-          first_name: "Policyholder",
-          last_name: docRecord.client_id,
-          email: "insured@evergreen-ins.com",
-        },
-        policy: {
-          policy_id: docRecord.filename.split("-")[1] ?? "POL-ACTIVE",
-          carrier_code: "SMIT",
-          policy_type: "commercial",
-          effective_date: "2025-06-01",
-          expiration_date: docRecord.expiration_date ?? "2026-06-01",
-          premium_current: 2400,
-          status: "active",
-          coverages: [],
-        },
-        certificateHolder: {
-          name: "Certificate Holder on File",
-        },
-      });
-      coiPdfStore.set(documentId, fallbackPdf);
-      return new Response(new Uint8Array(fallbackPdf), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `inline; filename="${docRecord.filename}"`,
-          "Content-Length": fallbackPdf.length.toString(),
-        },
-      });
+      throw notFoundError("COI document");
     }
 
     return new Response(new Uint8Array(cached), {

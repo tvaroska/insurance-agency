@@ -119,13 +119,6 @@
         "prisma": "^7.8.0",
       },
     },
-    "tests/e2e": {
-      "name": "@evergreen/e2e-tests",
-      "dependencies": {
-        "@evergreen/shared": "workspace:*",
-        "@modelcontextprotocol/sdk": "^1.11.0",
-      },
-    },
     "tests/integration": {
       "name": "@evergreen/integration-tests",
       "dependencies": {
@@ -243,8 +236,6 @@
     "@evergreen/comm": ["@evergreen/comm@workspace:services/comm"],
 
     "@evergreen/crm": ["@evergreen/crm@workspace:services/crm"],
-
-    "@evergreen/e2e-tests": ["@evergreen/e2e-tests@workspace:tests/e2e"],
 
     "@evergreen/ecm": ["@evergreen/ecm@workspace:services/ecm"],
 

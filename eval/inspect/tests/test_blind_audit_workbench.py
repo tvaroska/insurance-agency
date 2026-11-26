@@ -225,3 +225,11 @@ def test_real_v08_store_index_is_strictly_blind():
     assert json.loads(items_payload)["total"] == 60
     for forbidden in wb.FORBIDDEN_BLIND_TOKENS:
         assert forbidden not in items_payload, f"Real v0.8 index leaked {forbidden!r}"
+
+
+def test_real_v091_store_index_is_strictly_blind():
+    store = wb.BlindAuditStore(gym_root=GYM_ROOT)
+    items_payload = json.dumps(store.list_items())
+    assert json.loads(items_payload)["total"] == 60
+    for forbidden in wb.FORBIDDEN_BLIND_TOKENS:
+        assert forbidden not in items_payload, f"Real v0.9.1 index leaked {forbidden!r}"

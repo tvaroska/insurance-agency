@@ -347,10 +347,19 @@ describe("GET /v1/documents/:client_id/audit - Status Filter", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 404 when status filter matches no docs for client", async () => {
+  it("audit with a status filter that matches nothing returns 200", async () => {
     const headers = await authHeader(["ecm:documents:read"]);
     const res = await getAudit("CLI-001", { status: "generated" }, headers);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+
+    const json = await res.json();
+    expect(json.client_id).toBe("CLI-001");
+    expect(json.documents).toEqual([]);
+    expect(json.compliance_status).toBeDefined();
+    expect(json.pagination.has_more).toBe(false);
+
+    const unknownRes = await getAudit("CLI-DOES-NOT-EXIST", { status: "generated" }, headers);
+    expect(unknownRes.status).toBe(404);
   });
 });
 

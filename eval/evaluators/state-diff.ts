@@ -142,7 +142,7 @@ export function extractRowKey(
   return `hash:${canonicalJson(row)}`;
 }
 
-// ── Snapshot normalization & fetching ───────────────────────────────
+// Snapshot normalization and fetching
 
 function normalizeServiceSnapshot(raw: unknown): ServiceSnapshot {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -169,31 +169,60 @@ function normalizeServiceSnapshot(raw: unknown): ServiceSnapshot {
 
 /**
  * Fetches live database snapshots from `GET /sim/snapshot` across all configured services.
+ * Fails closed if any service is unreachable, returns non-2xx, or returns invalid JSON.
  */
 export async function fetchGymSnapshot(
   serviceUrls?: Record<string, string>,
+  fetchImpl?: typeof fetch,
 ): Promise<GymSnapshot> {
   const urls = serviceUrls ?? defaultBaseUrls();
+  const fetchFn = fetchImpl ?? globalThis.fetch;
   const snapshot: GymSnapshot = {};
 
   const entries = Object.entries(urls);
-  await Promise.all(
+  const results = await Promise.allSettled(
     entries.map(async ([service, baseUrl]) => {
+      const url = `${baseUrl}/sim/snapshot`;
+      let res: Response;
       try {
-        const res = await fetch(`${baseUrl}/sim/snapshot`, {
+        res = await fetchFn(url, {
           headers: scorerHeaders(),
         });
-        if (!res.ok) {
-          snapshot[service] = {};
-          return;
-        }
-        const body = await res.json();
-        snapshot[service] = normalizeServiceSnapshot(body);
-      } catch {
-        snapshot[service] = {};
+      } catch (err) {
+        throw new Error(
+          `${service}: GET ${url} failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
+      if (!res.ok) {
+        throw new Error(`${service}: GET ${url} returned ${res.status}`);
+      }
+      let body: unknown;
+      try {
+        body = await res.json();
+      } catch (err) {
+        throw new Error(
+          `${service}: GET ${url} returned invalid JSON: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+      return [service, normalizeServiceSnapshot(body)] as const;
     }),
   );
+
+  const failures: string[] = [];
+  for (const result of results) {
+    if (result.status === "rejected") {
+      failures.push(
+        result.reason instanceof Error ? result.reason.message : String(result.reason),
+      );
+    } else {
+      const [service, serviceSnapshot] = result.value;
+      snapshot[service] = serviceSnapshot;
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`Failed to collect gym snapshot:\n  ${failures.join("\n  ")}`);
+  }
 
   return snapshot;
 }

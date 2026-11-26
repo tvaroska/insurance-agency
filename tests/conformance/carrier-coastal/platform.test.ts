@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { expectError, loadContract } from "../harness";
+import { expectError, expectedServiceMode, loadContract } from "../harness";
 import { API, policyRow, quoteRow, rawQuoteRow, recommendation, riskFactors, riskScore, riskTier, SCOPES, spaced, start, type Ctx } from "./support";
 
 const contract = loadContract("carrier-coastal");
@@ -11,6 +11,7 @@ const SEED = {
   tables: {
     quotes: [
       quoteRow({ quote_id: "QT-ASSESSED" }),
+      rawQuoteRow({ quote_id: "QT-RAW" }),
       quoteRow({ quote_id: "QT-BOUND", status: "bound", bind_status: "bound", bound_at: "2026-01-06T00:00:00Z", policy_id: "POL-OLD" }),
     ],
     policies: [policyRow({ policy_id: "POL-OLD" })],
@@ -30,7 +31,7 @@ const seedJson = (mode: "seed" | "seed-clean", file: string): any[] =>
 const apiOperations = contract.operations().filter((o) => o.path.startsWith(API));
 const concrete = (path: string) => path.replace("{quote_id}", "QT-ASSESSED").replace("{policy_id}", "POL-OLD");
 const BODIES: Record<string, unknown> = {
-  submitQuote: { client_id: "CLI-001", policy_type: "personal_auto", effective_date: "2026-11-01" },
+  submitQuote: { quote_id: "QT-RAW" },
   bindQuote: { effective_date: "2026-11-01" },
   quickQuote: { vin: "1HGCM82633A004352", client_id: "CLI-003", driver_name: "Driver" },
   recalculateQuote: {},
@@ -168,16 +169,17 @@ describe("authentication and scopes", () => {
     expect(conflict.body.error_code).toBe("CONFLICT");
   });
 
-  test("CST-R10: every operation of the OpenAPI file was exercised", async () => {
+  test("CST-R10: every operation of the OpenAPI file answers its success schema", async () => {
     // A fresh contract object, so this does not depend on which tests ran before.
     const fresh = loadContract("carrier-coastal");
-    fresh.check(await ctx.svc.http.get("/health"));
-    fresh.check(await ctx.svc.http.get("/auth/dev-token"));
-    fresh.check(await ctx.svc.http.get("/auth/portal-session"));
+    expect(fresh.check(await ctx.svc.http.get("/health")).schemaChecked).toBe(true);
+    expect(fresh.check(await ctx.svc.http.get("/auth/dev-token")).schemaChecked).toBe(true);
+    expect(fresh.check(await ctx.svc.http.get("/auth/portal-session")).schemaChecked).toBe(true);
     for (const op of fresh.operations().filter((o) => o.path.startsWith(API))) {
-      const res = await ctx.svc.http.request(op.method, concrete(op.path), { body: BODIES[op.operationId] });
-      expect(res.status).toBe(401);
-      fresh.check(res);
+      await ctx.svc.seed(SEED);
+      const res = await call(ctx.api, op);
+      expect([200, 201]).toContain(res.status);
+      expect(fresh.check(res).schemaChecked).toBe(true);
     }
     expect(fresh.unchecked()).toEqual([]);
   });
@@ -553,9 +555,10 @@ describe("control plane, chaos and request log", () => {
 });
 
 describe("access log", () => {
-  test("CST-R61: each request is written to standard output as one JSON line", async () => {
-    // Standard output is only visible when the harness started the service itself.
-    if (ctx.svc.mode !== "process") return;
+  test.skipIf(expectedServiceMode("carrier-coastal") !== "process")(
+    "CST-R61: each request is written to standard output as one JSON line",
+    async () => {
+      expect(ctx.svc.mode).toBe("process");
     const id = `access-log-${crypto.randomUUID()}`;
     const res = await ctx.api.get(`${API}/policies/POL-NOPE/id-card`, { query: { limit: 1 }, headers: { "X-Correlation-ID": id, "User-Agent": "conformance-suite" } });
     expect(res.status).toBe(404);
@@ -575,5 +578,6 @@ describe("access log", () => {
     });
     expect(Number.isNaN(Date.parse(entry.timestamp))).toBe(false);
     expect(typeof entry.duration_ms).toBe("number");
-  });
+    },
+  );
 });

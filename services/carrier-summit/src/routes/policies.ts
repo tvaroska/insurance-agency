@@ -30,6 +30,7 @@ policiesRouter.get(
     // Get documents for this policy
     const docs = await prisma.policyDocument.findMany({
       where: { policy_id: policyId },
+      orderBy: { document_id: "asc" },
     });
 
     return c.json({

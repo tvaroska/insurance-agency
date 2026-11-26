@@ -8,9 +8,10 @@ const PYTHON_BIN = "python3";
 const PY_TIMEOUT_MS = 30_000;
 
 function runPythonJson(code: string): any {
-  const out = execFileSync(PYTHON_BIN, ["-c", code], {
+  const out = execFileSync(PYTHON_BIN, ["-B", "-c", code], {
     cwd: resolve(import.meta.dir, ".."),
     encoding: "utf-8",
+    env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" },
   });
   return JSON.parse(out.trim());
 }

@@ -32,6 +32,7 @@ import google.auth
 import google.auth.transport.requests
 import httpx
 
+from control_plane import scorer_headers
 from evergreen import load_evergreen_samples
 from summarize_inspect import (
     HOLDOUT_SCENARIOS,
@@ -190,11 +191,14 @@ def build_vertex_env(
 
 
 def verify_services(modality_mode: str = "strict", base_port: int = 3000, timeout: float = 5.0) -> None:
-    secret = os.environ.get("EVERGREEN_SCORER_SECRET", "")
-    headers = {"X-Eval-Scorer": "true", **({"X-Evergreen-Scorer-Secret": secret} if secret else {})}
+    headers = scorer_headers()
     for port in range(base_port, base_port + 8):
-        resp = httpx.get(f"http://localhost:{port}/sim/status", headers=headers, timeout=timeout)
-        resp.raise_for_status()
+        url = f"http://localhost:{port}/sim/status"
+        resp = httpx.get(url, headers=headers, timeout=timeout)
+        if resp.status_code < 200 or resp.status_code >= 300:
+            raise RuntimeError(
+                f"Service status check failed for {url}: HTTP {resp.status_code}"
+            )
         actual = resp.json().get("modality_mode")
         if actual != modality_mode:
             raise RuntimeError(f"Service on :{port} has modality_mode={actual!r}, expected {modality_mode!r}")
@@ -204,7 +208,7 @@ def _is_stack_ready(base_port: int, modality_mode: str) -> bool:
     try:
         verify_services(modality_mode=modality_mode, base_port=base_port, timeout=1.5)
         return True
-    except Exception:
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError, OSError):
         return False
 
 
@@ -584,6 +588,13 @@ def main(argv: list[str] | None = None) -> int:
         log = read_eval_log(str(f))
         if log.status == "success":
             records.extend(extract_records_from_log(log, eval_log_path=f))
+        else:
+            print(
+                f"[warn] Non-success eval log encountered: {f} (status={log.status})",
+                file=sys.stderr,
+                flush=True,
+            )
+            exit_code = 1
 
     clean_records = []
     if args.with_clean and clean_dir.exists():
@@ -591,6 +602,13 @@ def main(argv: list[str] | None = None) -> int:
             log = read_eval_log(str(f))
             if log.status == "success":
                 clean_records.extend(extract_records_from_log(log, eval_log_path=f))
+            else:
+                print(
+                    f"[warn] Non-success clean eval log encountered: {f} (status={log.status})",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                exit_code = 1
 
     rows = summarize_records(records, clean_records=clean_records)
     print("\n" + format_markdown_table(rows, include_anchors=True))

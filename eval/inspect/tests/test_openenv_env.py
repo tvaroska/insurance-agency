@@ -105,19 +105,29 @@ def test_custom_seed_tasks_pass_exact_variant_to_scorer_while_resetting_realisti
     ]
     assert len(scenario_09_custom) == 15
 
+    seen_control_paths: list[str] = []
+
     def fake_http(method: str, url: str, body: dict[str, Any] | None, headers: dict[str, str]):
+        seen_control_paths.append(url.split("://", 1)[1].split("/", 1)[1])
         if url.endswith("/sim/reset"):
             return 200, {"status": "reset", "seed_mode": body["seed_mode"]}
         if url.endswith("/sim/snapshot"):
             return 200, {"tables": {}}
+        if url.endswith("/sim/trace"):
+            return 200, {"resourceSpans": []}
+        if url.endswith("/sim/chaos"):
+            assert body is not None and body.get("enabled") is False
+            return 200, {"status": "ok", "chaos": body}
         return 404, {}
 
     seen_seeds: list[tuple[str, str, str]] = []
+    seen_trace_dirs: set[Path] = set()
 
     def fake_run(cmd, cwd=None, capture_output=False, text=False, timeout=None, check=False):
         seed_arg = cmd[cmd.index("--seed") + 1]
         sc_arg = cmd[cmd.index("--scenario") + 1]
         out_dir = Path(cmd[cmd.index("--out") + 1])
+        seen_trace_dirs.add(out_dir.parent)
         seen_seeds.append((sc_arg, seed_arg, cmd[cmd.index("--case") + 1]))
         report = {
             "scenario": sc_arg,
@@ -148,3 +158,92 @@ def test_custom_seed_tasks_pass_exact_variant_to_scorer_while_resetting_realisti
         assert report["seed"] not in {"clean", "realistic"}
 
     assert len(seen_seeds) == 14
+    assert len(seen_trace_dirs) == 14
+
+
+def test_reset_and_snapshot_raise_on_non_2xx(monkeypatch: pytest.MonkeyPatch):
+    openenv = _load_openenv_module()
+
+    # 1. reset() raises on 403 / 500 instead of returning silently
+    env_403 = openenv.EvergreenGymEnv(
+        task_id="01-realistic-natural",
+        http_handler=lambda method, url, body, headers: (403, {"error_code": "FORBIDDEN"}),
+    )
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        env_403.reset()
+
+    # 2. snapshot() raises on 500
+    env_snap_500 = openenv.EvergreenGymEnv(
+        task_id="01-realistic-natural",
+        http_handler=lambda method, url, body, headers: (
+            (500, {"error": "snapshot boom"}) if url.endswith("/sim/snapshot") else (200, {"status": "ok"})
+        ),
+    )
+    with pytest.raises(RuntimeError, match="HTTP 500"):
+        env_snap_500.snapshot()
+    with pytest.raises(RuntimeError, match="HTTP 500"):
+        env_snap_500.reset()
+
+    # 3. export_otlp_trace() raises on non-2xx and transport errors (never silently falls back)
+    env_trace_500 = openenv.EvergreenGymEnv(
+        task_id="01-realistic-natural",
+        http_handler=lambda method, url, body, headers: (
+            (500, {"error": "trace boom"}) if url.endswith("/sim/trace") else (200, {"tables": {}})
+        ),
+    )
+    with pytest.raises(RuntimeError, match="HTTP 500"):
+        env_trace_500.export_otlp_trace()
+
+    def raise_transport(method: str, url: str, body: dict[str, Any] | None, headers: dict[str, str]):
+        raise ConnectionError("service down")
+
+    env_conn_err = openenv.EvergreenGymEnv(task_id="01-realistic-natural", http_handler=raise_transport)
+    with pytest.raises(RuntimeError, match="service down"):
+        env_conn_err.export_otlp_trace()
+
+    # 4. score() disables chaos before collecting trace/snapshot and uses a unique temp dir per episode
+    events: list[tuple[str, Any]] = []
+
+    def tracking_http(method: str, url: str, body: dict[str, Any] | None, headers: dict[str, str]):
+        endpoint = "/" + url.split("://", 1)[1].split("/", 1)[1]
+        events.append((endpoint, body))
+        if endpoint == "/sim/trace":
+            return 200, {"resourceSpans": []}
+        if endpoint == "/sim/snapshot":
+            return 200, {"tables": {}}
+        return 200, {"status": "ok"}
+
+    score_dirs: list[Path] = []
+
+    def fake_score_run(cmd, cwd=None, capture_output=False, text=False, timeout=None, check=False):
+        out_dir = Path(cmd[cmd.index("--out") + 1])
+        score_dirs.append(out_dir.parent)
+        sc = cmd[cmd.index("--scenario") + 1]
+        (out_dir / f"{sc}-report.json").write_text(
+            json.dumps({
+                "scenario": sc,
+                "overall": {"score": 1.0, "eoCompliant": True, "apiCalls": 0, "expectedRange": [0, 5]},
+                "trace": {"score": 1.0, "checks": []},
+                "output": {"score": 1.0, "checks": []},
+                "eoTraps": [],
+            })
+        )
+        return type("Res", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    monkeypatch.setattr(openenv.subprocess, "run", fake_score_run)
+    env = openenv.EvergreenGymEnv(task_id="01-realistic-natural", http_handler=tracking_http)
+    env.reset()
+    env.chaos(enabled=True, error_rate=0.5)
+    events.clear()
+    env.score()
+
+    chaos_indices = [i for i, (ep, body) in enumerate(events) if ep == "/sim/chaos" and body and body["enabled"] is False]
+    trace_indices = [i for i, (ep, _body) in enumerate(events) if ep == "/sim/trace"]
+    snap_indices = [i for i, (ep, _body) in enumerate(events) if ep == "/sim/snapshot"]
+    assert len(chaos_indices) == 8
+    assert max(chaos_indices) < min(trace_indices)
+    assert max(trace_indices) < min(snap_indices)
+
+    env.reset()
+    env.score()
+    assert len(score_dirs) == 2 and score_dirs[0] != score_dirs[1]

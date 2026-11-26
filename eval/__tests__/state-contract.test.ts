@@ -186,6 +186,27 @@ describe("Pure 32-Table DB State-Contract Evaluator", () => {
     expect(badFieldRes.missingUpdates).toHaveLength(1);
   });
 
+  test("a contract without strict_no_unexpected_writes is closed-world", () => {
+    const before = emptySnapshot();
+    const after = emptySnapshot();
+    after.ams.tasks = [
+      { id: "TASK-EXPECTED", title: "Expected follow-up", status: "open" },
+      { id: "TASK-COLLATERAL", title: "Unasked follow-up", status: "open" },
+    ];
+
+    const res = evaluateSnapshotsAgainstContract(before, after, {
+      must_insert: [
+        { service: "ams", table: "tasks", where: { id: "TASK-EXPECTED" } },
+      ],
+    });
+
+    expect(res.passed).toBe(false);
+    expect(res.score).toBe(0);
+    expect(res.matchedInserts).toHaveLength(1);
+    expect(res.unexpectedWrites).toHaveLength(1);
+    expect(res.unexpectedWrites[0].key).toBe("id:TASK-COLLATERAL");
+  });
+
   test("validateStateScenario rejects unknown tables and single-turn definitions", () => {
     expect(() =>
       validateStateScenario({

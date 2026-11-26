@@ -23,7 +23,15 @@ export interface HttpResult {
   body: any;
   text: string;
   bytes: Uint8Array;
-  request: { method: string; path: string; url: string };
+  request: {
+    method: string;
+    path: string;
+    url: string;
+    /** Sent request payload (parsed object for JSON requests, raw value otherwise). */
+    body?: unknown;
+    /** Effective Content-Type header sent with the request, if any. */
+    contentType?: string;
+  };
 }
 
 export interface RequestOptions {
@@ -112,6 +120,7 @@ export class Client {
     }
     const headers: Record<string, string> = { ...this.defaultHeaders, ...opts.headers };
     let body: BodyInit | undefined;
+    let requestBody: unknown = opts.body;
     if (opts.body !== undefined) {
       if (typeof opts.body === "string" || opts.body instanceof FormData || opts.body instanceof Uint8Array) {
         body = opts.body as BodyInit;
@@ -120,6 +129,16 @@ export class Client {
         if (!Object.keys(headers).some((h) => h.toLowerCase() === "content-type")) {
           headers["Content-Type"] = "application/json";
         }
+      }
+    }
+    const contentTypeHeader = Object.entries(headers).find(([h]) => h.toLowerCase() === "content-type")?.[1];
+    const effectiveContentType =
+      contentTypeHeader ?? (opts.body instanceof FormData ? "multipart/form-data" : undefined);
+    if (typeof opts.body === "string" && effectiveContentType?.toLowerCase().includes("json")) {
+      try {
+        requestBody = JSON.parse(opts.body);
+      } catch {
+        // leave malformed JSON string as-is for negative-path tests
       }
     }
     const res = await this.fetcher(new Request(url.toString(), { method, headers, body, redirect: "manual" }));
@@ -139,7 +158,13 @@ export class Client {
       body: parsed,
       text,
       bytes,
-      request: { method: method.toUpperCase(), path: url.pathname, url: url.toString() },
+      request: {
+        method: method.toUpperCase(),
+        path: url.pathname,
+        url: url.toString(),
+        ...(opts.body !== undefined ? { body: requestBody } : {}),
+        ...(effectiveContentType ? { contentType: effectiveContentType } : {}),
+      },
     };
   }
 
@@ -349,6 +374,18 @@ function freePort(): number | null {
   } catch {
     return null;
   }
+}
+
+let cachedCanBindPort: boolean | undefined;
+
+/**
+ * Predicts whether `startService(name)` will run in `external`, `process`, or
+ * `in-process` mode synchronously at test-registration time (for `test.skipIf`).
+ */
+export function expectedServiceMode(name: ServiceName): "external" | "process" | "in-process" {
+  if (process.env[envVarFor(name)]) return "external";
+  if (cachedCanBindPort === undefined) cachedCanBindPort = freePort() !== null;
+  return cachedCanBindPort ? "process" : "in-process";
 }
 
 function serviceEnv(dataDir: string, extra: Record<string, string>): Record<string, string> {

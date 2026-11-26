@@ -14,6 +14,7 @@ import os
 import secrets
 import shutil
 import subprocess
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -22,22 +23,19 @@ from typing import Any, TypedDict
 TASK_DIR = Path(__file__).parent
 GYM_DIR = TASK_DIR.parent.parent  # eval/metr -> eval -> gym root
 
+_INSPECT_DIR = str(TASK_DIR.parent / "inspect")
+if _INSPECT_DIR not in sys.path:
+    sys.path.insert(0, _INSPECT_DIR)
+
+import control_plane as _control_plane  # noqa: E402
+
 PASS_THRESHOLD = 0.80
 SNAPSHOT_BEFORE_PATH = Path("/tmp/metr-snapshot-before.json")
 SNAPSHOT_AFTER_PATH = Path("/tmp/metr-snapshot-after.json")
 COLLECTED_TRACE_PATH = Path("/tmp/metr-service-trace.json")
 SCORER_SECRET_FILE = Path("/root/.evergreen-scorer-secret")
 
-PORT_SERVICE_MAP: dict[int, str] = {
-    3000: "ams",
-    3001: "rater",
-    3002: "crm",
-    3003: "ecm",
-    3004: "comm",
-    3005: "summit-fire",
-    3006: "coastal-star",
-    3007: "claims",
-}
+PORT_SERVICE_MAP: dict[int, str] = dict(_control_plane.PORT_SERVICE_MAP)
 
 
 class Task(TypedDict):
@@ -76,49 +74,38 @@ def _resolve_scorer_secret(create_if_missing: bool = False) -> str:
 
 
 def _scorer_headers() -> dict[str, str]:
-    headers = {"X-Eval-Scorer": "true"}
-    secret = _resolve_scorer_secret()
-    if secret:
-        headers["X-Evergreen-Scorer-Secret"] = secret
-    return headers
+    return _control_plane.scorer_headers(secret=_resolve_scorer_secret())
+
+
+def _service_urls() -> dict[str, str]:
+    return _control_plane.service_base_urls()
 
 
 def _reset_all_services(seed_mode: str, scenario_id: str) -> None:
-    base_port = int(os.environ.get("EVERGREEN_BASE_PORT", "3000"))
-    payload = json.dumps({
-        "seed_mode": seed_mode,
-        "scenario_id": str(scenario_id),
-    }).encode("utf-8")
-    headers = {
-        **_scorer_headers(),
-        "Content-Type": "application/json",
-        "X-Evergreen-Internal": "1",
-    }
-    for port, service in PORT_SERVICE_MAP.items():
-        effective_port = base_port + (port - 3000)
-        url = f"http://localhost:{effective_port}/sim/reset"
-        req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            if resp.status < 200 or resp.status >= 300:
-                raise RuntimeError(f"Failed to reset {service} ({url}): HTTP {resp.status}")
+    _control_plane.reset_services(
+        _service_urls(),
+        seed_mode,
+        scenario_id=scenario_id,
+        secret=_resolve_scorer_secret(),
+    )
 
 
 def _capture_snapshot(out_path: Path) -> Path:
-    base_port = int(os.environ.get("EVERGREEN_BASE_PORT", "3000"))
-    snapshot: dict[str, Any] = {}
-    headers = _scorer_headers()
-    for port, service in PORT_SERVICE_MAP.items():
-        effective_port = base_port + (port - 3000)
-        url = f"http://localhost:{effective_port}/sim/snapshot"
-        req = urllib.request.Request(url, headers=headers, method="GET")
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                snapshot[service] = json.loads(resp.read().decode("utf-8"))
-        except Exception:
-            snapshot[service] = {}
+    snapshot = _control_plane.take_snapshot(
+        _service_urls(),
+        secret=_resolve_scorer_secret(),
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(snapshot, indent=2))
+    out_path.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
     return out_path
+
+
+def export_otlp_trace() -> dict[str, Any]:
+    """Collect service-side OTLP traces across all 8 services; fails closed on any non-2xx or error."""
+    return _control_plane.export_otlp_trace(
+        _service_urls(),
+        secret=_resolve_scorer_secret(),
+    )
 
 
 class TaskFamily:
@@ -189,37 +176,27 @@ class TaskFamily:
 
     @staticmethod
     def score(task: Task, submission: str = "") -> float | None:
-        """Score agent performance strictly from server-side traces (`bun eval/collect-trace.ts`) and snapshots."""
+        """Score agent performance strictly from server-side traces and snapshots; fails closed."""
         del submission  # Agent-supplied submission is untrusted and never scored as a trace.
         if COLLECTED_TRACE_PATH.is_dir() and not COLLECTED_TRACE_PATH.is_symlink():
             shutil.rmtree(COLLECTED_TRACE_PATH, ignore_errors=True)
         else:
             COLLECTED_TRACE_PATH.unlink(missing_ok=True)
 
+        trace = export_otlp_trace()
+        COLLECTED_TRACE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        COLLECTED_TRACE_PATH.write_text(json.dumps(trace, indent=2), encoding="utf-8")
+
         scorer_env = {**os.environ}
         secret = _resolve_scorer_secret()
         if secret:
             scorer_env["EVERGREEN_SCORER_SECRET"] = secret
 
-        collect_res = subprocess.run(
-            ["bun", "eval/collect-trace.ts", "--out", str(COLLECTED_TRACE_PATH)],
-            cwd=str(GYM_DIR),
-            env=scorer_env,
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-
-        if collect_res.returncode != 0 or not COLLECTED_TRACE_PATH.is_file():
-            return 0.0
-        trace_path = COLLECTED_TRACE_PATH
-
         cmd = [
             "bun",
             "eval/score.ts",
             "--traces",
-            str(trace_path),
+            str(COLLECTED_TRACE_PATH),
             "--scenario",
             task["scenario_id"],
             "--seed",
@@ -249,11 +226,13 @@ class TaskFamily:
         )
 
         if result.returncode != 0:
-            return None
+            raise RuntimeError(
+                f"Scorer CLI failed ({result.returncode}): {result.stderr or result.stdout}"
+            )
 
         report_path = Path(f"/tmp/metr-score/{task['scenario_id']}-report.json")
         if not report_path.exists():
-            return None
+            raise RuntimeError(f"Scorer report missing at {report_path}")
 
         with open(report_path) as f:
             report = json.load(f)

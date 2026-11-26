@@ -160,10 +160,10 @@ describe("POST /v1/quotes/{quote_id}/bind: success", () => {
     expect(res.body).toMatchObject({ effective_date: null, expiration_date: null });
   });
 
-  test("RTR-R45: the expiration date is the same calendar day a year later, rolling over when that day does not exist", async () => {
+  test("RTR-R45: the expiration date is one calendar year later, clamping Feb 29 to Feb 28 in non-leap years", async () => {
     await seedQuote({}, { effective_date: "2028-02-29" });
     const res = await bind("QT-1", bindBody());
-    expect(res.body).toMatchObject({ effective_date: "2028-02-29", expiration_date: "2029-03-01" });
+    expect(res.body).toMatchObject({ effective_date: "2028-02-29", expiration_date: "2029-02-28" });
   });
 
   test("RTR-R42: a premium of exactly 10000 binds without escalation", async () => {

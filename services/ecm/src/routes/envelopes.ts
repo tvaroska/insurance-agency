@@ -178,6 +178,7 @@ envelopesRouter.post(
     // Verify all documents exist
     const existingDocs = await prisma.document.findMany({
       where: { document_id: { in: body.document_ids } },
+      orderBy: { document_id: "asc" },
       select: { document_id: true },
     });
 

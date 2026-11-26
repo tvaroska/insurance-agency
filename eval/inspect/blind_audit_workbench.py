@@ -26,8 +26,8 @@ from typing import Any
 from urllib.parse import urlparse
 
 GYM_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_SHEET = GYM_ROOT / "eval" / "results" / "v0.8" / "blind-audit-60-sheet.md"
-DEFAULT_KEY = GYM_ROOT / "eval" / "results" / "v0.8" / "blind-audit-60-key.json"
+DEFAULT_SHEET = GYM_ROOT / "eval" / "results" / "v0.9.1" / "blind-audit-60-sheet.md"
+DEFAULT_KEY = GYM_ROOT / "eval" / "results" / "v0.9.1" / "blind-audit-60-key.json"
 HTML_TEMPLATE = Path(__file__).resolve().with_name("blind_audit_workbench.html")
 
 SERVICE_ORDER: tuple[str, ...] = (
@@ -495,9 +495,12 @@ _CLI_RE = re.compile(r"\bCLI-\d+\b")
 
 # Forbidden tokens that must never appear in any blinded workbench payload.
 FORBIDDEN_BLIND_TOKENS: tuple[str, ...] = (
+    "gemini-4-hydrogen",
     "gemini-3.8-flash",
     "claude-sonnet-5-5",
     "deepseek-v4.1-flash",
+    "gpt-oss-120b",
+    "gemma-4-26b",
     "grader_passed",
     "grader_score",
     "eo_compliant",

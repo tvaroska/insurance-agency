@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { expectError, loadContract, mcpCall } from "../harness";
+import { expectError, expectedServiceMode, loadContract, mcpCall } from "../harness";
 import { callTool, ERROR_ENVELOPE_GAP, messageRow, SCOPES, start, tool, webhookRow, type Ctx } from "./support";
 
 const contract = loadContract("comm");
@@ -135,13 +135,14 @@ describe("REST authentication and scopes", () => {
     expect((await readonly.get("/v1/messages")).status).toBe(200);
   });
 
-  test("COMM-R7: every operation of the OpenAPI file was exercised", async () => {
+  test("COMM-R7: every operation of the OpenAPI file answers its success schema", async () => {
     // A fresh contract object, so this does not depend on which tests ran before.
+    await ctx.svc.reset("realistic");
     const fresh = loadContract("comm");
     for (const op of fresh.operations()) {
-      const res = await ctx.svc.http.request(op.method, concrete(op.path), { body: bodyFor(op.operationId) });
-      expect(res.status).toBe(401);
-      fresh.check(res, { allow: ERROR_ENVELOPE_GAP });
+      const res = await ctx.api.request(op.method, concrete(op.path), { body: bodyFor(op.operationId) });
+      expect([200, 201]).toContain(res.status);
+      expect(fresh.check(res).schemaChecked).toBe(true);
     }
     expect(fresh.unchecked()).toEqual([]);
   });
@@ -543,9 +544,10 @@ describe("control plane, chaos and request log", () => {
 });
 
 describe("access log", () => {
-  test("COMM-R54: each request is written to standard output as one JSON line", async () => {
-    // Standard output is only visible when the harness started the service itself.
-    if (ctx.svc.mode !== "process") return;
+  test.skipIf(expectedServiceMode("comm") !== "process")(
+    "COMM-R54: each request is written to standard output as one JSON line",
+    async () => {
+      expect(ctx.svc.mode).toBe("process");
     const id = `access-log-${crypto.randomUUID()}`;
     const res = await ctx.api.get("/v1/messages", { query: { limit: 1 }, headers: { "X-Correlation-ID": id, "User-Agent": "conformance-suite" } });
     expect(res.status).toBe(200);
@@ -565,5 +567,6 @@ describe("access log", () => {
     });
     expect(Number.isNaN(Date.parse(entry.timestamp))).toBe(false);
     expect(typeof entry.duration_ms).toBe("number");
-  });
+    },
+  );
 });

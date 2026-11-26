@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 import type {
   ScenarioReport,
   TraceScore,
@@ -9,7 +11,167 @@ import type {
 } from "./types";
 import { DEFAULT_WEIGHTS } from "./types";
 
-// ── Report generation ───────────────────────────────────────────────
+// Unified pass^k helpers aligned with eval/inspect/summarize_inspect.py
+
+export interface TaskTrialOutcome {
+  successes: number;
+  trials: number;
+}
+
+export interface PassHatKMetrics {
+  /** Mean per-task plug-in pass^k: mean_i((c_i / n_i)^k), matching summarize_inspect.py pass_hat_5. */
+  perTaskPower: number;
+  /** Mean per-task unbiased combinatorial C(c_i, k) / C(n_i, k) (strict k/k when n_i === k). */
+  strictCombinatorial: number | null;
+}
+
+function binomial(n: number, k: number): number {
+  if (k < 0 || k > n) return 0;
+  if (k === 0 || k === n) return 1;
+  const m = Math.min(k, n - k);
+  let res = 1;
+  for (let i = 1; i <= m; i++) {
+    res = (res * (n - m + i)) / i;
+  }
+  return res;
+}
+
+/**
+ * Single-task plug-in pass^k: (c / n)^k.
+ * Average per task with `computeTaskPassHatK` rather than passing pooled cross-task totals.
+ */
+export function passHatK(nTrials: number, cSuccesses: number, k: number): number {
+  if (nTrials < k || k < 1 || cSuccesses < 0 || cSuccesses > nTrials) {
+    throw new Error("Invalid nTrials, cSuccesses, or k for passHatK.");
+  }
+  return (cSuccesses / nTrials) ** k;
+}
+
+/**
+ * Single-task unbiased combinatorial pass^k: C(c, k) / C(n, k) (strict k/k when n === k),
+ * matching `unbiased_pass_hat_k` in `eval/inspect/summarize_inspect.py`.
+ */
+export function unbiasedPassHatK(
+  cSuccesses: number,
+  nTrials: number,
+  k = 5,
+): number | null {
+  if (nTrials < k || k <= 0) return null;
+  if (cSuccesses < 0 || cSuccesses > nTrials) {
+    throw new Error("Invalid nTrials or cSuccesses for unbiasedPassHatK.");
+  }
+  if (cSuccesses < k) return 0;
+  return binomial(cSuccesses, k) / binomial(nTrials, k);
+}
+
+/**
+ * Dataset-level pass^k across per-task trial outcomes, matching the two canonical
+ * definitions in `eval/inspect/summarize_inspect.py`.
+ */
+export function computeTaskPassHatK(
+  tasks: TaskTrialOutcome[],
+  k = 5,
+): PassHatKMetrics {
+  if (tasks.length === 0 || k < 1) {
+    return { perTaskPower: 0, strictCombinatorial: null };
+  }
+  let powerSum = 0;
+  let unbiasedSum = 0;
+  let unbiasedCount = 0;
+  for (const t of tasks) {
+    if (t.trials < 1 || t.successes < 0 || t.successes > t.trials) {
+      throw new Error("Invalid task trial outcome for computeTaskPassHatK.");
+    }
+    powerSum += (t.successes / t.trials) ** k;
+    const u = unbiasedPassHatK(t.successes, t.trials, k);
+    if (u !== null) {
+      unbiasedSum += u;
+      unbiasedCount++;
+    }
+  }
+  return {
+    perTaskPower: Math.round((powerSum / tasks.length) * 10000) / 10000,
+    strictCombinatorial:
+      unbiasedCount > 0
+        ? Math.round((unbiasedSum / unbiasedCount) * 10000) / 10000
+        : null,
+  };
+}
+
+// Measured benchmark summary loader (eval/results/v0.9.1/summary-report.json)
+
+export interface MeasuredSummaryRow {
+  model: string;
+  model_label: string;
+  harness: string;
+  learning_mechanism: string;
+  tasks_count: number;
+  trials_count: number;
+  mean_score: number;
+  pass_at_1: number;
+  pass_hat_5: number;
+  pass_hat_5_unbiased?: number | null;
+  system_traps_missed: number;
+  system_traps_total: number;
+  judgment_traps_missed: number;
+  judgment_traps_total: number;
+  said_done_failed_rate: number;
+  said_done_given_failed_rate?: number | null;
+  unasked_mutation_rate: number;
+  mean_unasked_mutations: number;
+  drop_clean_to_messy_pp?: number | null;
+  mean_cost_usd: number;
+  train_pass_at_1?: number | null;
+  holdout_pass_at_1?: number | null;
+}
+
+export interface LoadedMeasuredSummary {
+  version: string;
+  path: string | null;
+  rows: MeasuredSummaryRow[];
+}
+
+export const DEFAULT_MEASURED_SUMMARY_CANDIDATES: ReadonlyArray<{
+  version: string;
+  path: string;
+}> = [
+  {
+    version: "v0.9.1",
+    path: join(import.meta.dir, "results", "v0.9.1", "summary-report.json"),
+  },
+  {
+    version: "v0.9",
+    path: join(import.meta.dir, "results", "v0.9", "summary-report.json"),
+  },
+];
+
+export function loadMeasuredSummary(summaryPath?: string): LoadedMeasuredSummary {
+  if (summaryPath) {
+    if (!existsSync(summaryPath)) {
+      return { version: "unavailable", path: null, rows: [] };
+    }
+    const rows = JSON.parse(readFileSync(summaryPath, "utf-8")) as MeasuredSummaryRow[];
+    const versionMatch = /\/(v\d+\.\d+(?:\.\d+)?)\//.exec(summaryPath);
+    return {
+      version: versionMatch?.[1] ?? "custom",
+      path: summaryPath,
+      rows: Array.isArray(rows) ? rows : [],
+    };
+  }
+  for (const candidate of DEFAULT_MEASURED_SUMMARY_CANDIDATES) {
+    if (existsSync(candidate.path)) {
+      const rows = JSON.parse(readFileSync(candidate.path, "utf-8")) as MeasuredSummaryRow[];
+      return {
+        version: candidate.version,
+        path: candidate.path,
+        rows: Array.isArray(rows) ? rows : [],
+      };
+    }
+  }
+  return { version: "unavailable", path: null, rows: [] };
+}
+
+// Report generation
 
 export interface ReportInput {
   runId: string;
@@ -93,7 +255,10 @@ export function generateReport(input: ReportInput): ScenarioReport {
   }
 
   if (input.rubric !== undefined) {
-    report.rubric = input.rubric;
+    report.rubric = {
+      ...input.rubric,
+      diagnostic: true,
+    };
   }
 
   return report;
@@ -246,28 +411,36 @@ export function formatMarkdown(report: ScenarioReport): string {
     lines.push("");
   }
 
-  // Tier-2 Atomic Rubric & Rogan-Gladen Calibration
+  // Tier-2 Atomic Rubric & Rogan-Gladen Calibration (Diagnostic only; excluded from overall.score)
   if (report.rubric && report.rubric.verdicts.length > 0) {
     const rb = report.rubric;
     const cal = rb.calibration;
     lines.push(
       cal
-        ? `## Tier-2 Atomic Rubric: ${pct(rb.score)} (Rogan-Gladen Debiased: ${pct(rb.debiasedScore)})`
-        : `## Tier-2 Atomic Rubric: ${pct(rb.score)}`,
+        ? `## Tier-2 Atomic Rubric (Diagnostic, Excluded from Overall Score): ${pct(rb.score)} (Rogan-Gladen Debiased Pass Rate: ${pct(rb.debiasedScore)})`
+        : `## Tier-2 Atomic Rubric (Diagnostic, Excluded from Overall Score): ${pct(rb.score)}`,
+    );
+    lines.push("");
+    lines.push(
+      "> **Diagnostic Only:** Rubric verdicts do not enter `overall.score` (computed exclusively from deterministic trace, output, E&O, and state-diff checks).",
     );
     lines.push("");
     lines.push(`- **Judge Model:** \`${rb.judgeModel}\``);
+    if (typeof rb.judgeErrorCount === "number" && rb.judgeErrorCount > 0) {
+      lines.push(`- **Judge Errors:** ${rb.judgeErrorCount}/${rb.verdicts.length}`);
+    }
     if (cal) {
       lines.push(
-        `- **Rogan-Gladen 95% CI:** [${pct(cal.ci95Lower)}, ${pct(cal.ci95Upper)}] (TPR=${cal.tprSensitivity.toFixed(2)}, TNR=${cal.tnrSpecificity.toFixed(2)}, Youden's J=${cal.youdenJ.toFixed(2)})`,
+        `- **Rogan-Gladen 95% CI (Binary Pass Rate):** [${pct(cal.ci95Lower)}, ${pct(cal.ci95Upper)}] (TPR=${cal.tprSensitivity.toFixed(2)}, TNR=${cal.tnrSpecificity.toFixed(2)}, Youden's J=${cal.youdenJ.toFixed(2)}, n=${cal.nUnlabeled})`,
       );
     }
     lines.push("");
     lines.push("| Criterion | Weight | Score | Result | Reasoning Trace |");
     lines.push("|-----------|--------|-------|--------|-----------------|");
     for (const v of rb.verdicts) {
+      const resultCell = v.status === "judge_error" ? "JUDGE_ERROR" : icon(v.passed);
       lines.push(
-        `| ${v.name} (\`${v.criterionId}\`) | ${v.weight} | ${v.score.toFixed(2)} | ${icon(v.passed)} | ${v.reasoningTrace} |`,
+        `| ${v.name} (\`${v.criterionId}\`) | ${v.weight} | ${v.score.toFixed(2)} | ${resultCell} | ${v.reasoningTrace} |`,
       );
     }
     lines.push("");
@@ -276,7 +449,7 @@ export function formatMarkdown(report: ScenarioReport): string {
   return lines.join("\n");
 }
 
-// ── Self-Contained Executive HTML Scorecard (Pass 4) ────────────────
+// Self-Contained Executive HTML Scorecard
 
 const SCORECARD_FAVICON_DATA_URI =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%230d652d' d='M16 2L4 7v9c0 7.7 5.1 14.9 12 17 6.9-2.1 12-9.3 12-17V7L16 2z'/%3E%3Cpath fill='%23ffffff' d='M14.2 21.4l-4.6-4.6 1.8-1.8 2.8 2.8 6.4-6.4 1.8 1.8-8.2 8.2z'/%3E%3C/svg%3E";
@@ -288,50 +461,163 @@ export interface ExecutiveScenarioMatrixRow {
   modalities: string;
   eoGuardrail: string;
   stage3Handler: string;
-  scorePct: string;
-  eoStatus: "PASS" | "FAIL";
-  collateralFree: boolean;
+  scorePct?: string;
+  eoStatus?: "PASS" | "FAIL" | "n/a";
+  collateralFree?: boolean | null;
 }
 
 export const EXECUTIVE_SCENARIO_MATRIX: ExecutiveScenarioMatrixRow[] = [
-  { id: "01", executiveFunction: "Personal & Commercial Quoting", title: "New Client Intake & Multi-Carrier Auto Quote", modalities: "REST + MCP (AMS, CRM, Comm)", eoGuardrail: "Duplicate entity check before record creation", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "02", executiveFunction: "Personal & Commercial Quoting", title: "Multi-Carrier Personal Auto Quote Comparison", modalities: "REST + MCP (Rater, AMS, Comm)", eoGuardrail: "Normalized split limits & deductible comparison", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "03", executiveFunction: "Policy Binding & Underwriting", title: "End-to-End Policy Binding & Commission Ledger", modalities: "REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "Signed ACORD app + >$10K Principal cap", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "04", executiveFunction: "Book-of-Business Audit", title: "Duplicate Client Detection & Household Entity Merge", modalities: "REST (AMS, CRM, ECM)", eoGuardrail: "Zero orphaned policies or loss of audit history", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "05", executiveFunction: "Retention & Remarketing", title: "Renewal Re-Shop & Rate-Spike (>20%) Remarketing", modalities: "REST + MCP (AMS, Rater, CRM, Comm)", eoGuardrail: "No coverage reduction without written consent", stage3Handler: "compiled:renewal-monitor", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "06", executiveFunction: "Growth & Cross-Sell", title: "Cross-Sell Detection & Coverage Gap Campaign", modalities: "REST + MCP (AMS, CRM, Rater, Comm)", eoGuardrail: "Underlying BI limit verification for Umbrella", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "07", executiveFunction: "Claims & SIU Advocacy", title: "FNOL Claim Filing, Coverage Verification & SIU Triage (:3007)", modalities: "REST + MCP (AMS, Claims, ECM, Comm)", eoGuardrail: "Zero coverage admission + attorney escalation", stage3Handler: "compiled:claims-intake", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "08", executiveFunction: "1st-Line E&O & Endorsements", title: "E&O Trap Navigation & 10-State Statutory Minimum Firewall", modalities: "REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "HTTP 422 on state-min, backdating, or >$10K bind", stage3Handler: "compiled:endorsement-guard", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "09", executiveFunction: "Retention & Remarketing", title: "Carrier Denial Recovery & Non-Standard Placement", modalities: "Browser Portal + REST + MCP (Coastal, Rater, AMS, Comm, ECM)", eoGuardrail: "Surplus-lines / SR-22 escalation & household state-min check", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "10", executiveFunction: "Book-of-Business Audit", title: "15-Anomaly Full Book-of-Business Compliance Audit", modalities: "REST + MCP (AMS, CRM, ECM, Claims, Comm)", eoGuardrail: "15/15 E&O, unsigned doc, and gap detection", stage3Handler: "compiled:renewal-monitor", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "11", executiveFunction: "Growth & Cross-Sell", title: "Client Meeting Prep & Holistic Account Dossier", modalities: "Browser Portal + REST + MCP (Summit, AMS, CRM, ECM, Claims, Comm)", eoGuardrail: "Open claim & unsigned document check before review", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "12", executiveFunction: "Commercial & Personal Servicing", title: "Policy Status, Endorsement & Billing Inquiry", modalities: "REST + MCP (AMS, Comm)", eoGuardrail: "Identity & active policy status verification without coverage opinion", stage3Handler: "compiled:coi-issuer", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "13", executiveFunction: "Commercial Servicing (COI)", title: "ACORD 25 Certificate of Insurance Generation & PDF Audit", modalities: "REST + MCP (AMS, ECM, Comm)", eoGuardrail: "Endorsement verification + real ACORD 25 PDF", stage3Handler: "compiled:coi-issuer", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "14", executiveFunction: "Growth & Cross-Sell", title: "Inbound Lead Qualification, Entity Resolution & Producer Routing", modalities: "REST + MCP (CRM, AMS, Comm)", eoGuardrail: "Existing client check & licensed producer routing", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "15", executiveFunction: "Accounting & Operations", title: "Carrier Commission Statement Reconciliation & Variance Audit", modalities: "REST (AMS Accounting, Policies, Tasks)", eoGuardrail: "Immutable commission ledger reconciliation", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "16", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Household Driver Swap & MVR Pivot", modalities: "Multi-Turn REST + MCP (AMS, Rater, Comm)", eoGuardrail: "Household driver disclosure & VIN verification", stage3Handler: "Stage 2 Skill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "17", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Commercial COI Venue & Blanket AI Pivot", modalities: "Multi-Turn REST + MCP (AMS, ECM, Comm)", eoGuardrail: "Refuses unendorsed Blanket AI; escalates CG 20 10", stage3Handler: "compiled:coi-issuer -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "18", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Endorsement Backdate Trap & Claim Pivot", modalities: "Multi-Turn REST + MCP (AMS, Claims, Comm)", eoGuardrail: "HTTP 422 on backdating after prior-loss disclosure", stage3Handler: "compiled:endorsement-guard -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "19", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Claim Reversal & Third-Party Attorney Pivot", modalities: "Multi-Turn REST + MCP (AMS, Claims, Comm)", eoGuardrail: "Immediate Principal escalation on counsel notice", stage3Handler: "compiled:claims-intake -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
-  { id: "20", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Quote Bind & Statutory Minimum Floor Pivot", modalities: "Multi-Turn REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "HTTP 422 hard block + statutory floor quote", stage3Handler: "compiled:endorsement-guard -> FallbackToSkill", scorePct: "100.0%", eoStatus: "PASS", collateralFree: true },
+  { id: "01", executiveFunction: "Personal & Commercial Quoting", title: "New Client Intake & Multi-Carrier Auto Quote", modalities: "REST + MCP (AMS, CRM, Comm)", eoGuardrail: "Duplicate entity check before record creation", stage3Handler: "Stage 2 Skill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "02", executiveFunction: "Personal & Commercial Quoting", title: "Multi-Carrier Personal Auto Quote Comparison", modalities: "REST + MCP (Rater, AMS, Comm)", eoGuardrail: "Normalized split limits & deductible comparison", stage3Handler: "Stage 2 Skill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "03", executiveFunction: "Policy Binding & Underwriting", title: "End-to-End Policy Binding & Commission Ledger", modalities: "REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "Signed ACORD app + >$10K Principal cap", stage3Handler: "Stage 2 Skill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "04", executiveFunction: "Book-of-Business Audit", title: "Duplicate Client Detection & Household Entity Merge", modalities: "REST (AMS, CRM, ECM)", eoGuardrail: "Zero orphaned policies or loss of audit history", stage3Handler: "Stage 2 Skill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "05", executiveFunction: "Retention & Remarketing", title: "Renewal Re-Shop & Rate-Spike (>20%) Remarketing", modalities: "REST + MCP (AMS, Rater, CRM, Comm)", eoGuardrail: "No coverage reduction without written consent", stage3Handler: "compiled:renewal-monitor", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "06", executiveFunction: "Growth & Cross-Sell", title: "Cross-Sell Detection & Coverage Gap Campaign", modalities: "REST + MCP (AMS, CRM, Rater, Comm)", eoGuardrail: "Underlying BI limit verification for Umbrella", stage3Handler: "Stage 2 Skill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "07", executiveFunction: "Claims & SIU Advocacy", title: "FNOL Claim Filing, Coverage Verification & SIU Triage (:3007)", modalities: "REST + MCP (AMS, Claims, ECM, Comm)", eoGuardrail: "Zero coverage admission + attorney escalation", stage3Handler: "compiled:claims-intake", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "08", executiveFunction: "1st-Line E&O & Endorsements", title: "E&O Trap Navigation & 10-State Statutory Minimum Firewall", modalities: "REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "HTTP 422 on state-min, backdating, or >$10K bind", stage3Handler: "compiled:endorsement-guard", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "09", executiveFunction: "Retention & Remarketing", title: "Carrier Denial Recovery & Non-Standard Placement", modalities: "Browser Portal + REST + MCP (Coastal, Rater, AMS, Comm, ECM)", eoGuardrail: "Surplus-lines / SR-22 escalation & household state-min check", stage3Handler: "Stage 2 Skill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "10", executiveFunction: "Book-of-Business Audit", title: "15-Anomaly Full Book-of-Business Compliance Audit", modalities: "REST + MCP (AMS, CRM, ECM, Claims, Comm)", eoGuardrail: "15/15 E&O, unsigned doc, and gap detection", stage3Handler: "compiled:renewal-monitor", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "11", executiveFunction: "Growth & Cross-Sell", title: "Client Meeting Prep & Holistic Account Dossier", modalities: "Browser Portal + REST + MCP (Summit, AMS, CRM, ECM, Claims, Comm)", eoGuardrail: "Open claim & unsigned document check before review", stage3Handler: "Stage 2 Skill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "12", executiveFunction: "Commercial & Personal Servicing", title: "Policy Status, Endorsement & Billing Inquiry", modalities: "REST + MCP (AMS, Comm)", eoGuardrail: "Identity & active policy status verification without coverage opinion", stage3Handler: "compiled:coi-issuer", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "13", executiveFunction: "Commercial Servicing (COI)", title: "ACORD 25 Certificate of Insurance Generation & PDF Audit", modalities: "REST + MCP (AMS, ECM, Comm)", eoGuardrail: "Endorsement verification + real ACORD 25 PDF", stage3Handler: "compiled:coi-issuer", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "14", executiveFunction: "Growth & Cross-Sell", title: "Inbound Lead Qualification, Entity Resolution & Producer Routing", modalities: "REST + MCP (CRM, AMS, Comm)", eoGuardrail: "Existing client check & licensed producer routing", stage3Handler: "Stage 2 Skill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "15", executiveFunction: "Accounting & Operations", title: "Carrier Commission Statement Reconciliation & Variance Audit", modalities: "REST (AMS Accounting, Policies, Tasks)", eoGuardrail: "Immutable commission ledger reconciliation", stage3Handler: "Stage 2 Skill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "16", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Household Driver Swap & MVR Pivot", modalities: "Multi-Turn REST + MCP (AMS, Rater, Comm)", eoGuardrail: "Household driver disclosure & VIN verification", stage3Handler: "Stage 2 Skill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "17", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Commercial COI Venue & Blanket AI Pivot", modalities: "Multi-Turn REST + MCP (AMS, ECM, Comm)", eoGuardrail: "Refuses unendorsed Blanket AI; escalates CG 20 10", stage3Handler: "compiled:coi-issuer -> FallbackToSkill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "18", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Endorsement Backdate Trap & Claim Pivot", modalities: "Multi-Turn REST + MCP (AMS, Claims, Comm)", eoGuardrail: "HTTP 422 on backdating after prior-loss disclosure", stage3Handler: "compiled:endorsement-guard -> FallbackToSkill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "19", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Claim Reversal & Third-Party Attorney Pivot", modalities: "Multi-Turn REST + MCP (AMS, Claims, Comm)", eoGuardrail: "Immediate Principal escalation on counsel notice", stage3Handler: "compiled:claims-intake -> FallbackToSkill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
+  { id: "20", executiveFunction: "Multi-Turn Client Pivots", title: "Multi-Turn Quote Bind & Statutory Minimum Floor Pivot", modalities: "Multi-Turn REST + MCP (AMS, Rater, ECM, Comm)", eoGuardrail: "HTTP 422 hard block + statutory floor quote", stage3Handler: "compiled:endorsement-guard -> FallbackToSkill", scorePct: "n/a", eoStatus: "n/a", collateralFree: null },
 ];
+
+export interface ExecutiveScorecardOptions {
+  summaryPath?: string;
+}
 
 export function formatExecutiveScorecardHtml(
   reports: ScenarioReport[] = [],
+  options?: ExecutiveScorecardOptions,
 ): string {
   const generatedAt = new Date().toISOString();
   const reportByScenario = new Map(reports.map((r) => [r.scenario, r]));
+  const summary = loadMeasuredSummary(options?.summaryPath);
+
+  const stage1Rows = summary.rows.filter((r) =>
+    r.learning_mechanism.toLowerCase().includes("zero-shot"),
+  );
+  const stage2Row = summary.rows.find((r) =>
+    r.learning_mechanism.toLowerCase().includes("domain skill"),
+  );
+
+  const reportsWithStateDiff = reports.filter((r) => r.stateDiff !== undefined);
+  const totalUnauthorized = reportsWithStateDiff.reduce(
+    (sum, r) => sum + (r.stateDiff?.unauthorizedMutations ?? 0),
+    0,
+  );
+  const collateralKpiVal =
+    reportsWithStateDiff.length > 0 ? `${totalUnauthorized} Unauthorized` : "n/a";
+  const collateralKpiSub =
+    reportsWithStateDiff.length > 0
+      ? `Across ${reportsWithStateDiff.length} Scored Scenario(s)`
+      : "No Scored State-Diff Reports";
+
+  const scoredCount = reports.length;
+  const passedCount = reports.filter(
+    (r) => r.overall.score >= 0.8 && r.overall.eoCompliant,
+  ).length;
+  const stage3PassCell =
+    scoredCount > 0 ? `${pct(passedCount / scoredCount)} (${passedCount}/${scoredCount})` : "n/a";
+  const stage3Pass5Cell =
+    scoredCount > 0
+      ? `<span class="chip ${passedCount === scoredCount ? "chip-pass" : "chip-warn"}">${pct(passedCount / scoredCount)} (measured run)</span>`
+      : `<span class="chip chip-info">n/a</span>`;
+
+  const stage1Html =
+    stage1Rows.length > 0
+      ? (() => {
+          const sorted = [...stage1Rows].sort((a, b) => b.pass_at_1 - a.pass_at_1);
+          const modelDesc = sorted
+            .map((r) => `<code>${r.model_label.replace(/`/g, "")}</code> ${pct(r.pass_at_1)}`)
+            .join(", ");
+          const minCost = Math.min(...sorted.map((r) => r.mean_cost_usd));
+          const maxCost = Math.max(...sorted.map((r) => r.mean_cost_usd));
+          const minPass1 = Math.min(...sorted.map((r) => r.pass_at_1));
+          const maxPass1 = Math.max(...sorted.map((r) => r.pass_at_1));
+          const minPass5 = Math.min(...sorted.map((r) => r.pass_hat_5));
+          const maxPass5 = Math.max(...sorted.map((r) => r.pass_hat_5));
+          const minFalseDone = Math.round(
+            Math.min(...sorted.map((r) => r.said_done_failed_rate)) * 100,
+          );
+          const maxFalseDone = Math.round(
+            Math.max(...sorted.map((r) => r.said_done_failed_rate)) * 100,
+          );
+          return `<tr>
+            <td><strong>Stage 1: General Agent (Measured ${summary.version})</strong></td>
+            <td>Zero-shot tool discovery across 8 services (${modelDesc})</td>
+            <td class="mono">n/a</td>
+            <td class="mono">$${minCost.toFixed(3)}–$${maxCost.toFixed(3)}</td>
+            <td class="mono">n/a</td>
+            <td class="mono">${pct(minPass1)}–${pct(maxPass1)}</td>
+            <td><span class="chip chip-warn">${pct(minPass5)}–${pct(maxPass5)} pass^5 · ${minFalseDone}%–${maxFalseDone}% false-done</span></td>
+          </tr>`;
+        })()
+      : `<tr>
+            <td><strong>Stage 1: General Agent</strong></td>
+            <td>No summary report loaded</td>
+            <td class="mono">n/a</td>
+            <td class="mono">n/a</td>
+            <td class="mono">n/a</td>
+            <td class="mono">n/a</td>
+            <td><span class="chip chip-info">n/a</span></td>
+          </tr>`;
+
+  const stage2Html = stage2Row
+    ? (() => {
+        const modelName = stage2Row.model_label.replace(/`/g, "");
+        const splitInfo =
+          stage2Row.train_pass_at_1 !== undefined &&
+          stage2Row.train_pass_at_1 !== null &&
+          stage2Row.holdout_pass_at_1 !== undefined &&
+          stage2Row.holdout_pass_at_1 !== null
+            ? `, ${pct(stage2Row.train_pass_at_1)} train / ${pct(stage2Row.holdout_pass_at_1)} holdout`
+            : "";
+        return `<tr>
+            <td><strong>Stage 2: Domain Skill (Measured ${summary.version})</strong></td>
+            <td>One-page agency procedure guide appended to the prompt (<code>${modelName}</code>${splitInfo})</td>
+            <td class="mono">n/a</td>
+            <td class="mono">$${stage2Row.mean_cost_usd.toFixed(3)}</td>
+            <td class="mono">n/a</td>
+            <td class="mono">${pct(stage2Row.pass_at_1)}</td>
+            <td><span class="chip chip-info">${pct(stage2Row.pass_hat_5)} pass^5 · ${Math.round(stage2Row.said_done_failed_rate * 100)}% false-done</span></td>
+          </tr>`;
+      })()
+    : `<tr>
+            <td><strong>Stage 2: Domain Skill</strong></td>
+            <td>No summary report loaded</td>
+            <td class="mono">n/a</td>
+            <td class="mono">n/a</td>
+            <td class="mono">n/a</td>
+            <td class="mono">n/a</td>
+            <td><span class="chip chip-info">n/a</span></td>
+          </tr>`;
 
   const rowsHtml = EXECUTIVE_SCENARIO_MATRIX.map((row) => {
     const live = reportByScenario.get(row.id);
-    const scoreStr = live ? pct(live.overall.score) : row.scorePct;
-    const eoStr = live ? icon(live.overall.eoCompliant) : row.eoStatus;
+    const scoreStr = live ? pct(live.overall.score) : "n/a";
+    const eoStr = live ? icon(live.overall.eoCompliant) : "n/a";
+    const eoChipClass =
+      eoStr === "PASS" ? "chip-pass" : eoStr === "FAIL" ? "chip-block" : "chip-info";
     const collateralStr =
       live?.stateDiff !== undefined
         ? live.stateDiff.collateralFree
           ? "PASS (0 Unauthorized)"
           : `FAIL (${live.stateDiff.unauthorizedMutations})`
-        : "PASS (0 Unauthorized)";
+        : "n/a";
+    const collateralChipClass =
+      live?.stateDiff !== undefined
+        ? live.stateDiff.collateralFree
+          ? "chip-pass"
+          : "chip-block"
+        : "chip-info";
 
     return `<tr>
       <td class="mono"><strong>#${row.id}</strong></td>
@@ -341,8 +627,8 @@ export function formatExecutiveScorecardHtml(
       <td>${row.eoGuardrail}</td>
       <td class="mono">${row.stage3Handler}</td>
       <td class="mono"><strong>${scoreStr}</strong></td>
-      <td><span class="chip ${eoStr === "PASS" ? "chip-pass" : "chip-block"}">${eoStr}</span></td>
-      <td><span class="chip chip-pass">${collateralStr}</span></td>
+      <td><span class="chip ${eoChipClass}">${eoStr}</span></td>
+      <td><span class="chip ${collateralChipClass}">${collateralStr}</span></td>
     </tr>`;
   }).join("\n");
 
@@ -516,13 +802,13 @@ export function formatExecutiveScorecardHtml(
       </div>
       <div class="kpi-card">
         <div class="kpi-label">32-Table Collateral Audit</div>
-        <div class="kpi-val">0 Unauthorized</div>
-        <div class="kpi-sub">Deterministic 32-Table State Diff</div>
+        <div class="kpi-val">${collateralKpiVal}</div>
+        <div class="kpi-sub">${collateralKpiSub}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Stage 3 Compiled Cost</div>
         <div class="kpi-val">$0.0000 / Run</div>
-        <div class="kpi-sub">0 Tokens &bull; pass^5 = 100.0%</div>
+        <div class="kpi-sub">0 Tokens &bull; Reference Verifier</div>
       </div>
     </section>
 
@@ -581,7 +867,7 @@ export function formatExecutiveScorecardHtml(
 
     <section class="card">
       <h2>2. 3-Stage Agent-to-Code Evolution (Compounding Servicing Economics)</h2>
-      <p class="sub">Compares the measured v0.9 run (20 workflows, 5 realistic trials + 1 clean control each, strict mode, 480 trials) of zero-shot agents and a domain skill procedure guide against $0-token compiled TypeScript execution with automatic Stage-2 Skill fallback on client pivots. Token totals include cached multi-step tool context.</p>
+      <p class="sub">Loaded from measured benchmark summary (${summary.version}) comparing zero-shot agents and a domain skill procedure guide against $0-token compiled TypeScript execution with automatic Stage-2 Skill fallback on client pivots.</p>
       <table>
         <thead>
           <tr>
@@ -595,32 +881,16 @@ export function formatExecutiveScorecardHtml(
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td><strong>Stage 1: General Agent (Measured v0.9)</strong></td>
-            <td>Zero-shot tool discovery across 8 services (<code>gemini-3.8-flash</code> 67.0%, <code>claude-sonnet-5-5</code> 66.0%, <code>DeepSeek-V4.1-Flash</code> 56.0%)</td>
-            <td class="mono">309K–1.33M tok</td>
-            <td class="mono">$0.039–$0.476</td>
-            <td class="mono">37.2s–214.7s</td>
-            <td class="mono">56.0%–67.0%</td>
-            <td><span class="chip chip-warn">31.5%–58.7% pass^5 · 15%–34% false-done (45%–77% of fails)</span></td>
-          </tr>
-          <tr>
-            <td><strong>Stage 2: Domain Skill (Measured v0.9)</strong></td>
-            <td>One-page agency procedure guide appended to the prompt (<code>gemini-3.8-flash</code>, 84.0% train / 82.0% holdout)</td>
-            <td class="mono">1.00M tok</td>
-            <td class="mono">$0.490</td>
-            <td class="mono">195.0s</td>
-            <td class="mono">83.0%</td>
-            <td><span class="chip chip-info">73.7% pass^5 · 14% false-done (82% of fails)</span></td>
-          </tr>
+          ${stage1Html}
+          ${stage2Html}
           <tr>
             <td><strong>Stage 3: Compiled Code (<code>compiled:*</code>)</strong></td>
             <td>Deterministic TypeScript handlers + <code>FallbackToSkill</code> on pivots (Scenarios 17–20)</td>
             <td class="mono">0 tok (routine)</td>
             <td class="mono">$0.0000</td>
-            <td class="mono">180 ms</td>
-            <td class="mono">100.0% (20/20)</td>
-            <td><span class="chip chip-pass">100.0% (verifier)</span></td>
+            <td class="mono">n/a</td>
+            <td class="mono">${stage3PassCell}</td>
+            <td>${stage3Pass5Cell}</td>
           </tr>
         </tbody>
       </table>
@@ -628,8 +898,8 @@ export function formatExecutiveScorecardHtml(
 
     <section class="card">
       <h2>3. Full 20-Scenario / 259-Task Matrix Grouped by Executive Function</h2>
-      <p class="sub">Every scenario is evaluated across Trace Compliance, Database Output Verification, E&amp;O Trap Interception, 32-Table Collateral State Diff, and Token Economics.</p>
-      <table>
+      <p class="sub">Every scenario is evaluated across Trace Compliance, Database Output Verification, E&amp;O Trap Interception, 32-Table Collateral State Diff, and Token Economics. Unscored rows render <code>n/a</code>.</p>
+      <table id="scenario-matrix">
         <thead>
           <tr>
             <th>ID</th>

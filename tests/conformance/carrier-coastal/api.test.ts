@@ -250,7 +250,8 @@ describe("POST /quotes/submit, new quote", () => {
     ]);
     expect(res.body).toMatchObject({ client_id: "CLI-001", policy_type: "personal_auto", status: "assessed" });
     expect(res.body.risk_tier).toBe(riskTier(res.body.risk_score));
-    contract.check(res);
+    // specs/carrier-coastal.yaml QuoteSubmitRequest requires quote_id (existing-quote mode); new-quote mode omits it.
+    contract.check(res, { allow: ["requestBody/: is missing required property 'quote_id'"] });
   });
 
   test("CST-R27: a new quote can be assessed, recalculated and bound straight away", async () => {
@@ -267,7 +268,7 @@ describe("POST /quotes/submit, new quote", () => {
     contract.check(invalid);
     const created = await post("/quotes/submit", NEW);
     expect(created.status).toBe(201);
-    contract.check(created);
+    contract.check(created, { allow: ["requestBody/: is missing required property 'quote_id'"] });
   });
 });
 

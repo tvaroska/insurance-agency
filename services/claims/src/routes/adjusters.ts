@@ -26,7 +26,9 @@ adjustersRouter.get("/", requireScopes("claims:read"), async (c) => {
       : null,
   ]);
 
-  const rows = await prisma.adjuster.findMany();
+  const rows = await prisma.adjuster.findMany({
+    orderBy: { adjuster_id: "asc" },
+  });
 
   // Apply filters in JS (small dataset)
   let filtered = rows;

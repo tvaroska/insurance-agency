@@ -78,6 +78,12 @@ describe("contract", () => {
       "/things/special": {
         get: { operationId: "special", responses: { "200": { description: "no body schema" } } },
       },
+      "/things/empty-json": {
+        get: {
+          operationId: "emptyJson",
+          responses: { "200": { description: "missing schema", content: { "application/json": {} } } },
+        },
+      },
       "/things/{id}": {
         get: {
           operationId: "getThing",
@@ -87,30 +93,58 @@ describe("contract", () => {
             "404": { description: "missing" },
           },
         },
+        post: {
+          operationId: "updateThing",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { type: "object", required: ["name"], properties: { name: { type: "string" } } },
+              },
+            },
+          },
+          responses: {
+            "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/Thing" } } } },
+            "204": { description: "no content" },
+            "400": { description: "bad request" },
+          },
+        },
       },
     },
   };
-  const response = (path: string, status: number, body: unknown, method = "GET") => ({
+  const response = (
+    path: string,
+    status: number,
+    body: unknown,
+    method = "GET",
+    opts: { contentType?: string; requestBody?: unknown; requestContentType?: string } = {},
+  ) => ({
     status,
-    headers: new Headers({ "content-type": "application/json" }),
+    headers: new Headers(opts.contentType === "" ? {} : { "content-type": opts.contentType ?? "application/json" }),
     body,
-    text: JSON.stringify(body),
+    text: typeof body === "string" ? body : JSON.stringify(body),
     bytes: new Uint8Array(),
-    request: { method, path, url: `http://x${path}` },
+    request: {
+      method,
+      path,
+      url: `http://x${path}`,
+      ...(opts.requestBody !== undefined ? { body: opts.requestBody } : {}),
+      ...(opts.requestContentType ? { contentType: opts.requestContentType } : {}),
+    },
   });
 
   test("matches operations, prefers literal segments, reads scopes", () => {
     const contract = new Contract("demo", doc);
     expect(contract.match("GET", "/v1/things/special")?.operationId).toBe("special");
     expect(contract.match("GET", "/v1/things/42")?.operationId).toBe("getThing");
-    expect(contract.match("POST", "/v1/things/42")).toBeUndefined();
+    expect(contract.match("DELETE", "/v1/things/42")).toBeUndefined();
     expect(contract.operation("getThing").scopes).toEqual(["things:read"]);
     expect(contract.operation("special").scopes).toEqual([]);
   });
 
   test("checks status and body, and tracks which operations were seen", () => {
     const contract = new Contract("demo", doc);
-    expect(contract.unchecked()).toEqual(["special", "getThing"]);
+    expect(contract.unchecked()).toEqual(["special", "emptyJson", "getThing", "updateThing"]);
     expect(contract.check(response("/v1/things/42", 200, { id: "42" })).schemaChecked).toBe(true);
     expect(contract.check(response("/v1/things/42", 404, { error_code: "NOT_FOUND" })).schemaChecked).toBe(false);
     expect(() => contract.check(response("/v1/things/42", 200, { id: 42 }))).toThrow("/id: is number, expected string");
@@ -118,9 +152,64 @@ describe("contract", () => {
     expect(contract.check(response("/v1/things/42", 500, {}), { allowUndocumentedStatus: true }).issues).toEqual([]);
     expect(contract.check(response("/v1/things/42", 200, { id: 42 }), { allow: ["/id:"] }).issues).toEqual([]);
     expect(() => contract.check(response("/v1/unknown", 200, {}))).toThrow("no operation for GET /v1/unknown");
-    expect(contract.unchecked()).toEqual(["special"]);
+    expect(contract.unchecked()).toEqual(["special", "emptyJson", "updateThing"]);
     expect(contract.inspectSchema("Thing", {})).toEqual(["/: is missing required property 'id'"]);
     expect(() => contract.checkSchema("Thing", { id: "1" })).not.toThrow();
+  });
+
+  test("check() reports a 2xx JSON response documented without a schema", () => {
+    const contract = new Contract("demo", doc);
+    expect(() => contract.check(response("/v1/things/special", 200, { ok: true }))).toThrow(
+      "2xx JSON response for special 200 is documented without a content schema",
+    );
+    expect(() => contract.check(response("/v1/things/empty-json", 200, { ok: true }))).toThrow(
+      "2xx JSON response for emptyJson 200 (application/json) is documented without a schema",
+    );
+    // 204 No Content and non-JSON responses do not require a JSON schema.
+    expect(
+      contract.check(
+        response("/v1/things/42", 204, "", "POST", {
+          contentType: "",
+          requestBody: { name: "valid" },
+          requestContentType: "application/json",
+        }),
+      ).schemaChecked,
+    ).toBe(false);
+    expect(
+      contract.check(response("/v1/things/special", 200, "%PDF-1.4", "GET", { contentType: "application/pdf" }))
+        .schemaChecked,
+    ).toBe(false);
+  });
+
+  test("check() validates JSON request bodies on non-400/422 writes", () => {
+    const contract = new Contract("demo", doc);
+    const valid = contract.check(
+      response("/v1/things/42", 200, { id: "42" }, "POST", {
+        requestBody: { name: "widget" },
+        requestContentType: "application/json",
+      }),
+    );
+    expect(valid.schemaChecked).toBe(true);
+    expect(valid.requestChecked).toBe(true);
+
+    expect(() =>
+      contract.check(
+        response("/v1/things/42", 200, { id: "42" }, "POST", {
+          requestBody: { name: 123 },
+          requestContentType: "application/json",
+        }),
+      ),
+    ).toThrow("requestBody/name: is number, expected string");
+
+    // Deliberate 400 validation tests skip request body checks.
+    expect(
+      contract.check(
+        response("/v1/things/42", 400, { error_code: "VALIDATION_ERROR" }, "POST", {
+          requestBody: { name: 123 },
+          requestContentType: "application/json",
+        }),
+      ).issues,
+    ).toEqual([]);
   });
 
   test("every OpenAPI file in specs/ loads and lists operations with unique ids", () => {

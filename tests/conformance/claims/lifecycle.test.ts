@@ -15,12 +15,12 @@ test("CLM-R21, CLM-R54, CLM-R65, CLM-R82: a full claim lifecycle leaves the expe
   await ctx.svc.seed({ tables: seedTables() });
   const types = async (claimId: string) => {
     const res = await ctx.api.get(`/v1/claims/${claimId}/timeline`);
-    contract.check(res);
+    expect(contract.check(res).schemaChecked).toBe(true);
     return res.body.data.map((e: any) => e.event_type).sort();
   };
   const ok = (res: any, status: number) => {
     expect(res.status).toBe(status);
-    contract.check(res);
+    expect(contract.check(res).schemaChecked).toBe(true);
     return res.body;
   };
 

@@ -14,6 +14,7 @@ import {
   throwIfErrors,
   getSimulatedNow,
   getSimulatedToday,
+  nextSimulatedEpochMs,
   simRandomHex,
   type AuthVariables,
   type CorrelationVariables,
@@ -102,7 +103,7 @@ async function addTimelineEvent(opts: {
       old_value: opts.old_value ?? null,
       new_value: opts.new_value ?? null,
       created_by: opts.created_by ?? null,
-      created_at: getSimulatedNow().toISOString(),
+      created_at: new Date(nextSimulatedEpochMs()).toISOString(),
     },
   });
 }
@@ -359,12 +360,13 @@ claimsRouter.get("/:claim_id", requireScopes("claims:read"), async (c) => {
   // Fetch timeline
   const timeline = await prisma.claimTimeline.findMany({
     where: { claim_id: claimId },
-    orderBy: { created_at: "asc" },
+    orderBy: [{ created_at: "asc" }, { event_id: "asc" }],
   });
 
   // Fetch documents
   const documents = await prisma.claimDocument.findMany({
     where: { claim_id: claimId },
+    orderBy: { document_id: "asc" },
   });
 
   return c.json({
@@ -619,7 +621,7 @@ claimsRouter.get(
 
     const events = await prisma.claimTimeline.findMany({
       where: { claim_id: claimId },
-      orderBy: { created_at: "asc" },
+      orderBy: [{ created_at: "asc" }, { event_id: "asc" }],
     });
 
     return c.json({ data: events });

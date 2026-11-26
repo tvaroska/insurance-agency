@@ -218,7 +218,7 @@ test("every operation in specs/crm.yaml answers its success status with a body t
   await ctx.svc.seed({ tables: { leads: [leadRow()], campaigns: [campaign()], retention_risks: [risk()] } });
   const ok = (res: any, status: number) => {
     expect(res.status).toBe(status);
-    contract.check(res);
+    expect(contract.check(res).schemaChecked).toBe(true);
     return res.body;
   };
   ok(await ctx.api.get("/v1/leads"), 200);

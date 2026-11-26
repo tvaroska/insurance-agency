@@ -142,7 +142,7 @@ async function ensureSampleEscalations(): Promise<number> {
 workbenchRouter.post("/workbench/api/seed-escalations", async (c) => {
   const seededCount = await ensureSampleEscalations();
   const escalations = await prisma.escalation.findMany({
-    orderBy: { created_at: "desc" },
+    orderBy: [{ created_at: "desc" }, { escalation_id: "desc" }],
     take: 25,
   });
   return c.json({
@@ -169,7 +169,7 @@ workbenchRouter.get("/workbench/api/overview", async (c) => {
     prisma.commission.count(),
     prisma.task.count(),
     prisma.escalation.findMany({
-      orderBy: { created_at: "desc" },
+      orderBy: [{ created_at: "desc" }, { escalation_id: "desc" }],
       take: 25,
     }),
   ]);
@@ -380,7 +380,10 @@ async function renderLocalAcordSummaryResponse(
   clientId: string,
 ): Promise<Response> {
   const policy = await prisma.policy
-    .findFirst({ where: { client_id: clientId }, orderBy: { effective_date: "desc" } })
+    .findFirst({
+      where: { client_id: clientId },
+      orderBy: [{ effective_date: "desc" }, { policy_id: "desc" }],
+    })
     .catch(() => null);
   const pdf = renderSimplePdf(`ACORD 90 - PERSONAL AUTO APPLICATION (${docId})`, [
     "PRODUCER: Evergreen Insurance Partners",
@@ -451,7 +454,7 @@ workbenchRouter.get("/workbench/api/documents/:docId/pdf", async (c) => {
             client_id: doc.client_id,
             policy_type: wantsHome ? "homeowners" : "personal_auto",
           },
-          orderBy: { effective_date: "desc" },
+          orderBy: [{ effective_date: "desc" }, { policy_id: "desc" }],
         });
         if (policy) {
           const form = policy.policy_type === "homeowners" ? "80" : "90";

@@ -29,6 +29,7 @@ export async function simulateDelivery(
 ): Promise<WebhookDeliveryRecord[]> {
   const activeWebhooks = await db.webhook.findMany({
     where: { active: true },
+    orderBy: { webhook_id: "asc" },
   });
 
   const deliveries: WebhookDeliveryRecord[] = [];

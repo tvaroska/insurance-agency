@@ -6,6 +6,7 @@ import {
   requestLogger,
   jwtAuth,
   carrierLatency,
+  createErrorResponse,
   errorHandler,
   generateDevToken,
   oauthTokenEndpoint,
@@ -110,6 +111,16 @@ api.route("/submissions", submissionsRouter);
 api.route("/inspections", inspectionsRouter);
 
 app.route("/v1/summit", api);
+
+// Unknown /v1/* routes must return JSON 404 rather than falling through to SPA HTML.
+app.all("/v1/*", (c) =>
+  c.json(
+    createErrorResponse("NOT_FOUND", `Route not found: ${c.req.method} ${c.req.path}`, {
+      correlationId: c.get("correlationId"),
+    }),
+    404,
+  ),
+);
 
 // ── Static file serving (React portal) ───────────────────────────────
 const publicDir = join(import.meta.dir, "..", "public");

@@ -46,6 +46,7 @@ export async function handleGetTranscript(
 
   const row = await db.message.findFirst({
     where: { call_id: callId },
+    orderBy: { message_id: "asc" },
   });
 
   if (!row) {

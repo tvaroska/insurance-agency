@@ -134,8 +134,19 @@ export function quoteRequestBody(overrides: Record<string, unknown> = {}) {
   return {
     policy_type: "homeowners",
     effective_date: "2030-06-01",
-    client: { first_name: "Quinn", last_name: "Quote", address: { state: "TX" } },
-    property: { year_built: 1999 },
+    client: {
+      first_name: "Quinn",
+      last_name: "Quote",
+      date_of_birth: "1985-04-12",
+      address: { street: "100 Main St", city: "Austin", state: "TX", zip: "78701" },
+    },
+    property: {
+      address: { street: "100 Main St", city: "Austin", state: "TX", zip: "78701" },
+      year_built: 1999,
+      square_footage: 2100,
+      construction_type: "frame",
+      roof_type: "asphalt_shingle",
+    },
     requested_coverages: [{ coverage_type: "dwelling", limit: 300000 }],
     ...overrides,
   };
@@ -143,6 +154,7 @@ export function quoteRequestBody(overrides: Record<string, unknown> = {}) {
 
 export function bindBody(overrides: Record<string, unknown> = {}) {
   return {
+    quote_id: "QT-1",
     payment_method: "eft",
     producer_id: "prod_1",
     insured_signature_collected: true,

@@ -87,7 +87,7 @@ for (const path of PATHS) {
         estimated_loss: 750.5,
       });
       expect(res.status).toBe(201);
-      contract.check(res);
+      contract.check(res, { skipRequestCheck: true });
       expect(res.body).toMatchObject({
         claim_type: "theft",
         loss_description: "Bike stolen from garage.",

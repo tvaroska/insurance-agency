@@ -27,6 +27,20 @@ type AppVariables = CorrelationVariables & AuthVariables;
 
 const quotesRouter = new Hono<{ Variables: AppVariables }>();
 
+export function addOneCalendarYear(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) return isoDate;
+  const nextYear = Number(match[1]) + 1;
+  const month = match[2];
+  let day = match[3];
+  if (month === "02" && day === "29") {
+    const isNextLeap =
+      (nextYear % 4 === 0 && nextYear % 100 !== 0) || nextYear % 400 === 0;
+    if (!isNextLeap) day = "28";
+  }
+  return `${String(nextYear).padStart(4, "0")}-${month}-${day}`;
+}
+
 const POLICY_TYPES = [
   "personal_auto",
   "homeowners",
@@ -103,6 +117,7 @@ quotesRouter.get(
     if (query.carrier_code) {
       const matchingQuotes = await prisma.carrierQuote.findMany({
         where: { carrier_code: query.carrier_code },
+        orderBy: { quote_id: "asc" },
         select: { request_id: true },
       });
       const matchingRequestIds = [...new Set(matchingQuotes.map((q) => q.request_id))];
@@ -124,6 +139,7 @@ quotesRouter.get(
               request_id: { in: requestIds },
               ...(query.carrier_code ? { carrier_code: query.carrier_code } : {}),
             },
+            orderBy: { quote_id: "asc" },
           })
         : [];
 
@@ -233,7 +249,9 @@ quotesRouter.post(
 
     // Find eligible carriers by state and policy_type
     const state = body.client.address.state;
-    const allCarriers = await prisma.carrier.findMany();
+    const allCarriers = await prisma.carrier.findMany({
+      orderBy: { carrier_code: "asc" },
+    });
 
     const eligible = allCarriers.filter((carrier) => {
       const states: string[] = JSON.parse(carrier.states);
@@ -350,6 +368,7 @@ quotesRouter.get(
     // Fetch all carrier quotes for this request
     const quotes = await prisma.carrierQuote.findMany({
       where: { request_id: requestId },
+      orderBy: { quote_id: "asc" },
     });
 
     // Determine overall status
@@ -671,14 +690,9 @@ quotesRouter.post(
     const policySeq = String(Math.floor(simRandom() * 1_000_000)).padStart(6, "0");
     const policyId = `POL-${quote.carrier_code}-${year}-${policySeq}`;
 
-    // Calculate expiration date (1 year from effective date)
+    // Calculate expiration date (1 calendar year from effective date, timezone-independent)
     const effectiveDate = effectiveDateToBind;
-    let expirationDate: string | null = null;
-    if (effectiveDate) {
-      const expDate = new Date(effectiveDate);
-      expDate.setFullYear(expDate.getFullYear() + 1);
-      expirationDate = expDate.toISOString().split("T")[0];
-    }
+    const expirationDate = effectiveDate ? addOneCalendarYear(effectiveDate) : null;
 
     const ecmBase = (
       process.env.ECM_BASE_URL ||

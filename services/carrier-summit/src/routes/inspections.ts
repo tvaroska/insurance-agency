@@ -55,6 +55,7 @@ inspectionsRouter.get(
 
     const conditions = await prisma.underwritingCondition.findMany({
       where: { quote_id: quoteId },
+      orderBy: { condition_id: "asc" },
     });
 
     return c.json({

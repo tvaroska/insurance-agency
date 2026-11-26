@@ -32,7 +32,7 @@ When the environment does not allow binding a port, the harness loads the servic
 - Start each test title with the rule id it proves, for example `CLM-R52: ...`.
 - Check responses against the OpenAPI file with `contract.check(res)`.
 - A service process is shared by every test file of a run. Seed the state a test needs in the test or in `beforeEach`; do not rely on what an earlier test left behind.
-- Where the OpenAPI file and the service disagree, assert what the service does, record the gap in the spec's "Known gaps" section, and add a `test.todo` that names the gap.
+- Where the OpenAPI file and the service disagree, fix the contract or implementation directly instead of leaving `test.todo` placeholders; if an intentional boundary remains (such as browser layout rendering outside headless DOM smokes), document it honestly in the spec's "Known gaps" / boundary section.
 
 ## Harness reference
 

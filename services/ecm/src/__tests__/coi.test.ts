@@ -250,5 +250,35 @@ describe("POST /v1/documents/coi/generate - success", () => {
     const body2 = await res2.json();
     expect(body2.document_id).toBe(body1.document_id);
   });
+
+  it("pdf for a seeded COI is not fabricated", async () => {
+    clearCoiPdfStore();
+    testSqlite
+      .prepare(
+        `INSERT OR REPLACE INTO documents
+          (document_id, client_id, document_type, filename, mime_type, file_size_bytes, upload_date, status, tags)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "DOC-SEED-COI-001",
+        "CLI-001",
+        "coi",
+        "COI-POL-001-seeded.pdf",
+        "application/pdf",
+        1024,
+        "2026-01-15T00:00:00Z",
+        "uploaded",
+        "[]",
+      );
+
+    const headers = await authHeader(["ecm:documents:read"]);
+    const res = await app.request("/v1/documents/coi/DOC-SEED-COI-001/pdf", { headers });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error_code).toBe("NOT_FOUND");
+
+    const aliasRes = await app.request("/v1/coi/DOC-SEED-COI-001/pdf", { headers });
+    expect(aliasRes.status).toBe(404);
+  });
 });
 

@@ -10,9 +10,10 @@ import {
 } from "../client";
 
 function runPythonJson(code: string): any {
-  const out = execFileSync("python3", ["-c", code], {
+  const out = execFileSync("python3", ["-B", "-c", code], {
     cwd: resolve(import.meta.dir, ".."),
     encoding: "utf-8",
+    env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" },
   });
   return JSON.parse(out.trim());
 }

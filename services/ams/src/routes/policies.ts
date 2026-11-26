@@ -94,7 +94,10 @@ policiesRouter.get("/:id", requireScopes("ams:policies:read"), async (c) => {
   const policyId = c.req.param("id");
   const policy = await prisma.policy.findUnique({ where: { policy_id: policyId } });
   if (!policy) throw notFoundError("policy");
-  const policyCoverages = await prisma.coverage.findMany({ where: { policy_id: policyId } });
+  const policyCoverages = await prisma.coverage.findMany({
+    where: { policy_id: policyId },
+    orderBy: { id: "asc" },
+  });
   return c.json({ ...policy, coverages: policyCoverages });
 });
 
@@ -298,7 +301,7 @@ policiesRouter.get(
 
     const rows = await prisma.endorsement.findMany({
       where: { policy_id: policyId },
-      orderBy: { created_at: "asc" },
+      orderBy: [{ created_at: "asc" }, { endorsement_id: "asc" }],
     });
 
     const data = rows.map((row) => {

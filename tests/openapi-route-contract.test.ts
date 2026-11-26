@@ -311,6 +311,124 @@ describe("OpenAPI Specs & Bidirectional Service Route Contract Suite", () => {
     });
     expect(deniedRes.status).toBe(403);
   });
+
+  test("seeded ids satisfy spec patterns", () => {
+    const isIdField = (name: string) => name === "id" || name.endsWith("_id");
+
+    // Collect every seeded string ID across both data/seed and data/seed-clean.
+    const seededByField = new Map<string, Set<string>>();
+    const collectSeedIds = (node: unknown) => {
+      if (Array.isArray(node)) {
+        for (const item of node) collectSeedIds(item);
+      } else if (node && typeof node === "object") {
+        for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+          if (isIdField(key) && typeof value === "string" && value.length > 0) {
+            let bucket = seededByField.get(key);
+            if (!bucket) {
+              bucket = new Set<string>();
+              seededByField.set(key, bucket);
+            }
+            bucket.add(value);
+          } else {
+            collectSeedIds(value);
+          }
+        }
+      }
+    };
+
+    for (const seedFolder of ["seed", "seed-clean"]) {
+      const seedDir = join(ROOT_DIR, "data", seedFolder);
+      for (const file of readdirSync(seedDir).filter((f) => f.endsWith(".json")).sort()) {
+        const parsed = JSON.parse(readFileSync(join(seedDir, file), "utf-8"));
+        collectSeedIds(parsed);
+      }
+    }
+
+    // Collect every ID field pattern (and uuid format) declared across all 8 OpenAPI specs.
+    const constraints: Array<{
+      specFile: string;
+      field: string;
+      pattern?: string;
+      format?: string;
+    }> = [];
+    const visitSpec = (specFile: string, node: unknown) => {
+      if (Array.isArray(node)) {
+        for (const item of node) visitSpec(specFile, item);
+        return;
+      }
+      if (!node || typeof node !== "object") return;
+      const obj = node as Record<string, unknown>;
+
+      if (
+        typeof obj.name === "string" &&
+        isIdField(obj.name) &&
+        obj.schema &&
+        typeof obj.schema === "object"
+      ) {
+        const schema = obj.schema as Record<string, unknown>;
+        if (typeof schema.pattern === "string" || schema.format === "uuid") {
+          constraints.push({
+            specFile,
+            field: obj.name,
+            pattern: typeof schema.pattern === "string" ? schema.pattern : undefined,
+            format: typeof schema.format === "string" ? schema.format : undefined,
+          });
+        }
+      }
+
+      if (obj.properties && typeof obj.properties === "object") {
+        for (const [propName, propSchema] of Object.entries(
+          obj.properties as Record<string, unknown>,
+        )) {
+          if (isIdField(propName) && propSchema && typeof propSchema === "object") {
+            const schema = propSchema as Record<string, unknown>;
+            if (typeof schema.pattern === "string" || schema.format === "uuid") {
+              constraints.push({
+                specFile,
+                field: propName,
+                pattern: typeof schema.pattern === "string" ? schema.pattern : undefined,
+                format: typeof schema.format === "string" ? schema.format : undefined,
+              });
+            }
+          }
+        }
+      }
+
+      for (const value of Object.values(obj)) {
+        visitSpec(specFile, value);
+      }
+    };
+
+    for (const file of specFiles) {
+      const doc = parseYaml(readFileSync(join(SPECS_DIR, file), "utf-8"));
+      visitSpec(file, doc);
+    }
+
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const mismatches: string[] = [];
+    const checkedFields = new Set<string>();
+
+    for (const c of constraints) {
+      const values = seededByField.get(c.field);
+      if (!values || values.size === 0) continue;
+      checkedFields.add(c.field);
+      const regex = c.pattern ? new RegExp(c.pattern) : null;
+      for (const val of values) {
+        if (regex && !regex.test(val)) {
+          mismatches.push(`${c.specFile} ${c.field}=${val} failed pattern ${c.pattern}`);
+        }
+        if (c.format === "uuid" && !UUID_RE.test(val)) {
+          mismatches.push(`${c.specFile} ${c.field}=${val} failed format uuid`);
+        }
+      }
+    }
+
+    expect(checkedFields.has("request_id")).toBe(true);
+    expect(checkedFields.has("quote_id")).toBe(true);
+    expect(checkedFields.has("message_id")).toBe(true);
+    expect(checkedFields.has("call_id")).toBe(true);
+    expect(mismatches).toEqual([]);
+  });
 });
 
 function resolveAstGrepBin(): string | null {

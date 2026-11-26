@@ -119,6 +119,118 @@ def test_run_inspect_batch_retries_transient_choices_none_failure(
     assert (tmp_path / "ok.eval").exists()
 
 
+def test_run_inspect_batch_retries_non_success_header_preserves_sibling_and_raises_after_exhaustion(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    from types import SimpleNamespace
+
+    # Case 1: returncode == 0 but .eval header has status == "error", while a sibling scenario
+    # writes its own .eval file into the shared log_dir.
+    calls = 0
+
+    def fake_run_header_retry(cmd, cwd=None, env=None, check=False, capture_output=False, text=False):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            (tmp_path / "sibling-sc02.eval").write_text("sibling")
+            (tmp_path / "bad-sc01.eval").write_text("bad")
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+        (tmp_path / "good-sc01.eval").write_text("good")
+        return SimpleNamespace(returncode=0, stdout="ok\n", stderr="")
+
+    def fake_read_header(path_str: str, header_only: bool = False):
+        if path_str.endswith("sibling-sc02.eval"):
+            return SimpleNamespace(status="error", error="other worker", eval=SimpleNamespace(task_args={"scenario": "02"}))
+        if path_str.endswith("bad-sc01.eval"):
+            return SimpleNamespace(status="error", error="transient header err", eval=SimpleNamespace(task_args={"scenario": "01"}))
+        return SimpleNamespace(status="success", error=None, eval=SimpleNamespace(task_args={"scenario": "01"}))
+
+    monkeypatch.setattr(run_baseline.subprocess, "run", fake_run_header_retry)
+    monkeypatch.setattr(run_baseline, "read_eval_log", fake_read_header)
+
+    run_baseline.run_inspect_batch(
+        python_bin="python3",
+        model_id="google/gemini-4-hydrogen",
+        scenario="01",
+        seed="realistic",
+        difficulty="natural",
+        modality_mode="strict",
+        epochs=1,
+        turn_limit=30,
+        log_dir=tmp_path,
+        env={},
+    )
+    assert calls == 2
+    assert (tmp_path / "sibling-sc02.eval").exists()
+    assert not (tmp_path / "bad-sc01.eval").exists()
+    assert (tmp_path / "good-sc01.eval").exists()
+
+    # Case 2: persistent failure across both attempts raises RuntimeError and cleans up bad logs
+    persist_dir = tmp_path / "persist"
+    persist_calls = 0
+
+    def fake_run_always_fail(cmd, cwd=None, env=None, check=False, capture_output=False, text=False):
+        nonlocal persist_calls
+        persist_calls += 1
+        (persist_dir / f"attempt-{persist_calls}.eval").write_text("bad")
+        return SimpleNamespace(returncode=1, stdout="", stderr="choices=None")
+
+    monkeypatch.setattr(run_baseline.subprocess, "run", fake_run_always_fail)
+    monkeypatch.setattr(
+        run_baseline,
+        "read_eval_log",
+        lambda *_a, **_k: SimpleNamespace(
+            status="error",
+            error="choices=None",
+            eval=SimpleNamespace(task_args={"scenario": "01"}),
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="failed after 2 attempts"):
+        run_baseline.run_inspect_batch(
+            python_bin="python3",
+            model_id="google/gemini-4-hydrogen",
+            scenario="01",
+            seed="realistic",
+            difficulty="natural",
+            modality_mode="strict",
+            epochs=1,
+            turn_limit=30,
+            log_dir=persist_dir,
+            env={},
+        )
+    assert persist_calls == 2
+    assert list(persist_dir.glob("*.eval")) == []
+
+
+def test_verify_services_and_stack_ready_raise_on_non_2xx(monkeypatch: pytest.MonkeyPatch):
+    import httpx
+
+    monkeypatch.setattr(
+        run_baseline.httpx,
+        "get",
+        lambda url, headers=None, timeout=None: httpx.Response(403, json={"error": "forbidden"}),
+    )
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        run_baseline.verify_services(modality_mode="strict", base_port=3000)
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        run_baseline._is_stack_ready(3000, "strict")
+
+    monkeypatch.setattr(
+        run_baseline.httpx,
+        "get",
+        lambda url, headers=None, timeout=None: httpx.Response(200, json={"modality_mode": "permissive"}),
+    )
+    with pytest.raises(RuntimeError, match="modality_mode='permissive'"):
+        run_baseline._is_stack_ready(3000, "strict")
+
+    def raise_connect(url, headers=None, timeout=None):
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr(run_baseline.httpx, "get", raise_connect)
+    assert run_baseline._is_stack_ready(3000, "strict") is False
+
+
 def test_seed_clean_foreign_key_integrity_and_clean_control_purity():
     seed_clean = GYM_ROOT / "data" / "seed-clean"
     seed_realistic = GYM_ROOT / "data" / "seed"

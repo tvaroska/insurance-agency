@@ -278,7 +278,7 @@ paths:
           description: The quote request identifier returned by `POST /quotes/request`.
           schema:
             type: string
-            pattern: '^qr_[a-z0-9]{8}$'
+            pattern: '^(qr_[a-z0-9]{8}|QR-[A-Za-z0-9_-]+)$'
             example: qr_8f3a9b2c
       responses:
         '200':
@@ -421,7 +421,7 @@ paths:
           description: The carrier-specific quote identifier from the results array.
           schema:
             type: string
-            pattern: '^qt_[a-z0-9]{8}$'
+            pattern: '^(qt_[a-z0-9]{8}|QT-[A-Za-z0-9_-]+)$'
             example: qt_a1b2c3d4
       requestBody:
         required: true
@@ -1308,7 +1308,7 @@ components:
         quote_id:
           type: string
           description: The carrier-specific quote_id from the results array.
-          pattern: '^qt_[a-z0-9]{8}$'
+          pattern: '^(qt_[a-z0-9]{8}|QT-[A-Za-z0-9_-]+)$'
           example: qt_a1b2c3d4
         payment_method:
           $ref: '#/components/schemas/PaymentMethod'

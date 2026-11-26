@@ -106,6 +106,7 @@ campaignsRouter.post(
         campaign_id: campaignId,
         client_id: body.client_id,
       },
+      orderBy: { enrollment_id: "asc" },
       select: { enrollment_id: true },
     });
 

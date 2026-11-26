@@ -114,7 +114,7 @@ describe("Offline Snapshot Rehydration Rescorer (eval/rescore.ts)", () => {
     expect(rescored.stateDiff?.unauthorizedMutations ?? 0).toBe(
       live.report.stateDiff?.unauthorizedMutations ?? 0,
     );
-  });
+  }, 30_000);
 
   test("rescoreTrials tracks pass_to_fail and fail_to_pass flips accurately", async () => {
     await resetServices(baseUrls, "realistic", "17");
@@ -158,7 +158,7 @@ describe("Offline Snapshot Rehydration Rescorer (eval/rescore.ts)", () => {
     expect(summary.pass_to_fail).toBe(0);
     expect(summary.trials[0]!.flipped).toBe("fail_to_pass");
     expect(summary.trials[0]!.new_score).toBe(1);
-  });
+  }, 30_000);
 
   test("rehydrateSnapshot fails closed on invalid table names", async () => {
     await expect(

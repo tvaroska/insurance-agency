@@ -16,15 +16,29 @@ REQUIRED_FILES = (
     "eval/evaluators/rubric.ts",
 )
 
+REQUIRED_OPENAPI_SPECS = (
+    "specs/ams.yaml",
+    "specs/rater.yaml",
+    "specs/crm.yaml",
+    "specs/ecm.yaml",
+    "specs/comm.yaml",
+    "specs/carrier-summit.yaml",
+    "specs/carrier-coastal.yaml",
+    "specs/claims.yaml",
+)
+
 
 def main() -> int:
     root = pathlib.Path(__file__).resolve().parent.parent
     for req in REQUIRED_FILES:
         if not (root / req).is_file():
             sys.exit(f"ERROR: Missing required file in insurance-agency: {req}")
-    specs = list((root / "specs").glob("*.yaml"))
-    if len(specs) < 8:
-        sys.exit(f"ERROR: Expected >=8 OpenAPI specs in specs/*.yaml, found {len(specs)}")
+    missing_specs = [spec for spec in REQUIRED_OPENAPI_SPECS if not (root / spec).is_file()]
+    if missing_specs:
+        sys.exit(
+            "ERROR: Missing required OpenAPI specs in insurance-agency:\n"
+            + "\n".join(missing_specs)
+        )
 
     fenced = re.compile(r"```.*?```", re.DOTALL)
     inline = re.compile(r"`[^`\n]+`")

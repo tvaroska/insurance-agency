@@ -24,6 +24,7 @@ import json
 import math
 import random
 import re
+import sys
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -309,11 +310,46 @@ def extract_records_from_log(
 
     records: list[SampleRecord] = []
     for sample in samples:
+        s_meta = sample.metadata or {}
+        sample_cost = 0.0
+        if getattr(sample, "model_usage", None):
+            for m_key, u in sample.model_usage.items():
+                sample_cost += estimate_usage_cost_usd(m_key or model_name, u)
+        else:
+            sample_cost = fallback_sample_cost
+
         if not sample.scores:
+            records.append(
+                SampleRecord(
+                    model=model_name,
+                    harness=harness,
+                    learning_mechanism=learning,
+                    sample_id=str(sample.id),
+                    scenario_id=str(s_meta.get("scenario_id") or str(sample.id).split("-")[0]),
+                    seed=str(s_meta.get("seed") or "realistic"),
+                    epoch=int(getattr(sample, "epoch", 1) or 1),
+                    score=0.0,
+                    passed=False,
+                    output_score=0.0,
+                    trace_score=0.0,
+                    eo_compliant=False,
+                    api_calls=0,
+                    system_traps_total=0,
+                    system_traps_missed=0,
+                    judgment_traps_total=0,
+                    judgment_traps_missed=0,
+                    said_done_failed=False,
+                    unauthorized_mutations=0,
+                    cost_usd=sample_cost,
+                    deferred_or_refused=False,
+                    artifacts_dir=None,
+                    eval_log=rel_eval_log,
+                )
+            )
             continue
+
         score_obj = next(iter(sample.scores.values()))
         meta = score_obj.metadata or {}
-        s_meta = sample.metadata or {}
 
         val = float(score_obj.value or 0.0)
         eo_ok = bool(meta.get("eo_compliant", False))
@@ -343,13 +379,6 @@ def extract_records_from_log(
         raw_collateral = meta.get("collateral")
         collateral = raw_collateral if isinstance(raw_collateral, dict) else {}
         unauth = int(collateral.get("unauthorized_mutations", 0) or 0)
-
-        sample_cost = 0.0
-        if getattr(sample, "model_usage", None):
-            for m_key, u in sample.model_usage.items():
-                sample_cost += estimate_usage_cost_usd(m_key or model_name, u)
-        else:
-            sample_cost = fallback_sample_cost
 
         answer_text = score_obj.answer
         if not answer_text and getattr(sample, "output", None):
@@ -535,17 +564,56 @@ def format_traps_cell(row: RowSummary) -> str:
     return f"{sys_part} sys · {judg_part} judg"
 
 
+def validate_expected_counts(
+    records: list[SampleRecord],
+    *,
+    expect_tasks: int | None = None,
+    expect_epochs: int | None = None,
+    failed_logs: list[tuple[Path, str]] | None = None,
+) -> list[str]:
+    """Return errors when any arm misses expected task/epoch counts or non-success logs exist."""
+    errors: list[str] = []
+    for path, status in failed_logs or []:
+        errors.append(f"Non-success eval log {path.name}: status={status}")
+
+    if not records:
+        if expect_tasks is not None or expect_epochs is not None:
+            errors.append("No records found to satisfy count expectations.")
+        return errors
+
+    grouped: dict[tuple[str, str, str], list[SampleRecord]] = defaultdict(list)
+    for r in records:
+        grouped[(r.model, r.harness, r.learning_mechanism)].append(r)
+
+    for (model, _harness, learning), group in sorted(grouped.items()):
+        arm = f"{model} ({learning})"
+        by_task: dict[str, list[SampleRecord]] = defaultdict(list)
+        for r in group:
+            by_task[r.sample_id].append(r)
+        if expect_tasks is not None and len(by_task) < expect_tasks:
+            errors.append(
+                f"{arm}: expected at least {expect_tasks} tasks, got {len(by_task)}"
+            )
+        if expect_epochs is not None:
+            for sample_id, runs in sorted(by_task.items()):
+                if len(runs) < expect_epochs:
+                    errors.append(
+                        f"{arm} task {sample_id}: expected at least {expect_epochs} epochs, got {len(runs)}"
+                    )
+    return errors
+
+
 def format_markdown_table(rows: list[RowSummary], include_anchors: bool = False) -> str:
     lines = [
-        "| Model | Harness | Learning mechanism | `pass@1` | `pass^5` | Legal traps missed (3 system-caught / 7 judgment) | Said done, check failed | Records changed unasked | Drop, clean to messy | Cost per task |",
-        "| :--- | :--- | :--- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |",
+        "| Model | Harness | Learning mechanism | `n` | `pass@1` | `pass^5` | Legal traps missed (3 system-caught / 7 judgment) | Said done, check failed | Records changed unasked | Drop, clean to messy | Cost per task |",
+        "| :--- | :--- | :--- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |",
     ]
     if include_anchors:
         lines.append(
-            "| Scripted reference (`baseline-agent.ts`) | Reference runner | n/a | 100.0% | 100.0% | 0/3 sys · 0/7 judg | 0.0% | 0.0 | 0.0 pp | $0.000 |"
+            "| Scripted reference (`baseline-agent.ts`) | Reference runner | n/a | n/a | 100.0% | 100.0% | 0/3 sys · 0/7 judg | 0.0% | 0.0 | 0.0 pp | $0.000 |"
         )
         lines.append(
-            "| Do-nothing baseline | Reference runner | n/a | 0.0% | 0.0% | n/a | 0.0% | 0.0 | 0.0 pp | $0.000 |"
+            "| Do-nothing baseline | Reference runner | n/a | n/a | 0.0% | 0.0% | n/a | 0.0% | 0.0 | 0.0 pp | $0.000 |"
         )
 
     for r in rows:
@@ -563,7 +631,7 @@ def format_markdown_table(rows: list[RowSummary], include_anchors: bool = False)
             pass5_str = f"n/a (k={k_per_task})"
         lines.append(
             f"| {r.model_label} | {r.harness} | {r.learning_mechanism} | "
-            f"{pass1_str} | {pass5_str} | "
+            f"{r.trials_count} | {pass1_str} | {pass5_str} | "
             f"{format_traps_cell(r)} | {r.said_done_failed_rate * 100:.1f}% | "
             f"{r.mean_unasked_mutations:.2f} ({r.unasked_mutation_rate * 100:.0f}%) | "
             f"{drop_str} | ${r.mean_cost_usd:.3f} |"
@@ -732,6 +800,18 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="Optional path to write deterministic per-trial replay manifest JSON",
     )
+    parser.add_argument(
+        "--expect-tasks",
+        type=int,
+        default=None,
+        help="Fail non-zero if any arm has fewer than this many distinct tasks (or if non-success logs exist)",
+    )
+    parser.add_argument(
+        "--expect-epochs",
+        type=int,
+        default=None,
+        help="Fail non-zero if any task in any arm has fewer than this many epochs (or if non-success logs exist)",
+    )
     args = parser.parse_args(argv)
 
     log_paths, clean_paths = resolve_log_paths(args.logs, args.clean_logs)
@@ -740,19 +820,37 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"No .eval files found in: {log_paths or args.logs}")
 
     records: list[SampleRecord] = []
+    failed_logs: list[tuple[Path, str]] = []
     for f in eval_files:
         log = _read_log_for_summary(f)
         if log.status == "success":
             records.extend(extract_records_from_log(log, pass_threshold=args.pass_threshold, eval_log_path=f))
+        else:
+            failed_logs.append((f, str(log.status)))
+            print(f"[warn] Skipping non-success eval log {f}: status={log.status}", file=sys.stderr)
 
     clean_records: list[SampleRecord] = []
     for f in collect_eval_files(clean_paths):
         log = _read_log_for_summary(f)
         if log.status == "success":
             clean_records.extend(extract_records_from_log(log, pass_threshold=args.pass_threshold, eval_log_path=f))
+        else:
+            print(f"[warn] Skipping non-success clean eval log {f}: status={log.status}", file=sys.stderr)
 
     records = filter_records_by_split(records, args.split)
     clean_records = filter_records_by_split(clean_records, args.split)
+
+    if args.expect_tasks is not None or args.expect_epochs is not None:
+        count_errors = validate_expected_counts(
+            records,
+            expect_tasks=args.expect_tasks,
+            expect_epochs=args.expect_epochs,
+            failed_logs=failed_logs,
+        )
+        if count_errors:
+            for err in count_errors:
+                print(f"ERROR: {err}", file=sys.stderr)
+            return 1
 
     rows = summarize_records(records, clean_records=clean_records)
     if args.json_out:

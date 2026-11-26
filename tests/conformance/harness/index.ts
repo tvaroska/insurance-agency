@@ -1,5 +1,7 @@
-export { startService, Service, Client } from "./service";
+export { startService, expectedServiceMode, Service, Client } from "./service";
 export type { ServiceName, SeedBase, HttpResult, RequestOptions, StartOptions, TokenOptions, TraceSpan } from "./service";
+export { openPortalPage } from "./browser";
+export type { PortalPage, RecordedPageRequest } from "./browser";
 export { loadContract, Contract } from "./openapi";
 export type { OperationRef, CheckOptions, CheckResult } from "./openapi";
 export { validateSchema } from "./schema";

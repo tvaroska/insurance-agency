@@ -151,6 +151,8 @@ def test_extract_and_summarize_computes_pass1_pass5_traps_collateral_and_drop():
     assert row.pass_at_1_ci95 == wilson_ci95(1, 2)
 
     md = format_markdown_table(rows, include_anchors=True)
+    assert "| `n` |" in md
+    assert "| 2 |" in md
     assert "Reference runner" in md
     assert "`gemini-3.8-flash`" in md
     assert "50.0% (0.50 mean)" in md
@@ -512,4 +514,129 @@ def test_read_log_for_summary_hydrates_truncated_collateral_or_eo_traps_metadata
     recs = extract_records_from_log(loaded)
     assert len(recs) == 1
     assert recs[0].unauthorized_mutations == 3
+
+
+def test_unscored_samples_count_as_failures_instead_of_being_skipped():
+    fake_samples = [
+        SimpleNamespace(
+            id="01-realistic-natural",
+            epoch=1,
+            metadata={"scenario_id": "01", "seed": "realistic"},
+            model_usage={},
+            scores={
+                "service_trace_scorer": SimpleNamespace(
+                    value=1.0,
+                    answer="Done.",
+                    metadata={
+                        "eo_compliant": True,
+                        "output_score": 1.0,
+                        "trace_score": 1.0,
+                        "api_calls": 5,
+                        "eo_traps": [],
+                        "collateral": {"unauthorized_mutations": 0},
+                    },
+                )
+            },
+        ),
+        SimpleNamespace(
+            id="02-realistic-natural",
+            epoch=1,
+            metadata={"scenario_id": "02", "seed": "realistic"},
+            model_usage={},
+            scores={},
+        ),
+        SimpleNamespace(
+            id="03-realistic-natural",
+            epoch=1,
+            metadata={"scenario_id": "03", "seed": "realistic"},
+            model_usage={},
+            scores=None,
+        ),
+    ]
+    fake_log = SimpleNamespace(
+        status="success",
+        eval=SimpleNamespace(model="google/gemini-4-hydrogen", metadata={}),
+        samples=fake_samples,
+        stats=SimpleNamespace(model_usage={}),
+    )
+
+    records = extract_records_from_log(fake_log)
+    assert len(records) == 3
+    by_id = {r.sample_id: r for r in records}
+    assert by_id["01-realistic-natural"].passed is True
+    assert by_id["02-realistic-natural"].passed is False
+    assert by_id["02-realistic-natural"].score == 0.0
+    assert by_id["03-realistic-natural"].passed is False
+    assert by_id["03-realistic-natural"].score == 0.0
+
+    rows = summarize_records(records)
+    assert len(rows) == 1
+    assert rows[0].tasks_count == 3
+    assert rows[0].trials_count == 3
+    assert rows[0].pass_at_1 == round(1 / 3, 4)
+
+
+def test_main_fails_when_a_task_or_epoch_is_missing(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
+):
+    from inspect_ai.log import (
+        EvalConfig,
+        EvalDataset,
+        EvalLog,
+        EvalPlan,
+        EvalResults,
+        EvalSpec,
+        EvalStats,
+        write_eval_log,
+    )
+
+    logs_dir = tmp_path / "realistic-natural"
+    _write_fixture_eval_log(
+        logs_dir / "arm-a.eval",
+        model="google/gemini-4-hydrogen",
+        learning_mechanism="None (zero-shot)",
+        seed="realistic",
+        scenarios=[("01", 1.0, True), ("02", 1.0, True)],
+    )
+
+    # Exact match passes
+    assert (
+        summarize_inspect.main([str(logs_dir), "--expect-tasks", "2", "--expect-epochs", "1"])
+        == 0
+    )
+    capsys.readouterr()
+
+    # Missing task fails non-zero
+    rc_missing_task = summarize_inspect.main([str(logs_dir), "--expect-tasks", "3", "--expect-epochs", "1"])
+    assert rc_missing_task != 0
+    assert "expected at least 3 tasks, got 2" in capsys.readouterr().err
+
+    # Missing epoch fails non-zero
+    rc_missing_epoch = summarize_inspect.main([str(logs_dir), "--expect-tasks", "2", "--expect-epochs", "2"])
+    assert rc_missing_epoch != 0
+    assert "expected at least 2 epochs, got 1" in capsys.readouterr().err
+
+    # Non-success .eval log also fails non-zero under strict count expectations
+    failed_log = EvalLog(
+        status="error",
+        eval=EvalSpec(
+            run_id="run_err",
+            task_id="task_err",
+            created="2026-10-14T12:00:00+00:00",
+            task="evergreen_langchain",
+            dataset=EvalDataset(name="evergreen", samples=0),
+            model="google/gemini-4-hydrogen",
+            config=EvalConfig(),
+            metadata={"learning_mechanism": "None (zero-shot)"},
+        ),
+        plan=EvalPlan(),
+        results=EvalResults(),
+        stats=EvalStats(),
+        samples=[],
+    )
+    write_eval_log(failed_log, str(logs_dir / "arm-a-failed.eval"))
+    rc_failed_log = summarize_inspect.main([str(logs_dir), "--expect-tasks", "2", "--expect-epochs", "1"])
+    assert rc_failed_log != 0
+    assert "Non-success eval log arm-a-failed.eval: status=error" in capsys.readouterr().err
+
 

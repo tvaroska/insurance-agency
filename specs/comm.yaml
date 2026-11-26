@@ -818,7 +818,7 @@ components:
         message_id:
           type: string
           description: Unique identifier assigned to the queued message.
-          pattern: "^msg_[a-f0-9\\-]{36}$"
+          pattern: "^(msg_[a-z0-9_\\-]+|MSG-[A-Za-z0-9_-]+)$"
           example: "msg_b4c5d6e7-f8a9-0b1c-2d3e-4f5a6b7c8d9e"
         status:
           $ref: "#/components/schemas/MessageStatus"
@@ -966,7 +966,7 @@ components:
               properties:
                 message_id:
                   type: string
-                  pattern: "^msg_[a-f0-9\\-]{36}$"
+                  pattern: "^(msg_[a-z0-9_\\-]+|MSG-[A-Za-z0-9_-]+)$"
                   example: "msg_b4c5d6e7-f8a9-0b1c-2d3e-4f5a6b7c8d9e"
                 channel:
                   $ref: "#/components/schemas/Channel"
@@ -1007,7 +1007,7 @@ components:
               properties:
                 message_id:
                   type: string
-                  pattern: "^msg_[a-f0-9\\-]{36}$"
+                  pattern: "^(msg_[a-z0-9_\\-]+|MSG-[A-Za-z0-9_-]+)$"
                   example: "msg_cccc3333-dddd-eeee-ffff-aaaa4444bbbb"
                 channel:
                   $ref: "#/components/schemas/Channel"
@@ -1089,14 +1089,13 @@ components:
               properties:
                 call_id:
                   type: string
-                  pattern: "^call_[a-f0-9\\-]{36}$"
+                  pattern: "^(call_[a-f0-9\\-]{36}|CALL-[A-Za-z0-9_-]+)$"
                   example: "call_f6a7b8c9-d0e1-2f3a-4b5c-6d7e8f9a0b1c"
                 client_id:
                   type: string
-                  format: uuid
                   nullable: true
                   description: Client ID if the caller was identified, null otherwise.
-                  example: "cli_9a0b1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d"
+                  example: "CLI-001"
                 caller_number:
                   type: string
                   description: E.164 phone number of the caller.

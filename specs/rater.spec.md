@@ -155,7 +155,7 @@ Checks run in this order and stop at the first failure.
 - **RTR-R45** On success the quote's `status` becomes `bound` and `bound_at` the current time. No other row changes: the request and its other quotes stay as they are, and `payment_method`, `producer_id` and the signature fields are not stored. The answer is `201`:
   - `policy_id` = `POL-<carrier_code>-<current year>-<six random digits>`
   - `quote_id`, `carrier_code`, `carrier_name`, `premium_annual`, `premium_monthly` from the quote
-  - `effective_date` = the request's effective date, and `expiration_date` = the same calendar day one year later (`YYYY-MM-DD`), rolling over when that day does not exist (`2028-02-29` gives `2029-03-01`); both null when the request has no effective date
+  - `effective_date` = the request's effective date, and `expiration_date` = the same calendar day one year later (`YYYY-MM-DD`, computed via calendar string arithmetic so `2028-02-29` clamps to `2029-02-28` regardless of host timezone); both null when the request has no effective date
   - `bind_status` = `bound`, `bound_at`
   - `policy_documents_url` = `<ECM base URL>/v1/documents?client_id=<request.client_id, URL-encoded>` when the associated quote request has a `client_id`, otherwise `<ECM base URL>/v1/documents` (`ECM_BASE_URL`, else `ECM_URL`, else `http://localhost:3003`, without trailing slashes)
 - **RTR-R46** When the AMS cannot be reached in RTR-R44, the answer is `500 INTERNAL_ERROR` and the quote stays unbound.

@@ -236,8 +236,7 @@ describe("certificate of insurance: effects", () => {
     }
   });
 
-  test("ECM-R67: a stored coi document that this process did not generate gets a placeholder certificate", async () => {
-    // The service remembers a placeholder for as long as the process lives, so the id is new on every run.
+  test("ECM-R67: a stored coi document without generated PDF bytes returns 404 NOT_FOUND instead of fabricating a PDF", async () => {
     const id = `DOC-COI-${Date.now()}`;
     await ctx.svc.seed({
       tables: {
@@ -248,19 +247,13 @@ describe("certificate of insurance: effects", () => {
       },
     });
     ctx.ams.clear();
-    const pdf = await ctx.api.get(`/v1/coi/${id}/pdf`);
-    const text = expectPdf(pdf);
-    expect(pdf.headers.get("content-disposition")).toBe('inline; filename="COI-POLX-1.pdf"');
-    expect(text[0]).toBe("ACORD 25");
-    expect(pdfField(text, "INSURED")).toBe("Policyholder CLI-5");
-    expect(pdfField(text, "CERTIFICATE HOLDER")).toBe("Certificate Holder on File");
-    expect(pdfField(text, "POLICY EXP DATE")).toBe("2031-12-31");
+    for (const path of [`/v1/coi/${id}/pdf`, `/v1/documents/coi/${id}/pdf`]) {
+      const res = await ctx.api.get(path);
+      expectError(res, 404, "NOT_FOUND");
+      expect(res.body.message).toBe("COI document not found.");
+      checkError(contract, res);
+    }
     expect(ctx.ams.calls).toEqual([]);
-
-    const again = await ctx.api.get(`/v1/documents/coi/${id}/pdf`);
-    expectPdf(again);
-    expect(Buffer.from(again.bytes).equals(Buffer.from(pdf.bytes))).toBe(true);
-    expect(again.headers.get("content-disposition")).toBe(`inline; filename="ACORD-25-${id}.pdf"`);
 
     const notCoi = await ctx.api.get("/v1/coi/DOC-APP/pdf");
     expectError(notCoi, 404, "NOT_FOUND");

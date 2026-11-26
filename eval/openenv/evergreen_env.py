@@ -15,6 +15,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.error
@@ -29,18 +30,14 @@ EVAL_DIR = OPENENV_DIR.parent
 GYM_ROOT = EVAL_DIR.parent
 TASKS_JSON_PATH = EVAL_DIR / "metr" / "tasks.json"
 
-PORT_SERVICE_MAP: dict[int, str] = {
-    3000: "ams",
-    3001: "rater",
-    3002: "crm",
-    3003: "ecm",
-    3004: "comm",
-    3005: "summit-fire",
-    3006: "coastal-star",
-    3007: "claims",
-}
+_INSPECT_DIR = str(EVAL_DIR / "inspect")
+if _INSPECT_DIR not in sys.path:
+    sys.path.insert(0, _INSPECT_DIR)
 
-SERVICE_PORT_MAP: dict[str, int] = {v: k for k, v in PORT_SERVICE_MAP.items()}
+import control_plane as _control_plane  # noqa: E402
+
+PORT_SERVICE_MAP: dict[int, str] = dict(_control_plane.PORT_SERVICE_MAP)
+SERVICE_PORT_MAP: dict[str, int] = dict(_control_plane.SERVICE_PORTS)
 
 FORBIDDEN_STEP_HEADERS: frozenset[str] = frozenset(
     {
@@ -119,8 +116,10 @@ class EvergreenGymEnv:
         self._bearer_token: str | None = None
         self._portal_sessions: dict[str, dict[str, str]] = {}
         self._task_seed: str = str(self.current_task["seed"])
-        self._effective_seed: str = "clean" if self._task_seed == "clean" else "realistic"
+        self._effective_seed: str = _control_plane.seed_mode(self._task_seed)
         self._initial_snapshot: dict[str, Any] | None = None
+        self._chaos_enabled: bool = False
+        self._episode_seq: int = 0
 
     def _request_json(
         self,
@@ -166,7 +165,7 @@ class EvergreenGymEnv:
             if options and "seed_mode" in options
             else (seed if isinstance(seed, str) else self.current_task["seed"])
         )
-        effective_seed = "clean" if raw_seed == "clean" else "realistic"
+        effective_seed = _control_plane.seed_mode(raw_seed)
 
         self.step_count = 0
         self.recorded_spans = []
@@ -174,22 +173,15 @@ class EvergreenGymEnv:
         self._portal_sessions = {}
         self._task_seed = raw_seed
         self._effective_seed = effective_seed
+        self._chaos_enabled = False
+        self._episode_seq += 1
 
-        reset_headers = self._scorer_headers()
-        reset_statuses: dict[str, Any] = {}
-        for canonical_port, service in PORT_SERVICE_MAP.items():
-            port = self._service_port(canonical_port)
-            url = f"{self.host}:{port}/sim/reset"
-            status_code, payload = self._request_json(
-                "POST",
-                url,
-                {
-                    "seed_mode": effective_seed,
-                    "scenario_id": str(self.current_task["scenario_id"]),
-                },
-                reset_headers,
-            )
-            reset_statuses[service] = {"status_code": status_code, "response": payload}
+        reset_statuses = _control_plane.reset_services(
+            self._target_urls(),
+            raw_seed,
+            scenario_id=str(self.current_task["scenario_id"]),
+            http_handler=self._http_handler,
+        )
 
         self._initial_snapshot = self.snapshot()
 
@@ -446,25 +438,19 @@ class EvergreenGymEnv:
         )
         return base_port + (canonical - 3000)
 
+    def _target_urls(self, services: list[str] | None = None) -> dict[str, str]:
+        targets = services or list(SERVICE_PORT_MAP.keys())
+        return {svc: f"{self.host}:{self._service_port(svc)}" for svc in targets}
+
     def _scorer_headers(self) -> dict[str, str]:
-        headers = {"X-Eval-Scorer": "true"}
-        secret = os.environ.get("EVERGREEN_SCORER_SECRET")
-        if secret:
-            headers["X-Evergreen-Scorer-Secret"] = secret
-        return headers
+        return _control_plane.scorer_headers()
 
     def snapshot(self, services: list[str] | None = None) -> dict[str, Any]:
-        """Query `GET /sim/snapshot` across all (or specified) microservices."""
-        targets = services or list(SERVICE_PORT_MAP.keys())
-        snapshots: dict[str, Any] = {}
-        headers = self._scorer_headers()
-        for svc in targets:
-            port = self._service_port(svc)
-            _, payload = self._request_json(
-                "GET", f"{self.host}:{port}/sim/snapshot", None, headers
-            )
-            snapshots[svc] = payload
-        return snapshots
+        """Query `GET /sim/snapshot` across all (or specified) microservices; raises on non-2xx."""
+        return _control_plane.take_snapshot(
+            self._target_urls(services),
+            http_handler=self._http_handler,
+        )
 
     def time_travel(
         self,
@@ -473,25 +459,13 @@ class EvergreenGymEnv:
         target_date: str | None = None,
         services: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Advance the simulated clock via `POST /sim/time-travel`."""
-        if days is None and not target_date:
-            raise ValueError("Provide either `days` or `target_date`.")
-        body: dict[str, Any] = {}
-        if days is not None:
-            body["days"] = days
-        if target_date is not None:
-            body["target_date"] = target_date
-
-        targets = services or list(SERVICE_PORT_MAP.keys())
-        results: dict[str, Any] = {}
-        headers = self._scorer_headers()
-        for svc in targets:
-            port = self._service_port(svc)
-            _, payload = self._request_json(
-                "POST", f"{self.host}:{port}/sim/time-travel", body, headers
-            )
-            results[svc] = payload
-        return results
+        """Advance the simulated clock via `POST /sim/time-travel`; raises on non-2xx."""
+        return _control_plane.time_travel(
+            self._target_urls(services),
+            days=days,
+            target_date=target_date,
+            http_handler=self._http_handler,
+        )
 
     def chaos(
         self,
@@ -502,88 +476,36 @@ class EvergreenGymEnv:
         latency_ms: int = 0,
         services: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Configure chaos fault injection via `POST /sim/chaos`."""
-        body = {
-            "enabled": enabled,
-            "error_rate": error_rate,
-            "status_code": status_code,
-            "latency_ms": latency_ms,
-        }
-        targets = services or list(SERVICE_PORT_MAP.keys())
-        results: dict[str, Any] = {}
-        headers = self._scorer_headers()
-        for svc in targets:
-            port = self._service_port(svc)
-            _, payload = self._request_json(
-                "POST", f"{self.host}:{port}/sim/chaos", body, headers
-            )
-            results[svc] = payload
+        """Configure chaos fault injection via `POST /sim/chaos`; raises on non-2xx."""
+        results = _control_plane.set_chaos(
+            self._target_urls(services),
+            enabled=enabled,
+            error_rate=error_rate,
+            status_code=status_code,
+            latency_ms=latency_ms,
+            http_handler=self._http_handler,
+        )
+        self._chaos_enabled = bool(enabled)
         return results
 
     def export_otlp_trace(self) -> dict[str, Any]:
-        """Collect service-side OTLP traces (`GET /sim/trace`) across all 8 services, falling back to `self.recorded_spans` when running against mock handlers."""
-        headers = self._scorer_headers()
-        entries: list[tuple[int, dict[str, Any], dict[str, Any], dict[str, Any]]] = []
-        saw_service_trace_endpoint = False
-
-        for svc in SERVICE_PORT_MAP:
-            port = self._service_port(svc)
-            try:
-                status_code, payload = self._request_json(
-                    "GET", f"{self.host}:{port}/sim/trace", None, headers
-                )
-            except Exception:
-                continue
-            if status_code == 200 and isinstance(payload, dict) and isinstance(payload.get("resourceSpans"), list):
-                saw_service_trace_endpoint = True
-                for rs in payload["resourceSpans"]:
-                    resource = rs.get("resource", {})
-                    for ss in rs.get("scopeSpans", []):
-                        scope = {k: v for k, v in ss.items() if k != "spans"}
-                        for span in ss.get("spans", []):
-                            start_ns = int(span.get("startTimeUnixNano", "0") or "0")
-                            entries.append((start_ns, resource, scope, span))
-
-        if saw_service_trace_endpoint:
-            entries.sort(key=lambda item: item[0])
-            resource_spans: list[dict[str, Any]] = []
-            prev_resource: dict[str, Any] | None = None
-            prev_scope: dict[str, Any] | None = None
-            for _, resource, scope, span in entries:
-                if resource != prev_resource or scope != prev_scope or not resource_spans:
-                    resource_spans.append(
-                        {
-                            "resource": resource,
-                            "scopeSpans": [{**scope, "spans": []}],
-                        }
-                    )
-                    prev_resource = resource
-                    prev_scope = scope
-                resource_spans[-1]["scopeSpans"][0]["spans"].append(span)
-            return {"resourceSpans": resource_spans}
-
-        return {
-            "resourceSpans": [
-                {
-                    "resource": {
-                        "attributes": [
-                            {
-                                "key": "service.name",
-                                "value": {"stringValue": "openenv-agent"},
-                            }
-                        ]
-                    },
-                    "scopeSpans": [{"spans": list(self.recorded_spans)}],
-                }
-            ]
-        }
+        """Collect service-side OTLP traces (`GET /sim/trace`) across all 8 services; fails closed on non-2xx."""
+        return _control_plane.export_otlp_trace(
+            self._target_urls(),
+            http_handler=self._http_handler,
+        )
 
     def score(self) -> dict[str, Any]:
         """Invoke `bun eval/score.ts` on the current trajectory and before/after 32-table snapshots."""
         if self._scorer_fn is not None:
             return self._scorer_fn(self.current_task, self.recorded_spans)
 
-        trace_dir = Path(tempfile.mkdtemp(prefix=f"openenv-traces-{self.task_id}-"))
+        # Ensure chaos fault injection is off before scoring reads traces, snapshots, and checks.
+        self.chaos(enabled=False)
+
+        trace_dir = Path(
+            tempfile.mkdtemp(prefix=f"openenv-traces-{self.task_id}-ep{self._episode_seq}-")
+        )
         try:
             trace_file = trace_dir / "trace.json"
             trace_file.write_text(json.dumps(self.export_otlp_trace(), indent=2))

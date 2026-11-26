@@ -36,7 +36,7 @@ describe("held-out validation fixtures (data/validation/claims)", () => {
     while (true) {
       const res = await ctx.api.get("/v1/claims", { query: { limit: 200, cursor } });
       const body = expectStatus(res, 200);
-      contract.check(res);
+      contract.check(res, { allow: ["query/limit:"] });
       expect(body.pagination.limit).toBe(100);
       for (const row of body.data) seen.push(row.claim_id);
       pages += 1;

@@ -412,7 +412,7 @@ describe("what the page must be able to do, driven the way the page drives it", 
     expect(again.body.message).toBe("Quote has already been bound.");
   });
 
-  test("Known gap 12 (HTTP boundary): served portal bundle carries VIN decode, screen controls, and session-retry markers", async () => {
+  test("Known gap 12 (static asset boundary; interactive DOM smoke is in browser.test.ts): served portal bundle carries screen and session-retry markers", async () => {
     const html = (await open.svc.http.get("/")).text;
     const script = /<script[^>]+src="([^"]+)"/.exec(html)?.[1] ?? "";
     const js = (await open.svc.http.get(script)).text;
@@ -424,7 +424,8 @@ describe("what the page must be able to do, driven the way the page drives it", 
 
 describe("latency", () => {
   test("CST-R44: CARRIER_LATENCY_MS delays authenticated API requests only", async () => {
-    const slow = await start({ CARRIER_LATENCY_MS: "300" });
+    const injectedMs = 300;
+    const slow = await start({ CARRIER_LATENCY_MS: String(injectedMs) });
     await slow.svc.seed(SEED);
     const path = `${API}/quotes/QT-ASSESSED/risk-assessment`;
     const timed = async (run: () => Promise<{ status: number }>) => {
@@ -432,16 +433,38 @@ describe("latency", () => {
       const res = await run();
       return { status: res.status, ms: performance.now() - started };
     };
+    const fastOfTwo = async (run: () => Promise<{ status: number }>) => {
+      const a = await timed(run);
+      const b = await timed(run);
+      return a.ms <= b.ms ? a : b;
+    };
+
+    // Warm up and capture un-delayed baseline on the open instance.
+    await open.api.get(path);
+    await slow.svc.http.get("/health");
+    const baselineOpen = await fastOfTwo(() => open.api.get(path));
+
     const authed = await timed(() => slow.api.get(path));
     expect(authed.status).toBe(200);
-    expect(authed.ms).toBeGreaterThanOrEqual(290);
+    expect(authed.ms).toBeGreaterThanOrEqual(injectedMs - 15);
+    expect(authed.ms - baselineOpen.ms).toBeGreaterThanOrEqual(injectedMs - 50);
+
     const missing = await timed(() => slow.api.get(`${API}/policies/POL-NOPE/id-card`));
     expect(missing.status).toBe(404);
-    expect(missing.ms).toBeGreaterThanOrEqual(290);
-    const unauthenticated = await timed(() => slow.svc.http.get(path));
+    expect(missing.ms).toBeGreaterThanOrEqual(injectedMs - 15);
+    expect(missing.ms - baselineOpen.ms).toBeGreaterThanOrEqual(injectedMs - 50);
+
+    const minDelayedMs = Math.min(authed.ms, missing.ms);
+    const unauthenticated = await fastOfTwo(() => slow.svc.http.get(path));
     expect(unauthenticated.status).toBe(401);
-    expect(unauthenticated.ms).toBeLessThan(250);
-    expect((await timed(() => slow.svc.http.get("/health"))).ms).toBeLessThan(250);
-    expect((await timed(() => open.api.get(path))).ms).toBeLessThan(250);
+    expect(minDelayedMs - unauthenticated.ms).toBeGreaterThanOrEqual(injectedMs - 120);
+
+    const health = await fastOfTwo(() => slow.svc.http.get("/health"));
+    expect(health.status).toBe(200);
+    expect(minDelayedMs - health.ms).toBeGreaterThanOrEqual(injectedMs - 120);
+
+    const fast = await fastOfTwo(() => open.api.get(path));
+    expect(fast.status).toBe(200);
+    expect(minDelayedMs - fast.ms).toBeGreaterThanOrEqual(injectedMs - 120);
   }, 30_000);
 });

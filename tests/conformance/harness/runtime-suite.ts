@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { startService, type Service, type ServiceName } from "./service";
+import { expectedServiceMode, startService, type Service, type ServiceName } from "./service";
 
 export interface RuntimeContractOptions {
   service: ServiceName;
@@ -55,6 +55,7 @@ export function runtimeContractTests(opts: RuntimeContractOptions): void {
   const keys = Object.keys(opts.seedCounts.realistic);
   const empty = Object.fromEntries(keys.map((key) => [key, 0]));
   const counts = (target: Service) => countRows(target, keys);
+  const expectedMode = expectedServiceMode(service);
   let svc: Service;
 
   beforeAll(async () => {
@@ -62,34 +63,42 @@ export function runtimeContractTests(opts: RuntimeContractOptions): void {
   }, 30_000);
 
   describe(`${service}: process, database and seeding`, () => {
-    test(`${rules.process}, ${rules.database}: the seed script and the server share the database file under EVERGREEN_DATA_DIR`, async () => {
-      const seeded = await startService(service, { env: { SEED_MODE: "clean" }, seedScript: true });
-      try {
-        if (seeded.mode === "external") return;
-        expect(await counts(seeded)).toEqual(opts.seedCounts.clean);
-        expect(existsSync(join(seeded.dataDir!, `${service}.db`))).toBe(true);
-        expect((await seeded.http.get("/health")).body).toMatchObject({ status: "ok", service });
-      } finally {
-        await seeded.stop();
-      }
-    }, 30_000);
+    test.skipIf(expectedMode === "external")(
+      `${rules.process}, ${rules.database}: the seed script and the server share the database file under EVERGREEN_DATA_DIR`,
+      async () => {
+        const seeded = await startService(service, { env: { SEED_MODE: "clean" }, seedScript: true });
+        try {
+          expect(seeded.mode).not.toBe("external");
+          expect(await counts(seeded)).toEqual(opts.seedCounts.clean);
+          expect(existsSync(join(seeded.dataDir!, `${service}.db`))).toBe(true);
+          expect((await seeded.http.get("/health")).body).toMatchObject({ status: "ok", service });
+        } finally {
+          await seeded.stop();
+        }
+      },
+      30_000,
+    );
 
-    test(`${rules.database}: DATABASE_URL overrides the database location`, async () => {
-      const dir = mkdtempSync(join(tmpdir(), `conformance-${service}-url-`));
-      process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
-      const file = join(dir, "custom.db");
-      const custom = await startService(service, { env: { DATABASE_URL: `file:${file}` } });
-      try {
-        if (custom.mode === "external") return;
-        await custom.reset("clean");
-        expect(await counts(custom)).toEqual(opts.seedCounts.clean);
-        expect(existsSync(file)).toBe(true);
-        expect(existsSync(join(custom.dataDir!, `${service}.db`))).toBe(false);
-      } finally {
-        await custom.stop();
-        rmSync(dir, { recursive: true, force: true });
-      }
-    }, 30_000);
+    test.skipIf(expectedMode === "external")(
+      `${rules.database}: DATABASE_URL overrides the database location`,
+      async () => {
+        const dir = mkdtempSync(join(tmpdir(), `conformance-${service}-url-`));
+        process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+        const file = join(dir, "custom.db");
+        const custom = await startService(service, { env: { DATABASE_URL: `file:${file}` } });
+        try {
+          expect(custom.mode).not.toBe("external");
+          await custom.reset("clean");
+          expect(await counts(custom)).toEqual(opts.seedCounts.clean);
+          expect(existsSync(file)).toBe(true);
+          expect(existsSync(join(custom.dataDir!, `${service}.db`))).toBe(false);
+        } finally {
+          await custom.stop();
+          rmSync(dir, { recursive: true, force: true });
+        }
+      },
+      30_000,
+    );
 
     test(`${rules.seeding}: POST /sim/reset without a body loads the data set named by SEED_MODE, realistic when unset`, async () => {
       const cleanDefault = await startService(service, { env: { SEED_MODE: "clean" }, seedScript: true });
@@ -210,19 +219,41 @@ export function runtimeContractTests(opts: RuntimeContractOptions): void {
     test(`${rules.chaos}: latency_ms delays /v1 requests`, async () => {
       await svc.seed();
       const api = await svc.client();
-      await svc.chaos({ enabled: true, error_rate: 0, latency_ms: 300 });
-      const started = Date.now();
-      expect((await api.get(opts.readPath)).status).toBe(200);
-      expect(Date.now() - started).toBeGreaterThanOrEqual(290);
-      const health = Date.now();
+      const timed = async (run: () => Promise<{ status: number }>) => {
+        const started = performance.now();
+        const res = await run();
+        return { status: res.status, ms: performance.now() - started };
+      };
+      // Warm up and measure un-delayed baseline so timing assertions stay resilient on loaded hosts.
+      await api.get(opts.readPath);
       await svc.http.get("/health");
-      expect(Date.now() - health).toBeLessThan(250);
-      await svc.seed();
+      const baselineReadMs = Math.min(
+        (await timed(() => api.get(opts.readPath))).ms,
+        (await timed(() => api.get(opts.readPath))).ms,
+      );
+
+      const injectedMs = 300;
+      await svc.chaos({ enabled: true, error_rate: 0, latency_ms: injectedMs });
+      try {
+        const delayedRead = await timed(() => api.get(opts.readPath));
+        expect(delayedRead.status).toBe(200);
+        expect(delayedRead.ms).toBeGreaterThanOrEqual(injectedMs - 15);
+        expect(delayedRead.ms - baselineReadMs).toBeGreaterThanOrEqual(injectedMs - 50);
+
+        const healthMs = Math.min(
+          (await timed(() => svc.http.get("/health"))).ms,
+          (await timed(() => svc.http.get("/health"))).ms,
+        );
+        expect(delayedRead.ms - healthMs).toBeGreaterThanOrEqual(injectedMs - 120);
+      } finally {
+        await svc.seed();
+      }
     });
 
-    test(`${rules.accessLog ?? rules.process}: every answered request is written to standard output as one JSON line`, async () => {
-      // Standard output is only visible when the harness started the service itself.
-      if (svc.mode !== "process") return;
+    test.skipIf(expectedMode !== "process")(
+      `${rules.accessLog ?? rules.process}: every answered request is written to standard output as one JSON line`,
+      async () => {
+        expect(svc.mode).toBe("process");
       await svc.seed();
       const api = await svc.client();
       const lineFor = async (id: string) => {
@@ -274,7 +305,8 @@ export function runtimeContractTests(opts: RuntimeContractOptions): void {
       const health = await lineFor(healthId);
       expect(health).toMatchObject({ method: "GET", path: "/health", status: 200 });
       expect("query" in health).toBe(false);
-    });
+      },
+    );
 
     test(`${rules.trace}: GET /sim/trace lists every /v1 request since the last seed or reset`, async () => {
       await svc.seed();

@@ -234,27 +234,27 @@ The path id is the target (kept); `source_client_id` in the body is merged into 
 
 **getEscalation** `GET /v1/escalations/{escalation_id}`
 
-- **AMS-R75** `404 escalation` when it does not exist. Otherwise every call adds 1 to `poll_count` and sets `updated_at`, whatever the status. The response is the escalation (AMS-R73 shape, with the new `poll_count`) plus `events`: all events of this escalation, oldest first, each `{id, escalation_id, event_type, from_status, to_status, details, created_at}` with `details` parsed.
+- **AMS-R75** `404 escalation` when it does not exist. Authorized internal/scorer observation calls (`X-Evergreen-Internal: 1` or `X-Eval-Scorer: true`) return the current escalation and its events without incrementing `poll_count` or advancing resolution. Otherwise every agent call adds 1 to `poll_count` and sets `updated_at`, whatever the status. The response is the escalation (AMS-R73 shape, with the new `poll_count`) plus `events`: all events of this escalation, oldest first, each `{id, escalation_id, event_type, from_status, to_status, details, created_at}` with `details` parsed.
 - **AMS-R76** If the status is `pending` and the new `poll_count` is 2 or more, the escalation is decided during this call (section 7.1, table in AMS-R78). The escalation gets `status = <decision>` and `manager_response = {decision, template_id, response_text, resolved_at}`. Two events are appended in this order, both with `from_status: "pending"` and `to_status: <decision>`: `manager_reviewed` with `details: {template_id}`, then `status_changed` with `details: null`. The response of this same call shows the decided state and all three events.
-- **AMS-R77** An escalation whose status is not `pending` is never decided again. Reading it only increments `poll_count`.
-- **AMS-R78** The decision is taken from the first row of this table whose reason matches and whose keyword condition holds. A keyword matches when it occurs anywhere in `summary`, ignoring case. `context` plays no part.
+- **AMS-R77** An escalation whose status is not `pending` is never decided again. Reading it only increments `poll_count` (except internal/scorer observation calls).
+- **AMS-R78** The decision is taken from the first row of this table whose `reason` and structured `context` predicate match. Free-text wording in `summary` is never inspected.
 
-| # | Reason | Summary contains any of | Template | Decision |
+| # | Reason | Structured `context` predicate | Template | Decision |
 | :--- | :--- | :--- | :--- | :--- |
 | 1 | `state_minimum_violation` | (always) | `state_minimum_override_denial` | denied |
 | 2 | `backdating` | (always) | `backdating_denial` | denied |
-| 3 | `premium_threshold` | `deny`, `decline`, `reject`, `unacceptable` | `premium_threshold_denial` | denied |
+| 3 | `premium_threshold` | `risk_acceptable === false`, `underwriting_eligible === false`, `within_appetite === false`, or `decision` in `["denied", "deny"]` | `premium_threshold_denial` | denied |
 | 4 | `premium_threshold` | (otherwise) | `premium_threshold_approval` | approved |
-| 5 | `coverage_adequacy` | `gap`, `lapse` | `coverage_gap_review` | needs_info |
-| 6 | `coverage_adequacy` | `roof`, `inspection` | `roof_inspection_required` | needs_info |
+| 5 | `coverage_adequacy` | `has_coverage_gap === true`, `coverage_gap === true`, or `issue` in `["coverage_gap", "lapse"]` | `coverage_gap_review` | needs_info |
+| 6 | `coverage_adequacy` | `roof_inspection_required === true`, `issue === "roof_inspection"`, or `roof_age_years > 15` | `roof_inspection_required` | needs_info |
 | 7 | `coverage_adequacy` | (otherwise) | `coverage_adequacy_review` | needs_info |
-| 8 | `surplus_lines` | `no license`, `missing license`, `unlicensed` | `surplus_lines_license_missing` | denied |
+| 8 | `surplus_lines` | `surplus_lines_licensed === false`, `has_surplus_lines_license === false`, or `license_on_file === false` | `surplus_lines_license_missing` | denied |
 | 9 | `surplus_lines` | (otherwise) | `surplus_lines_approval` | approved |
 | 10 | `attorney_involvement` | (always) | `attorney_referral_confirmation` | approved |
-| 11 | `principal_review` | `deny`, `decline`, `reject`, `not acceptable` | `principal_approval_denied` | denied |
-| 12 | `principal_review` | `high value`, `high-value` | `high_value_property_approval` | approved |
-| 13 | `principal_review` | `flood`, `flood zone` | `flood_zone_exception` | approved |
-| 14 | `principal_review` | `attorney`, `legal` | `attorney_referral_confirmation` | approved |
+| 11 | `principal_review` | `risk_acceptable === false`, `underwriting_eligible === false`, `within_appetite === false`, or `decision` in `["denied", "deny"]` | `principal_approval_denied` | denied |
+| 12 | `principal_review` | `high_value_property === true` or `category === "high_value_property"` | `high_value_property_approval` | approved |
+| 13 | `principal_review` | `flood_zone === true` or `category === "flood_zone"` | `flood_zone_exception` | approved |
+| 14 | `principal_review` | `attorney_involved === true` or `category === "attorney_involvement"` | `attorney_referral_confirmation` | approved |
 | 15 | `principal_review` | (otherwise) | `principal_approval_granted` | approved |
 | 16 | any other reason (`claims_specialist`, `claim_specialist`) | (always) | `general_escalation_acknowledged` | needs_info |
 
@@ -519,8 +519,8 @@ All OpenAPI-vs-service contract disagreements (`AMS-G1`–`AMS-G14`, `AMS-G16`) 
 
 ### 14.3 HTTP-conformance boundaries
 
-- **AMS-G20** Browser DOM rendering, tabs, and the in-page calculator on `/` execute in a real browser (`tests/e2e/`). The conformance suite checks that `/` serves one self-contained HTML document containing all workbench routes, modes, and control hooks (AMS-R103).
-- **AMS-G21** Governed `run-journey` against all seven live sibling services (AMS-R106) is exercised by full-stack integration and harness validation (`eval/validate-harness.ts`, `tests/integration/`). The conformance suite proves the health probe, offline fallback, chaos forwarding, and ECM PDF pass-through against a local stub peer.
+- **AMS-G20 (open — no browser DOM suite)** Browser DOM rendering, tabs, and the in-page calculator on `/` are not yet executed by a real browser or headless DOM suite. `tests/conformance/ams/workbench.test.ts` checks the HTTP contracts of `/` and `/workbench/api/*` plus static markers in the served HTML shell (AMS-R103).
+- **AMS-G21 (open — stubbed peer boundary)** Governed `run-journey` against all seven live sibling services (AMS-R106) is not executed live inside single-service conformance, which proves the health probe, offline fallback, chaos forwarding, and ECM PDF pass-through against a local stub peer; multi-service scenarios are covered separately by `eval/validate-harness.ts` and `tests/integration/`.
 - The `SIMULATED_TODAY` override (section 8.3): the tests run with it unset.
 - `/sim/chaos` error rates strictly between 0 and 1.
 - The fallback database location inside the repository (AMS-R121), which the tests never write to.

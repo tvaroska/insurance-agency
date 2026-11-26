@@ -725,7 +725,7 @@ describe("workbench PDFs", () => {
   });
 });
 
-test("AMS-G15, AMS-G20, AMS-G21 (scope boundaries): platform/workbench routes stay outside the 19-tool /v1 OpenAPI spec and HTML embeds tabs + calculator hooks", async () => {
+test("AMS-G15, AMS-R103 (HTTP boundary; AMS-G20/AMS-G21 remain open): platform/workbench routes stay outside the 19-tool /v1 OpenAPI spec and HTML shell serves expected routes", async () => {
   const { loadContract } = await import("../harness");
   const amsContract = loadContract("ams");
   expect(amsContract.operations()).toHaveLength(19);

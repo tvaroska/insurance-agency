@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseOtlpTrace, evaluateTrace, parseTrace } from "../evaluators/trace";
 import { parseGenAiTrace } from "../evaluators/trace-genai";
+import { findToolMappingCollisions, loadToolMapping } from "../tool-mapping";
 import type { ApiCall, OtlpTrace, TraceCheck, ToolMapping } from "../types";
 
 // ── Fixtures ──────────────────────────────────────────────────────
@@ -270,6 +271,105 @@ describe("parseGenAiTrace", () => {
     for (let i = 1; i < calls.length; i++) {
       expect(calls[i].timestamp).toBeGreaterThanOrEqual(calls[i - 1].timestamp);
     }
+  });
+
+  test("reads actual HTTP status and error attributes on mapping fallback instead of assuming 200", () => {
+    const mapping = loadToolMapping();
+    const trace = makeTrace([
+      {
+        traceId: "genai-err",
+        spanId: "s-status-attr",
+        name: "execute_tool rater_bindQuote",
+        kind: 1,
+        startTimeUnixNano: "1700000001000000000",
+        endTimeUnixNano: "1700000001100000000",
+        attributes: [
+          { key: "gen_ai.operation.name", value: { stringValue: "execute_tool" } },
+          { key: "gen_ai.tool.name", value: { stringValue: "rater_bindQuote" } },
+          { key: "http.response.status_code", value: { intValue: 422 } },
+        ],
+      },
+      {
+        traceId: "genai-err",
+        spanId: "s-span-error",
+        name: "execute_tool coastal_bindQuote",
+        kind: 1,
+        startTimeUnixNano: "1700000001200000000",
+        endTimeUnixNano: "1700000001300000000",
+        status: { code: 2 },
+        attributes: [
+          { key: "gen_ai.operation.name", value: { stringValue: "execute_tool" } },
+          { key: "gen_ai.tool.name", value: { stringValue: "coastal_bindQuote" } },
+        ],
+      },
+      {
+        traceId: "genai-err",
+        spanId: "s-json-error",
+        name: "execute_tool comm_send_message",
+        kind: 1,
+        startTimeUnixNano: "1700000001400000000",
+        endTimeUnixNano: "1700000001500000000",
+        attributes: [
+          { key: "gen_ai.operation.name", value: { stringValue: "execute_tool" } },
+          { key: "gen_ai.tool.name", value: { stringValue: "comm_send_message" } },
+          {
+            key: "gen_ai.tool.call.result",
+            value: { stringValue: JSON.stringify({ isError: true, error: "Forbidden" }) },
+          },
+        ],
+      },
+      {
+        traceId: "genai-err",
+        spanId: "s-response-code",
+        name: "execute_tool ams_createEndorsement",
+        kind: 1,
+        startTimeUnixNano: "1700000001600000000",
+        endTimeUnixNano: "1700000001700000000",
+        attributes: [
+          { key: "gen_ai.operation.name", value: { stringValue: "execute_tool" } },
+          { key: "gen_ai.tool.name", value: { stringValue: "ams_createEndorsement" } },
+          {
+            key: "gen_ai.tool.call.result",
+            value: { stringValue: JSON.stringify({ status_code: 422, error_code: "EO_COMPLIANCE_VIOLATION" }) },
+          },
+        ],
+      },
+    ]);
+
+    const calls = parseGenAiTrace(trace, mapping);
+    expect(calls).toHaveLength(4);
+    expect(calls[0].service).toBe("rater");
+    expect(calls[0].statusCode).toBe(422);
+    expect(calls[1].service).toBe("coastal-star");
+    expect(calls[1].statusCode).toBe(500);
+    expect(calls[2].service).toBe("comm");
+    expect(calls[2].statusCode).toBe(500);
+    expect(calls[3].service).toBe("ams");
+    expect(calls[3].statusCode).toBe(422);
+  });
+
+  test("loadToolMapping preserves all 4 colliding operationIds under service-qualified keys without last-wins overwrite", () => {
+    const collisions = findToolMappingCollisions();
+    expect(Object.keys(collisions).sort()).toEqual([
+      "bindQuote",
+      "getDevToken",
+      "getHealth",
+      "getPortalSession",
+    ]);
+
+    const mapping = loadToolMapping();
+    for (const collidingId of Object.keys(collisions)) {
+      expect(mapping[collidingId]).toBeUndefined();
+    }
+    expect(mapping["rater:bindQuote"]?.service).toBe("rater");
+    expect(mapping["coastal-star:bindQuote"]?.service).toBe("coastal-star");
+    expect(mapping["summit-fire:getHealth"]?.service).toBe("summit-fire");
+    expect(mapping["coastal-star:getHealth"]?.service).toBe("coastal-star");
+    expect(mapping["summit-fire:getPortalSession"]?.service).toBe("summit-fire");
+    expect(mapping["coastal-star:getPortalSession"]?.service).toBe("coastal-star");
+    // Unambiguous operations remain available under both bare and qualified keys
+    expect(mapping["listClients"]?.service).toBe("ams");
+    expect(mapping["ams:listClients"]?.service).toBe("ams");
   });
 });
 

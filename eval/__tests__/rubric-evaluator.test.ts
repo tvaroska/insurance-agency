@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import {
   BINARY_SCALE_STEPS,
   CONTRADICTION_AWARE_4PT_STEPS,
@@ -22,6 +25,7 @@ import {
   validateAtomicRubric,
 } from "../evaluators/rubric";
 import { runJudgeCalibration } from "../calibration/calibrate-judge";
+import { formatMarkdown, generateReport } from "../report";
 import type { RubricCriterion } from "../types";
 import { scenarios } from "../scenarios";
 
@@ -402,5 +406,235 @@ describe("Tier-2 Atomic Rubric, Rogan-Gladen & EVAL-P01..P10 Calibration", () =>
       }
     }
     expect(totalCriteria).toBeGreaterThanOrEqual(22);
+  });
+
+  test("judge failure yields a judge_error verdict", async () => {
+    const criteria: RubricCriterion[] = [
+      {
+        id: "crit_fail",
+        name: "Failing Judge Criterion",
+        weight: 0.5,
+        service: "comm",
+        path: "/messages?direction=outbound",
+        field: "body",
+        scaleType: "binary",
+        passingScore: 1,
+        question: "Did the outbound message include the exact policy number?",
+        scaleSteps: BINARY_SCALE_STEPS,
+      },
+      {
+        id: "crit_ok",
+        name: "Passing Judge Criterion",
+        weight: 0.5,
+        service: "comm",
+        path: "/messages?direction=outbound",
+        field: "body",
+        scaleType: "binary",
+        passingScore: 1,
+        question: "Did the outbound message avoid unlicensed coverage guarantees?",
+        scaleSteps: BINARY_SCALE_STEPS,
+      },
+    ];
+
+    const prefetchedPayloads = {
+      "comm:/messages?direction=outbound": {
+        data: [{ body: "Policy POL-123 reviewed by a licensed producer." }],
+      },
+    };
+
+    const summary = await evaluateRubrics(criteria, {
+      prefetchedPayloads,
+      useLlmJudge: true,
+      judgeModel: DEFAULT_JUDGE_MODEL,
+      judgeFn: async (_prompt, criterion) => {
+        if (criterion.id === "crit_fail") {
+          throw new Error("Vertex 503 upstream timeout");
+        }
+        return {
+          reasoning_trace: "No coverage guarantee found.",
+          score: 1.0,
+          passed: true,
+        };
+      },
+    });
+
+    expect(summary.diagnostic).toBe(true);
+    expect(summary.verdicts).toHaveLength(2);
+    expect(summary.verdicts[0].status).toBe("judge_error");
+    expect(summary.verdicts[0].judgeError).toContain("Vertex 503 upstream timeout");
+    expect(summary.verdicts[0].score).toBe(0);
+    expect(summary.verdicts[0].passed).toBe(false);
+    expect(summary.verdicts[0].reasoningTrace).toContain("Vertex 503 upstream timeout");
+    expect(summary.verdicts[1].status).toBe("ok");
+    expect(summary.verdicts[1].passed).toBe(true);
+    expect(summary.judgeErrorCount).toBe(1);
+    expect(summary.validVerdictCount).toBe(1);
+    expect(summary.calibration?.nUnlabeled).toBe(1);
+    expect(summary.calibration?.rawJudgePassRate).toBe(1);
+
+    // When all criteria fail with judge errors, calibration is skipped (validCount === 0)
+    const allErrors = await evaluateRubrics([criteria[0]], {
+      prefetchedPayloads,
+      useLlmJudge: true,
+      judgeModel: DEFAULT_JUDGE_MODEL,
+      judgeFn: async () => {
+        throw new Error("network down");
+      },
+    });
+    expect(allErrors.validVerdictCount).toBe(0);
+    expect(allErrors.judgeErrorCount).toBe(1);
+    expect(allErrors.calibration).toBeUndefined();
+    expect(allErrors.score).toBe(0);
+
+    // Report marks rubric as diagnostic and renders JUDGE_ERROR cleanly without touching overall.score
+    const report = generateReport({
+      runId: "diag-rubric",
+      scenario: "02",
+      caseId: "realistic-natural",
+      seed: "realistic",
+      traceScores: [{ name: "t1", passed: true, weight: 1 }],
+      outputScores: [{ name: "o1", passed: true, weight: 1 }],
+      eoTrapResults: [],
+      apiCallCount: 4,
+      expectedRange: [2, 10],
+      rubric: summary,
+    });
+    expect(report.overall.score).toBe(1);
+    expect(report.rubric?.diagnostic).toBe(true);
+    const md = formatMarkdown(report);
+    expect(md).toContain("Diagnostic, Excluded from Overall Score");
+    expect(md).toContain("JUDGE_ERROR");
+  });
+
+  test("out-of-scale judge score is rejected instead of clamped to pass", async () => {
+    const criterion: RubricCriterion = {
+      id: "ordinal_grounding",
+      name: "Ordinal Grounding",
+      weight: 1,
+      service: "comm",
+      path: "/messages?direction=outbound",
+      field: "body",
+      scaleType: "ordinal_4",
+      passingScore: 0.66,
+      question: "Does the outbound message cite carrier quotes accurately?",
+      scaleSteps: FOUR_POINT_GROUNDEDNESS_STEPS,
+    };
+    const prefetchedPayloads = {
+      "comm:/messages?direction=outbound": {
+        data: [{ body: "Summit $1,120 vs Coastal $1,180." }],
+      },
+    };
+
+    for (const badScore of [4, -0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const res = await evaluateRubrics([criterion], {
+        prefetchedPayloads,
+        useLlmJudge: true,
+        judgeFn: async () => ({
+          reasoning_trace: "Returning an out-of-scale numeric score.",
+          score: badScore,
+          passed: true,
+        }),
+      });
+      expect(res.verdicts).toHaveLength(1);
+      expect(res.verdicts[0].status).toBe("judge_error");
+      expect(res.verdicts[0].passed).toBe(false);
+      expect(res.verdicts[0].score).toBe(0);
+      expect(res.verdicts[0].reasoningTrace).toContain("outside normalized [0, 1] scale");
+      expect(res.calibration).toBeUndefined();
+    }
+
+    // Rogan-Gladen uses binary pass rate (1.0), not mean ordinal score (0.66)
+    const ordinalPass = await evaluateRubrics([criterion], {
+      prefetchedPayloads,
+      useLlmJudge: true,
+      judgeModel: DEFAULT_JUDGE_MODEL,
+      calibration: {
+        tprSensitivity: 0.9,
+        tnrSpecificity: 0.9,
+        nCalibrationPos: 60,
+        nCalibrationNeg: 60,
+      },
+      judgeFn: async () => ({
+        reasoning_trace: "Mostly grounded paraphrase.",
+        score: 0.66,
+        passed: true,
+      }),
+    });
+    expect(ordinalPass.score).toBe(0.66);
+    expect(ordinalPass.rawPassRate).toBe(1);
+    expect(ordinalPass.calibration?.rawJudgePassRate).toBe(1);
+  });
+
+  test("receipt without evaluatorMode is rejected", async () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "evergreen-cal-receipt-"));
+    try {
+      const missingModePath = join(tmpDir, "missing-mode.json");
+      writeFileSync(
+        missingModePath,
+        JSON.stringify({
+          schemaVersion: "1.0",
+          judgeModel: "gemini-4-argon",
+          confusionMatrix: {
+            tprSensitivity: 0.9,
+            tnrSpecificity: 0.92,
+            nPos: 60,
+            nNeg: 60,
+          },
+        }),
+        "utf-8",
+      );
+
+      expect(() => loadCalibrationReceipt(missingModePath)).toThrow(/missing a valid evaluatorMode/);
+      expect(() =>
+        loadCalibrationReceipt(missingModePath, {
+          expectedEvaluatorMode: "vertex-llm-judge",
+        }),
+      ).toThrow(/missing a valid evaluatorMode/);
+
+      // Matching judgeModel succeeds, mismatched judgeModel is rejected
+      expect(() =>
+        loadCalibrationReceipt(DEFAULT_LLM_CALIBRATION_RECEIPT_PATH, {
+          expectedEvaluatorMode: "vertex-llm-judge",
+          expectedJudgeModel: DEFAULT_JUDGE_MODEL,
+        }),
+      ).not.toThrow();
+
+      expect(() =>
+        loadCalibrationReceipt(DEFAULT_LLM_CALIBRATION_RECEIPT_PATH, {
+          expectedEvaluatorMode: "vertex-llm-judge",
+          expectedJudgeModel: "claude-sonnet-5-5",
+        }),
+      ).toThrow(/judgeModel='gemini-4-argon', expected 'claude-sonnet-5-5'/);
+
+      // LLM rubric evaluation with an uncalibrated judgeModel does not silently apply gemini-4-argon TPR/TNR
+      const criterion: RubricCriterion = {
+        id: "model_match_check",
+        name: "Model Match Check",
+        weight: 1,
+        service: "comm",
+        path: "/messages?direction=outbound",
+        field: "body",
+        scaleType: "binary",
+        passingScore: 1,
+        question: "Does the message cite the policy number accurately?",
+        scaleSteps: BINARY_SCALE_STEPS,
+      };
+      const mismatched = await evaluateRubrics([criterion], {
+        prefetchedPayloads: {
+          "comm:/messages?direction=outbound": { data: [{ body: "POL-123" }] },
+        },
+        useLlmJudge: true,
+        judgeModel: "claude-sonnet-5-5",
+        judgeFn: async () => ({
+          reasoning_trace: "Policy number cited.",
+          score: 1.0,
+          passed: true,
+        }),
+      });
+      expect(mismatched.judgeModel).toBe("claude-sonnet-5-5");
+      expect(mismatched.calibration).toBeUndefined();
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });

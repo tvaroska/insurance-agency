@@ -359,9 +359,9 @@ Intentional simulation simplifications (kept as specified):
 10. The page's API client has a quote look-up call (`GET /v1/coastal/quotes/{id}`) that no screen uses and the API does not implement. That path, like any unknown `GET` under `/v1/coastal` sent with a valid token, falls through to the UI page and returns `200` HTML rather than a JSON `404`.
 11. The quick quote's risk score is generated via the deterministic episode PRNG (`simRandom()`, reset on `/sim/reset` and `/sim/seed`), so sequential calls in an episode vary across `[50, 84]` while identical trajectories from a reset state are reproducible (CST-R34).
 
-HTTP-conformance boundary (interactive DOM rendering is verified separately in browser/e2e suites):
+HTTP-conformance and headless DOM boundaries (full Playwright/Chromium visual rendering is not run in the default gate):
 
-12. Visual rendering, button enable/disable states, the page's local VIN decode, and runtime session renewal/retry loops execute in the browser. The conformance suite proves that the page and its JS/CSS assets are served, verifies the shipped bundle contains the fixed route, header, payload, and screen markers of CST-R45 to CST-R49, and executes the exact handshake and API payloads over HTTP in strict mode.
+12. **Open (headless DOM smoke only; full browser rendering uncovered).** CSS layout, visual rendering, and real browser engine behavior are not tested in Chromium/Playwright. `tests/conformance/carrier-coastal/browser.test.ts` runs a headless DOM smoke that executes the served React portal bundle against a live strict-mode service (bootstrap cookie jar, `/auth/dev-token`, `/auth/portal-session`, `X-Portal-Session`, local VIN decode, form entry, and `POST /v1/coastal/quotes/quick`) and verifies both rendered DOM output and SQLite persistence; `portal.test.ts` covers the remaining HTTP handshake and strict-mode API contracts of CST-R45 to CST-R49.
 13. Browser cookie jar handling (`HttpOnly`, `SameSite=Strict`) is tested via `Set-Cookie` and `Cookie` headers over HTTP.
 14. CST-R46 to CST-R49 API journeys are verified over HTTP in strict mode using the fixed payloads shipped by the page.
 15. Wall-clock 3600s expiry of cookies and sessions is not waited for.

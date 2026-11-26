@@ -44,6 +44,42 @@ function walkRepoFiles(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
+function findPycacheDirs(dir: string, acc: string[] = []): string[] {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === ".git" || entry.name === "node_modules" || entry.name === ".venv") continue;
+    if (!entry.isDirectory()) continue;
+    const fullPath = join(dir, entry.name);
+    if (entry.name === "__pycache__") {
+      acc.push(relative(ROOT, fullPath));
+      continue;
+    }
+    findPycacheDirs(fullPath, acc);
+  }
+  return acc;
+}
+
+interface CriticalTableRow {
+  pathColumn: string;
+  whyColumn: string;
+  pinningColumn: string;
+}
+
+function parseCriticalTable(markdown: string): CriticalTableRow[] {
+  const lines = markdown.split("\n").map((l) => l.trim());
+  const rows: CriticalTableRow[] = [];
+  for (const line of lines) {
+    if (!line.startsWith("|")) continue;
+    const cells = line
+      .slice(1, line.endsWith("|") ? -1 : undefined)
+      .split(/(?<!\\)\|/)
+      .map((c) => c.replace(/\\\|/g, "|").trim());
+    if (cells.length < 3) continue;
+    if (cells[0] === "Path / Invariant" || cells[0].startsWith(":---") || cells[0].startsWith("---")) continue;
+    rows.push({ pathColumn: cells[0], whyColumn: cells[1], pinningColumn: cells[2] });
+  }
+  return rows;
+}
+
 describe("Repository Hygiene & Governance Spine (ADR-005 & ADR-006)", () => {
   const repoFiles = walkRepoFiles(ROOT);
 
@@ -61,7 +97,8 @@ describe("Repository Hygiene & Governance Spine (ADR-005 & ADR-006)", () => {
   test("retired PG/K8s manifests, Drizzle schema.ts stubs, and committed caches are absent and .gitignore covers runtime DBs", () => {
     expect(existsSync(join(ROOT, "docker-compose.pg.yaml"))).toBe(false);
     expect(existsSync(join(ROOT, "k8s"))).toBe(false);
-    expect(existsSync(join(ROOT, "eval", "metr", "__pycache__"))).toBe(false);
+    expect(existsSync(join(ROOT, "tests", "e2e"))).toBe(false);
+    expect(findPycacheDirs(ROOT)).toEqual([]);
 
     const servicesDir = join(ROOT, "services");
     const staleSchemaFiles: string[] = [];
@@ -81,19 +118,56 @@ describe("Repository Hygiene & Governance Spine (ADR-005 & ADR-006)", () => {
   });
 
   test("all CRITICAL.md load-bearing paths exist on disk", () => {
-    const criticalPaths = [
-      "specs",
-      "specs/claims.behavior.yaml",
-      "data/seed",
-      "data/seed-clean",
-      "eval/evaluators/rubric.ts",
-      "eval/score.ts",
-      "regulatory.md",
-      "packages/shared",
-    ];
-    for (const relPath of criticalPaths) {
-      expect(existsSync(join(ROOT, relPath))).toBe(true);
+    const markdown = readFileSync(join(ROOT, "CRITICAL.md"), "utf-8");
+    const rows = parseCriticalTable(markdown);
+    expect(rows.length).toBeGreaterThanOrEqual(5);
+
+    const extracted = new Set<string>();
+    const linkRe = /\[[^\]]+\]\(([^)\s]+)\)/g;
+    const codePathRe = /`((?:specs|data|eval|packages|services|tests|docs|scripts)\/[^`\s*?|]+|regulatory\.md)`/g;
+    for (const row of rows) {
+      for (const m of row.pathColumn.matchAll(linkRe)) {
+        const target = m[1].split("#", 1)[0];
+        if (!target || target.startsWith("http://") || target.startsWith("https://")) continue;
+        extracted.add(target.replace(/\/+$/, ""));
+      }
+      for (const m of row.pathColumn.matchAll(codePathRe)) {
+        extracted.add(m[1].replace(/\/+$/, ""));
+      }
     }
+
+    expect(extracted.size).toBeGreaterThanOrEqual(8);
+    const missing = [...extracted].filter((relPath) => !existsSync(join(ROOT, relPath)));
+    expect(missing).toEqual([]);
+  });
+
+  test("every pinning test named in CRITICAL.md exists", () => {
+    const markdown = readFileSync(join(ROOT, "CRITICAL.md"), "utf-8");
+    const rows = parseCriticalTable(markdown);
+    expect(rows.length).toBeGreaterThanOrEqual(5);
+
+    const missing: string[] = [];
+    const globs: string[] = [];
+    let totalPinned = 0;
+
+    for (const row of rows) {
+      const entries = [...row.pinningColumn.matchAll(/`([^`\n]+)`/g)].map((m) => m[1].trim());
+      expect(entries.length, `CRITICAL.md row has no pinning tests: ${row.pathColumn}`).toBeGreaterThan(0);
+      for (const entry of entries) {
+        totalPinned++;
+        if (/[*?[\]]/.test(entry)) {
+          globs.push(entry);
+          continue;
+        }
+        if (!existsSync(join(ROOT, entry))) {
+          missing.push(entry);
+        }
+      }
+    }
+
+    expect(totalPinned).toBeGreaterThanOrEqual(10);
+    expect(globs).toEqual([]);
+    expect(missing).toEqual([]);
   });
 
   test("ADR-005 portability: zero machine-specific home paths or file:// URIs in tracked files (including .svg)", () => {

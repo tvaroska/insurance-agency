@@ -135,6 +135,20 @@ documentsRouter.get(
         ],
       });
 
+    // Check client existence across all documents before applying optional status filter
+    const allDocs = await prisma.document.findMany({
+      where: { client_id: clientId },
+      orderBy: { document_id: "asc" },
+      select: {
+        document_type: true,
+        expiration_date: true,
+      },
+    });
+
+    if (allDocs.length === 0) {
+      throw notFoundError("client documents");
+    }
+
     const filters: Record<string, unknown>[] = [
       { client_id: clientId },
     ];
@@ -151,10 +165,6 @@ documentsRouter.get(
       take,
     });
 
-    if (rows.length === 0 && !cursor) {
-      throw notFoundError("client documents");
-    }
-
     // Parse tags and build document list
     const mapped = rows.map((row) => ({
       ...row,
@@ -167,15 +177,6 @@ documentsRouter.get(
       ["upload_date", "document_id"],
       cursor,
     );
-
-    // Determine compliance status from ALL client documents (not just this page)
-    const allDocs = await prisma.document.findMany({
-      where: { client_id: clientId },
-      select: {
-        document_type: true,
-        expiration_date: true,
-      },
-    });
 
     const presentTypes = new Set(allDocs.map((d) => d.document_type));
     const simNow = getSimulatedNow();

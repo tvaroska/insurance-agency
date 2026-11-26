@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { expectedServiceMode } from "../harness";
 import { runtimeContractTests } from "../harness/runtime-suite";
 import { start, type Ctx } from "./support";
 
@@ -161,9 +162,11 @@ describe("ams: mapping from seed files to rows", () => {
 });
 
 describe("ams: access log", () => {
-  test("AMS-R120: the server writes one JSON line per request to standard output", async () => {
-    const { svc, api } = await start();
-    if (svc.mode !== "process") return;
+  test.skipIf(expectedServiceMode("ams") !== "process")(
+    "AMS-R120: the server writes one JSON line per request to standard output",
+    async () => {
+      const { svc, api } = await start();
+      expect(svc.mode).toBe("process");
     await svc.seed();
     await api.get("/v1/clients/NO-SUCH-CLIENT", { headers: { "X-Correlation-ID": "access-log-1", "User-Agent": "conformance-test" } });
     await svc.http.get("/health", { headers: { "X-Correlation-ID": "access-log-2" } });
@@ -193,5 +196,6 @@ describe("ams: access log", () => {
       expect(Number.isNaN(Date.parse(line.timestamp))).toBe(false);
       expect(typeof line.duration_ms).toBe("number");
     }
-  });
+    },
+  );
 });

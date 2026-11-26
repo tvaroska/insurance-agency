@@ -175,7 +175,7 @@ test("every operation in specs/ecm.yaml answers its success status in the docume
   ctx.claims.on("GET", "/v1/claims/{id}", { body: claimDetail() });
   const ok = (res: any, status: number) => {
     expect(res.status).toBe(status);
-    contract.check(res);
+    expect(contract.check(res).schemaChecked).toBe(true);
     return res.body;
   };
 
@@ -212,11 +212,24 @@ test("every operation in specs/ecm.yaml answers its success status in the docume
   expect(contract.unchecked()).toEqual([]);
 });
 
-test("ECM-G02, ECM-G08, ECM-G14: specs/ecm.yaml aligns ID formats, omits unused 409s, and allows date-only expiration_date", async () => {
+test("ECM-G02, ECM-G08, ECM-G14: specs/ecm.yaml aligns ID formats, omits unused 409s, and accepts seeded YYYY-MM-DD expiration dates", async () => {
   const { parse } = await import("yaml");
   const doc = parse(await Bun.file(new URL("../../../specs/ecm.yaml", import.meta.url)).text());
   expect(doc.paths["/documents/upload"].post.responses["409"]).toBeUndefined();
   expect(doc.paths["/envelopes/create"].post.responses["409"]).toBeUndefined();
   expect(doc.components.schemas.Document.properties.document_id.format).toBeUndefined();
-  expect(doc.components.schemas.Document.properties.expiration_date.format).toBeUndefined();
+  // Seeded documents store date-only expiration_date values (YYYY-MM-DD); check schema compatibility without locking out a future format: date constraint.
+  expect(
+    contract.inspectSchema("Document", {
+      document_id: "DOC-001",
+      client_id: "CLI-001",
+      document_type: "id_verification",
+      filename: "dl.pdf",
+      mime_type: "application/pdf",
+      file_size_bytes: 1024,
+      status: "expired",
+      upload_date: "2025-01-01T00:00:00Z",
+      expiration_date: "2025-11-10",
+    }),
+  ).toEqual([]);
 });

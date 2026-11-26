@@ -6,6 +6,7 @@ import type { HttpResult } from "./service";
 import { REPO_ROOT } from "./paths";
 
 const METHODS = ["get", "put", "post", "delete", "patch", "head", "options"] as const;
+const BODY_METHODS = new Set(["POST", "PATCH", "PUT"]);
 
 export interface OperationRef {
   operationId: string;
@@ -32,6 +33,8 @@ export interface CheckOptions {
   allow?: (string | RegExp)[];
   /** Check against this operation instead of the one matched from the request method and path. */
   operationId?: string;
+  /** Skip request body/parameter schema validation (for deliberate negative-input tests). */
+  skipRequestCheck?: boolean;
 }
 
 export interface CheckResult {
@@ -39,12 +42,16 @@ export interface CheckResult {
   status: number;
   /** False when the documented response has no JSON schema to check against. */
   schemaChecked: boolean;
+  /** True when a sent JSON request body was validated against the operation's `requestBody` schema. */
+  requestChecked?: boolean;
   issues: string[];
 }
 
 interface Operation extends OperationRef {
   segments: string[];
   responses: Record<string, any>;
+  requestBody?: any;
+  parameters: any[];
 }
 
 export class Contract {
@@ -70,6 +77,7 @@ export class Contract {
       const itemBasePath = item.servers?.[0]?.url
         ? parseBasePath(item.servers[0].url)
         : defaultBasePath;
+      const itemParams: any[] = Array.isArray(item.parameters) ? item.parameters : [];
       for (const method of METHODS) {
         const op = item[method];
         if (!op) continue;
@@ -79,6 +87,8 @@ export class Contract {
         const path = `${opBasePath}${specPath}`;
         const security: Record<string, string[]>[] = op.security ?? topSecurity ?? [];
         const scopes = [...new Set(security.flatMap((entry) => Object.values(entry).flat()))];
+        const opParams: any[] = Array.isArray(op.parameters) ? op.parameters : [];
+        const mergedParams = mergeParameters(itemParams, opParams, document);
         this.ops.push({
           operationId: op.operationId ?? `${method.toUpperCase()} ${path}`,
           method: method.toUpperCase(),
@@ -87,6 +97,8 @@ export class Contract {
           statuses: Object.keys(op.responses ?? {}),
           segments: path.split("/").filter(Boolean),
           responses: op.responses ?? {},
+          requestBody: op.requestBody,
+          parameters: mergedParams,
         });
       }
     }
@@ -94,13 +106,13 @@ export class Contract {
 
   /** Every operation in the OpenAPI file. */
   operations(): OperationRef[] {
-    return this.ops.map(({ segments: _s, responses: _r, ...ref }) => ref);
+    return this.ops.map(({ segments: _s, responses: _r, requestBody: _rb, parameters: _p, ...ref }) => ref);
   }
 
   operation(operationId: string): OperationRef {
     const op = this.ops.find((o) => o.operationId === operationId);
     if (!op) throw new Error(`specs/${this.service}.yaml has no operation '${operationId}'.`);
-    const { segments: _s, responses: _r, ...ref } = op;
+    const { segments: _s, responses: _r, requestBody: _rb, parameters: _p, ...ref } = op;
     return ref;
   }
 
@@ -108,7 +120,7 @@ export class Contract {
   match(method: string, path: string): OperationRef | undefined {
     const op = this.find(method, path);
     if (!op) return undefined;
-    const { segments: _s, responses: _r, ...ref } = op;
+    const { segments: _s, responses: _r, requestBody: _rb, parameters: _p, ...ref } = op;
     return ref;
   }
 
@@ -154,6 +166,64 @@ export class Contract {
     }
     this.checked.add(op.operationId);
     const result: CheckResult = { operationId: op.operationId, status: res.status, schemaChecked: false, issues: [] };
+    const isTolerated = (line: string) =>
+      (opts.allow ?? []).some((rule) => (typeof rule === "string" ? line.includes(rule) : rule.test(line)));
+
+    // Validate JSON request body and query parameters on accepted (2xx/3xx) responses,
+    // skipping 4xx/5xx negative tests (e.g. 400/422 malformed inputs or 401/403 empty-body auth probes).
+    const shouldCheckRequest = !opts.skipRequestCheck && res.status >= 200 && res.status < 400;
+    if (shouldCheckRequest) {
+      if (BODY_METHODS.has(op.method) && op.requestBody) {
+        const reqBodySpec = deref(op.requestBody, this.document);
+        const reqContent: Record<string, any> | undefined = reqBodySpec.content;
+        const sentBody = res.request.body;
+        const sentType = (res.request.contentType ?? "").split(";")[0].trim().toLowerCase();
+        const isJsonRequest =
+          sentBody !== undefined &&
+          !(sentBody instanceof FormData) &&
+          !(sentBody instanceof Uint8Array) &&
+          (sentType.includes("json") || (sentType === "" && typeof sentBody === "object" && sentBody !== null));
+
+        if (isJsonRequest && reqContent) {
+          const jsonKey = Object.keys(reqContent).find((k) => k.toLowerCase().includes("json"));
+          const reqSchema = jsonKey ? reqContent[jsonKey]?.schema : undefined;
+          if (reqSchema) {
+            result.requestChecked = true;
+            for (const issue of validateSchema(reqSchema, sentBody, this.document)) {
+              const line = `requestBody${issue.path || "/"}: ${issue.message}`;
+              if (!isTolerated(line)) result.issues.push(line);
+            }
+          }
+        } else if (
+          sentBody === undefined &&
+          reqBodySpec.required === true &&
+          res.status >= 200 &&
+          res.status < 300
+        ) {
+          const line = `requestBody: is required by ${op.operationId} but no body was sent`;
+          if (!isTolerated(line)) result.issues.push(line);
+        }
+      }
+
+      if (op.parameters.length > 0 && res.request.url) {
+        try {
+          const searchParams = new URL(res.request.url).searchParams;
+          for (const param of op.parameters) {
+            if (param.in !== "query" || !param.schema) continue;
+            if (!searchParams.has(param.name)) continue;
+            const rawValues = searchParams.getAll(param.name);
+            const paramSchema = deref(param.schema, this.document);
+            const coerced = coerceQueryParam(rawValues, paramSchema);
+            for (const issue of validateSchema(paramSchema, coerced, this.document)) {
+              const line = `query/${param.name}${issue.path}: ${issue.message}`;
+              if (!isTolerated(line)) result.issues.push(line);
+            }
+          }
+        } catch {
+          // ignore unparseable synthetic URLs in unit tests
+        }
+      }
+    }
 
     const status = String(res.status);
     const rawResponse = op.responses[status] ?? op.responses[`${status[0]}XX`] ?? op.responses.default;
@@ -167,9 +237,18 @@ export class Contract {
     }
     const response = deref(rawResponse, this.document);
     const content: Record<string, any> | undefined = response.content;
-    if (!content || Object.keys(content).length === 0) return result;
-
     const actualType = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    const is2xx = res.status >= 200 && res.status < 300;
+    const isJsonResponse = actualType.includes("json");
+
+    if (!content || Object.keys(content).length === 0) {
+      if (is2xx && res.status !== 204 && isJsonResponse) {
+        const line = `2xx JSON response for ${op.operationId} ${status} is documented without a content schema`;
+        if (!isTolerated(line)) result.issues.push(line);
+      }
+      return result;
+    }
+
     const mediaKey = Object.keys(content).find((key) => {
       const k = key.toLowerCase();
       return k === actualType || k === "*/*" || (k.endsWith("/*") && actualType.startsWith(k.slice(0, -1)));
@@ -181,23 +260,27 @@ export class Contract {
       return result;
     }
     const schema = content[mediaKey]?.schema;
-    if (!schema || !mediaKey.toLowerCase().includes("json")) return result;
+    if (!schema) {
+      if (is2xx && res.status !== 204 && (mediaKey.toLowerCase().includes("json") || isJsonResponse)) {
+        const line = `2xx JSON response for ${op.operationId} ${status} (${mediaKey}) is documented without a schema`;
+        if (!isTolerated(line)) result.issues.push(line);
+      }
+      return result;
+    }
+    if (!mediaKey.toLowerCase().includes("json")) return result;
 
     result.schemaChecked = true;
     for (const issue of validateSchema(schema, res.body, this.document)) {
       const line = `${issue.path || "/"}: ${issue.message}`;
-      const tolerated = (opts.allow ?? []).some((rule) =>
-        typeof rule === "string" ? line.includes(rule) : rule.test(line),
-      );
-      if (!tolerated) result.issues.push(line);
+      if (!isTolerated(line)) result.issues.push(line);
     }
     return result;
   }
 
   /**
-   * Validates a response against the matching operation in the OpenAPI file:
-   * the status must be documented and a JSON body must satisfy the documented
-   * schema. Throws with every issue listed.
+   * Validates a response (and, for non-400/422 JSON writes, the sent request
+   * payload) against the matching operation in the OpenAPI file. Throws with
+   * every issue listed.
    */
   check(res: HttpResult, opts: CheckOptions = {}): CheckResult {
     const result = this.inspect(res, opts);
@@ -229,6 +312,32 @@ export class Contract {
   unchecked(): string[] {
     return this.ops.map((o) => o.operationId).filter((id) => !this.checked.has(id));
   }
+}
+
+function mergeParameters(itemParams: any[], opParams: any[], doc: any): any[] {
+  const byKey = new Map<string, any>();
+  for (const raw of [...itemParams, ...opParams]) {
+    const p = deref(raw, doc);
+    if (p?.name && p?.in) byKey.set(`${p.in}:${p.name}`, p);
+  }
+  return [...byKey.values()];
+}
+
+function coerceQueryParam(values: string[], schema: Record<string, any>): unknown {
+  if (schema.type === "array") {
+    return values.length === 1 && values[0].includes(",") ? values[0].split(",") : values;
+  }
+  const raw = values[0] ?? "";
+  if (schema.type === "integer" || schema.type === "number") {
+    if (raw.trim() === "") return raw;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : raw;
+  }
+  if (schema.type === "boolean") {
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+  }
+  return raw;
 }
 
 function preview(body: unknown): string {

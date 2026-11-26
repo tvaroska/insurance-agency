@@ -17,7 +17,7 @@ const testPrisma = new PrismaClient({ adapter: testAdapter });
 mock.module("../prisma", () => ({ prisma: testPrisma }));
 
 import { describe, expect, test, beforeAll } from "bun:test";
-import { quotesRouter } from "../routes/quotes";
+import { quotesRouter, addOneCalendarYear } from "../routes/quotes";
 import {
   createTables,
   createTestApp,
@@ -438,5 +438,58 @@ describe("GET /v1/quotes - listing and client_id filter", () => {
     expect(body.data.length).toBeGreaterThanOrEqual(1);
     expect(body.data[0].client_id).toBe("CLI-003");
     expect(Array.isArray(body.data[0].carriers)).toBe(true);
+  });
+});
+
+describe("Calendar year expiration arithmetic (A-4 timezone determinism)", () => {
+  test("computes 2026-11-03 -> 2027-11-03 and Feb 29 -> Feb 28 independent of timezone", async () => {
+    const prevTz = process.env.TZ;
+    try {
+      for (const tz of ["UTC", "America/Los_Angeles", "Pacific/Honolulu", "Asia/Tokyo"]) {
+        process.env.TZ = tz;
+        expect(addOneCalendarYear("2026-11-03")).toBe("2027-11-03");
+        expect(addOneCalendarYear("2028-02-29")).toBe("2029-02-28");
+        expect(addOneCalendarYear("2026-01-01")).toBe("2027-01-01");
+      }
+
+      process.env.TZ = "America/Los_Angeles";
+      insertSqliteRow(
+        testSqlite,
+        "carrier_quotes",
+        makeCarrierQuote({
+          quote_id: "QT-TZ-BIND-1",
+          request_id: "QR-001",
+          carrier_code: "CSTL",
+          carrier_name: "Coastal Star",
+          premium_annual: 1200,
+          premium_monthly: 100,
+          status: "quoted",
+        }),
+      );
+
+      const headers = await authHeader(["rater:quotes:bind"]);
+      const res = await app.request("/v1/quotes/QT-TZ-BIND-1/bind", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quote_id: "QT-TZ-BIND-1",
+          payment_method: "eft",
+          producer_id: "PROD-001",
+          insured_signature_collected: true,
+          insured_signature_date: "2026-11-03",
+          effective_date: "2026-11-03",
+        }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body.effective_date).toBe("2026-11-03");
+      expect(body.expiration_date).toBe("2027-11-03");
+    } finally {
+      if (prevTz === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = prevTz;
+      }
+    }
   });
 });

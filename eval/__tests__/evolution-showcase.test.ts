@@ -2,16 +2,22 @@ import { describe, expect, test } from "bun:test";
 import {
   calculateAgencyRoi,
   COMPILED_WORKFLOW_SPECS,
+  loadMeasuredStageBaselines,
   runEvolutionShowcase,
 } from "../evolution-showcase";
 import { runMultiHarnessComparison } from "../harnesses/runner";
 import {
-  formatExecutiveScorecardHtml,
+  computeTaskPassHatK,
   EXECUTIVE_SCENARIO_MATRIX,
+  formatExecutiveScorecardHtml,
+  generateReport,
+  passHatK,
+  unbiasedPassHatK,
 } from "../report";
 
 describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () => {
   test("calculateAgencyRoi models Evergreen 11-staff capacity lift from $200K to $385K rev/employee", () => {
+    const baselines = loadMeasuredStageBaselines();
     const roi = calculateAgencyRoi();
     expect(roi.staffCount).toBe(11);
     expect(roi.baselineWrittenPremiumUsd).toBe(20_000_000);
@@ -19,11 +25,13 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
     expect(roi.baselineRevenuePerEmployeeUsd).toBe(200_000);
     expect(roi.governedRevenuePerEmployeeUsd).toBe(385_000);
     expect(roi.revenueLiftPct).toBe(92.5);
+    expect(roi.stage1GeneralAgentCpvoUsd).toBe(baselines.stage1CpvoUsd);
+    expect(roi.stage2SkillCpvoUsd).toBe(baselines.stage2CpvoUsd);
     expect(roi.stage3BlendedCpvoUsd).toBeLessThan(roi.stage2SkillCpvoUsd);
     expect(roi.stage2SkillCpvoUsd).toBeLessThan(roi.stage1GeneralAgentCpvoUsd);
   });
 
-  test("runEvolutionShowcase executes Stage 1 -> Stage 2 -> Stage 3 ($0-token + FallbackToSkill) across all 4 workflows", async () => {
+  test("runEvolutionShowcase loads measured summary metrics and executes Stage 1 -> Stage 2 -> Stage 3 without fabricating pass^5", async () => {
     const standInFetch = (async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/oauth/token")) {
@@ -36,7 +44,10 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
       });
     }) as unknown as typeof fetch;
 
+    const baselines = loadMeasuredStageBaselines();
     const summary = await runEvolutionShowcase({ fetchImpl: standInFetch });
+    expect(summary.summaryVersion).toBe("v0.9.1");
+    expect(summary.summaryPath).toContain("eval/results/v0.9.1/summary-report.json");
     expect(summary.workflows).toHaveLength(COMPILED_WORKFLOW_SPECS.length);
     for (const spec of COMPILED_WORKFLOW_SPECS) {
       expect(spec.id.startsWith("compiled:")).toBe(true);
@@ -45,38 +56,56 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
     expect(summary.stages.stage2DomainSkill.label).not.toContain(
       "skills/insurance-servicing",
     );
-    expect(summary.stages.stage1GeneralAgent.avgTokens).toBe(1_333_422);
-    expect(summary.stages.stage1GeneralAgent.cpvoUsd).toBe(0.7104);
-    expect(summary.stages.stage1GeneralAgent.avgLatencyMs).toBe(214_650);
-    expect(summary.stages.stage1GeneralAgent.pass1).toBe(0.67);
-    expect(summary.stages.stage1GeneralAgent.meanScore).toBe(0.77);
-    expect(summary.stages.stage1GeneralAgent.eoComplianceRate).toBe(0.88);
+    expect(summary.stages.stage1GeneralAgent.avgTokens).toBeGreaterThan(
+      summary.stages.stage2DomainSkill.avgTokens,
+    );
+    expect(summary.stages.stage1GeneralAgent.cpvoUsd).toBe(baselines.stage1CpvoUsd);
+    expect(summary.stages.stage1GeneralAgent.pass1).toBe(baselines.stage1Primary.pass_at_1);
+    expect(summary.stages.stage1GeneralAgent.meanScore).toBe(baselines.stage1Primary.mean_score);
+    expect(summary.stages.stage1GeneralAgent.pass5).toBe(baselines.stage1Primary.pass_hat_5);
+    expect(summary.stages.stage1GeneralAgent.pass5Strict).toBe(
+      baselines.stage1Primary.pass_hat_5_unbiased ?? null,
+    );
+    expect(summary.stages.stage1GeneralAgent.eoComplianceRate).toBe(
+      baselines.stage1EoComplianceRate,
+    );
     expect(summary.stages.stage1GeneralAgent.provenance).toBe(
-      "measured_v0.9_baseline",
+      "measured_v0.9.1_baseline",
     );
     expect(summary.stages.stage1GeneralAgent.falseCompletionRateRange).toBe(
-      "15%–34%",
+      baselines.falseCompletionRateRange,
     );
     expect(summary.stages.stage1GeneralAgent.measuredModels).toHaveLength(3);
-    expect(summary.stages.stage2DomainSkill.avgTokens).toBe(1_002_522);
-    expect(summary.stages.stage2DomainSkill.cpvoUsd).toBe(0.5904);
-    expect(summary.stages.stage2DomainSkill.avgLatencyMs).toBe(194_980);
-    expect(summary.stages.stage2DomainSkill.pass1).toBe(0.83);
-    expect(summary.stages.stage2DomainSkill.eoComplianceRate).toBe(0.98);
+    expect(summary.stages.stage2DomainSkill.avgTokens).toBeGreaterThan(0);
+    expect(summary.stages.stage2DomainSkill.cpvoUsd).toBe(baselines.stage2CpvoUsd);
+    expect(summary.stages.stage2DomainSkill.pass1).toBe(baselines.stage2Skill.pass_at_1);
+    expect(summary.stages.stage2DomainSkill.pass5).toBe(baselines.stage2Skill.pass_hat_5);
+    expect(summary.stages.stage2DomainSkill.pass5Strict).toBe(
+      baselines.stage2Skill.pass_hat_5_unbiased ?? null,
+    );
+    expect(summary.stages.stage2DomainSkill.eoComplianceRate).toBe(
+      baselines.stage2EoComplianceRate,
+    );
     expect(summary.stages.stage2DomainSkill.provenance).toBe(
-      "measured_v0.9_domain_skill",
+      "measured_v0.9.1_domain_skill",
     );
     expect(summary.stages.stage3CompiledCode.routineTokens).toBe(0);
     expect(summary.stages.stage3CompiledCode.routineCpvoUsd).toBe(0);
-    expect(summary.stages.stage3CompiledCode.blendedCpvoUsd).toBe(0.1299);
-    expect(summary.stages.stage3CompiledCode.avgLatencyMs).toBe(180);
+    expect(summary.stages.stage3CompiledCode.blendedCpvoUsd).toBe(
+      summary.agencyRoi.stage3BlendedCpvoUsd,
+    );
     expect(summary.stages.stage3CompiledCode.pass1).toBe(1.0);
+    expect(summary.stages.stage3CompiledCode.pass5).toBe(1.0);
     expect(summary.stages.stage3CompiledCode.provenance).toBe(
       "measured_reference_verifier_with_projected_fallback",
     );
     expect(summary.stages.stage3CompiledCode.fallbackRatePct).toBe(22.0);
 
     for (const wf of summary.workflows) {
+      // Per-workflow Stage 1 & Stage 2 pass^5 match the loaded per-task pass_hat_5, not pooled (pass@1)^5
+      expect(wf.routineRun.stage1.pass5).toBe(baselines.stage1Primary.pass_hat_5);
+      expect(wf.routineRun.stage2.pass5).toBe(baselines.stage2Skill.pass_hat_5);
+
       // Routine run: Stage 3 compiled code uses 0 tokens and $0 LLM cost
       expect(wf.routineRun.stage1.totalTokens).toBeGreaterThan(
         wf.routineRun.stage2.totalTokens,
@@ -93,6 +122,25 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
       expect(wf.pivotRun.stage3WithFallback.eoCompliant).toBe(true);
       expect(wf.pivotRun.stage3WithFallback.traceScore).toBe(1);
     }
+  });
+
+  test("computeTaskPassHatK aligns with summarize_inspect.py per-task (c/k)^k and strict k/k definitions", () => {
+    // Two tasks with k=5 trials: task 1 passes 5/5, task 2 passes 4/5
+    // Mean per-task (c/5)^5 = (1.0 + 0.8^5) / 2 = (1 + 0.32768) / 2 = 0.66384 -> 0.6638
+    // Mean strict combinatorial C(c,5)/C(5,5) = (1 + 0) / 2 = 0.5
+    const metrics = computeTaskPassHatK(
+      [
+        { successes: 5, trials: 5 },
+        { successes: 4, trials: 5 },
+      ],
+      5,
+    );
+    expect(metrics.perTaskPower).toBeCloseTo(0.6638, 4);
+    expect(metrics.strictCombinatorial).toBe(0.5);
+    expect(unbiasedPassHatK(5, 5, 5)).toBe(1);
+    expect(unbiasedPassHatK(4, 5, 5)).toBe(0);
+    expect(unbiasedPassHatK(3, 4, 5)).toBeNull();
+    expect(passHatK(5, 4, 5)).toBeCloseTo(0.8 ** 5, 6);
   });
 
   test("runMultiHarnessComparison supports both recorded log aggregation and live trajectory execution", async () => {
@@ -150,6 +198,50 @@ describe("3-Stage Agent-to-Code Evolution Showcase & 11-Staff Agency ROI", () =>
     expect(html).toContain("Trajectory Claim vs. 32-Table SQLite Database State Evidence");
     expect(html).toContain("3-Stage Agent-to-Code Evolution");
     expect(html).toContain("#20");
+  });
+
+  test("scorecard renders n/a without a report", () => {
+    const emptyHtml = formatExecutiveScorecardHtml([]);
+    const matrixStart = emptyHtml.indexOf('<table id="scenario-matrix">');
+    expect(matrixStart).toBeGreaterThan(-1);
+    const matrixSection = emptyHtml.slice(matrixStart);
+
+    // Every one of the 20 scenario rows renders n/a (never hardcoded 100.0% / PASS)
+    expect(matrixSection).not.toContain("100.0%");
+    expect(matrixSection).not.toContain("PASS (0 Unauthorized)");
+    expect(matrixSection).not.toContain(">PASS<");
+    const naMatches = matrixSection.match(/>n\/a</g) ?? [];
+    expect(naMatches.length).toBe(60); // 20 rows * 3 columns (Score, E&O Gate, State-Diff Audit)
+
+    // Providing a single live ScenarioReport populates only that scenario and leaves the other 19 as n/a
+    const singleReport = generateReport({
+      runId: "r-01",
+      scenario: "01",
+      caseId: "realistic-natural",
+      seed: "realistic",
+      traceScores: [{ name: "t1", passed: true, weight: 1 }],
+      outputScores: [{ name: "o1", passed: true, weight: 1 }],
+      eoTrapResults: [],
+      apiCallCount: 6,
+      expectedRange: [5, 12],
+      stateDiff: {
+        insertedCount: 2,
+        updatedCount: 0,
+        deletedCount: 0,
+        totalMutations: 2,
+        collateralFree: false,
+        unauthorizedMutations: 1,
+        collateralPenalty: 0.1,
+        findings: [],
+      },
+    });
+    const partialHtml = formatExecutiveScorecardHtml([singleReport]);
+    const partialMatrix = partialHtml.slice(partialHtml.indexOf('<table id="scenario-matrix">'));
+    expect(partialMatrix).toContain("75.0%");
+    expect(partialMatrix).toContain("FAIL (1)");
+    expect(partialMatrix).toContain('<span class="chip chip-block">FAIL (1)</span>');
+    const remainingNa = partialMatrix.match(/>n\/a</g) ?? [];
+    expect(remainingNa.length).toBe(57); // 19 unscored rows * 3 columns
   });
 
   test("README.md stays a benchmark README; EXECUTIVE-BRIEF.md and design/story.md keep hygiene, canonical ports, and provenance", async () => {

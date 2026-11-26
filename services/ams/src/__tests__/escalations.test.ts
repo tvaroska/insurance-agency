@@ -272,6 +272,64 @@ describe("GET /v1/escalations/:id", () => {
     expect(body.status).toBe("approved");
     expect(body.poll_count).toBe(6);
   });
+
+  test("internal and scorer polls do not advance escalation auto-resolution", async () => {
+    const esc = makeEscalation({
+      escalation_id: "esc_nopoll01",
+      reason: "premium_threshold",
+      summary: "Commercial quote above binding authority",
+      poll_count: 0,
+    });
+    insertSqliteRow(testSqlite, "escalations", esc);
+    insertSqliteRow(testSqlite, "escalation_events", {
+      escalation_id: "esc_nopoll01",
+      event_type: "created",
+      from_status: null,
+      to_status: "pending",
+      details: null,
+      created_at: esc.created_at,
+    });
+
+    const authHeaders = await authHeader(["ams:escalations:read"]);
+
+    // Internal service reads (e.g. Rater bind check) must not increment poll_count or resolve.
+    for (let i = 0; i < 3; i++) {
+      const internalRes = await getEscalation("esc_nopoll01", {
+        ...authHeaders,
+        "X-Evergreen-Internal": "1",
+      });
+      expect(internalRes.status).toBe(200);
+      const internalBody = await internalRes.json();
+      expect(internalBody.status).toBe("pending");
+      expect(internalBody.poll_count).toBe(0);
+      expect(internalBody.manager_response).toBeNull();
+      expect(internalBody.events.length).toBe(1);
+    }
+
+    // Eval scorer reads must likewise observe without advancing state.
+    for (let i = 0; i < 3; i++) {
+      const scorerRes = await getEscalation("esc_nopoll01", {
+        ...authHeaders,
+        "X-Eval-Scorer": "true",
+      });
+      expect(scorerRes.status).toBe(200);
+      const scorerBody = await scorerRes.json();
+      expect(scorerBody.status).toBe("pending");
+      expect(scorerBody.poll_count).toBe(0);
+      expect(scorerBody.manager_response).toBeNull();
+      expect(scorerBody.events.length).toBe(1);
+    }
+
+    // Normal agent polls still advance and resolve on the second poll.
+    const poll1 = await (await getEscalation("esc_nopoll01", authHeaders)).json();
+    expect(poll1.status).toBe("pending");
+    expect(poll1.poll_count).toBe(1);
+
+    const poll2 = await (await getEscalation("esc_nopoll01", authHeaders)).json();
+    expect(poll2.status).toBe("approved");
+    expect(poll2.poll_count).toBe(2);
+    expect(poll2.manager_response?.template_id).toBe("premium_threshold_approval");
+  });
 });
 
 // ── GET /v1/escalations ──
@@ -363,10 +421,42 @@ describe("Manager engine - decisions", () => {
     expect(result.template_id).toBe("premium_threshold_approval");
   });
 
-  test("premium_threshold with deny keyword returns denied", () => {
+  test("premium_threshold decision ignores incidental keywords", async () => {
+    const summaryWithIncidentalWords =
+      "Prior carrier declined renewal and rejected earlier quote; requesting binding approval for $14,500 commercial policy (no unacceptable risk).";
+    const direct = processEscalation({
+      reason: "premium_threshold",
+      summary: summaryWithIncidentalWords,
+      context: { annual_premium: 14500, notes: "prior carrier declined renewal" },
+    });
+    expect(direct.decision).toBe("approved");
+    expect(direct.template_id).toBe("premium_threshold_approval");
+
+    const writeHeaders = await authHeader(["ams:escalations:write"]);
+    const readHeaders = await authHeader(["ams:escalations:read"]);
+    const created = await (
+      await postEscalation(
+        {
+          client_id: "CL-001",
+          reason: "premium_threshold",
+          summary: summaryWithIncidentalWords,
+          context: { annual_premium: 14500 },
+        },
+        writeHeaders,
+      )
+    ).json();
+
+    await getEscalation(created.escalation_id, readHeaders);
+    const resolved = await (await getEscalation(created.escalation_id, readHeaders)).json();
+    expect(resolved.status).toBe("approved");
+    expect(resolved.manager_response?.template_id).toBe("premium_threshold_approval");
+  });
+
+  test("premium_threshold with explicit structured denial context returns denied", () => {
     const result = processEscalation({
       reason: "premium_threshold",
-      summary: "Premium is too high, please deny this request",
+      summary: "Premium exceeds binding authority",
+      context: { risk_acceptable: false },
     });
     expect(result.decision).toBe("denied");
     expect(result.template_id).toBe("premium_threshold_denial");
@@ -381,19 +471,21 @@ describe("Manager engine - decisions", () => {
     expect(result.template_id).toBe("state_minimum_override_denial");
   });
 
-  test("coverage_adequacy with roof keyword returns needs_info", () => {
+  test("coverage_adequacy with structured roof inspection context returns needs_info", () => {
     const result = processEscalation({
       reason: "coverage_adequacy",
-      summary: "Roof inspection needed for 20 year old roof",
+      summary: "Homeowners renewal review",
+      context: { roof_age_years: 20 },
     });
     expect(result.decision).toBe("needs_info");
     expect(result.template_id).toBe("roof_inspection_required");
   });
 
-  test("coverage_adequacy with gap keyword returns needs_info", () => {
+  test("coverage_adequacy with structured coverage gap context returns needs_info", () => {
     const result = processEscalation({
       reason: "coverage_adequacy",
-      summary: "Coverage gap from Jan to March",
+      summary: "Coverage continuity check",
+      context: { has_coverage_gap: true },
     });
     expect(result.decision).toBe("needs_info");
     expect(result.template_id).toBe("coverage_gap_review");
@@ -408,10 +500,11 @@ describe("Manager engine - decisions", () => {
     expect(result.template_id).toBe("coverage_adequacy_review");
   });
 
-  test("surplus_lines with missing license returns denied", () => {
+  test("surplus_lines with missing license context returns denied", () => {
     const result = processEscalation({
       reason: "surplus_lines",
-      summary: "Producer has no license for surplus lines",
+      summary: "Surplus lines placement check",
+      context: { surplus_lines_licensed: false },
     });
     expect(result.decision).toBe("denied");
     expect(result.template_id).toBe("surplus_lines_license_missing");
@@ -426,10 +519,11 @@ describe("Manager engine - decisions", () => {
     expect(result.template_id).toBe("surplus_lines_approval");
   });
 
-  test("principal_review with high value returns approved", () => {
+  test("principal_review with high value property context returns approved", () => {
     const result = processEscalation({
       reason: "principal_review",
-      summary: "High value property at $2M",
+      summary: "Property review at $2M",
+      context: { high_value_property: true },
     });
     expect(result.decision).toBe("approved");
     expect(result.template_id).toBe("high_value_property_approval");

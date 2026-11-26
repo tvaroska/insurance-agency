@@ -48,39 +48,40 @@ const RESPONSE_TEXT: Record<string, string> = {
     "Escalation received and under review. Please provide any additional context or documentation that may help expedite the decision.",
 };
 
-// AMS-R78: [reason, summary, expected template, expected decision].
-const DECISIONS: [string, string, string, string][] = [
-  ["state_minimum_violation", "Client insists on lower limits, please approve", "state_minimum_override_denial", "denied"],
-  ["backdating", "High value client asks for an earlier date", "backdating_denial", "denied"],
-  ["premium_threshold", "Premium of $12,500 on a commercial package", "premium_threshold_approval", "approved"],
-  ["premium_threshold", "Underwriter says deny", "premium_threshold_denial", "denied"],
-  ["premium_threshold", "Recommend we DECLINE this risk", "premium_threshold_denial", "denied"],
-  ["premium_threshold", "Carrier may reject it", "premium_threshold_denial", "denied"],
-  ["premium_threshold", "Loss history is unacceptable", "premium_threshold_denial", "denied"],
-  ["coverage_adequacy", "There is a gap between terms", "coverage_gap_review", "needs_info"],
-  ["coverage_adequacy", "Policy may lapse next month", "coverage_gap_review", "needs_info"],
-  ["coverage_adequacy", "Old roof on the house", "roof_inspection_required", "needs_info"],
-  ["coverage_adequacy", "Needs an inspection", "roof_inspection_required", "needs_info"],
-  ["coverage_adequacy", "Roof issue and a coverage gap", "coverage_gap_review", "needs_info"],
-  ["coverage_adequacy", "Is the dwelling limit enough?", "coverage_adequacy_review", "needs_info"],
-  ["surplus_lines", "Producer has no license for this", "surplus_lines_license_missing", "denied"],
-  ["surplus_lines", "Missing license on file", "surplus_lines_license_missing", "denied"],
-  ["surplus_lines", "Unlicensed placement requested", "surplus_lines_license_missing", "denied"],
-  ["surplus_lines", "Coastal property needs a non-admitted carrier", "surplus_lines_approval", "approved"],
-  ["attorney_involvement", "Client mentioned a lawsuit and wants us to deny it", "attorney_referral_confirmation", "approved"],
-  ["principal_review", "Underwriting would decline", "principal_approval_denied", "denied"],
-  ["principal_review", "Not acceptable under our appetite", "principal_approval_denied", "denied"],
-  ["principal_review", "Reject: high value home in a flood zone", "principal_approval_denied", "denied"],
-  ["principal_review", "A high value home", "high_value_property_approval", "approved"],
-  ["principal_review", "High-Value collection", "high_value_property_approval", "approved"],
-  ["principal_review", "High value home in a flood zone", "high_value_property_approval", "approved"],
-  ["principal_review", "Property sits in a flood zone", "flood_zone_exception", "approved"],
-  ["principal_review", "Flood exposure, attorney involved", "flood_zone_exception", "approved"],
-  ["principal_review", "Their attorney called", "attorney_referral_confirmation", "approved"],
-  ["principal_review", "A legal question came up", "attorney_referral_confirmation", "approved"],
-  ["principal_review", "Unusual risk, please look", "principal_approval_granted", "approved"],
-  ["claims_specialist", "Client reported a loss, deny or approve?", "general_escalation_acknowledged", "needs_info"],
-  ["claim_specialist", "Client reported a loss", "general_escalation_acknowledged", "needs_info"],
+// AMS-R78: [reason, structured context, summary (may carry incidental keywords that must be ignored), expected template, expected decision].
+const DECISIONS: [string, Record<string, unknown> | null, string, string, string][] = [
+  ["state_minimum_violation", null, "Client insists on lower limits, please approve", "state_minimum_override_denial", "denied"],
+  ["backdating", null, "High value client asks for an earlier date", "backdating_denial", "denied"],
+  ["premium_threshold", null, "Premium of $12,500 on a commercial package", "premium_threshold_approval", "approved"],
+  ["premium_threshold", null, "Incidental mention: prior carrier declined last year", "premium_threshold_approval", "approved"],
+  ["premium_threshold", { risk_acceptable: false }, "Review requested", "premium_threshold_denial", "denied"],
+  ["premium_threshold", { underwriting_eligible: false }, "Review requested", "premium_threshold_denial", "denied"],
+  ["premium_threshold", { within_appetite: false }, "Review requested", "premium_threshold_denial", "denied"],
+  ["premium_threshold", { decision: "denied" }, "Review requested", "premium_threshold_denial", "denied"],
+  ["coverage_adequacy", { has_coverage_gap: true }, "Review requested", "coverage_gap_review", "needs_info"],
+  ["coverage_adequacy", { issue: "lapse" }, "Review requested", "coverage_gap_review", "needs_info"],
+  ["coverage_adequacy", { roof_inspection_required: true }, "Review requested", "roof_inspection_required", "needs_info"],
+  ["coverage_adequacy", { roof_age_years: 20 }, "Review requested", "roof_inspection_required", "needs_info"],
+  ["coverage_adequacy", { coverage_gap: true, roof_inspection_required: true }, "Both present; gap rule comes first", "coverage_gap_review", "needs_info"],
+  ["coverage_adequacy", null, "Old roof and coverage gap text only (no structured context)", "coverage_adequacy_review", "needs_info"],
+  ["surplus_lines", { surplus_lines_licensed: false }, "Review requested", "surplus_lines_license_missing", "denied"],
+  ["surplus_lines", { has_surplus_lines_license: false }, "Review requested", "surplus_lines_license_missing", "denied"],
+  ["surplus_lines", { license_on_file: false }, "Review requested", "surplus_lines_license_missing", "denied"],
+  ["surplus_lines", null, "Coastal property needs a non-admitted carrier", "surplus_lines_approval", "approved"],
+  ["attorney_involvement", null, "Client mentioned a lawsuit and wants us to deny it", "attorney_referral_confirmation", "approved"],
+  ["principal_review", { risk_acceptable: false }, "Review requested", "principal_approval_denied", "denied"],
+  ["principal_review", { within_appetite: false }, "Review requested", "principal_approval_denied", "denied"],
+  ["principal_review", { decision: "deny", high_value_property: true, flood_zone: true }, "Denial takes precedence", "principal_approval_denied", "denied"],
+  ["principal_review", { high_value_property: true }, "Review requested", "high_value_property_approval", "approved"],
+  ["principal_review", { category: "high_value_property" }, "Review requested", "high_value_property_approval", "approved"],
+  ["principal_review", { high_value_property: true, flood_zone: true }, "High value precedes flood", "high_value_property_approval", "approved"],
+  ["principal_review", { flood_zone: true }, "Review requested", "flood_zone_exception", "approved"],
+  ["principal_review", { category: "flood_zone", attorney_involved: true }, "Flood precedes attorney", "flood_zone_exception", "approved"],
+  ["principal_review", { attorney_involved: true }, "Review requested", "attorney_referral_confirmation", "approved"],
+  ["principal_review", { category: "attorney_involvement" }, "Review requested", "attorney_referral_confirmation", "approved"],
+  ["principal_review", null, "Unusual risk, incidental decline wording ignored", "principal_approval_granted", "approved"],
+  ["claims_specialist", null, "Client reported a loss, deny or approve?", "general_escalation_acknowledged", "needs_info"],
+  ["claim_specialist", null, "Client reported a loss", "general_escalation_acknowledged", "needs_info"],
 ];
 
 beforeAll(async () => {
@@ -297,10 +298,22 @@ describe("getEscalation", () => {
     expect(res.body).toMatchObject({ status: "needs_info", poll_count: 6, manager_response: null, events: [] });
   });
 
+  test("AMS-R75: internal service and scorer reads observe state without incrementing poll_count or resolving", async () => {
+    const id = (await create()).body.escalation_id;
+    const headerSets: Record<string, string>[] = [{ "X-Evergreen-Internal": "1" }, { "X-Eval-Scorer": "true" }];
+    for (const headers of headerSets) {
+      const { result, diff } = await ctx.svc.changes(() => ctx.api.get(`/v1/escalations/${id}`, { headers }));
+      expect(result.status).toBe(200);
+      expect(result.body).toMatchObject({ escalation_id: id, status: "pending", poll_count: 0, manager_response: null });
+      expect(diff).toEqual({});
+      contract.check(result);
+    }
+  });
+
   describe("decision table", () => {
-    for (const [reason, summary, template, decision] of DECISIONS) {
-      test(`AMS-R78, AMS-R79: ${reason} "${summary}" -> ${template} (${decision})`, async () => {
-        const id = (await create({ reason, summary, context: { hint: "deny reject decline" } })).body.escalation_id;
+    for (const [reason, context, summary, template, decision] of DECISIONS) {
+      test(`AMS-R78, AMS-R79: ${reason} ${JSON.stringify(context)} "${summary}" -> ${template} (${decision})`, async () => {
+        const id = (await create({ reason, summary, ...(context ? { context } : {}) })).body.escalation_id;
         await ctx.api.get(`/v1/escalations/${id}`);
         const res = await ctx.api.get(`/v1/escalations/${id}`);
         expect(res.body.status).toBe(decision);

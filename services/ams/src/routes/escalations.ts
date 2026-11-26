@@ -10,6 +10,7 @@ import {
   checkEnum,
   checkMaxLength,
   throwIfErrors,
+  isAuthorizedScorerOrInternal,
   nextSimulatedEpochMs,
   simRandomId,
   type AuthVariables,
@@ -92,6 +93,20 @@ escalationsRouter.get(
       throw notFoundError("escalation");
     }
 
+    // Internal service verification (e.g. Rater bind gate) and scorer reads observe
+    // current state without incrementing poll_count or advancing auto-resolution.
+    if (isAuthorizedScorerOrInternal(c.req.raw.headers)) {
+      const events = await prisma.escalationEvent.findMany({
+        where: { escalation_id: id },
+        orderBy: [{ created_at: "asc" }, { id: "asc" }],
+      });
+
+      return c.json({
+        ...mapEscalationRow(row),
+        events: events.map(mapEventRow),
+      });
+    }
+
     const now = new Date(nextSimulatedEpochMs()).toISOString();
     const newPollCount = row.poll_count + 1;
 
@@ -156,6 +171,7 @@ escalationsRouter.get(
       // Fetch audit trail
       const events = await prisma.escalationEvent.findMany({
         where: { escalation_id: id },
+        orderBy: [{ created_at: "asc" }, { id: "asc" }],
       });
 
       return c.json({
@@ -167,6 +183,7 @@ escalationsRouter.get(
     // Return current state (still pending or already resolved)
     const events = await prisma.escalationEvent.findMany({
       where: { escalation_id: id },
+      orderBy: [{ created_at: "asc" }, { id: "asc" }],
     });
 
     return c.json({

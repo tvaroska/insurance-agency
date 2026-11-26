@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { expectError, loadContract } from "../harness";
+import { expectError, expectedServiceMode, loadContract } from "../harness";
 import { API, documentRow, policyRow, quoteRow, SCOPES, start, submit, SUBMISSION, type Ctx } from "./support";
 
 const contract = loadContract("carrier-summit");
@@ -160,16 +160,18 @@ describe("authentication and scopes", () => {
     expect(conflict.body.error_code).toBe("CONFLICT");
   });
 
-  test("SMT-R10: every operation of the OpenAPI file was exercised", async () => {
+  test("SMT-R10: every operation of the OpenAPI file answers its success schema", async () => {
     // A fresh contract object, so this does not depend on which tests ran before.
     const fresh = loadContract("carrier-summit");
-    fresh.check(await ctx.svc.http.get("/health"));
-    fresh.check(await ctx.svc.http.get("/auth/dev-token"));
-    fresh.check(await ctx.svc.http.get("/auth/portal-session"));
+    expect(fresh.check(await ctx.svc.http.get("/health")).schemaChecked).toBe(true);
+    expect(fresh.check(await ctx.svc.http.get("/auth/dev-token")).schemaChecked).toBe(true);
+    expect(fresh.check(await ctx.svc.http.get("/auth/portal-session")).schemaChecked).toBe(true);
     for (const op of fresh.operations().filter((o) => o.path.startsWith(API))) {
-      const res = await ctx.svc.http.request(op.method, concrete(op.path), { body: bodyFor(op.operationId) });
-      expect(res.status).toBe(401);
-      fresh.check(res);
+      await ctx.svc.seed(SEED);
+      await Bun.sleep(3);
+      const res = await ctx.api.request(op.method, concrete(op.path), { body: bodyFor(op.operationId) });
+      expect([200, 201]).toContain(res.status);
+      expect(fresh.check(res).schemaChecked).toBe(true);
     }
     expect(fresh.unchecked()).toEqual([]);
   });
@@ -528,9 +530,10 @@ describe("control plane, chaos and request log", () => {
 });
 
 describe("access log", () => {
-  test("SMT-R54: each request is written to standard output as one JSON line", async () => {
-    // Standard output is only visible when the harness started the service itself.
-    if (ctx.svc.mode !== "process") return;
+  test.skipIf(expectedServiceMode("carrier-summit") !== "process")(
+    "SMT-R54: each request is written to standard output as one JSON line",
+    async () => {
+      expect(ctx.svc.mode).toBe("process");
     const id = `access-log-${crypto.randomUUID()}`;
     const res = await ctx.api.get(`${API}/quotes/QT-NOPE`, { query: { limit: 1 }, headers: { "X-Correlation-ID": id, "User-Agent": "conformance-suite" } });
     expect(res.status).toBe(404);
@@ -550,5 +553,6 @@ describe("access log", () => {
     });
     expect(Number.isNaN(Date.parse(entry.timestamp))).toBe(false);
     expect(typeof entry.duration_ms).toBe("number");
-  });
+    },
+  );
 });

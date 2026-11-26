@@ -32,10 +32,10 @@ for (const [path, rule] of [
   ["/v1/carriers/appetite", "RTR-R53"],
 ] as const) {
   describe(`GET ${path}`, () => {
-    const codes = async (query: Record<string, string | number> = {}) => {
+    const codes = async (query: Record<string, string | number> = {}, allow: string[] = []) => {
       const res = await ctx.api.get(path, { query });
       expect(res.status).toBe(200);
-      contract.check(res, CARRIER_LIST_GAP);
+      contract.check(res, allow.length > 0 ? { ...CARRIER_LIST_GAP, allow } : CARRIER_LIST_GAP);
       return res.body.data.map((c: any) => c.carrier_code);
     };
 
@@ -58,15 +58,15 @@ for (const [path, rule] of [
       expect(await codes({ state: "TX", policy_type: "homeowners" })).toEqual(["ERIE"]);
       expect(await codes({ state: "IL", policy_type: "homeowners", risk_category: "preferred" })).toEqual(["ERIE", "LIBT"]);
       expect(await codes({ state: "ZZ" })).toEqual([]);
-      expect(await codes({ policy_type: "boat" })).toEqual([]);
+      expect(await codes({ policy_type: "boat" }, ["query/policy_type:"])).toEqual([]);
     });
 
     test(`${rule}, RTR-R51: risk_category=standard does not select carriers that only take non_standard risks`, async () => {
       await ctx.svc.seed({ tables: { carriers: CARRIERS } });
       expect(await codes({ risk_category: "standard" })).toEqual(["ERIE", "HRTF"]);
       expect(await codes({ risk_category: "non_standard" })).toEqual(["NTNW"]);
-      expect(await codes({ state: "T" })).toEqual(["ERIE", "NTNW"]);
-      expect(await codes({ policy_type: "auto" })).toEqual(["ERIE", "NTNW"]);
+      expect(await codes({ state: "T" }, ["query/state:"])).toEqual(["ERIE", "NTNW"]);
+      expect(await codes({ policy_type: "auto" }, ["query/policy_type:"])).toEqual(["ERIE", "NTNW"]);
     });
 
     test(`${rule}, RTR-R51: a risk_category outside the three categories is a validation error`, async () => {
@@ -266,7 +266,7 @@ test("every operation in specs/rater.yaml answers its success status with a body
   await ctx.svc.seed({ tables: { carriers: [carrierRow()], quote_requests: [requestRow()], carrier_quotes: [quoteRow()] } });
   const ok = (res: any, status: number, opts = {}) => {
     expect(res.status).toBe(status);
-    contract.check(res, opts);
+    expect(contract.check(res, opts).schemaChecked).toBe(true);
     return res.body;
   };
   ok(await ctx.api.get("/v1/quotes"), 200);

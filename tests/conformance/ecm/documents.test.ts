@@ -126,10 +126,11 @@ const DOCS = [
 ];
 
 describe("GET /v1/documents", () => {
-  const ids = async (query: Record<string, string | number> = {}) => {
+  const ids = async (query: Record<string, string | number> = {}, allow: string[] = []) => {
     const res = await ctx.api.get("/v1/documents", { query });
     expect(res.status).toBe(200);
-    check(contract, res);
+    if (allow.length > 0) contract.check(res, { allow });
+    else check(contract, res);
     return res.body.data.map((d: any) => d.document_id);
   };
 
@@ -152,7 +153,11 @@ describe("GET /v1/documents", () => {
     expect(await ids({ client_id: "CLI-2" })).toEqual(["DOC-4", "DOC-3"]);
     expect(await ids({ date_from: "2024-03-10T00:00:00Z" })).toEqual(["DOC-5", "DOC-2"]);
     expect(await ids({ date_to: "2024-02-10T00:00:00Z" })).toEqual(["DOC-4", "DOC-3", "DOC-1"]);
-    expect(await ids({ date_from: "2024-02", date_to: "2024-04" })).toEqual(["DOC-2", "DOC-4", "DOC-3"]);
+    expect(await ids({ date_from: "2024-02", date_to: "2024-04" }, ["query/date_from:", "query/date_to:"])).toEqual([
+      "DOC-2",
+      "DOC-4",
+      "DOC-3",
+    ]);
     expect(await ids({ client_id: "CLI-2", status: "generated" })).toEqual(["DOC-4"]);
     expect(await ids({ client_id: "CLI-9" })).toEqual([]);
   });
@@ -215,9 +220,18 @@ describe("GET /v1/documents/{client_id}/audit", () => {
     checkError(contract, res);
   });
 
-  test("ECM-R30: a status filter that matches none of the client's documents is 404 too", async () => {
+  test("ECM-R30: a status filter that matches none of the client's documents returns 200 with an empty documents list", async () => {
     await ctx.svc.seed({ tables: { documents: both } });
-    expectError(await audit("CLI-1", { status: "expired" }), 404, "NOT_FOUND");
+    const res = await audit("CLI-1", { status: "expired" });
+    expect(res.status).toBe(200);
+    check(contract, res);
+    expect(res.body).toEqual({
+      client_id: "CLI-1",
+      documents: [],
+      compliance_status: "compliant",
+      missing_documents: [],
+      pagination: { limit: 25, cursor: null, next_cursor: null, has_more: false },
+    });
   });
 
   test("ECM-R31, ECM-R32: a client with both required documents is compliant", async () => {

@@ -112,6 +112,7 @@ clientsRouter.post("/", requireScopes("ams:clients:write"), async (c) => {
   // Check for duplicate email
   const existing = await prisma.client.findFirst({
     where: { email: body.email },
+    orderBy: { id: "asc" },
     select: { id: true },
   });
 
@@ -206,6 +207,7 @@ clientsRouter.patch("/:id", requireScopes("ams:clients:write"), async (c) => {
   if (body.email !== undefined) {
     const duplicate = await prisma.client.findFirst({
       where: { email: body.email, NOT: { id: clientId } },
+      orderBy: { id: "asc" },
       select: { id: true },
     });
 
@@ -338,6 +340,7 @@ clientsRouter.get("/:id/policies", requireScopes("ams:policies:read"), async (c)
   const coverageRows = policyIds.length > 0
     ? await prisma.coverage.findMany({
         where: { policy_id: { in: policyIds } },
+        orderBy: { id: "asc" },
       })
     : [];
 
@@ -459,7 +462,7 @@ clientsRouter.get("/household/:household_id", requireScopes("ams:clients:read"),
   // Get all household members
   const members = await prisma.client.findMany({
     where: { household_id: householdId },
-    orderBy: [{ last_name: "asc" }, { first_name: "asc" }],
+    orderBy: [{ last_name: "asc" }, { first_name: "asc" }, { id: "asc" }],
   });
 
   if (members.length === 0) {
@@ -470,6 +473,7 @@ clientsRouter.get("/household/:household_id", requireScopes("ams:clients:read"),
   const memberIds = members.map((m) => m.id);
   const policyRows = await prisma.policy.findMany({
     where: { client_id: { in: memberIds } },
+    orderBy: { policy_id: "asc" },
   });
 
   // Get coverages for all policies
@@ -477,6 +481,7 @@ clientsRouter.get("/household/:household_id", requireScopes("ams:clients:read"),
   const coverageRows = policyIds.length > 0
     ? await prisma.coverage.findMany({
         where: { policy_id: { in: policyIds } },
+        orderBy: { id: "asc" },
       })
     : [];
 

@@ -31,6 +31,7 @@ idCardsRouter.get(
     // Check for existing ID card
     const existingCard = await prisma.idCard.findFirst({
       where: { policy_id: policyId },
+      orderBy: { card_id: "asc" },
     });
 
     if (existingCard) {

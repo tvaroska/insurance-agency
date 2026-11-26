@@ -2,10 +2,9 @@
  * 3-Stage Agent-to-Code Evolution Showcase (`eval/evolution-showcase.ts`).
  *
  * Compares measured vs. modeled operational economics across three execution stages:
- *   - Stage 1 (Measured v0.9 Baseline): Zero-shot tool discovery across 8 services
- *     (`gemini-3.8-flash`, `claude-sonnet-5-5`, `DeepSeek-V4.1-Flash` from `eval/results/v0.9/`)
- *   - Stage 2 (Measured v0.9 Domain Skill): Guided domain SOP (`eval/inspect/evergreen_domain_skill.md`)
- *     on `gemini-3.8-flash` across a 10-train / 10-holdout workflow split
+ *   - Stage 1 (Measured Baseline): Loaded from `eval/results/v0.9.1/summary-report.json`
+ *     (or `eval/results/v0.9/summary-report.json` if overridden)
+ *   - Stage 2 (Measured Domain Skill): Loaded from the same summary report's Domain skill (SOP) arm
  *   - Stage 3 (Measured Scripted Verifier + Modeled Pivot Fallback): `$0`-token deterministic
  *     TypeScript workflows (`compiled:*`) with automatic `FallbackToSkill` on multi-turn client pivots
  *     (Scenarios 17, 18, 19, 20).
@@ -14,7 +13,11 @@
 import { runBaselineAgent } from "./agents/baseline-agent";
 import { parseTrace, evaluateTrace } from "./evaluators/trace";
 import { extractEconomicsMetrics } from "./evaluators/economics";
-import { passHatK } from "./evaluators/rubric";
+import {
+  computeTaskPassHatK,
+  loadMeasuredSummary,
+  type MeasuredSummaryRow,
+} from "./report";
 import { scenarios } from "./scenarios";
 
 export type EvolutionStageId =
@@ -84,6 +87,8 @@ export const COMPILED_WORKFLOW_SPECS: CompiledWorkflowSpec[] = [
 ];
 
 export type StageProvenance =
+  | "measured_v0.9.1_baseline"
+  | "measured_v0.9.1_domain_skill"
   | "measured_v0.9_baseline"
   | "measured_v0.9_domain_skill"
   | "measured_reference_verifier_with_projected_fallback";
@@ -92,33 +97,99 @@ export interface MeasuredModelBaseline {
   model: string;
   pass1: number;
   meanScore: number;
+  pass5: number;
+  pass5Strict: number | null;
   falseCompletionRate: number;
   costPerTaskUsd: number;
 }
 
-export const MEASURED_V09_STAGE1_MODELS: MeasuredModelBaseline[] = [
-  {
-    model: "gemini-3.8-flash",
-    pass1: 0.67,
-    meanScore: 0.77,
-    falseCompletionRate: 0.15,
-    costPerTaskUsd: 0.476,
-  },
-  {
-    model: "claude-sonnet-5-5",
-    pass1: 0.66,
-    meanScore: 0.81,
-    falseCompletionRate: 0.16,
-    costPerTaskUsd: 0.145,
-  },
-  {
-    model: "DeepSeek-V4.1-Flash",
-    pass1: 0.56,
-    meanScore: 0.75,
-    falseCompletionRate: 0.34,
-    costPerTaskUsd: 0.039,
-  },
-];
+function round4(n: number): number {
+  return Math.round(n * 10000) / 10000;
+}
+
+function stripBackticks(label: string): string {
+  return label.replace(/`/g, "").trim();
+}
+
+function trapComplianceRate(row: MeasuredSummaryRow): number {
+  const total = row.system_traps_total + row.judgment_traps_total;
+  const missed = row.system_traps_missed + row.judgment_traps_missed;
+  return total > 0 ? round4(1 - missed / total) : 1.0;
+}
+
+function toMeasuredModelBaseline(row: MeasuredSummaryRow): MeasuredModelBaseline {
+  return {
+    model: stripBackticks(row.model_label),
+    pass1: row.pass_at_1,
+    meanScore: row.mean_score,
+    pass5: row.pass_hat_5,
+    pass5Strict: row.pass_hat_5_unbiased ?? null,
+    falseCompletionRate: row.said_done_failed_rate,
+    costPerTaskUsd: row.mean_cost_usd,
+  };
+}
+
+export interface LoadedStageBaselines {
+  version: string;
+  summaryPath: string | null;
+  stage1Models: MeasuredModelBaseline[];
+  stage1Primary: MeasuredSummaryRow;
+  stage2Skill: MeasuredSummaryRow;
+  stage1CpvoUsd: number;
+  stage2CpvoUsd: number;
+  stage1EoComplianceRate: number;
+  stage2EoComplianceRate: number;
+  falseCompletionRateRange: string;
+  falseCompletionGivenFailedRange: string;
+}
+
+export function loadMeasuredStageBaselines(summaryPath?: string): LoadedStageBaselines {
+  const loaded = loadMeasuredSummary(summaryPath);
+  const zeroShotRows = loaded.rows.filter(
+    (r) => r.learning_mechanism.toLowerCase().includes("zero-shot"),
+  );
+  const skillRow = loaded.rows.find(
+    (r) => r.learning_mechanism.toLowerCase().includes("domain skill"),
+  );
+
+  if (zeroShotRows.length === 0 || !skillRow) {
+    throw new Error(
+      `Measured summary report (${loaded.path ?? summaryPath ?? "default"}) is missing zero-shot or domain-skill rows.`,
+    );
+  }
+
+  const sortedZeroShot = [...zeroShotRows].sort((a, b) => b.pass_at_1 - a.pass_at_1);
+  const stage1Primary = sortedZeroShot[0];
+  const stage1Models = sortedZeroShot.map(toMeasuredModelBaseline);
+
+  const stage1CpvoUsd = round4(stage1Primary.mean_cost_usd / Math.max(stage1Primary.pass_at_1, 0.01));
+  const stage2CpvoUsd = round4(skillRow.mean_cost_usd / Math.max(skillRow.pass_at_1, 0.01));
+
+  const fcrMin = Math.round(Math.min(...sortedZeroShot.map((r) => r.said_done_failed_rate)) * 100);
+  const fcrMax = Math.round(Math.max(...sortedZeroShot.map((r) => r.said_done_failed_rate)) * 100);
+  const condRates = sortedZeroShot
+    .map((r) => r.said_done_given_failed_rate)
+    .filter((v): v is number => typeof v === "number");
+  const condMin = condRates.length > 0 ? Math.round(Math.min(...condRates) * 100) : 0;
+  const condMax = condRates.length > 0 ? Math.round(Math.max(...condRates) * 100) : 0;
+
+  return {
+    version: loaded.version,
+    summaryPath: loaded.path,
+    stage1Models,
+    stage1Primary,
+    stage2Skill: skillRow,
+    stage1CpvoUsd,
+    stage2CpvoUsd,
+    stage1EoComplianceRate: trapComplianceRate(stage1Primary),
+    stage2EoComplianceRate: trapComplianceRate(skillRow),
+    falseCompletionRateRange: `${fcrMin}%–${fcrMax}%`,
+    falseCompletionGivenFailedRange: `${condMin}%–${condMax}%`,
+  };
+}
+
+export const MEASURED_V09_STAGE1_MODELS: MeasuredModelBaseline[] =
+  loadMeasuredStageBaselines().stage1Models;
 
 export interface StageExecutionMetrics {
   stage: EvolutionStageId;
@@ -142,6 +213,8 @@ export interface StageExecutionMetrics {
 
 export interface EvolutionComparisonSummary {
   generatedAt: string;
+  summaryVersion: string;
+  summaryPath: string | null;
   stages: {
     stage1GeneralAgent: {
       label: string;
@@ -152,6 +225,7 @@ export interface EvolutionComparisonSummary {
       pass1: number;
       meanScore: number;
       pass5: number;
+      pass5Strict: number | null;
       eoComplianceRate: number;
       falseCompletionRateRange: string;
       measuredModels: MeasuredModelBaseline[];
@@ -164,6 +238,7 @@ export interface EvolutionComparisonSummary {
       avgLatencyMs: number;
       pass1: number;
       pass5: number;
+      pass5Strict: number | null;
       eoComplianceRate: number;
     };
     stage3CompiledCode: {
@@ -220,18 +295,23 @@ export interface AgencyRoiModel {
 
 /**
  * Modeled 11-staff agency capacity & unit-economics projection referenced in `EXECUTIVE-BRIEF.md`.
+ * Stage 1/2/3 CPVO inputs are derived from the measured summary report.
  */
 export function calculateAgencyRoi(overrides?: {
   staffCount?: number;
   baselineWrittenPremiumUsd?: number;
   commissionRatePct?: number;
   automationCoveragePct?: number;
+  fallbackRatePct?: number;
+  summaryPath?: string;
 }): AgencyRoiModel {
+  const baselines = loadMeasuredStageBaselines(overrides?.summaryPath);
   const staffCount = overrides?.staffCount ?? 11;
   const baselineWrittenPremiumUsd =
     overrides?.baselineWrittenPremiumUsd ?? 20_000_000;
   const commissionRatePct = overrides?.commissionRatePct ?? 11.0;
   const automationCoveragePct = overrides?.automationCoveragePct ?? 78.0;
+  const fallbackRatePct = overrides?.fallbackRatePct ?? 22.0;
 
   const capacityMultiplier = 1 + (automationCoveragePct / 78.0) * 0.925;
   const governedWrittenPremiumUsd = Math.round(
@@ -259,9 +339,9 @@ export function calculateAgencyRoi(overrides?: {
     ) / 10;
 
   const manualCsrCostPerTransactionUsd = 18.5;
-  const stage1GeneralAgentCpvoUsd = 0.7104;
-  const stage2SkillCpvoUsd = 0.5904;
-  const stage3BlendedCpvoUsd = 0.1299;
+  const stage1GeneralAgentCpvoUsd = baselines.stage1CpvoUsd;
+  const stage2SkillCpvoUsd = baselines.stage2CpvoUsd;
+  const stage3BlendedCpvoUsd = round4(stage2SkillCpvoUsd * (fallbackRatePct / 100));
   const annualServicingTransactions = 42_000;
   const annualLaborHoursSaved = 11_800;
   const annualNetSavingsUsd = Math.round(
@@ -326,7 +406,9 @@ export async function runStageTrajectory(options: {
   isPivotCase: boolean;
   fetchImpl?: typeof fetch;
   baseUrls?: Record<string, string>;
+  summaryPath?: string;
 }): Promise<StageExecutionMetrics> {
+  const baselines = loadMeasuredStageBaselines(options.summaryPath);
   const fetchFn = options.fetchImpl ?? globalThis.fetch;
   const scen = scenarios[options.scenarioId];
   const variant =
@@ -342,7 +424,7 @@ export async function runStageTrajectory(options: {
         ? "domain_skill"
         : "compiled_code";
 
-  const model = "gemini-3.8-flash";
+  const model = stripBackticks(baselines.stage1Primary.model_label);
 
   const runResult = await runBaselineAgent({
     scenarioId: options.scenarioId,
@@ -361,59 +443,87 @@ export async function runStageTrajectory(options: {
     totalWeight > 0
       ? traceChecks.reduce((acc, c) => acc + (c.passed ? c.weight : 0), 0) /
         totalWeight
-      : 1.0;
+      : 0.0;
 
   const eoTrapsCaught = (variant?.eoTraps ?? []).every((trap) =>
     evaluateTrace([trap.check], parsedCalls).every((r) => r.passed),
   );
+  const eoCompliant =
+    runResult.privacyAudit.passed && eoTrapsCaught && traceScore >= 0.95;
 
   const econ = extractEconomicsMetrics(runResult.trace, parsedCalls, {
     score: traceScore,
     defaultModel: model,
   });
 
+  // Use the per-task pass^5 loaded directly from the summary report (no pooled (pass@1)^5 fabrication).
+  const routineVerifierPassed = eoCompliant ? 1.0 : 0.0;
   const pass1 =
     options.stage === "stage_1_general_agent"
-      ? 0.67
+      ? baselines.stage1Primary.pass_at_1
       : options.stage === "stage_2_domain_skill" || isFallback
-        ? 0.83
-        : 1.0;
-  const pass5 = passHatK(100, Math.round(pass1 * 100), 5);
+        ? baselines.stage2Skill.pass_at_1
+        : routineVerifierPassed;
+  const pass5 =
+    options.stage === "stage_1_general_agent"
+      ? baselines.stage1Primary.pass_hat_5
+      : options.stage === "stage_2_domain_skill" || isFallback
+        ? baselines.stage2Skill.pass_hat_5
+        : computeTaskPassHatK(
+            [{ successes: routineVerifierPassed === 1.0 ? 5 : 0, trials: 5 }],
+            5,
+          ).perTaskPower;
 
+  const isV091 = baselines.version === "v0.9.1";
   const provenance: StageProvenance =
     options.stage === "stage_1_general_agent"
-      ? "measured_v0.9_baseline"
+      ? isV091
+        ? "measured_v0.9.1_baseline"
+        : "measured_v0.9_baseline"
       : options.stage === "stage_2_domain_skill"
-        ? "measured_v0.9_domain_skill"
+        ? isV091
+          ? "measured_v0.9.1_domain_skill"
+          : "measured_v0.9_domain_skill"
         : "measured_reference_verifier_with_projected_fallback";
 
   const estimatedCostUsd =
     tokenProfile === "compiled_code"
       ? 0
       : options.stage === "stage_1_general_agent"
-        ? Math.max(econ.estimatedCostUsd, 0.476)
-        : Math.max(econ.estimatedCostUsd, 0.49);
+        ? baselines.stage1Primary.mean_cost_usd
+        : baselines.stage2Skill.mean_cost_usd;
 
   const cpvoUsd =
-    Math.round((estimatedCostUsd / Math.max(pass1, 0.01)) * 10000) / 10000;
-
-  const latencyMs =
     tokenProfile === "compiled_code"
-      ? Math.max(1, econ.wallClockMs || 180)
-      : options.stage === "stage_1_general_agent"
-        ? 214_650
-        : 194_980;
+      ? 0
+      : round4(estimatedCostUsd / Math.max(pass1, 0.01));
+
+  const latencyMs = Math.max(1, econ.wallClockMs);
+
+  const stage1ModelsText = baselines.stage1Models
+    .map((m) => `${m.model} ${(m.pass1 * 100).toFixed(1)}%`)
+    .join(", ");
+  const s2Train =
+    baselines.stage2Skill.train_pass_at_1 !== undefined &&
+    baselines.stage2Skill.train_pass_at_1 !== null
+      ? `${(baselines.stage2Skill.train_pass_at_1 * 100).toFixed(1)}% train`
+      : "n/a train";
+  const s2Holdout =
+    baselines.stage2Skill.holdout_pass_at_1 !== undefined &&
+    baselines.stage2Skill.holdout_pass_at_1 !== null
+      ? `${(baselines.stage2Skill.holdout_pass_at_1 * 100).toFixed(1)}% holdout`
+      : "n/a holdout";
 
   return {
     stage: options.stage,
     stageLabel:
       options.stage === "stage_1_general_agent"
-        ? "Stage 1: Zero-Shot General Agent (Measured v0.9, 20 workflows x 5 trials: gemini-3.8-flash 67.0% pass@1, claude-sonnet-5-5 66.0%, DeepSeek-V4.1-Flash 56.0%; 15%–34% false-completion rate)"
+        ? `Stage 1: Zero-Shot General Agent (Measured ${baselines.version}, ${baselines.stage1Primary.tasks_count} workflows x ${Math.round(baselines.stage1Primary.trials_count / Math.max(1, baselines.stage1Primary.tasks_count))} trials: ${stage1ModelsText}; ${baselines.falseCompletionRateRange} false-completion rate)`
         : options.stage === "stage_2_domain_skill"
-          ? "Stage 2: Domain Skill Procedure Guide (Measured v0.9: gemini-3.8-flash 83.0% pass@1, 84.0% train / 82.0% holdout, 73.7% pass^5; eval/inspect/evergreen_domain_skill.md)"
+          ? `Stage 2: Domain Skill Procedure Guide (Measured ${baselines.version}: ${stripBackticks(baselines.stage2Skill.model_label)} ${(baselines.stage2Skill.pass_at_1 * 100).toFixed(1)}% pass@1, ${s2Train} / ${s2Holdout}, ${(baselines.stage2Skill.pass_hat_5 * 100).toFixed(1)}% pass^5; eval/inspect/evergreen_domain_skill.md)`
           : isFallback
             ? "Stage 3: Compiled Code -> Projected FallbackToSkill (eval/inspect/evergreen_domain_skill.md)"
-            : "Stage 3: $0-Token Compiled Deterministic Code (Measured 100.0% Scripted Reference Verifier)",
+            : "Stage 3: $0-Token Compiled Deterministic Code (Scripted Reference Verifier)",
     provenance,
     scenarioId: options.scenarioId,
     workflowId: options.workflow.id,
@@ -434,7 +544,7 @@ export async function runStageTrajectory(options: {
     latencyMs,
     pass1,
     pass5,
-    eoCompliant: runResult.privacyAudit.passed && eoTrapsCaught && traceScore >= 0.95,
+    eoCompliant,
     traceScore: Math.round(traceScore * 1000) / 1000,
   };
 }
@@ -442,7 +552,9 @@ export async function runStageTrajectory(options: {
 export async function runEvolutionShowcase(options?: {
   fetchImpl?: typeof fetch;
   baseUrls?: Record<string, string>;
+  summaryPath?: string;
 }): Promise<EvolutionComparisonSummary> {
+  const baselines = loadMeasuredStageBaselines(options?.summaryPath);
   const workflows = [];
   for (const spec of COMPILED_WORKFLOW_SPECS) {
     const [r1, r2, r3, p1, p2, p3] = await Promise.all([
@@ -453,6 +565,7 @@ export async function runEvolutionShowcase(options?: {
         isPivotCase: false,
         fetchImpl: options?.fetchImpl,
         baseUrls: options?.baseUrls,
+        summaryPath: options?.summaryPath,
       }),
       runStageTrajectory({
         stage: "stage_2_domain_skill",
@@ -461,6 +574,7 @@ export async function runEvolutionShowcase(options?: {
         isPivotCase: false,
         fetchImpl: options?.fetchImpl,
         baseUrls: options?.baseUrls,
+        summaryPath: options?.summaryPath,
       }),
       runStageTrajectory({
         stage: "stage_3_compiled_code",
@@ -469,6 +583,7 @@ export async function runEvolutionShowcase(options?: {
         isPivotCase: false,
         fetchImpl: options?.fetchImpl,
         baseUrls: options?.baseUrls,
+        summaryPath: options?.summaryPath,
       }),
       runStageTrajectory({
         stage: "stage_1_general_agent",
@@ -477,6 +592,7 @@ export async function runEvolutionShowcase(options?: {
         isPivotCase: true,
         fetchImpl: options?.fetchImpl,
         baseUrls: options?.baseUrls,
+        summaryPath: options?.summaryPath,
       }),
       runStageTrajectory({
         stage: "stage_2_domain_skill",
@@ -485,6 +601,7 @@ export async function runEvolutionShowcase(options?: {
         isPivotCase: true,
         fetchImpl: options?.fetchImpl,
         baseUrls: options?.baseUrls,
+        summaryPath: options?.summaryPath,
       }),
       runStageTrajectory({
         stage: "stage_3_compiled_code",
@@ -493,6 +610,7 @@ export async function runEvolutionShowcase(options?: {
         isPivotCase: true,
         fetchImpl: options?.fetchImpl,
         baseUrls: options?.baseUrls,
+        summaryPath: options?.summaryPath,
       }),
     ]);
 
@@ -503,49 +621,100 @@ export async function runEvolutionShowcase(options?: {
     });
   }
 
-  const agencyRoi = calculateAgencyRoi();
+  const stage1Runs = workflows.flatMap((w) => [w.routineRun.stage1, w.pivotRun.stage1]);
+  const stage2Runs = workflows.flatMap((w) => [w.routineRun.stage2, w.pivotRun.stage2]);
+  const stage3RoutineRuns = workflows.map((w) => w.routineRun.stage3);
+  const stage3AllRuns = workflows.flatMap((w) => [
+    w.routineRun.stage3,
+    w.pivotRun.stage3WithFallback,
+  ]);
+
+  const mean = (vals: number[]) =>
+    vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
+
+  const stage1AvgTokens = Math.round(mean(stage1Runs.map((r) => r.totalTokens)));
+  const stage2AvgTokens = Math.round(mean(stage2Runs.map((r) => r.totalTokens)));
+  const fallbackRatePct = 22.0;
+  const blendedTokens = Math.round(stage2AvgTokens * (fallbackRatePct / 100));
+  const blendedCpvoUsd = round4(baselines.stage2CpvoUsd * (fallbackRatePct / 100));
+
+  const stage3PassTasks = stage3RoutineRuns.map((r) => ({
+    successes: r.eoCompliant ? 5 : 0,
+    trials: 5,
+  }));
+  const stage3Pass1 = round4(
+    mean(stage3RoutineRuns.map((r) => (r.eoCompliant ? 1 : 0))),
+  );
+  const stage3Pass5 = computeTaskPassHatK(stage3PassTasks, 5).perTaskPower;
+  const stage3EoRate = round4(
+    mean(stage3AllRuns.map((r) => (r.eoCompliant ? 1 : 0))),
+  );
+
+  const agencyRoi = calculateAgencyRoi({
+    fallbackRatePct,
+    summaryPath: options?.summaryPath,
+  });
+  const isV091 = baselines.version === "v0.9.1";
+
+  const stage1ModelsText = baselines.stage1Models
+    .map((m) => `${m.model} ${(m.pass1 * 100).toFixed(1)}% pass@1`)
+    .join(", ");
+  const s2Train =
+    baselines.stage2Skill.train_pass_at_1 !== undefined &&
+    baselines.stage2Skill.train_pass_at_1 !== null
+      ? `${(baselines.stage2Skill.train_pass_at_1 * 100).toFixed(1)}% train`
+      : "n/a train";
+  const s2Holdout =
+    baselines.stage2Skill.holdout_pass_at_1 !== undefined &&
+    baselines.stage2Skill.holdout_pass_at_1 !== null
+      ? `${(baselines.stage2Skill.holdout_pass_at_1 * 100).toFixed(1)}% holdout`
+      : "n/a holdout";
 
   return {
     generatedAt: new Date().toISOString(),
+    summaryVersion: baselines.version,
+    summaryPath: baselines.summaryPath,
     stages: {
       stage1GeneralAgent: {
         label:
-          "Stage 1: Zero-Shot General Agent (Measured v0.9, 20 workflows x 5 trials: gemini-3.8-flash 67.0% pass@1, claude-sonnet-5-5 66.0%, DeepSeek-V4.1-Flash 56.0%; 15%–34% unconditional false-done, 45%–77% on failed runs)",
-        provenance: "measured_v0.9_baseline",
-        avgTokens: 1_333_422,
-        cpvoUsd: 0.7104,
-        avgLatencyMs: 214_650,
-        pass1: 0.67,
-        meanScore: 0.77,
-        pass5: 0.587,
-        eoComplianceRate: 0.88,
-        falseCompletionRateRange: "15%–34%",
-        measuredModels: MEASURED_V09_STAGE1_MODELS,
+          `Stage 1: Zero-Shot General Agent (Measured ${baselines.version}, ${baselines.stage1Primary.tasks_count} workflows x ${Math.round(baselines.stage1Primary.trials_count / Math.max(1, baselines.stage1Primary.tasks_count))} trials: ${stage1ModelsText}; ${baselines.falseCompletionRateRange} unconditional false-done, ${baselines.falseCompletionGivenFailedRange} on failed runs)`,
+        provenance: isV091 ? "measured_v0.9.1_baseline" : "measured_v0.9_baseline",
+        avgTokens: stage1AvgTokens,
+        cpvoUsd: baselines.stage1CpvoUsd,
+        avgLatencyMs: Math.round(mean(stage1Runs.map((r) => r.latencyMs))),
+        pass1: baselines.stage1Primary.pass_at_1,
+        meanScore: baselines.stage1Primary.mean_score,
+        pass5: baselines.stage1Primary.pass_hat_5,
+        pass5Strict: baselines.stage1Primary.pass_hat_5_unbiased ?? null,
+        eoComplianceRate: baselines.stage1EoComplianceRate,
+        falseCompletionRateRange: baselines.falseCompletionRateRange,
+        measuredModels: baselines.stage1Models,
       },
       stage2DomainSkill: {
         label:
-          "Stage 2: Domain Skill Procedure Guide (Measured v0.9: gemini-3.8-flash 83.0% pass@1, 84.0% train / 82.0% holdout, 73.7% pass^5; eval/inspect/evergreen_domain_skill.md)",
-        provenance: "measured_v0.9_domain_skill",
-        avgTokens: 1_002_522,
-        cpvoUsd: 0.5904,
-        avgLatencyMs: 194_980,
-        pass1: 0.83,
-        pass5: 0.737,
-        eoComplianceRate: 0.98,
+          `Stage 2: Domain Skill Procedure Guide (Measured ${baselines.version}: ${stripBackticks(baselines.stage2Skill.model_label)} ${(baselines.stage2Skill.pass_at_1 * 100).toFixed(1)}% pass@1, ${s2Train} / ${s2Holdout}, ${(baselines.stage2Skill.pass_hat_5 * 100).toFixed(1)}% pass^5; eval/inspect/evergreen_domain_skill.md)`,
+        provenance: isV091 ? "measured_v0.9.1_domain_skill" : "measured_v0.9_domain_skill",
+        avgTokens: stage2AvgTokens,
+        cpvoUsd: baselines.stage2CpvoUsd,
+        avgLatencyMs: Math.round(mean(stage2Runs.map((r) => r.latencyMs))),
+        pass1: baselines.stage2Skill.pass_at_1,
+        pass5: baselines.stage2Skill.pass_hat_5,
+        pass5Strict: baselines.stage2Skill.pass_hat_5_unbiased ?? null,
+        eoComplianceRate: baselines.stage2EoComplianceRate,
       },
       stage3CompiledCode: {
         label:
-          "Stage 3: $0-Token Compiled Deterministic Code (Measured 100.0% Scripted Reference Verifier across 20 Workflows + Projected FallbackToSkill)",
+          `Stage 3: $0-Token Compiled Deterministic Code (Measured ${(stage3Pass1 * 100).toFixed(1)}% Scripted Reference Verifier + Projected FallbackToSkill)`,
         provenance: "measured_reference_verifier_with_projected_fallback",
         routineTokens: 0,
         routineCpvoUsd: 0.0,
-        blendedTokens: 220_555,
-        blendedCpvoUsd: 0.1299,
-        avgLatencyMs: 180,
-        pass1: 1.0,
-        pass5: passHatK(100, 100, 5),
-        eoComplianceRate: 0.99,
-        fallbackRatePct: 22.0,
+        blendedTokens,
+        blendedCpvoUsd,
+        avgLatencyMs: Math.round(mean(stage3RoutineRuns.map((r) => r.latencyMs))),
+        pass1: stage3Pass1,
+        pass5: stage3Pass5,
+        eoComplianceRate: stage3EoRate,
+        fallbackRatePct,
       },
     },
     workflows,

@@ -63,6 +63,15 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_openai import ChatOpenAI
 
+from control_plane import (
+    check_modality_async as check_modality,
+    collect_trace_async as collect_trace,
+    export_otlp_trace_async as export_otlp_trace,
+    reset_services_async as reset_services,
+    scorer_headers,
+    seed_mode,
+    take_snapshot_async as take_snapshot,
+)
 from evergreen import GYM_ROOT, load_evergreen_samples
 from openapi_tools import RestClient, build_rest_tools, service_base_urls
 
@@ -329,61 +338,6 @@ async def open_mcp_tools(
     return tools
 
 
-def seed_mode(seed: str):
-    # Services load data/seed-clean only for "clean"; scenario variants such as
-    # "attorney" run on the realistic data.
-    return "clean" if seed == "clean" else "realistic"
-
-
-def scorer_headers() -> dict[str, str]:
-    headers = {"X-Eval-Scorer": "true"}
-    secret = os.environ.get("EVERGREEN_SCORER_SECRET", "")
-    if secret:
-        headers["X-Evergreen-Scorer-Secret"] = secret
-    return headers
-
-
-async def check_modality(http: httpx.AsyncClient, urls: dict[str, str], modality_mode: str):
-    headers = scorer_headers()
-    for name, url in urls.items():
-        resp = await http.get(f"{url}/sim/status", headers=headers)
-        resp.raise_for_status()
-        actual = resp.json().get("modality_mode", "permissive")
-        if actual != modality_mode:
-            raise RuntimeError(
-                f"{name} runs with MODALITY_MODE={actual}, but the task has modality_mode={modality_mode}"
-            )
-
-
-async def reset_services(
-    http: httpx.AsyncClient,
-    urls: dict[str, str],
-    seed: str,
-    scenario_id: str | None = None,
-):
-    payload: dict[str, Any] = {"seed_mode": seed_mode(seed)}
-    if scenario_id:
-        payload["scenario_id"] = str(scenario_id).strip().zfill(2)
-    headers = scorer_headers()
-
-    async def reset(url: str):
-        resp = await http.post(f"{url}/sim/reset", json=payload, headers=headers)
-        resp.raise_for_status()
-
-    await asyncio.gather(*(reset(url) for url in urls.values()))
-
-
-async def take_snapshot(http: httpx.AsyncClient, urls: dict[str, str]):
-    """Database state in the GymSnapshot shape eval/score.ts reads: {service: {table: rows}}."""
-    snapshot: dict[str, Any] = {}
-    headers = scorer_headers()
-    for name, url in urls.items():
-        resp = await http.get(f"{url}/sim/snapshot", headers=headers)
-        resp.raise_for_status()
-        snapshot[name] = resp.json().get("tables", {})
-    return snapshot
-
-
 async def run_bun(*args: str):
     result = await subprocess([os.environ.get("BUN_BIN", "bun"), *args], cwd=GYM_ROOT, timeout=300)
     if not result.success:
@@ -590,6 +544,34 @@ def archive_sample_artifacts(
     return str(bundle_dir)
 
 
+def _extract_rubric_metadata(raw_rubric: Any) -> dict[str, Any] | None:
+    """Pass rubric evaluation through as diagnostic metadata without crashing on `judge_error`."""
+    if not isinstance(raw_rubric, dict):
+        return None
+    raw_score = raw_rubric.get("score")
+    raw_debiased = raw_rubric.get("debiasedScore")
+    raw_verdicts = raw_rubric.get("verdicts")
+    verdicts = list(raw_verdicts) if isinstance(raw_verdicts, list) else []
+    judge_error_count = sum(
+        1 for v in verdicts if isinstance(v, dict) and v.get("status") == "judge_error"
+    )
+    meta: dict[str, Any] = {
+        "diagnostic": True,
+        "score": float(raw_score) if isinstance(raw_score, (int, float)) and not isinstance(raw_score, bool) else None,
+        "debiased_score": (
+            float(raw_debiased)
+            if isinstance(raw_debiased, (int, float)) and not isinstance(raw_debiased, bool)
+            else None
+        ),
+        "judge_model": raw_rubric.get("judgeModel"),
+        "judge_error_count": judge_error_count,
+        "verdicts": verdicts,
+    }
+    if raw_rubric.get("calibration") is not None:
+        meta["calibration"] = raw_rubric["calibration"]
+    return meta
+
+
 def report_score(report: dict[str, Any], answer: str, work_dir: Path | str):
     """Inspect Score from an eval/score.ts ScenarioReport."""
     overall = report["overall"]
@@ -603,6 +585,7 @@ def report_score(report: dict[str, Any], answer: str, work_dir: Path | str):
             "total_mutations": state_diff["totalMutations"],
             "findings": state_diff.get("findings", []),
         }
+    rubric = _extract_rubric_metadata(report.get("rubric"))
     trace_score = float(report["trace"]["score"])
     output_score = float(report["output"]["score"])
     eo_compliant = bool(overall["eoCompliant"])
@@ -619,6 +602,7 @@ def report_score(report: dict[str, Any], answer: str, work_dir: Path | str):
             "trace_score": trace_score,
             "output_score": output_score,
             "collateral": collateral,
+            "rubric": rubric,
             "api_calls": overall["apiCalls"],
             "expected_range": overall["expectedRange"],
             "trace_checks": report["trace"]["checks"],
@@ -639,9 +623,10 @@ def service_trace_scorer(artifacts_dir: str | None = None, learning_mechanism: s
         trace_file = work_dir / "trace.json"
         after_file = work_dir / "snapshot-after.json"
         report_dir = work_dir / "report"
-        await run_bun("eval/collect-trace.ts", "--out", str(trace_file))
+        urls = service_base_urls()
         async with httpx.AsyncClient(timeout=120) as http:
-            after_file.write_text(json.dumps(await take_snapshot(http, service_base_urls())))
+            trace_file.write_text(json.dumps(await collect_trace(http, urls), indent=2))
+            after_file.write_text(json.dumps(await take_snapshot(http, urls)))
         await run_bun(
             "eval/score.ts",
             "--traces",

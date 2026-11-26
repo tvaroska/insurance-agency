@@ -246,7 +246,7 @@ describe("POST /v1/leads/{id}/enroll", () => {
       enroll("lead_a", { campaign_id: "camp_b", trigger_reason: "r".repeat(600), metadata: { k: "v" } }),
     );
     expect(res.status).toBe(201);
-    contract.check(res);
+    contract.check(res, { allow: ["requestBody/trigger_reason:"] });
     expect(res.body).toEqual({
       enrollment_id: expect.stringMatching(ENROLLMENT_ID),
       campaign_id: "camp_b",

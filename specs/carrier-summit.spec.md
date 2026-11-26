@@ -288,9 +288,9 @@ Intentional simulation simplifications (kept as specified):
 10. An unknown `GET` path under `/v1/summit`, sent with a valid token, falls through to the UI page and returns `200` HTML rather than a JSON `404`.
 11. Inspections are never completed and conditions are never resolved; no route does either.
 
-HTTP-conformance boundary (interactive DOM rendering is verified separately in browser/e2e suites):
+HTTP-conformance and headless DOM boundaries (full Playwright/Chromium visual rendering is not run in the default gate):
 
-12. Visual rendering, step gating, timeline formatting, and runtime session renewal/retry loops execute in the browser. The conformance suite proves that the page and its JS/CSS assets are served, verifies the shipped bundle contains the fixed route, header, payload, and screen markers of SMT-R37 to SMT-R42, and executes the exact handshake and API payloads over HTTP in strict mode.
+12. **Open (headless DOM smoke only; full browser rendering uncovered).** CSS layout, visual rendering, and real browser engine behavior are not tested in Chromium/Playwright. `tests/conformance/carrier-summit/browser.test.ts` runs a headless DOM smoke that executes the served React portal bundle against a live strict-mode service (bootstrap cookie jar, `/auth/dev-token`, `/auth/portal-session`, `X-Portal-Session`, 4-step Property Submission wizard interaction, and `POST /v1/summit/submissions`) and verifies both rendered DOM output and SQLite persistence; `portal.test.ts` covers the remaining HTTP handshake and strict-mode API contracts of SMT-R37 to SMT-R42.
 13. Browser cookie jar handling (`HttpOnly`, `SameSite=Strict`) is tested via `Set-Cookie` and `Cookie` headers over HTTP.
 14. SMT-R38 to SMT-R42 API journeys are verified over HTTP in strict mode using the fixed payloads shipped by the page.
 15. Wall-clock 3600s expiry of cookies and sessions is not waited for.

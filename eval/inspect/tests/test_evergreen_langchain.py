@@ -319,7 +319,52 @@ def test_report_score_carries_the_scorer_breakdown(tmp_path: Path):
         "total_mutations": 1,
         "findings": [],
     }
+    assert score.metadata["rubric"] is None
     assert score.metadata["artifacts_dir"] == str(tmp_path)
+
+
+def test_report_score_passes_rubric_as_diagnostic_metadata_and_survives_judge_error(tmp_path: Path):
+    report_with_rubric = {
+        **REPORT,
+        "rubric": {
+            "score": None,
+            "debiasedScore": None,
+            "judgeModel": "google/gemini-4-argon",
+            "verdicts": [
+                {
+                    "criterionId": "crit-1",
+                    "name": "tone_and_clarity",
+                    "status": "judge_error",
+                    "error": "HTTP 503 upstream timeout",
+                    "reasoningTrace": "Judge request timed out",
+                    "score": None,
+                    "passed": None,
+                    "weight": 1,
+                    "judgeModel": "google/gemini-4-argon",
+                },
+                {
+                    "criterionId": "crit-2",
+                    "name": "disclosure_complete",
+                    "status": "ok",
+                    "reasoningTrace": "All disclosures present",
+                    "score": 1.0,
+                    "passed": True,
+                    "weight": 1,
+                    "judgeModel": "google/gemini-4-argon",
+                },
+            ],
+        },
+    }
+    score = harness.report_score(report_with_rubric, answer="done", work_dir=tmp_path)
+    assert score.value == 0.62
+    rubric = score.metadata["rubric"]
+    assert rubric["diagnostic"] is True
+    assert rubric["score"] is None
+    assert rubric["debiased_score"] is None
+    assert rubric["judge_model"] == "google/gemini-4-argon"
+    assert rubric["judge_error_count"] == 1
+    assert len(rubric["verdicts"]) == 2
+    assert rubric["verdicts"][0]["status"] == "judge_error"
 
 
 def test_archive_sample_artifacts_writes_receipt_bundle_and_sha256sums(tmp_path: Path):
@@ -390,6 +435,10 @@ def run_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, max_samples: i
             return httpx.Response(200, json={"status": "reset"})
         if path == "/sim/snapshot":
             return httpx.Response(200, json={"service": "x", "tables": {"clients": [{"id": "CLI-001"}]}})
+        if path == "/sim/trace":
+            if request.url.port == 3000:
+                events.append("GET /sim/trace")
+            return httpx.Response(200, json={"resourceSpans": []})
         if path == "/oauth/token":
             return httpx.Response(200, json={"access_token": "t", "expires_in": 3600})
         events.append(f"{request.method} {path} {request.headers['authorization']}")
@@ -406,13 +455,11 @@ def run_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, max_samples: i
     async def fake_bun(*args: str):
         events.append(args[0])
         out = Path(args[args.index("--out") + 1])
-        if args[0] == "eval/collect-trace.ts":
-            out.write_text('{"resourceSpans": []}')
-            return
         assert args[args.index("--seed") + 1] == "realistic"
         before = json.loads(Path(args[args.index("--snapshot-before") + 1]).read_text())
         assert before["ams"] == {"clients": [{"id": "CLI-001"}]}
         assert Path(args[args.index("--snapshot-after") + 1]).exists()
+        assert Path(args[args.index("--traces") + 1]).exists()
         out.mkdir()
         (out / f"{args[args.index('--scenario') + 1]}-report.json").write_text(json.dumps(REPORT))
 
@@ -443,7 +490,7 @@ def run_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, max_samples: i
     return log, events
 
 
-ONE_SAMPLE = ["reset realistic", "GET /v1/clients Bearer t", "eval/collect-trace.ts", "eval/score.ts"]
+ONE_SAMPLE = ["reset realistic", "GET /v1/clients Bearer t", "GET /sim/trace", "eval/score.ts"]
 
 
 def test_pipeline_resets_runs_collects_and_scores_one_sample_at_a_time(
